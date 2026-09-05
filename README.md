@@ -40,8 +40,8 @@ Managed in Vercel (Production, Preview, Development). Pull them locally with `ve
 
 | Variable | Source | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | Neon integration | Pooled connection for request-time queries (`drizzle-orm/neon-http`) |
-| `DATABASE_URL_UNPOOLED` | Neon integration | Direct connection for migrations |
+| `DATABASE_URL` | Neon integration (Production, Preview); set by hand for Development | Pooled connection for request-time queries (`drizzle-orm/neon-http`) |
+| `DATABASE_URL_UNPOOLED` | Neon integration (Production, Preview); set by hand for Development | Direct connection for migrations |
 | `CFBD_API_KEY` | CollegeFootballData account | Game schedules and scores |
 | `CRON_SECRET` | Generated | Bearer token required by scheduled route handlers |
 | `NEXT_PUBLIC_APP_URL` | Set by hand | Absolute URL used in magic links and texts. Production: `https://slate.midfield-mafia.com`. Development: `http://localhost:3000`. Unset in Preview; code should fall back to `https://${VERCEL_URL}` |
@@ -60,8 +60,14 @@ git add drizzle/           # commit the SQL with the schema change
 The `build` script runs `drizzle-kit migrate` against `DATABASE_URL_UNPOOLED` before
 `next build`, so every deployment corresponds to an already-migrated database. Because the
 Neon integration creates a database branch per Preview deployment, each preview migrates its
-own branch and production data is never touched by a PR. Locally, run `npx drizzle-kit migrate`
+own branch and production data is never touched by a PR. Locally, run `npm run migrate`
 once after pulling schema changes.
+
+Neon branches: `main` is production. Vercel creates `preview/<git-branch>` per Preview
+deployment and injects that branch's connection string into the deployment only. The
+`development` branch backs the Vercel Development environment, so `.env.local`, `npm run
+migrate`, and `npm run seed` never touch production. Its two connection strings are set by
+hand in Vercel (Development only) because the integration serves only Production and Preview.
 
 `npm run migrate` is the same command with the config's `.env.local` fallback, for local use.
 
