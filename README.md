@@ -42,7 +42,7 @@ Managed in Vercel (Production, Preview, Development). Pull them locally with `ve
 | `DATABASE_URL_UNPOOLED` | Neon integration | Direct connection for migrations |
 | `CFBD_API_KEY` | CollegeFootballData account | Game schedules and scores |
 | `CRON_SECRET` | Generated | Bearer token required by scheduled route handlers |
-| `NEXT_PUBLIC_APP_URL` | Vercel project | Absolute URL used in magic links and texts |
+| `NEXT_PUBLIC_APP_URL` | Set by hand | Absolute URL used in magic links and texts. Production: `https://slate.midfield-mafia.com`. Development: `http://localhost:3000`. Unset in Preview; code should fall back to `https://${VERCEL_URL}` |
 | `PINGRAM_API_KEY` | Pingram dashboard | Sends text messages (free tier, 100 SMS a month) |
 
 ## Database and migrations
@@ -65,6 +65,11 @@ Drizzle and the migrate step are added by the first schema ticket (Members and m
 sign-in); until then `npm run build` is just `next build`.
 
 ## Deploying
+
+Production is [slate.midfield-mafia.com](https://slate.midfield-mafia.com). The domain is
+registered at GoDaddy; an A record for `slate` points at Vercel (`76.76.21.21`) and the apex is
+left free for other Midfield Mafia projects. The `cfb-pickem-eight.vercel.app` URL keeps working
+as an alias.
 
 Pushing to `main` deploys to production. Every other branch and PR gets a Preview deployment
 with its own Neon branch. Vercel Hobby deploys commits from any repo collaborator because the

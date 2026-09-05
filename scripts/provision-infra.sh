@@ -214,8 +214,22 @@ else
   vc login
   vc link
 fi
-ask VERCEL_PROD_URL "Production URL shown on the project page (e.g. https://cfb-pickem.vercel.app):"
-write_env NEXT_PUBLIC_APP_URL "$VERCEL_PROD_URL"
+APP_DOMAIN="slate.midfield-mafia.com"
+VERCEL_PROD_URL="https://$APP_DOMAIN"
+say "Attach the custom domain. midfield-mafia.com is registered at GoDaddy; the app lives"
+say "on the slate subdomain so the apex stays free for other Midfield Mafia projects."
+vc domains add "$APP_DOMAIN" cfb-pickem >/dev/null 2>&1 || note "$APP_DOMAIN already attached (or add failed; check Vercel → Project → Domains)"
+step "In GoDaddy DNS for midfield-mafia.com add: Type A, Name slate, Value 76.76.21.21, TTL default."
+step "Vercel verifies the record on its own (usually a few minutes) and emails you when it is live."
+say "NEXT_PUBLIC_APP_URL is the absolute URL baked into magic links and texts."
+say "Production uses the custom domain; Development uses localhost; Preview is left unset so"
+say "the app falls back to Vercel's per-deployment VERCEL_URL."
+vc env add NEXT_PUBLIC_APP_URL production --value "$VERCEL_PROD_URL" --force >/dev/null \
+  && printf '  %s✓ set%s NEXT_PUBLIC_APP_URL (Production) = %s\n' "$GREEN" "$RESET" "$VERCEL_PROD_URL" \
+  || warn "could not set NEXT_PUBLIC_APP_URL in Vercel; set it by hand to $VERCEL_PROD_URL for Production"
+vc env add NEXT_PUBLIC_APP_URL development --value "http://localhost:3000" --force >/dev/null \
+  || warn "could not set NEXT_PUBLIC_APP_URL (Development) in Vercel"
+write_env NEXT_PUBLIC_APP_URL "http://localhost:3000"
 
 # ── 2. Neon ───────────────────────────────────────────────────────────────
 stage "Neon: Postgres via the Vercel integration"
@@ -318,6 +332,7 @@ summary=$(cat <<MD
 
 - **Vercel**: project \`cfb-pickem\` on Jonah's Hobby team, imported from \`$REPO\`. Production: $VERCEL_PROD_URL. Pushes to \`main\` deploy to production; every other branch gets a Preview deployment.
 - **Neon**: Free plan, installed through the Vercel Marketplace and attached to the project. \`DATABASE_URL\` (pooled) and \`DATABASE_URL_UNPOOLED\` (direct) are injected into all environments; preview branching is on, so each Preview deployment gets its own database branch.
+- **Domain**: \`$APP_DOMAIN\` attached to the project (A record at GoDaddy → 76.76.21.21); \`NEXT_PUBLIC_APP_URL\` is $VERCEL_PROD_URL in Production and http://localhost:3000 in Development.
 - **Env vars in Vercel** (Production, Preview, Development): \`CFBD_API_KEY\` (from Alex), \`CRON_SECRET\` (generated), \`PINGRAM_API_KEY\`. Local copies live in \`.env.local\` via \`npx vercel env pull\`.
 - **Alex's pushes deploy**: $ALEX_DEPLOYS.
 - **Pingram** (free tier, 100 SMS/month, shared sender numbers): account under $PINGRAM_LOGIN; \`PINGRAM_API_KEY\` $PINGRAM_STATUS. No number purchase or carrier verification needed. The Text messaging ticket wires it in.
