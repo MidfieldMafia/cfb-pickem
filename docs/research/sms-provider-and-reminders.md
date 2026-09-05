@@ -82,3 +82,31 @@ Direct answer to "can any option plausibly be sending real texts to real US phon
 - GitHub Actions scheduled workflows — free on public repos (and included minutes on private repos), minimum interval of 5 minutes per GitHub's own docs, though the `schedule` event "can be delayed during periods of high load" (notably the top of every hour) and, on public repos, scheduled workflows auto-disable after 60 days of repo inactivity ([docs.github.com](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)).
 
 **Verifying requests are genuinely from Vercel Cron**: Vercel's docs recommend setting a `CRON_SECRET` environment variable (a random string, 16+ characters) in the project. Vercel automatically sends this value as an `Authorization: Bearer <CRON_SECRET>` header on every cron invocation, and the Route Handler should compare the incoming header against the stored secret before doing any work, returning 401 on mismatch ([vercel.com/docs/cron-jobs/manage-cron-jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)). This same pattern should be reused for any external cron fallback (cron-job.org, GitHub Actions) by having it send the same secret as a bearer token or custom header, so the app can trust either scheduler equally.
+
+## Addendum (2026-09-05): Pingram supersedes Twilio for v1
+
+Decided in conversation after the original research: v1 texting uses **Pingram** (the renamed
+NotificationAPI), not Twilio, because it is the only option found that sends real US SMS with
+no cost, no card, and no carrier registration wait.
+
+- **Free tier**: 100 SMS (US equivalent) and 3,000 emails per month, no credit card, one API key
+  ([pingram.io/pricing](https://www.pingram.io/pricing)).
+- **How it sends**: Pingram owns the telecom side; free accounts send from Pingram's shared
+  650-area-code numbers, so there is nothing to buy or verify
+  ([docs: SMS overview](https://www.pingram.io/docs/sms/overview)).
+- **The caveat**: shared numbers are unregistered. Pingram calls this "suitable for testing and
+  low-volume use" and says to "expect limited throughput and higher filtering risk"
+  ([docs: senders and A2P 10DLC](https://www.pingram.io/docs/sms/sms-senders-and-a2p-10dlc)).
+  A registered dedicated number with managed 10DLC registration (a few business days, sole
+  proprietors eligible without an EIN) needs a paid plan from $20/month, which costs more than
+  Twilio would for a whole season.
+- **Budget fit**: reminders go only to members with incomplete picks, so a 20-person group
+  should use roughly 30-60 texts a month after the first week's magic links. The messaging
+  module must count sends per month and stop short of 100, falling back to the commissioner's
+  copyable reminder.
+- **Fallback**: the messaging module sits behind an interface, so if carrier filtering drops
+  too many texts, swap the implementation to Twilio toll-free (about $20 per season, roughly a
+  week of verification) without touching callers.
+- **API shape** (Node SDK `pingram`): `new Pingram({ apiKey })`, then
+  `pingram.sms.send({ type, to: '+1…', message })`
+  ([docs: send SMS](https://www.pingram.io/docs/quick-start/send-sms)).

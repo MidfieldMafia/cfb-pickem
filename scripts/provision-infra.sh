@@ -196,7 +196,7 @@ vc() { npx -y vercel@latest "$@"; }
 
 TOTAL_STAGES=7
 
-banner "Saturday Slate: provision Neon, Vercel, Twilio"
+banner "Saturday Slate: provision Neon, Vercel, Pingram"
 
 # ── 1. Vercel project ─────────────────────────────────────────────────────
 stage "Vercel: create the project from GitHub"
@@ -289,32 +289,27 @@ else
   SKIPPED+=("Verify a push by Alex produces a Preview deployment")
 fi
 
-# ── 6. Twilio ─────────────────────────────────────────────────────────────
-stage "Twilio: account, toll-free number, verification"
-say "Verification takes 3-5 business days and nothing sends before it clears,"
-say "so this happens now even though the app will not text until the messaging ticket."
-open_url "https://www.twilio.com/try-twilio"
-step "Sign up (or sign in). Skip the guided onboarding if offered."
-step "Upgrade the account: Billing → add a payment method. Trial accounts can only"
-step "text 5 verified numbers, so the family group needs a paid account."
-pause "Account upgraded? Press Enter."
-open_url "https://console.twilio.com/us1/develop/phone-numbers/manage/search"
-step "Buy a number: set Country US, Number type Toll-free, capability SMS. About \$2.15/month."
-ask TWILIO_PHONE_NUMBER "Paste the toll-free number you bought (E.164, e.g. +18005551234):"
-say "Now submit Toll-Free Verification. In the console: Messaging → Regulatory"
-say "Compliance → Toll-Free Verification (the exact menu path may differ slightly)."
-open_url "https://console.twilio.com/us1/develop/sms/regulatory-compliance/toll-free-verification"
-step "Business name: your own name (this is a personal, non-commercial project)."
-step "Website: $VERCEL_PROD_URL. Never use a link shortener anywhere in the form."
-step "Use case: account notifications. Volume: under 1,000 messages a month."
-step "Opt-in: members give their phone number to the commissioner in person and"
-step "consent to weekly pick reminders; they can reply STOP at any time."
-step "Sample message: 'Saturday Slate: picks lock Sat 11:00am CT. Make yours at $VERCEL_PROD_URL. Reply STOP to opt out.'"
-pause "Submitted? Press Enter."
-ask TWILIO_LOGIN "Which email is the Twilio account under?"
-TWILIO_SUBMITTED=$(date +%Y-%m-%d)
-write_env TWILIO_PHONE_NUMBER "$TWILIO_PHONE_NUMBER"
-note "Account SID and Auth Token stay in the Twilio console for now; the messaging ticket wires them in."
+# ── 6. Pingram ────────────────────────────────────────────────────────────
+stage "Pingram: free SMS API key"
+say "Texts go through Pingram's free tier: 100 SMS a month from shared numbers,"
+say "no card, no carrier registration. The app will not send until the messaging"
+say "ticket lands, but the key is captured now so that ticket is not blocked."
+open_url "https://www.pingram.io/"
+step "Sign up (GitHub or email). Stay on the Free plan; do not add a card."
+step "In the dashboard open API Keys and create a secret key (starts with pingram_sk_)."
+ask_secret PINGRAM_API_KEY "Paste the Pingram secret API key:"
+if [[ -n "$PINGRAM_API_KEY" ]]; then
+  vc env add PINGRAM_API_KEY production,preview,development --value "$PINGRAM_API_KEY" --sensitive --force >/dev/null \
+    && printf '  %s✓ set%s PINGRAM_API_KEY in Vercel (production, preview, development)\n' "$GREEN" "$RESET" \
+    || { warn "vercel env add failed for PINGRAM_API_KEY"; SKIPPED+=("PINGRAM_API_KEY in Vercel"); }
+  write_env PINGRAM_API_KEY "$PINGRAM_API_KEY"
+  PINGRAM_STATUS="key set in Vercel"
+else
+  warn "no key entered; skipping"
+  SKIPPED+=("PINGRAM_API_KEY: sign up at pingram.io and run: npx vercel env add PINGRAM_API_KEY production,preview,development --sensitive")
+  PINGRAM_STATUS="not yet set"
+fi
+ask PINGRAM_LOGIN "Which email is the Pingram account under?"
 
 # ── 7. Record on the ticket ───────────────────────────────────────────────
 stage "Record the outcome on the roadmap ticket"
@@ -323,9 +318,9 @@ summary=$(cat <<MD
 
 - **Vercel**: project \`cfb-pickem\` on Jonah's Hobby team, imported from \`$REPO\`. Production: $VERCEL_PROD_URL. Pushes to \`main\` deploy to production; every other branch gets a Preview deployment.
 - **Neon**: Free plan, installed through the Vercel Marketplace and attached to the project. \`DATABASE_URL\` (pooled) and \`DATABASE_URL_UNPOOLED\` (direct) are injected into all environments; preview branching is on, so each Preview deployment gets its own database branch.
-- **Env vars in Vercel** (Production, Preview, Development): \`CFBD_API_KEY\` (from Alex), \`CRON_SECRET\` (generated). Local copies live in \`.env.local\` via \`npx vercel env pull\`.
+- **Env vars in Vercel** (Production, Preview, Development): \`CFBD_API_KEY\` (from Alex), \`CRON_SECRET\` (generated), \`PINGRAM_API_KEY\`. Local copies live in \`.env.local\` via \`npx vercel env pull\`.
 - **Alex's pushes deploy**: $ALEX_DEPLOYS.
-- **Twilio**: paid account under $TWILIO_LOGIN. Toll-free number **$TWILIO_PHONE_NUMBER**. Toll-Free Verification submitted $TWILIO_SUBMITTED; expect 3-5 business days. Account SID and Auth Token are not yet in Vercel; the Text messaging ticket adds them.
+- **Pingram** (free tier, 100 SMS/month, shared sender numbers): account under $PINGRAM_LOGIN; \`PINGRAM_API_KEY\` $PINGRAM_STATUS. No number purchase or carrier verification needed. The Text messaging ticket wires it in.
 - **Local setup** is documented in the README.
 MD
 )
@@ -339,7 +334,7 @@ if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
     gh issue comment "$TICKET" --repo "$REPO" --body "$summary" >/dev/null && printf '  %s✓ commented%s on #%s\n' "$GREEN" "$RESET" "$TICKET"
     if (( ${#SKIPPED[@]} == 0 )) && confirm "Everything is done. Close #$TICKET and add it to the roadmap's Decisions so far?"; then
       gh issue close "$TICKET" --repo "$REPO" --comment "Resolved: infrastructure provisioned, see the comment above." >/dev/null
-      line="- [Task: provision Neon, Vercel, and secrets](https://github.com/$REPO/issues/$TICKET): Vercel project \`cfb-pickem\` at $VERCEL_PROD_URL with Neon Free attached and preview branching on; \`CFBD_API_KEY\` and \`CRON_SECRET\` set in all environments; Twilio toll-free $TWILIO_PHONE_NUMBER bought and verification submitted $TWILIO_SUBMITTED."
+      line="- [Task: provision Neon, Vercel, and secrets](https://github.com/$REPO/issues/$TICKET): Vercel project \`cfb-pickem\` at $VERCEL_PROD_URL with Neon Free attached and preview branching on; \`CFBD_API_KEY\` and \`CRON_SECRET\` set in all environments; Pingram free-tier account created and \`PINGRAM_API_KEY\` $PINGRAM_STATUS."
       body_tmp=$(mktemp)
       gh issue view "$MAP" --repo "$REPO" --json body -q .body | tr -d '\r' \
         | awk -v l="$line" '{ a[NR]=$0 } END {

@@ -43,8 +43,7 @@ Managed in Vercel (Production, Preview, Development). Pull them locally with `ve
 | `CFBD_API_KEY` | CollegeFootballData account | Game schedules and scores |
 | `CRON_SECRET` | Generated | Bearer token required by scheduled route handlers |
 | `NEXT_PUBLIC_APP_URL` | Vercel project | Absolute URL used in magic links and texts |
-
-Twilio credentials are added when the text messaging ticket lands.
+| `PINGRAM_API_KEY` | Pingram dashboard | Sends text messages (free tier, 100 SMS a month) |
 
 ## Database and migrations
 
@@ -77,5 +76,5 @@ takes a few hundred milliseconds longer.
 ## Provisioning from scratch
 
 [`scripts/provision-infra.sh`](scripts/provision-infra.sh) walks the commissioner through
-creating the Vercel project, attaching Neon, setting the secrets, and setting up Twilio. It is
+creating the Vercel project, attaching Neon, setting the secrets, and creating the Pingram account. It is
 idempotent and safe to re-run.
