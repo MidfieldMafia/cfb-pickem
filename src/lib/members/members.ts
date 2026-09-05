@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { newSecret } from "./token";
@@ -63,10 +63,22 @@ export async function listMembers(db: Db, actor: Member): Promise<Member[]> {
   return db.query.members.findMany({ orderBy: [asc(members.joinedAt), asc(members.id)] });
 }
 
-/** Replaces the token so the old link stops working, and signs out every device. */
-export async function regenerateMagicLink(db: Db, actor: Member, memberId: number): Promise<Member> {
+/**
+ * Replaces the token so the old link stops working, and signs out every
+ * device. When a commissioner regenerates their own link, pass the session
+ * they are using so that device stays signed in and can copy the new link.
+ */
+export async function regenerateMagicLink(
+  db: Db,
+  actor: Member,
+  memberId: number,
+  options: { keepSessionId?: string } = {},
+): Promise<Member> {
   requireCommissioner(actor);
-  await db.delete(sessions).where(eq(sessions.memberId, memberId));
+  const keep = memberId === actor.id ? options.keepSessionId : undefined;
+  await db
+    .delete(sessions)
+    .where(keep ? and(eq(sessions.memberId, memberId), ne(sessions.id, keep)) : eq(sessions.memberId, memberId));
   const [updated] = await db
     .update(members)
     .set({ token: newSecret() })

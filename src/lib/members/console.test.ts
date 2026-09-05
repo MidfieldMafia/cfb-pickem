@@ -46,6 +46,19 @@ describe("commissioner console", () => {
     expect((await exchangeToken(db, refreshed.token))?.member.id).toBe(grandma.id);
   });
 
+  test("regenerating your own link keeps the device that did it signed in", async () => {
+    const { db, jonah } = await setup();
+    const thisPhone = await exchangeToken(db, jonah.token);
+    const oldLaptop = await exchangeToken(db, jonah.token);
+
+    const refreshed = await regenerateMagicLink(db, jonah, jonah.id, { keepSessionId: thisPhone!.sessionId });
+
+    expect((await getSession(db, thisPhone!.sessionId))?.id).toBe(jonah.id);
+    expect(await getSession(db, oldLaptop!.sessionId)).toBeNull();
+    expect(await exchangeToken(db, jonah.token)).toBeNull();
+    expect((await exchangeToken(db, refreshed.token))?.member.id).toBe(jonah.id);
+  });
+
   test("a deactivated member cannot sign in and their sessions stop working", async () => {
     const { db, jonah, grandma } = await setup();
     const session = await exchangeToken(db, grandma.token);

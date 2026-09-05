@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { db } from "@/db";
+import { SESSION_COOKIE } from "@/lib/members/cookie";
 import { requireConsole } from "@/lib/members/current";
 import { addMember, InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
 
@@ -27,7 +29,8 @@ export async function addMemberAction(_prev: AddMemberState, formData: FormData)
 
 export async function regenerateAction(formData: FormData) {
   const actor = await requireConsole();
-  await regenerateMagicLink(db(), actor, Number(formData.get("memberId")));
+  const keepSessionId = (await cookies()).get(SESSION_COOKIE)?.value;
+  await regenerateMagicLink(db(), actor, Number(formData.get("memberId")), { keepSessionId });
   revalidatePath("/console/members");
 }
 
