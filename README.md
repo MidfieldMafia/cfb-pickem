@@ -71,6 +71,20 @@ hand in Vercel (Development only) because the integration serves only Production
 
 `npm run migrate` is the same command with the config's `.env.local` fallback, for local use.
 
+## Building a week's slate
+
+Commissioners build each week at `/console/slate`. The page reads that week's FBS games,
+the latest AP poll, and sportsbook spreads from CollegeFootballData (three calls, cached
+in process for ten minutes; "Refresh from feed" bypasses the cache and re-reads kickoffs
+for games already on the slate). Filter to ranked or SEC games, add about ten, flag one
+as the Tiebreaker Game. The Deadline floats at the earliest kickoff until publish and can
+only be moved earlier. Publishing freezes the Deadline and shows the slate to members at
+`/week`; after that a game can only be voided, with a note, never removed. Kickoff times
+render in each viewer's own time zone.
+
+The CollegeFootballData client lives in `src/lib/cfbd/`. Tests never call the real API:
+they replay the recorded Week 2 2026 responses in `src/lib/cfbd/fixtures/`.
+
 ## Seeding and signing in
 
 There are no passwords. Each member has a permanent Magic Link (`/m/<token>`); opening it sets

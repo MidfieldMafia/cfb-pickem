@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Pennant } from "@/components/pennant";
 import { Wordmark } from "@/components/wordmark";
 import { requireConsole } from "@/lib/members/current";
+import { ConsoleNav } from "./console-nav";
 
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const commissioner = await requireConsole();
@@ -21,17 +22,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         </Link>
       </header>
       <div className="flex flex-1 flex-col md:flex-row">
-        <nav className="flex gap-1 border-b border-border px-4 py-2 md:w-56 md:flex-col md:border-b-0 md:border-r md:py-4">
-          <Link
-            href="/console/members"
-            className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground no-underline"
-          >
-            Members
-          </Link>
-          <Link href="/week" className="rounded-md px-3 py-2 text-sm font-semibold no-underline md:mt-auto">
-            Open the app
-          </Link>
-        </nav>
+        <ConsoleNav />
         <main className="flex-1 px-4 py-6">{children}</main>
       </div>
     </div>
