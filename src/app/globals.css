@@ -1,26 +1,149 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ── Saturday Slate tokens ─────────────────────────────────────────
+   Source of truth: docs/design-notes.md. Light is the default and the
+   priority (read outdoors in sun). Every pair here is audited ≥ 4.5:1
+   for text and ≥ 3:1 for borders/fills. Flat color only — no gradients. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F7F1E3;
+  --foreground: #241F1A;
+  --card: #FBF6EC;
+  --card-foreground: #241F1A;
+  --popover: #FBF6EC;
+  --popover-foreground: #241F1A;
+  --primary: #1F4034;
+  --primary-foreground: #FBF6EC;
+  --secondary: #A94B17;
+  --secondary-foreground: #FBF6EC;
+  --muted: #EAE0CC;
+  --muted-foreground: #6F6152;
+  --accent: #EFE7D5;
+  --accent-foreground: #241F1A;
+  --destructive: #8E2B20;
+  --destructive-foreground: #FBF6EC;
+  --border: #9C845F;
+  --input: #9C845F;
+  --ring: #1F4034;
+  --chart-1: #2F6A4F;
+  --chart-2: #A94B17;
+  --chart-3: #856717;
+  --chart-4: #6A9449;
+  --chart-5: #7A6C5A;
+  --radius: 0.375rem;
+
+  /* pick + game states */
+  --win: #6A9449;            --win-foreground: #241F1A;
+  --loss: #5E1F1A;           --loss-foreground: #FBF6EC;
+  --push: #7A6C5A;           --push-foreground: #FBF6EC;
+  --live: #D26A12;           --live-foreground: #241F1A;
+  --locked: #6F6152;         --locked-foreground: #FBF6EC;
+  --pending: #A48746;        --pending-foreground: #241F1A;
+  --leader: #856717;         --leader-foreground: #FBF6EC;
+}
+
+.dark {
+  --background: #1C1714;
+  --foreground: #F2E9D8;
+  --card: #241E19;
+  --card-foreground: #F2E9D8;
+  --popover: #241E19;
+  --popover-foreground: #F2E9D8;
+  --primary: #5C9A74;
+  --primary-foreground: #16120F;
+  --secondary: #D2712E;
+  --secondary-foreground: #16120F;
+  --muted: #2E2720;
+  --muted-foreground: #B3A38B;
+  --accent: #332B23;
+  --accent-foreground: #F2E9D8;
+  --destructive: #D46A50;
+  --destructive-foreground: #16120F;
+  --border: #7A6952;
+  --input: #7A6952;
+  --ring: #5C9A74;
+  --chart-1: #5C9A74;
+  --chart-2: #D2712E;
+  --chart-3: #B08D2E;
+  --chart-4: #93C06B;
+  --chart-5: #8B7C69;
+
+  --win: #93C06B;            --win-foreground: #16120F;
+  --loss: #B24838;           --loss-foreground: #FBF6EC;
+  --push: #8B7C69;           --push-foreground: #16120F;
+  --live: #E8862A;           --live-foreground: #16120F;
+  --locked: #9A8A76;         --locked-foreground: #16120F;
+  --pending: #C4A768;        --pending-foreground: #16120F;
+  --leader: #B08D2E;         --leader-foreground: #16120F;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-win: var(--win);
+  --color-win-foreground: var(--win-foreground);
+  --color-loss: var(--loss);
+  --color-loss-foreground: var(--loss-foreground);
+  --color-push: var(--push);
+  --color-push-foreground: var(--push-foreground);
+  --color-live: var(--live);
+  --color-live-foreground: var(--live-foreground);
+  --color-locked: var(--locked);
+  --color-locked-foreground: var(--locked-foreground);
+  --color-pending: var(--pending);
+  --color-pending-foreground: var(--pending-foreground);
+  --color-leader: var(--leader);
+  --color-leader-foreground: var(--leader-foreground);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 8px);
+
+  /* type — set by next/font in layout.tsx */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-chivo), var(--font-manrope), sans-serif;
+
+  /* spacing is Tailwind's 4px scale (p-1 = 4px … p-12 = 48px). Named steps: */
+  --spacing-tap: 2.75rem; /* 44px — minimum tap target: h-tap, min-w-tap, size-tap */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "tnum" 1; /* tabular numerals everywhere: scores, records, points */
+    text-wrap: pretty;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  h1, h2, h3, .font-display { font-family: var(--font-display); font-weight: 900; letter-spacing: -0.01em; }
+  h1 { @apply text-[28px] leading-8; }
+  h2 { @apply text-[22px] leading-7 font-bold; }
+  /* shadcn defaults to 36px buttons/inputs; the app minimum is 44px. */
+  button, [role="button"], input, select, textarea, a.tap { min-height: var(--spacing-tap); }
 }

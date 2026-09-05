@@ -1,0 +1,74 @@
+[
+  {
+    "id": "pennants-01",
+    "name": "Pine Wedge",
+    "file": "/avatars/pennants/01.svg",
+    "color": "#1F4034"
+  },
+  {
+    "id": "pennants-02",
+    "name": "Rust Band",
+    "file": "/avatars/pennants/02.svg",
+    "color": "#A94B17"
+  },
+  {
+    "id": "pennants-03",
+    "name": "Brass Stripe",
+    "file": "/avatars/pennants/03.svg",
+    "color": "#856717"
+  },
+  {
+    "id": "pennants-04",
+    "name": "Moss Dot",
+    "file": "/avatars/pennants/04.svg",
+    "color": "#6A9449"
+  },
+  {
+    "id": "pennants-05",
+    "name": "Oxblood Bars",
+    "file": "/avatars/pennants/05.svg",
+    "color": "#5E1F1A"
+  },
+  {
+    "id": "pennants-06",
+    "name": "Maroon Chevrons",
+    "file": "/avatars/pennants/06.svg",
+    "color": "#75222C"
+  },
+  {
+    "id": "pennants-07",
+    "name": "Ink Block",
+    "file": "/avatars/pennants/07.svg",
+    "color": "#241F1A"
+  },
+  {
+    "id": "pennants-08",
+    "name": "Clay Split",
+    "file": "/avatars/pennants/08.svg",
+    "color": "#7A6C5A"
+  },
+  {
+    "id": "pennants-09",
+    "name": "Ember Arrow",
+    "file": "/avatars/pennants/09.svg",
+    "color": "#D26A12"
+  },
+  {
+    "id": "pennants-10",
+    "name": "Ochre Lines",
+    "file": "/avatars/pennants/10.svg",
+    "color": "#A48746"
+  },
+  {
+    "id": "pennants-11",
+    "name": "Fern Field",
+    "file": "/avatars/pennants/11.svg",
+    "color": "#2F6A4F"
+  },
+  {
+    "id": "pennants-12",
+    "name": "Tan Tri",
+    "file": "/avatars/pennants/12.svg",
+    "color": "#9C845F"
+  }
+]
