@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function Console() {
-  redirect("/console/members");
+  redirect("/console/slate");
 }
