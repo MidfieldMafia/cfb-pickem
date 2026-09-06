@@ -15,7 +15,7 @@ import {
   type GameResult,
   type ResultAudit,
 } from "@/lib/results/results";
-import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
+import { activeSeason, isWeekNumber, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
 import {
   chooseResultsWeekAction,
   clearOverrideAction,
@@ -26,7 +26,6 @@ import {
 } from "./actions";
 import { ResultForm } from "./result-form";
 
-const WEEK_NUMBERS = Array.from({ length: 15 }, (_, i) => i + 1);
 const REVIEW_HOURS = REVIEW_AFTER_MS / 3600_000;
 
 function Team({ name, rank }: { name: string; rank: number | null }) {
@@ -67,10 +66,9 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
   const season = await activeSeason(database);
   const existing = await seasonWeeks(database, season);
   const requested = Number(params.week);
-  const weekNumber =
-    Number.isInteger(requested) && requested > 0
-      ? requested
-      : existing.filter((w) => w.published).at(-1)?.weekNumber ?? existing.at(-1)?.weekNumber ?? 1;
+  const weekNumber = isWeekNumber(requested)
+    ? requested
+    : existing.filter((w) => w.published).at(-1)?.weekNumber ?? existing.at(-1)?.weekNumber ?? 1;
   const week = await openWeek(database, commissioner, weekNumber);
   const slate = await slateFor(database, week.id);
   const log = await resultAuditsFor(database, commissioner, week.id);
