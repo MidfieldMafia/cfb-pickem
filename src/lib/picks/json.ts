@@ -6,6 +6,7 @@
  */
 import type { GameDetail } from "@/lib/scoring/types";
 import type { PickSheet } from "./picks";
+import type { SheetProgress } from "./progress";
 
 export interface GameJson {
   id: number;
@@ -44,6 +45,12 @@ export interface SheetJson {
   /** True when the Lock sits on a Void game: a Dropped Lock. Scores nothing; movable until the Deadline. */
   lockDropped: boolean;
   tiebreakerGuess: number | null;
+  /**
+   * What was left before the Deadline when the server built this sheet. A
+   * screen that has changed something the server has not answered yet recounts
+   * with `sheetProgress` rather than reading a count that is one save behind.
+   */
+  progress: SheetProgress;
 }
 
 export function toSheetJson(sheet: PickSheet): SheetJson {
@@ -73,6 +80,7 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     lockGameId: sheet.lockGameId,
     lockDropped: sheet.lockDropped,
     tiebreakerGuess: sheet.tiebreakerGuess,
+    progress: sheet.progress,
   };
 }
 

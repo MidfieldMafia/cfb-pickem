@@ -25,6 +25,7 @@ import { put } from "@/lib/picks/client";
 import { formatCountdown, useDeadlineClock } from "@/lib/picks/clock";
 import { teamName, type GameJson, type SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
+import { firstOpenGame, liveGames, remainingLabel, sheetProgress } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
 
 function StepRow({
@@ -118,19 +119,24 @@ export function Review({ initial }: { initial: SheetJson }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const liveGames = sheet.games.filter((g) => !g.void);
   const pickFor = (gameId: number) => sheet.picks.find((p) => p.gameId === gameId);
-  const pickedCount = liveGames.filter((g) => pickFor(g.id)).length;
-  const missing = liveGames.length - pickedCount;
+  const picked = (gameId: number) => pickFor(gameId) !== undefined;
+  // Recounted from the sheet in hand rather than read off `sheet.progress`: an
+  // optimistic Lock or Guess has to move these before the server answers.
+  const progress = sheetProgress({
+    games: sheet.games,
+    picked,
+    lockGameId: sheet.lockGameId,
+    lockDropped: sheet.lockDropped,
+    tiebreakerGuess: sheet.tiebreakerGuess,
+  });
+  const open = progress.liveGames - progress.picksMade;
   const lockGame = sheet.games.find((g) => g.id === sheet.lockGameId);
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
-  const lockDropped = sheet.lockDropped;
   const tiebreakerGame = sheet.games.find((g) => g.id === sheet.tiebreakerGameId);
-  const guessDone = sheet.tiebreakerGuess !== null;
-  const todo = [missing > 0, !lockGame || lockDropped, !guessDone].filter(Boolean).length;
-  const steps = liveGames.length + 2;
-  const stepsDone = pickedCount + (lockGame && !lockDropped ? 1 : 0) + (guessDone ? 1 : 0);
-  const firstOpen = liveGames.find((g) => !pickFor(g.id));
+  const steps = progress.liveGames + 2;
+  const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
+  const firstOpen = firstOpenGame(sheet.games, picked);
   const groups = groupByKickoff(sheet.games);
   const tiebreakerLine = tiebreakerGame
     ? `Combined final score, ${tiebreakerGame.awayTeam} at ${tiebreakerGame.homeTeam}`
@@ -241,12 +247,15 @@ export function Review({ initial }: { initial: SheetJson }) {
             )}
           </p>
         </div>
-        <Badge variant={todo ? "outline" : "default"} className="mt-1">
+        <Badge variant={progress.remaining ? "outline" : "default"} className="mt-1">
           {stepsDone} of {steps}
         </Badge>
       </header>
 
-      <Progress value={liveGames.length ? (pickedCount / liveGames.length) * 100 : 0} aria-label="Picks made" />
+      <Progress
+        value={progress.liveGames ? (progress.picksMade / progress.liveGames) * 100 : 0}
+        aria-label="Picks made"
+      />
 
       {locked ? (
         <div role="status" className="flex items-center gap-2 rounded-md bg-locked p-3 text-sm text-locked-foreground">
@@ -257,46 +266,42 @@ export function Review({ initial }: { initial: SheetJson }) {
 
       <section
         className={`grid gap-1.5 rounded-xl border p-2.5 ${
-          todo && !locked ? "border-secondary bg-accent" : "border-border bg-card"
+          progress.remaining && !locked ? "border-secondary bg-accent" : "border-border bg-card"
         }`}
       >
         <div className="flex min-h-5 items-center gap-2">
-          <span className={`flex-1 ${LABEL} ${todo && !locked ? "" : "text-muted-foreground"}`}>
-            {locked
-              ? `Week ${sheet.weekNumber} is in the books`
-              : todo
-                ? `${plural(todo, "thing")} left before the deadline`
-                : `You're all set for Week ${sheet.weekNumber}`}
+          <span className={`flex-1 ${LABEL} ${progress.remaining && !locked ? "" : "text-muted-foreground"}`}>
+            {remainingLabel(progress, sheet.weekNumber, locked)}
           </span>
-          {!todo && !locked ? <Check size={16} strokeWidth={3} className="text-win-foreground" /> : null}
+          {!progress.remaining && !locked ? <Check size={16} strokeWidth={3} className="text-win-foreground" /> : null}
         </div>
         <StepRow
-          done={missing === 0}
+          done={open === 0}
           label="Make every pick"
-          detail={missing ? `${plural(missing, "game")} still open` : `All ${liveGames.length} picked`}
-          action={missing ? "Set" : "Change"}
+          detail={open ? `${plural(open, "game")} still open` : `All ${progress.liveGames} picked`}
+          action={open ? "Set" : "Change"}
           disabled={locked}
           onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.id}` : "/picks")}
         />
         <StepRow
-          done={!!lockGame && !lockDropped}
+          done={progress.lockSet}
           label="Lock of the Week"
           detail={
             lockGame && lockPick
-              ? lockDropped
+              ? sheet.lockDropped
                 ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
                 : `${teamName(lockGame, lockPick.teamId)} counts double`
               : "One pick counts double"
           }
-          action={lockGame && !lockDropped ? "Change" : "Set"}
+          action={progress.lockSet ? "Change" : "Set"}
           disabled={locked}
           onClick={() => setLockOpen(true)}
         />
         <StepRow
-          done={guessDone}
+          done={progress.guessSet}
           label="Tiebreaker Guess"
-          detail={guessDone ? `${sheet.tiebreakerGuess} points combined` : tiebreakerLine}
-          action={guessDone ? "Change" : "Set"}
+          detail={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : tiebreakerLine}
+          action={progress.guessSet ? "Change" : "Set"}
           disabled={locked}
           onClick={() => document.getElementById("tiebreaker-guess")?.focus()}
         />
@@ -324,7 +329,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         >
           <span
             className={`grid size-9 place-items-center rounded-full ${
-              lockGame && !lockDropped ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+              progress.lockSet ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
             }`}
           >
             <Lock size={18} />
@@ -334,7 +339,7 @@ export function Review({ initial }: { initial: SheetJson }) {
               <>
                 <span className="font-display text-lg leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
                 <span className="text-xs text-muted-foreground">
-                  {lockDropped
+                  {sheet.lockDropped
                     ? locked
                       ? "That game is void, so no Lock counts this week"
                       : "That game is void and scores zero; choose another Lock"
@@ -351,7 +356,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             )}
           </span>
           {locked ? null : (
-            <span className="text-sm font-semibold text-secondary">{lockGame && !lockDropped ? "Change" : "Choose"}</span>
+            <span className="text-sm font-semibold text-secondary">{progress.lockSet ? "Change" : "Choose"}</span>
           )}
         </button>
         {lockError ? (
@@ -378,7 +383,7 @@ export function Review({ initial }: { initial: SheetJson }) {
                 setGuess(e.target.value.replace(/\D/g, ""));
                 setGuessState({});
               }}
-              className={guessDone ? "" : "border-secondary"}
+              className={progress.guessSet ? "" : "border-secondary"}
             />
             <Button type="submit" variant="outline" disabled={locked || guessState.pending}>
               {guessState.pending ? "Saving…" : "Save"}
@@ -408,10 +413,10 @@ export function Review({ initial }: { initial: SheetJson }) {
             <DrawerDescription>One of your picks. It scores double if it wins; nothing extra if it loses.</DrawerDescription>
           </DrawerHeader>
           <div className="grid max-h-80 gap-1.5 overflow-y-auto px-4">
-            {pickedCount === 0 ? (
+            {progress.picksMade === 0 ? (
               <p className="py-3 text-center text-sm text-muted-foreground">Make a pick first, then lock it.</p>
             ) : null}
-            {liveGames.map((game) => {
+            {liveGames(sheet.games).map((game) => {
               const pick = pickFor(game.id);
               if (!pick) return null;
               const on = sheet.lockGameId === game.id;
