@@ -18,7 +18,7 @@ export default async function Welcome() {
         </h1>
         {returning ? null : (
           <p className="text-muted-foreground">
-            This link is yours. Keep it; it signs you in on any phone.
+            This link is yours &mdash; keep it, it signs you in on any phone.
           </p>
         )}
       </div>

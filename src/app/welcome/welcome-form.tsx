@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useActionState } from "react";
 import { SECTION_LABEL } from "@/components/section-label";
@@ -58,7 +59,9 @@ export function WelcomeForm({
             </label>
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">Twelve pennants. Pick the one that feels like you.</p>
+        <p className="text-sm text-muted-foreground">
+          Twelve pennants, one per member. Pick the one that feels like you.
+        </p>
       </fieldset>
 
       {state.error ? (
@@ -70,6 +73,7 @@ export function WelcomeForm({
       <div className="mt-auto pt-4">
         <Button type="submit" size="lg" className="w-full" disabled={pending}>
           {pending ? "Saving…" : returning ? "Save" : "Continue"}
+          {pending || returning ? null : <ArrowRight aria-hidden />}
         </Button>
       </div>
     </form>
