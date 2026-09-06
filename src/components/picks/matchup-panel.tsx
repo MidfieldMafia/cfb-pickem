@@ -1,8 +1,16 @@
+import { CAPS_LABEL as LABEL } from "@/components/section-label";
 import { matchupColors } from "@/lib/matchup-colors";
 import type { MatchupDetail } from "./types";
 
-const LABEL = "font-bold uppercase tracking-[0.08em] text-secondary";
 const ROW = "grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 text-[13px] tabular-nums";
+
+/** The form comparison, in the order the panel stacks the bars. */
+const STATS = [
+  { key: "pointsFor", label: "Points / game", lowerBetter: false },
+  { key: "pointsAgainst", label: "Points allowed", lowerBetter: true },
+  { key: "yardsFor", label: "Yards / game", lowerBetter: false },
+  { key: "yardsAgainst", label: "Yards allowed", lowerBetter: true },
+] as const;
 
 /** Splits "Georgia −6.5" into what each side of the spread row shows. */
 function spreadSides(spread: string, away: string): [string, string] {
@@ -112,36 +120,17 @@ export function MatchupPanel({
 
       {detail ? (
         <div className="grid gap-1.5">
-          <StatBar
-            awayTeam={awayTeam}
-            homeTeam={homeTeam}
-            label="Points / game"
-            away={detail.away.pointsFor}
-            home={detail.home.pointsFor}
-          />
-          <StatBar
-            awayTeam={awayTeam}
-            homeTeam={homeTeam}
-            label="Points allowed"
-            away={detail.away.pointsAgainst}
-            home={detail.home.pointsAgainst}
-            lowerBetter
-          />
-          <StatBar
-            awayTeam={awayTeam}
-            homeTeam={homeTeam}
-            label="Yards / game"
-            away={detail.away.yardsFor}
-            home={detail.home.yardsFor}
-          />
-          <StatBar
-            awayTeam={awayTeam}
-            homeTeam={homeTeam}
-            label="Yards allowed"
-            away={detail.away.yardsAgainst}
-            home={detail.home.yardsAgainst}
-            lowerBetter
-          />
+          {STATS.map(({ key, label, lowerBetter }) => (
+            <StatBar
+              key={key}
+              awayTeam={awayTeam}
+              homeTeam={homeTeam}
+              label={label}
+              away={detail.away[key]}
+              home={detail.home[key]}
+              lowerBetter={lowerBetter}
+            />
+          ))}
         </div>
       ) : null}
 

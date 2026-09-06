@@ -5,10 +5,11 @@
  * screens consume, joined to a Game by CollegeFootballData id and snapshotted
  * onto the slate; the scoring engine never reads any of it.
  */
-import type { GameDetail, TeamDetail, Weather } from "@/lib/scoring/types";
+import { hourIn } from "@/lib/intl-time";
+import type { GameDetail, SkyIcon, TeamDetail, Weather } from "@/lib/scoring/types";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { rankLookup } from "./rankings";
-import type { CfbdClient, CfbdGame, CfbdGameWeather, CfbdVenue, WeekQuery } from "./types";
+import type { CfbdBettingGame, CfbdClient, CfbdGame, CfbdGameWeather, CfbdVenue, WeekQuery } from "./types";
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -41,14 +42,17 @@ function pointsByTeam(seasonGames: CfbdGame[]): Map<number, Tally> {
   return tallies;
 }
 
-/** Hour of day at the venue, for choosing the moon over the sun. Falls back to UTC. */
-function localHour(at: Date, timeZone: string | null): number {
-  try {
-    const text = new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: timeZone ?? "UTC" }).format(at);
-    return Number(text);
-  } catch {
-    return at.getUTCHours();
+/**
+ * The line the first sportsbook posted for each game, preferring the feed's own
+ * formatting. Shared with `weekCandidates`, which shows it on the slate builder.
+ */
+export function bookLines(betting: CfbdBettingGame[]): Map<number, string> {
+  const lines = new Map<number, string>();
+  for (const b of betting) {
+    const line = b.lines.find((l) => l.spread !== null);
+    if (line) lines.set(b.id, line.formattedSpread ?? `${line.spread}`);
   }
+  return lines;
 }
 
 /**
@@ -56,7 +60,7 @@ function localHour(at: Date, timeZone: string | null): number {
  * feed: 1 clear, 2 fair, 3 cloudy, 7 light rain, 8 rain, 18 heavy rain shower,
  * 25 thunderstorm; 0 with no text means unknown, so the chance of rain decides.
  */
-export function skyIcon(code: number | null, rainChance: number | null, night: boolean): string {
+export function skyIcon(code: number | null, rainChance: number | null, night: boolean): SkyIcon {
   switch (code) {
     case 1:
       return night ? "moon" : "sun";
@@ -84,7 +88,7 @@ function toWeather(
   venue: CfbdVenue | undefined,
 ): Weather | null {
   if (!w || w.temperature === null || w.gameIndoors) return null;
-  const hour = localHour(kickoff, venue?.timezone ?? null);
+  const hour = hourIn(kickoff, venue?.timezone ?? "UTC");
   const night = hour >= 19 || hour < 6;
   return {
     temperature: Math.round(w.temperature),
@@ -127,11 +131,7 @@ export async function weekDetails(
     ]);
 
   const ranks = rankLookup(pollWeeks, query.week);
-  const lines = new Map<number, string>();
-  for (const b of betting) {
-    const line = b.lines.find((l) => l.spread !== null);
-    if (line) lines.set(b.id, line.formattedSpread ?? `${line.spread}`);
-  }
+  const lines = bookLines(betting);
   const recordByTeam = new Map(records.map((r) => [r.teamId, r.total]));
   const statsByTeam = new Map<string, Map<string, number>>();
   for (const s of stats) {
@@ -167,8 +167,8 @@ export async function weekDetails(
     return {
       rank: ranks.get(teamId) ?? null,
       record: record ? `${record.wins}–${record.losses}${record.ties ? `–${record.ties}` : ""}` : "0–0",
-      pointsFor: tally ? round1(tally.pointsFor / tally.games) : null,
-      pointsAgainst: tally ? round1(tally.pointsAgainst / tally.games) : null,
+      pointsFor: average(tally?.pointsFor, tally?.games),
+      pointsAgainst: average(tally?.pointsAgainst, tally?.games),
       yardsFor: average(teamStats?.get("totalYards"), played),
       yardsAgainst: average(teamStats?.get("totalYardsOpponent"), played),
     };

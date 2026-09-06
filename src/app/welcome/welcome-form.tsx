@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { useActionState } from "react";
+import { SECTION_LABEL } from "@/components/section-label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Avatar } from "@/lib/avatars";
+import { MAX_DISPLAY_NAME } from "@/lib/members/limits";
 import { saveWelcome, type WelcomeState } from "./actions";
 
 export function WelcomeForm({
@@ -23,14 +25,14 @@ export function WelcomeForm({
   return (
     <form action={action} className="flex flex-1 flex-col gap-6">
       <div className="space-y-2">
-        <label htmlFor="displayName" className="block text-xs font-bold uppercase tracking-[0.08em] text-secondary">
+        <label htmlFor="displayName" className={`block ${SECTION_LABEL}`}>
           Your name on the leaderboard
         </label>
         <Input
           id="displayName"
           name="displayName"
           defaultValue={displayName}
-          maxLength={40}
+          maxLength={MAX_DISPLAY_NAME}
           required
           autoComplete="nickname"
           className="text-lg"
@@ -38,7 +40,7 @@ export function WelcomeForm({
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">Pick your pennant</legend>
+        <legend className={SECTION_LABEL}>Pick your pennant</legend>
         <div className="grid grid-cols-4 gap-2">
           {avatars.map((avatar) => (
             <label key={avatar.id} className="cursor-pointer">

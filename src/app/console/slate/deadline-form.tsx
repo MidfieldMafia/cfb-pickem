@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
+import { useActionState, useState } from "react";
+import { useHydrated } from "@/components/local-time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { setDeadlineAction, type SlateActionState } from "./actions";
@@ -13,19 +14,13 @@ function toLocalInput(at: Date): string {
   )}`;
 }
 
-const subscribe = () => () => {};
-
 /**
  * The visible field is in the viewer's time zone; the hidden field carries the
  * UTC instant the server acts on, so the server never guesses a zone.
  */
 export function DeadlineForm({ weekId, deadline }: { weekId: number; deadline: Date }) {
   const [state, action, pending] = useActionState<SlateActionState, FormData>(setDeadlineAction, {});
-  const mounted = useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false,
-  );
+  const mounted = useHydrated();
   const [iso, setIso] = useState(deadline.toISOString());
 
   return (

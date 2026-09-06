@@ -19,11 +19,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { LocalTime } from "@/components/local-time";
+import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { Wordmark } from "@/components/wordmark";
 import { put } from "@/lib/picks/client";
 import { formatCountdown, useDeadlineClock } from "@/lib/picks/clock";
 import { teamName, type GameJson, type SheetJson } from "@/lib/picks/json";
-import { MAX_TIEBREAKER_GUESS } from "@/lib/picks/limits";
+import { tiebreakerGuessError } from "@/lib/picks/limits";
+import { plural } from "@/lib/plural";
 
 function StepRow({
   done,
@@ -65,7 +67,6 @@ function StepRow({
   );
 }
 
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-secondary";
 
 /**
  * Every pick on one screen. Tap a row to change it in the pick flow; choose
@@ -76,9 +77,8 @@ const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-secondary";
 export function Review({ initial }: { initial: SheetJson }) {
   const router = useRouter();
   const [sheet, setSheet] = useState(initial);
-  const [lockedByServer, setLockedByServer] = useState(initial.locked);
   const { remainingMs, passed, sync } = useDeadlineClock(sheet.deadline, sheet.serverNow);
-  const locked = lockedByServer || passed;
+  const locked = sheet.locked || passed;
 
   const [lockOpen, setLockOpen] = useState(false);
   const [lockError, setLockError] = useState<string | null>(null);
@@ -102,7 +102,6 @@ export function Review({ initial }: { initial: SheetJson }) {
           lockGameId: touched.current.lock ? current.lockGameId : fresh.lockGameId,
           tiebreakerGuess: touched.current.guess ? current.tiebreakerGuess : fresh.tiebreakerGuess,
         }));
-        setLockedByServer(fresh.locked);
         sync(fresh.serverNow);
         setGuess((current) =>
           current === "" && !touched.current.guess && fresh.tiebreakerGuess !== null ? String(fresh.tiebreakerGuess) : current,
@@ -132,6 +131,9 @@ export function Review({ initial }: { initial: SheetJson }) {
   const stepsDone = pickedCount + (lockGame && !lockVoid ? 1 : 0) + (guessDone ? 1 : 0);
   const firstOpen = liveGames.find((g) => !pickFor(g.id));
   const groups = groupByKickoff(sheet.games);
+  const tiebreakerLine = tiebreakerGame
+    ? `Combined final score, ${tiebreakerGame.awayTeam} at ${tiebreakerGame.homeTeam}`
+    : "Combined final score of the Tiebreaker Game";
 
   const chooseLock = async (gameId: number | null) => {
     setLockPending(true);
@@ -148,14 +150,15 @@ export function Review({ initial }: { initial: SheetJson }) {
     }
     setSheet((s) => ({ ...s, lockGameId: previous }));
     setLockError(result.error);
-    if (result.locked) setLockedByServer(true);
+    if (result.locked) setSheet((s) => ({ ...s, locked: true }));
   };
 
   const saveGuess = async (event: FormEvent) => {
     event.preventDefault();
     const value = Number(guess);
-    if (guess.trim() === "" || !Number.isInteger(value) || value < 0 || value > MAX_TIEBREAKER_GUESS) {
-      setGuessState({ error: `Enter a whole number of points, 0 to ${MAX_TIEBREAKER_GUESS}.` });
+    const invalid = guess.trim() === "" ? "Enter a guess first." : tiebreakerGuessError(value);
+    if (invalid) {
+      setGuessState({ error: invalid });
       return;
     }
     setGuessState({ pending: true });
@@ -168,7 +171,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       return;
     }
     setGuessState({ error: result.error });
-    if (result.locked) setLockedByServer(true);
+    if (result.locked) setSheet((s) => ({ ...s, locked: true }));
   };
 
   const pickRow = (game: GameJson) => {
@@ -259,7 +262,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             {locked
               ? `Week ${sheet.weekNumber} is in the books`
               : todo
-                ? `${todo} thing${todo === 1 ? "" : "s"} left before the deadline`
+                ? `${plural(todo, "thing")} left before the deadline`
                 : `You're all set for Week ${sheet.weekNumber}`}
           </span>
           {!todo && !locked ? <Check size={16} strokeWidth={3} className="text-win-foreground" /> : null}
@@ -267,7 +270,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         <StepRow
           done={missing === 0}
           label="Make every pick"
-          detail={missing ? `${missing} game${missing === 1 ? "" : "s"} still open` : `All ${liveGames.length} picked`}
+          detail={missing ? `${plural(missing, "game")} still open` : `All ${liveGames.length} picked`}
           action={missing ? "Set" : "Change"}
           disabled={locked}
           onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.id}` : "/picks")}
@@ -289,13 +292,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         <StepRow
           done={guessDone}
           label="Tiebreaker Guess"
-          detail={
-            guessDone
-              ? `${sheet.tiebreakerGuess} points combined`
-              : tiebreakerGame
-                ? `Combined final score, ${tiebreakerGame.awayTeam} at ${tiebreakerGame.homeTeam}`
-                : "Combined final score of the Tiebreaker Game"
-          }
+          detail={guessDone ? `${sheet.tiebreakerGuess} points combined` : tiebreakerLine}
           action={guessDone ? "Change" : "Set"}
           disabled={locked}
           onClick={() => document.getElementById("tiebreaker-guess")?.focus()}
@@ -359,11 +356,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       <section>
         <h2 className={`pb-1 pt-2 ${LABEL}`}>Tiebreaker Guess</h2>
         <form onSubmit={saveGuess} className="grid gap-2">
-          <p className="text-sm text-muted-foreground">
-            {tiebreakerGame
-              ? `Combined final score, ${tiebreakerGame.awayTeam} at ${tiebreakerGame.homeTeam}. Closest guess wins ties.`
-              : "Combined final score of the Tiebreaker Game. Closest guess wins ties."}
-          </p>
+          <p className="text-sm text-muted-foreground">{tiebreakerLine}. Closest guess wins ties.</p>
           <div className="flex gap-2">
             <Input
               id="tiebreaker-guess"
@@ -407,7 +400,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             <DrawerDescription>One of your picks. It scores double if it wins; nothing extra if it loses.</DrawerDescription>
           </DrawerHeader>
           <div className="grid max-h-80 gap-1.5 overflow-y-auto px-4">
-            {liveGames.filter((g) => pickFor(g.id)).length === 0 ? (
+            {pickedCount === 0 ? (
               <p className="py-3 text-center text-sm text-muted-foreground">Make a pick first, then lock it.</p>
             ) : null}
             {liveGames.map((game) => {

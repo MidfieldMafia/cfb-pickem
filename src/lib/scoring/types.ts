@@ -157,6 +157,9 @@ export interface SeasonResult {
  * out. Screens join it to a `Game` by id.
  */
 
+/** The Lucide icons the forecast can ask for. */
+export type SkyIcon = "sun" | "moon" | "cloud" | "cloud-sun" | "cloud-rain" | "cloud-sun-rain";
+
 export interface Weather {
   /** Degrees Fahrenheit. From /games/weather. */
   temperature: number;
@@ -166,8 +169,7 @@ export interface Weather {
    * it below 20. Null when the kickoff is past the forecast horizon.
    */
   precipitation: number | null;
-  /** Lucide icon name: sun, moon, cloud, cloud-sun, cloud-rain, cloud-sun-rain. */
-  icon: string;
+  icon: SkyIcon;
   /** Miles per hour. From /games/weather. */
   wind: number;
 }

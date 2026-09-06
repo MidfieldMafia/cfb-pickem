@@ -1,3 +1,5 @@
+import { hourIn } from "@/lib/intl-time";
+
 /**
  * Review groups picks by kickoff window. Windows are an Eastern-time
  * convention in college football — a Central viewer still calls the 11am
@@ -8,11 +10,7 @@
  * slate still groups sensibly.
  */
 export function windowLabel(kickoff: string | Date): string {
-  const hour = Number(
-    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/New_York" }).format(
-      new Date(kickoff),
-    ),
-  );
+  const hour = hourIn(kickoff, "America/New_York");
   if (hour < 14) return "Noon";
   if (hour < 18) return "Afternoon";
   return "Night";

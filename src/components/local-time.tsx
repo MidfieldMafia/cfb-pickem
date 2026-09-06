@@ -1,8 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { formatterFor } from "@/lib/intl-time";
 
-export type TimeStyle = "kickoff" | "deadline" | "time" | "slot";
+export type TimeStyle = "kickoff" | "deadline";
 
 const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
   /** "Sat, Sep 12, 3:30 PM" */
@@ -16,17 +17,26 @@ const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
     minute: "2-digit",
     timeZoneName: "short",
   },
-  /** "3:30 PM" */
-  time: { hour: "numeric", minute: "2-digit" },
-  /** "Sat 12:00 PM" — the kickoff slot on Pick entry and the Review groupings. */
-  slot: { weekday: "short", hour: "numeric", minute: "2-digit" },
 };
 
-export function formatLocal(at: Date, style: TimeStyle, timeZone?: string): string {
-  return new Intl.DateTimeFormat("en-US", { ...FORMATS[style], timeZone }).format(at);
+function formatLocal(at: Date, style: TimeStyle, timeZone?: string): string {
+  return formatterFor({ ...FORMATS[style], timeZone }, `${style}|${timeZone ?? ""}`).format(at);
 }
 
 const subscribe = () => () => {};
+
+/**
+ * False on the server and on the first client pass, true after hydration. For
+ * the handful of places that must render the same markup both times and only
+ * then reach for something browser-only, such as the viewer's time zone.
+ */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
+}
 
 /**
  * A timestamp in the viewer's own time zone. The server renders UTC; the

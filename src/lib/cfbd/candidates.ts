@@ -1,10 +1,7 @@
 import type { GameDetail } from "@/lib/scoring/types";
 import { noRainChance, type RainChanceSource } from "@/lib/weather/open-meteo";
-import { weekDetails } from "./details";
-import { rankLookup } from "./rankings";
+import { bookLines, weekDetails } from "./details";
 import type { CfbdClient, CfbdGame, WeekQuery } from "./types";
-
-export { rankLookup };
 
 /** A game a commissioner can put on a Slate: the feed's game plus rank and spread. */
 export interface CandidateGame {
@@ -34,38 +31,27 @@ export async function weekCandidates(
   query: WeekQuery,
   rain: RainChanceSource = noRainChance,
 ): Promise<CandidateGame[]> {
-  const [games, pollWeeks, betting, details] = await Promise.all([
+  const [games, betting, details] = await Promise.all([
     cfbd.games(query),
-    cfbd.rankings(query.year),
     cfbd.lines(query),
     weekDetails(cfbd, rain, query),
   ]);
-  const ranks = rankLookup(pollWeeks, query.week);
-  const spreads = new Map<number, string>();
-  for (const game of betting) {
-    const line = game.lines.find((l) => l.spread !== null);
-    if (line) spreads.set(game.id, line.formattedSpread ?? `${line.spread}`);
-  }
+  const spreads = bookLines(betting);
   return games
-    .map((game) => toCandidate(game, ranks, spreads, details.get(game.id)!))
+    .map((game) => toCandidate(game, spreads, details.get(game.id)!))
     .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime() || a.cfbdGameId - b.cfbdGameId);
 }
 
-function toCandidate(
-  game: CfbdGame,
-  ranks: Map<number, number>,
-  spreads: Map<number, string>,
-  detail: GameDetail,
-): CandidateGame {
+function toCandidate(game: CfbdGame, spreads: Map<number, string>, detail: GameDetail): CandidateGame {
   return {
     cfbdGameId: game.id,
     homeTeamId: game.homeId,
     homeTeam: game.homeTeam,
-    homeRank: ranks.get(game.homeId) ?? null,
+    homeRank: detail.home.rank,
     homeConference: game.homeConference,
     awayTeamId: game.awayId,
     awayTeam: game.awayTeam,
-    awayRank: ranks.get(game.awayId) ?? null,
+    awayRank: detail.away.rank,
     awayConference: game.awayConference,
     kickoff: new Date(game.startDate),
     kickoffTbd: game.startTimeTBD,

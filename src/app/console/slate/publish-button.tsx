@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { plural } from "@/lib/plural";
 import { publishAction, type SlateActionState } from "./actions";
 
 export function PublishButton({ weekId, gameCount }: { weekId: number; gameCount: number }) {
@@ -11,7 +12,7 @@ export function PublishButton({ weekId, gameCount }: { weekId: number; gameCount
     <form action={action} className="space-y-2">
       <input type="hidden" name="weekId" value={weekId} />
       <Button type="submit" className="w-full" disabled={pending || gameCount === 0}>
-        {pending ? "Publishing…" : `Publish slate (${gameCount} game${gameCount === 1 ? "" : "s"})`}
+        {pending ? "Publishing…" : `Publish slate (${plural(gameCount, "game")})`}
       </Button>
       {state.error ? (
         <p role="alert" className="text-sm font-semibold text-destructive">

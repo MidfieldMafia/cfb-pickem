@@ -1,5 +1,6 @@
 import type {
   Game,
+  Lock,
   LockResult,
   Member,
   PickResult,
@@ -43,16 +44,42 @@ function scorePick(rules: Rules, game: Game, team: TeamId | undefined, locked: b
   return { gameId: game.id, team, outcome: "incorrect", locked, points: 0 };
 }
 
-function scoreMember(rules: Rules, week: Week, member: Member, tiebreakerTotal: number | null): WeeklyScore {
-  const lock = week.locks.find((l) => l.memberId === member.id);
+/**
+ * Picks, locks and guesses indexed by member once per week, so scoring a member
+ * is a lookup rather than a scan of every other member's rows.
+ */
+interface WeekIndex {
+  picks: Map<string, TeamId>;
+  locks: Map<string, Lock>;
+  guesses: Map<string, number>;
+  voidGameIds: Set<string>;
+}
+
+function indexWeek(week: Week): WeekIndex {
+  return {
+    picks: new Map(week.picks.map((p) => [`${p.memberId}:${p.gameId}`, p.team])),
+    locks: new Map(week.locks.map((l) => [l.memberId, l])),
+    guesses: new Map(week.tiebreakerGuesses.map((t) => [t.memberId, t.guess])),
+    voidGameIds: new Set(week.games.filter((g) => g.void).map((g) => g.id)),
+  };
+}
+
+function scoreMember(
+  rules: Rules,
+  week: Week,
+  index: WeekIndex,
+  member: Member,
+  tiebreakerTotal: number | null,
+): WeeklyScore {
+  const lock = index.locks.get(member.id);
   const picks: PickResult[] = week.games.map((game) => {
-    const pick = week.picks.find((p) => p.memberId === member.id && p.gameId === game.id);
-    return scorePick(rules, game, pick?.team, lock?.gameId === game.id);
+    const team = index.picks.get(`${member.id}:${game.id}`);
+    return scorePick(rules, game, team, lock?.gameId === game.id);
   });
   const lockResult: LockResult | null = lock
-    ? { gameId: lock.gameId, dropped: week.games.some((g) => g.id === lock.gameId && g.void) }
+    ? { gameId: lock.gameId, dropped: index.voidGameIds.has(lock.gameId) }
     : null;
-  const tiebreakerGuess = week.tiebreakerGuesses.find((t) => t.memberId === member.id)?.guess ?? null;
+  const tiebreakerGuess = index.guesses.get(member.id) ?? null;
   const tiebreakerError = tiebreakerTotal === null ? null : Math.abs((tiebreakerGuess ?? 0) - tiebreakerTotal);
   return {
     memberId: member.id,
@@ -98,9 +125,10 @@ export function playedWeek(member: Member, week: Week): boolean {
 
 export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResult {
   const tiebreakerTotal = combinedFinalScore(week.games.find((g) => g.id === week.tiebreakerGameId));
+  const index = indexWeek(week);
   const scores = members
     .filter((member) => playedWeek(member, week))
-    .map((member) => scoreMember(rules, week, member, tiebreakerTotal))
+    .map((member) => scoreMember(rules, week, index, member, tiebreakerTotal))
     .sort(compareWeekly);
   const complete = week.games.every((g) => g.void || g.status === "final");
   return { weekNumber: week.weekNumber, complete, scores, weeklyWin: decideWeeklyWin(scores) };

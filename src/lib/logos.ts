@@ -56,11 +56,6 @@ export function logoSrc(school: string): string | undefined {
   return entry && `/${entry.file}`;
 }
 
-export function smallLogoSrc(school: string): string | undefined {
-  const entry = findLogo(school);
-  return entry && `/${entry.small}`;
-}
-
 /**
  * Only 31 of the 136 schools carry colors, so the fallback is the common path,
  * not an edge case. Inventing a color would misrepresent a school's brand.
