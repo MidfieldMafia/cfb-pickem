@@ -13,6 +13,7 @@ import { LocalTime } from "@/components/local-time";
 import { put } from "@/lib/picks/client";
 import { useDeadlineClock } from "@/lib/picks/clock";
 import type { GameJson, PickJson, SheetJson } from "@/lib/picks/json";
+import { firstOpenGame, sheetProgress } from "@/lib/picks/progress";
 
 type Status = "saved" | "saving" | "failed";
 
@@ -29,10 +30,10 @@ const ADVANCE_DELAY_MS = 400;
 
 const isSaved = (pick: LocalPick | undefined) => pick?.status === "saved";
 
-/** The first live game without a saved pick; a failed save still counts as open. */
+/** Where the flow opens: the first game still to pick, or the top of the slate. */
 function firstUnpicked(games: GameJson[], picks: LocalPicks): number {
-  const index = games.findIndex((g) => !g.void && !isSaved(picks[g.id]));
-  return index === -1 ? 0 : index;
+  const open = firstOpenGame(games, (gameId) => isSaved(picks[gameId]));
+  return open ? games.indexOf(open) : 0;
 }
 
 function ProgressStrip({
@@ -109,7 +110,6 @@ function StatusChip({ pick }: { pick: LocalPick | undefined }) {
 export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId?: number }) {
   const router = useRouter();
   const games = sheet.games;
-  const liveGames = games.filter((g) => !g.void);
   const [picks, setPicks] = useState<LocalPicks>(() =>
     Object.fromEntries(sheet.picks.map((p) => [p.gameId, { teamId: p.teamId, status: "saved" as const }])),
   );
@@ -130,7 +130,15 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
   const game = games[index];
   const detail = game.detail;
   const pick = picks[game.id];
-  const pickedCount = liveGames.filter((g) => isSaved(picks[g.id])).length;
+  // Recounted from the local picks, which hold only what the server took: an
+  // in-flight or failed save leaves its game open here just as it does on the sheet.
+  const progress = sheetProgress({
+    games,
+    picked: (gameId) => isSaved(picks[gameId]),
+    lockGameId: sheet.lockGameId,
+    lockDropped: sheet.lockDropped,
+    tiebreakerGuess: sheet.tiebreakerGuess,
+  });
   const last = index + 1 >= games.length;
 
   const goTo = (i: number) => {
@@ -191,7 +199,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
         <div className="min-w-0 flex-1">
           <div className="font-display text-lg leading-6">Week {sheet.weekNumber}</div>
           <div className="text-sm text-muted-foreground">
-            Game {index + 1} of {games.length} · {pickedCount} picked
+            Game {index + 1} of {games.length} · {progress.picksMade} of {progress.liveGames} picked
           </div>
         </div>
         <StatusChip pick={pick} />

@@ -10,6 +10,7 @@ import { Wordmark } from "@/components/wordmark";
 import { cfbdFromEnv } from "@/lib/cfbd/http";
 import { requireMember } from "@/lib/members/current";
 import { pickSheet } from "@/lib/picks/picks";
+import { remainingLabel } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
 import {
   refreshResultsIfStale,
@@ -46,11 +47,9 @@ export default async function Week() {
     await refreshQuietly(slate.week.id);
     reveal = await revealFor(db(), member, slate.week.id);
   }
-  const liveGames = sheet ? sheet.games.filter((g) => !g.void) : [];
-  const picked = sheet
-    ? liveGames.filter((g) => sheet.picks.some((p) => p.gameId === g.id)).length
-    : 0;
-  const allPicked = sheet !== null && picked === liveGames.length;
+  // Every Pick in: whatever is left this week is on the review screen.
+  const allPicked =
+    sheet !== null && sheet.progress.picksMade === sheet.progress.liveGames;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
@@ -74,16 +73,23 @@ export default async function Week() {
             ) : null}
             {sheet ? (
               <div className="space-y-2 pt-2">
-                <p className="text-sm">
+                <p className="text-sm font-semibold">
+                  {remainingLabel(
+                    sheet.progress,
+                    slate.week.weekNumber,
+                    sheet.locked,
+                  )}
+                </p>
+                <p className="text-sm text-muted-foreground">
                   {sheet.locked
-                    ? `You picked ${picked} of ${liveGames.length}.`
-                    : `${picked} of ${liveGames.length} picked`}
+                    ? `You picked ${sheet.progress.picksMade} of ${sheet.progress.liveGames}.`
+                    : `${sheet.progress.picksMade} of ${sheet.progress.liveGames} picked`}
                   {sheet.lockDropped
                     ? " · Lock voided"
-                    : sheet.lockGameId !== null
+                    : sheet.progress.lockSet
                       ? " · Lock set"
                       : " · No Lock yet"}
-                  {sheet.tiebreakerGuess !== null
+                  {sheet.progress.guessSet
                     ? ` · Tiebreaker ${sheet.tiebreakerGuess}`
                     : " · No Tiebreaker Guess yet"}
                 </p>
@@ -95,11 +101,13 @@ export default async function Week() {
                   >
                     {sheet.locked
                       ? "See your picks"
-                      : allPicked
+                      : sheet.progress.remaining === 0
                         ? "Review your picks"
-                        : picked
-                          ? "Continue picking"
-                          : "Make your picks"}
+                        : allPicked
+                          ? "Finish up"
+                          : sheet.progress.picksMade
+                            ? "Continue picking"
+                            : "Make your picks"}
                   </Link>
                 </Button>
               </div>

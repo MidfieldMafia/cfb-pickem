@@ -144,6 +144,43 @@ describe("pick entry", () => {
     expect(await db.query.locks.findMany()).toHaveLength(1);
   });
 
+  test("the sheet counts what is left, and every pick but no Lock has one thing left", async () => {
+    const { db, jonah, grandma, week, michigan, texas, florida } = await setup();
+    expect((await pickSheet(db, grandma, week.id, THURSDAY)).progress).toEqual({
+      liveGames: 3,
+      picksMade: 0,
+      lockSet: false,
+      guessSet: false,
+      remaining: 3,
+    });
+
+    for (const game of [michigan, texas, florida]) {
+      await savePick(db, grandma, week.id, game.id, game.homeTeamId, THURSDAY);
+    }
+    await setTiebreakerGuess(db, grandma, week.id, 55, THURSDAY);
+    expect((await pickSheet(db, grandma, week.id, THURSDAY)).progress).toEqual({
+      liveGames: 3,
+      picksMade: 3,
+      lockSet: false,
+      guessSet: true,
+      remaining: 1,
+    });
+
+    await setLock(db, grandma, week.id, florida.id, THURSDAY);
+    expect((await pickSheet(db, grandma, week.id, THURSDAY)).progress.remaining).toBe(0);
+
+    // A Void takes its game off the count and drops the Lock sitting on it, so the
+    // Lock is one thing left again even though the member never touched anything.
+    await voidGame(db, jonah, florida.id, "Hurricane");
+    expect((await pickSheet(db, grandma, week.id, THURSDAY)).progress).toEqual({
+      liveGames: 2,
+      picksMade: 2,
+      lockSet: false,
+      guessSet: true,
+      remaining: 1,
+    });
+  });
+
   test("nobody reads another member's picks before the deadline, commissioners included", async () => {
     const { db, jonah, grandma, week, michigan, texas, deadline } = await setup();
     await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);

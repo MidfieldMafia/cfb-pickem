@@ -21,6 +21,7 @@ import {
 import type { Db } from "@/db/types";
 import { slateFor } from "@/lib/slate/slate";
 import { tiebreakerGuessError } from "./limits";
+import { sheetProgress, type SheetProgress } from "./progress";
 
 export class InvalidPick extends Error {}
 
@@ -62,6 +63,12 @@ export interface PickSheet {
    */
   lockDropped: boolean;
   tiebreakerGuess: number | null;
+  /**
+   * What is left before the Deadline, counted here so no screen counts it
+   * again. This is the server's count at read time; a screen holding a change
+   * the server has not answered yet recounts with `sheetProgress`.
+   */
+  progress: SheetProgress;
   /** The server clock at read time, for countdowns. */
   serverNow: Date;
   /** True once `serverNow` reaches the Deadline. */
@@ -106,6 +113,8 @@ export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date
     if (row) own.push({ gameId: row.gameId, teamId: row.teamId, updatedAt: row.updatedAt });
   }
   const lockGameId = lock?.gameId ?? null;
+  const lockDropped = slate.games.some((g) => g.id === lockGameId && g.void);
+  const tiebreakerGuess = guess?.guess ?? null;
   return {
     week: slate.week,
     season: slate.season,
@@ -113,8 +122,15 @@ export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date
     deadline: slate.week.deadline,
     picks: own,
     lockGameId,
-    lockDropped: slate.games.some((g) => g.id === lockGameId && g.void),
-    tiebreakerGuess: guess?.guess ?? null,
+    lockDropped,
+    tiebreakerGuess,
+    progress: sheetProgress({
+      games: slate.games,
+      picked: (gameId) => byGame.has(gameId),
+      lockGameId,
+      lockDropped,
+      tiebreakerGuess,
+    }),
     serverNow: now,
     locked: isLocked(slate.week.deadline, now),
   };
