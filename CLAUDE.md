@@ -1,6 +1,16 @@
 @AGENTS.md
 
+## Checks
+
+Verify with `npm run typecheck`, `npm run test`, and `npx eslint src`.
+
+Do not run `npm run build` to check your work. It is `drizzle-kit migrate && next build`, and `DATABASE_URL` in `.env.local` points at a shared Neon database, so the build applies migrations to a database other people are using. A real build belongs on Vercel's preview deploy.
+
 ## Agent skills
+
+### Verifying a rendered change
+
+Nothing in the test suite covers rendering, and every screen needs a Magic Link to reach. See `.claude/skills/verify-running-app/SKILL.md`.
 
 ### Issue tracker
 
