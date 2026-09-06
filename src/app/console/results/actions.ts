@@ -15,11 +15,9 @@ import {
   restoreGame,
 } from "@/lib/results/results";
 import { InvalidSlate, openWeek, voidGame } from "@/lib/slate/slate";
+import type { ActionState } from "../action-form";
 
-export interface ResultActionState {
-  error?: string;
-  done?: string;
-}
+type ResultActionState = ActionState;
 
 const RESULTS_PATH = "/console/results";
 

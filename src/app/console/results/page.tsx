@@ -15,7 +15,8 @@ import {
   type GameResult,
   type ResultAudit,
 } from "@/lib/results/results";
-import { activeSeason, isWeekNumber, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { activeSeason, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { requestedWeekNumber } from "../week-param";
 import {
   chooseResultsWeekAction,
   clearOverrideAction,
@@ -24,7 +25,7 @@ import {
   restoreGameAction,
   voidResultAction,
 } from "./actions";
-import { ResultForm } from "./result-form";
+import { ActionForm } from "../action-form";
 
 const REVIEW_HOURS = REVIEW_AFTER_MS / 3600_000;
 
@@ -65,11 +66,8 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
   const database = db();
   const season = await activeSeason(database);
   const existing = await seasonWeeks(database, season);
-  const requested = Number(params.week);
-  const weekNumber = isWeekNumber(requested)
-    ? requested
-    : existing.filter((w) => w.published).at(-1)?.weekNumber ?? existing.at(-1)?.weekNumber ?? 1;
-  const week = await openWeek(database, commissioner, weekNumber);
+  const weekNumber = requestedWeekNumber(existing, params.week);
+  const week = await openWeek(database, commissioner, weekNumber, season);
   const slate = await slateFor(database, week.id);
   const log = await resultAuditsFor(database, commissioner, week.id);
   const now = new Date();
@@ -127,7 +125,7 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                 "The feed has not been checked for this week yet."
               )}
             </p>
-            <ResultForm
+            <ActionForm
               action={refreshResultsAction}
               hidden={{ weekId: week.id }}
               submit="Check the feed now"
@@ -195,7 +193,7 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                     </td>
                     <td className="p-3">
                       {game.void ? (
-                        <ResultForm
+                        <ActionForm
                           action={restoreGameAction}
                           hidden={{ gameId: game.id }}
                           submit="Restore game"
@@ -203,7 +201,7 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                         />
                       ) : (
                         <div className="space-y-2">
-                          <ResultForm
+                          <ActionForm
                             action={overrideResultAction}
                             hidden={{ gameId: game.id }}
                             submit="Set score"
@@ -241,10 +239,10 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                               aria-label={`Override note for ${game.awayTeam} at ${game.homeTeam}`}
                               className="h-9 w-44"
                             />
-                          </ResultForm>
+                          </ActionForm>
                           <div className="flex flex-wrap gap-2">
                             {result.source === "override" ? (
-                              <ResultForm
+                              <ActionForm
                                 action={clearOverrideAction}
                                 hidden={{ gameId: game.id }}
                                 submit="Clear override"
@@ -252,7 +250,7 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                                 variant="ghost"
                               />
                             ) : null}
-                            <ResultForm
+                            <ActionForm
                               action={voidResultAction}
                               hidden={{ gameId: game.id }}
                               submit="Void"
@@ -267,7 +265,7 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                                 aria-label={`Void note for ${game.awayTeam} at ${game.homeTeam}`}
                                 className="h-9 w-44"
                               />
-                            </ResultForm>
+                            </ActionForm>
                           </div>
                         </div>
                       )}
