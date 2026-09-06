@@ -13,7 +13,7 @@ import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
 import { weekPicks } from "@/lib/picks/picks";
 import { scoreWeek, type PickOutcome } from "@/lib/scoring";
-import { slateFor } from "@/lib/slate/slate";
+import { slateFor, type Slate } from "@/lib/slate/slate";
 import { describeResult, effectiveResult, logResultChange, type GameResult, type ResultSource, type ResultStatus } from "./audit";
 import { toEngineMember, toEngineWeek } from "./engine";
 
@@ -59,10 +59,10 @@ function feedResult(feed: CfbdGame): { status: GameStatus; homeScore: number | n
 export async function ingestResults(
   db: Db,
   cfbd: CfbdClient,
-  weekId: number,
+  slate: Slate,
   now: Date = new Date(),
 ): Promise<{ changed: number }> {
-  const slate = await slateFor(db, weekId);
+  const weekId = slate.week.id;
   const feed = await cfbd.games({ year: slate.season.year, week: slate.week.weekNumber });
   const byId = new Map(feed.map((g) => [g.id, g]));
   let changed = 0;
@@ -86,6 +86,17 @@ export type RefreshOutcome =
   /** This request claimed the refresh and pulled the feed. */
   | "refreshed";
 
+/** What the stale gate did, and the Slate to read on from. */
+export interface RefreshedSlate {
+  outcome: RefreshOutcome;
+  /**
+   * The Slate that was passed in, or a re-read of it when the feed actually
+   * moved: a caller grading the Week straight after must not grade the scores
+   * it walked in with.
+   */
+  slate: Slate;
+}
+
 /**
  * The stale gate: member traffic schedules feed calls, and this bounds them.
  * Runs `ingestResults` only when a non-void game is past kickoff without a
@@ -96,22 +107,22 @@ export type RefreshOutcome =
 export async function refreshResultsIfStale(
   db: Db,
   cfbd: CfbdClient,
-  weekId: number,
+  slate: Slate,
   now: Date = new Date(),
-): Promise<RefreshOutcome> {
-  const slate = await slateFor(db, weekId);
-  if (!slate.week.published) return "idle";
+): Promise<RefreshedSlate> {
+  const weekId = slate.week.id;
+  if (!slate.week.published) return { outcome: "idle", slate };
   const waiting = slate.games.some((g) => effectiveResult(g).status === "pending" && g.kickoff <= now);
-  if (!waiting) return "idle";
+  if (!waiting) return { outcome: "idle", slate };
   const cutoff = new Date(now.getTime() - REFRESH_INTERVAL_MS);
   const claimed = await db
     .update(weeks)
     .set({ scoreboardFetchedAt: now })
     .where(and(eq(weeks.id, weekId), or(isNull(weeks.scoreboardFetchedAt), lte(weeks.scoreboardFetchedAt, cutoff))))
     .returning({ id: weeks.id });
-  if (claimed.length === 0) return "fresh";
-  await ingestResults(db, cfbd, weekId, now);
-  return "refreshed";
+  if (claimed.length === 0) return { outcome: "fresh", slate };
+  await ingestResults(db, cfbd, slate, now);
+  return { outcome: "refreshed", slate: await slateFor(db, weekId) };
 }
 
 export interface OverrideInput {
@@ -264,9 +275,8 @@ export interface Reveal {
 }
 
 /** The Reveal. Refused before the Deadline (see `weekPicks`), for everyone. */
-export async function revealFor(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<Reveal> {
-  const slate = await slateFor(db, weekId);
-  const memberPicks = await weekPicks(db, actor, weekId, now);
+export async function revealFor(db: Db, actor: Member, slate: Slate, now: Date = new Date()): Promise<Reveal> {
+  const memberPicks = await weekPicks(db, actor, slate, now);
   const ids = memberPicks.map((m) => m.memberId);
   const rows = ids.length
     ? await db.query.members.findMany({ where: inArray(members.id, ids), orderBy: [asc(members.joinedAt), asc(members.id)] })

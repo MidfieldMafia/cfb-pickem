@@ -9,44 +9,21 @@ import { TeamName } from "@/components/team-name";
 import { Wordmark } from "@/components/wordmark";
 import { cfbdFromEnv } from "@/lib/cfbd/http";
 import { requireMember } from "@/lib/members/current";
-import { pickSheet } from "@/lib/picks/picks";
 import { remainingLabel } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
-import {
-  refreshResultsIfStale,
-  revealFor,
-  type Reveal,
-} from "@/lib/results/results";
-import { publishedSlate } from "@/lib/slate/slate";
+import { currentWeek } from "@/lib/week/week";
 import { RevealList } from "./reveal";
-
-/**
- * Member traffic schedules the score feed: a visit after the Deadline pulls
- * CollegeFootballData when a game is past kickoff without a final, bounded
- * by the stale gate. A feed failure never breaks the page; the last scores
- * stand.
- */
-async function refreshQuietly(weekId: number): Promise<void> {
-  try {
-    await refreshResultsIfStale(db(), cfbdFromEnv(), weekId);
-  } catch (error) {
-    console.warn(
-      "Results refresh skipped:",
-      error instanceof Error ? error.message : error,
-    );
-  }
-}
 
 /** The published Slate as a list, with the door into pick entry; after the Deadline, the Reveal. */
 export default async function Week() {
   const member = await requireMember();
-  const slate = await publishedSlate(db());
-  const sheet = slate ? await pickSheet(db(), member, slate.week.id) : null;
-  let reveal: Reveal | null = null;
-  if (slate && sheet?.locked) {
-    await refreshQuietly(slate.week.id);
-    reveal = await revealFor(db(), member, slate.week.id);
-  }
+  const week = await currentWeek(db(), member, new Date(), {
+    reveal: true,
+    cfbd: cfbdFromEnv,
+  });
+  const slate = week?.slate ?? null;
+  const sheet = week?.sheet ?? null;
+  const reveal = week?.reveal ?? null;
   // Every Pick in: whatever is left this week is on the review screen.
   const allPicked =
     sheet !== null && sheet.progress.picksMade === sheet.progress.liveGames;
