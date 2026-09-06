@@ -5,16 +5,16 @@ import { pickSheet, savePick } from "@/lib/picks/picks";
 
 /** The signed-in member's pick sheet for the published Week, with the server clock. */
 export async function GET() {
-  return withPickContext(async ({ actor, weekId, now }) =>
-    Response.json(toSheetJson(await pickSheet(db(), actor, weekId, now))),
+  return withPickContext(async ({ actor, slate, now }) =>
+    Response.json(toSheetJson(await pickSheet(db(), actor, slate, now))),
   );
 }
 
 /** Saves one Pick: `{ gameId, teamId }`. Replaces any earlier pick in that game. */
 export async function PUT(request: Request) {
   const body = await readBody(request);
-  return withPickContext(async ({ actor, weekId, now }) => {
-    const pick = await savePick(db(), actor, weekId, integer(body, "gameId"), integer(body, "teamId"), now);
+  return withPickContext(async ({ actor, slate, now }) => {
+    const pick = await savePick(db(), actor, slate.week.id, integer(body, "gameId"), integer(body, "teamId"), now);
     return Response.json({
       pick: { gameId: pick.gameId, teamId: pick.teamId, updatedAt: pick.updatedAt.toISOString() },
       serverNow: now.toISOString(),

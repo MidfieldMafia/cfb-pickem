@@ -19,7 +19,7 @@ import {
   type Week,
 } from "@/db/schema";
 import type { Db } from "@/db/types";
-import { slateFor } from "@/lib/slate/slate";
+import { deadlinePassed, type Slate } from "@/lib/slate/slate";
 import { tiebreakerGuessError } from "./limits";
 import { sheetProgress, type SheetProgress } from "./progress";
 
@@ -93,9 +93,14 @@ async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> 
   return game;
 }
 
-export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<PickSheet> {
-  const slate = await slateFor(db, weekId);
+/**
+ * One member's sheet for a Slate the caller already loaded. Taking the Slate
+ * rather than a week id is what lets a screen read the Week once and hand the
+ * same rows to the sheet, the Reveal, and the score refresh.
+ */
+export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date = new Date()): Promise<PickSheet> {
   if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
+  const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
   const [rows, lock, guess] = await Promise.all([
     gameIds.length
@@ -132,7 +137,7 @@ export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date
       tiebreakerGuess,
     }),
     serverNow: now,
-    locked: isLocked(slate.week.deadline, now),
+    locked: deadlinePassed(slate, now),
   };
 }
 
@@ -149,10 +154,10 @@ export interface MemberPicks {
  * for everyone, commissioners included; a member's own picks come from
  * `pickSheet`, which is never hidden from them.
  */
-export async function weekPicks(db: Db, _actor: Member, weekId: number, now: Date = new Date()): Promise<MemberPicks[]> {
-  const slate = await slateFor(db, weekId);
+export async function weekPicks(db: Db, _actor: Member, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
   if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
-  if (!isLocked(slate.week.deadline, now)) throw new PicksHidden();
+  if (!deadlinePassed(slate, now)) throw new PicksHidden();
+  const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
   const [activeMembers, rows, lockRows, guessRows] = await Promise.all([
     db.query.members.findMany({ where: eq(members.active, true) }),

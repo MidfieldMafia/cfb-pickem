@@ -5,9 +5,9 @@ import { setLock } from "@/lib/picks/picks";
 /** Sets the Lock of the Week: `{ gameId }`, or `{ gameId: null }` for no Lock this week. */
 export async function PUT(request: Request) {
   const body = await readBody(request);
-  return withPickContext(async ({ actor, weekId, now }) => {
+  return withPickContext(async ({ actor, slate, now }) => {
     const gameId = body.gameId === null ? null : integer(body, "gameId");
-    await setLock(db(), actor, weekId, gameId, now);
+    await setLock(db(), actor, slate.week.id, gameId, now);
     return Response.json({ lockGameId: gameId, serverNow: now.toISOString() });
   });
 }
