@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-export type TimeStyle = "kickoff" | "deadline" | "time";
+export type TimeStyle = "kickoff" | "deadline" | "time" | "slot";
 
 const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
   /** "Sat, Sep 12, 3:30 PM" */
@@ -18,6 +18,8 @@ const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
   },
   /** "3:30 PM" */
   time: { hour: "numeric", minute: "2-digit" },
+  /** "Sat 12:00 PM" — the kickoff slot on Pick entry and the Review groupings. */
+  slot: { weekday: "short", hour: "numeric", minute: "2-digit" },
 };
 
 export function formatLocal(at: Date, style: TimeStyle, timeZone?: string): string {
