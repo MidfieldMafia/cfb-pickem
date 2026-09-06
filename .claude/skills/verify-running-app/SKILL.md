@@ -13,24 +13,60 @@ Every screen except `/expired` needs a session, and the app has no password
 login. The only way in is a Magic Link, which is minted from the database by a
 commissioner. **You cannot issue one yourself. Ask.**
 
-## 1. Is a server already up?
+## 1. Work out which checkout you are in
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/health
+git rev-parse --show-toplevel
+[ "$(git rev-parse --git-dir)" = "$(git rev-parse --git-common-dir)" ] \
+  && echo "main checkout" || echo "WORKTREE"
 ```
 
-`200` means one is running — use it, do not start a second on another port.
-A connection failure means you need one:
+This matters more than it looks. `next dev` does not fail when its port is
+taken — it warns and moves:
+
+```
+Port 3000 is in use by process 1234, using available port 3001 instead.
+```
+
+So if another checkout already holds 3000, your server lands on 3001, a request
+to `localhost:3000` is answered by **the other checkout's code**, and the screen
+comes back looking fine whether or not your change works. A green result from
+the wrong tree is the worst outcome this skill can produce.
+
+Pick your port explicitly and keep it in a variable:
 
 ```bash
-npm run dev    # run in background
+PORT=3000          # main checkout
+PORT=3101          # a worktree — any free port that is yours alone
+BASE="http://localhost:$PORT"
 ```
 
-Then wait for it:
+## 2. Get a server on that port
+
+Check whether yours is already up:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" "$BASE/api/health"
+```
+
+`200` in the **main checkout** means reuse it. `200` in a **worktree** proves
+only that *a* Saturday Slate is listening, not that it is yours — if you did not
+start it on that port yourself, treat it as somebody else's and pick another
+port.
+
+Otherwise start one, in the background, on your port:
+
+```bash
+npm run dev -- -p "$PORT"
+```
+
+Read the startup output and confirm the port it actually bound. If it warns that
+your port was in use, it has moved, and `$PORT` is now wrong — update it or pick
+another. Then wait:
 
 ```bash
 for i in $(seq 1 30); do
-  curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health 2>/dev/null \
+  curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health" 2>/dev/null \
     | grep -qE "200|500" && { echo "up after ${i}s"; break; }
   sleep 1
 done
@@ -39,7 +75,21 @@ done
 Never reach for `npm run build` here. It runs `drizzle-kit migrate` against the
 shared database first. See the Checks section of `CLAUDE.md`.
 
-## 2. Ask for a Magic Link
+### A worktree has no `.env.local`
+
+`.env` files are gitignored, so a fresh worktree does not get one and `db()`
+throws `DATABASE_URL is not set` on the first request. Copy it from the main
+checkout:
+
+```bash
+cp "$(git rev-parse --git-common-dir)/../.env.local" .env.local
+```
+
+Every checkout then points at the same shared Neon database. Fine for reading a
+screen. It also means a commissioner action taken in a worktree is a real write
+that everyone else sees — so drive the console deliberately, not idly.
+
+## 3. Ask for a Magic Link
 
 Ask the user for one; Jonah issues them. It looks like:
 
@@ -47,10 +97,12 @@ Ask the user for one; Jonah issues them. It looks like:
 http://localhost:3000/m/<token>
 ```
 
-## 3. Trade it for a session cookie
+The token is what matters, not the port — swap in your own `$BASE`.
+
+## 4. Trade it for a session cookie
 
 ```bash
-curl -s -i "http://localhost:3000/m/<token>" | head -6
+curl -s -i "$BASE/m/<token>" | head -6
 ```
 
 A good token answers `307` toward `/week` — or `/welcome` on a member's first
@@ -69,10 +121,13 @@ Hold the cookie in a shell variable, not a file:
 S="slate_session=<value>"
 ```
 
-## 4. Fetch the screens the diff touched
+The session is a database row, so a cookie minted against one checkout works on
+any of them.
+
+## 5. Fetch the screens the diff touched
 
 ```bash
-curl -s -b "$S" http://localhost:3000/week \
+curl -s -b "$S" "$BASE/week" \
   -o "$SCRATCH/week.html" -w "status=%{http_code} bytes=%{size_download}\n"
 ```
 
@@ -88,7 +143,7 @@ correctly.
 grep -oE "<h1[^>]*>[^<]*</h1>" "$SCRATCH/week.html"
 ```
 
-## 5. Windows path trap
+## 6. Windows path trap
 
 `node` here is a Windows binary and Git Bash paths do not reach it. A file
 written to `/tmp/week.html` from the shell is read back by
@@ -98,7 +153,7 @@ with `ENOENT`.
 Use the session scratchpad with a Windows-style absolute path, and hand the same
 path to both the shell and node.
 
-## 6. The token and the cookie are real credentials
+## 7. The token and the cookie are real credentials
 
 Both are live session material. Keep them in the shell for the length of the
 check. Do not write them into a file, a commit, a PR body, an issue, or any
