@@ -4,7 +4,7 @@ import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { TeamLogo } from "@/components/team-logo";
-import type { Reveal, RevealMember, RevealPick } from "@/lib/results/results";
+import type { Reveal, RevealPick, ScoredMember } from "@/lib/results/results";
 
 /** The chip that sums up one side: "✓ 4 picks" once the game is final, "4 picks" before. */
 function SideChip({ picks, outcome }: { picks: RevealPick[]; outcome: RevealPick["outcome"] | null }) {
@@ -40,7 +40,7 @@ function Side({
   rank: number | null;
   score: number | null;
   picks: RevealPick[];
-  members: Map<number, RevealMember>;
+  members: Map<number, ScoredMember>;
   final: boolean;
   viewerId: number;
 }) {

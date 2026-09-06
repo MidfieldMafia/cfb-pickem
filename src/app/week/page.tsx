@@ -19,13 +19,13 @@ import { RevealList } from "./reveal";
 export default async function Week() {
   const member = await requireMember();
   const week = await currentWeek(db(), member, new Date(), {
-    reveal: true,
+    graded: true,
     cfbd: cfbdFromEnv,
   });
   const slate = week?.slate ?? null;
   const games = slate?.games.map(toGameJson) ?? [];
   const sheet = week?.sheet ?? null;
-  const reveal = week?.reveal ?? null;
+  const reveal = week?.result?.reveal ?? null;
   // Every Pick in: whatever is left this week is on the review screen.
   const allPicked =
     sheet !== null && sheet.progress.picksMade === sheet.progress.liveGames;

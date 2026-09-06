@@ -117,11 +117,20 @@ export function deadlinePassed(slate: Slate, now: Date): boolean {
   return slate.week.published && slate.deadline !== null && now.getTime() >= slate.deadline.getTime();
 }
 
+/**
+ * Slate order: kickoff, then id. The order the pick flow walks and the order
+ * every board reads in, so a screen that loads its Games by hand still shows
+ * the same Slate `slateFor` would have handed it.
+ */
+export function slateOrder(slateGames: Game[]): Game[] {
+  return [...slateGames].sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime() || a.id - b.id);
+}
+
 export async function slateFor(db: Db, weekId: number): Promise<Slate> {
   const week = await db.query.weeks.findFirst({ where: eq(weeks.id, weekId), with: { season: true, games: true } });
   if (!week) throw new InvalidSlate("No such week.");
   const { season, games: slateGames, ...bare } = week;
-  const sorted = [...slateGames].sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime() || a.id - b.id);
+  const sorted = slateOrder(slateGames);
   return {
     week: bare,
     season,
