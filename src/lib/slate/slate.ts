@@ -10,6 +10,7 @@ import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
+import { noRainChance, type RainChanceSource } from "@/lib/weather/open-meteo";
 
 export class InvalidSlate extends Error {}
 
@@ -61,6 +62,15 @@ async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> 
   const game = await db.query.games.findFirst({ where: eq(games.id, gameId), with: { week: true } });
   if (!game) throw new InvalidSlate("That game is not on the slate.");
   return game;
+}
+
+/** Key-order-independent JSON, because Postgres jsonb reorders object keys on the way back. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
 }
 
 function earliest(slateGames: Game[]): Date | null {
@@ -115,6 +125,7 @@ export async function addGame(db: Db, actor: Member, weekId: number, candidate: 
       awayConference: candidate.awayConference,
       kickoff: candidate.kickoff,
       spread: candidate.spread,
+      detail: candidate.detail,
     })
     .onConflictDoNothing()
     .returning();
@@ -213,14 +224,19 @@ export async function voidGame(db: Db, actor: Member, gameId: number, note: stri
 
 /**
  * Re-reads the week from CollegeFootballData and updates each slate game's
- * kickoff (and, while unpublished, its rank and spread snapshot). Games stay
- * on the slate whatever the feed says; the Deadline is never touched here.
- * Returns how many games changed.
+ * kickoff and pick-screen detail (and, while unpublished, its rank and
+ * spread snapshot). Games stay on the slate whatever the feed says; the
+ * Deadline is never touched here. Returns how many games changed.
  */
-export async function refreshFromFeed(db: Db, cfbd: CfbdClient, weekId: number): Promise<number> {
+export async function refreshFromFeed(
+  db: Db,
+  cfbd: CfbdClient,
+  weekId: number,
+  rain: RainChanceSource = noRainChance,
+): Promise<number> {
   const slate = await slateFor(db, weekId);
   if (slate.games.length === 0) return 0;
-  const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber });
+  const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const byId = new Map(feed.map((c) => [c.cfbdGameId, c]));
   let changed = 0;
   for (const game of slate.games) {
@@ -228,6 +244,7 @@ export async function refreshFromFeed(db: Db, cfbd: CfbdClient, weekId: number):
     if (!fresh) continue;
     const patch: Partial<typeof games.$inferInsert> = {};
     if (fresh.kickoff.getTime() !== game.kickoff.getTime()) patch.kickoff = fresh.kickoff;
+    if (canonical(fresh.detail) !== canonical(game.detail)) patch.detail = fresh.detail;
     if (!slate.week.published) {
       if (fresh.spread !== game.spread) patch.spread = fresh.spread;
       if (fresh.homeRank !== game.homeRank) patch.homeRank = fresh.homeRank;

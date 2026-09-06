@@ -43,28 +43,29 @@ function StatBar({
   awayTeam: string;
   homeTeam: string;
   label: string;
-  away: number;
-  home: number;
+  /** Null before a team's first game or for an FCS opponent: the side shows a dash and the bar splits evenly. */
+  away: number | null;
+  home: number | null;
   lowerBetter?: boolean;
 }) {
-  const total = away + home || 1;
-  const awayBetter = lowerBetter ? away < home : away > home;
+  const known = away !== null && home !== null;
+  const total = known ? away + home || 1 : 1;
+  const awayBetter = known && (lowerBetter ? away < home : away > home);
+  const homeBetter = known && (lowerBetter ? home < away : home > away);
+  const strong = "font-extrabold text-foreground";
+  const weak = "font-medium text-muted-foreground";
   return (
     <div className={ROW}>
-      <span className={awayBetter ? "font-extrabold text-foreground" : "font-medium text-muted-foreground"}>{away}</span>
+      <span className={awayBetter ? strong : weak}>{away ?? "–"}</span>
       <span className="grid gap-[3px]">
         <span className={`${LABEL} text-center text-[10px] leading-3`}>{label}</span>
         <SplitBar
-          awayShare={Math.round((away / total) * 100)}
+          awayShare={known ? Math.round((away / total) * 100) : 50}
           colors={matchupColors(awayTeam, homeTeam)}
-          label={`${label}: ${awayTeam} ${away}, ${homeTeam} ${home}`}
+          label={`${label}: ${awayTeam} ${away ?? "unknown"}, ${homeTeam} ${home ?? "unknown"}`}
         />
       </span>
-      <span
-        className={`text-right ${awayBetter ? "font-medium text-muted-foreground" : "font-extrabold text-foreground"}`}
-      >
-        {home}
-      </span>
+      <span className={`text-right ${homeBetter ? strong : weak}`}>{home ?? "–"}</span>
     </div>
   );
 }

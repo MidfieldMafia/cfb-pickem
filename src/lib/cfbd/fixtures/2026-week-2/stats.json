@@ -1,0 +1,2690 @@
+[
+ {
+  "season": 2026,
+  "team": "Air Force",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Air Force",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 450
+ },
+ {
+  "season": 2026,
+  "team": "Air Force",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 107
+ },
+ {
+  "season": 2026,
+  "team": "Akron",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Akron",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 305
+ },
+ {
+  "season": 2026,
+  "team": "Akron",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 559
+ },
+ {
+  "season": 2026,
+  "team": "Alabama",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Alabama",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 487
+ },
+ {
+  "season": 2026,
+  "team": "Alabama",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 162
+ },
+ {
+  "season": 2026,
+  "team": "App State",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "App State",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 647
+ },
+ {
+  "season": 2026,
+  "team": "App State",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 250
+ },
+ {
+  "season": 2026,
+  "team": "Arizona",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Arizona",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 520
+ },
+ {
+  "season": 2026,
+  "team": "Arizona",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 193
+ },
+ {
+  "season": 2026,
+  "team": "Arizona State",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Arizona State",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 681
+ },
+ {
+  "season": 2026,
+  "team": "Arizona State",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 188
+ },
+ {
+  "season": 2026,
+  "team": "Arkansas",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Arkansas",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 415
+ },
+ {
+  "season": 2026,
+  "team": "Arkansas",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 153
+ },
+ {
+  "season": 2026,
+  "team": "Arkansas State",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Arkansas State",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 434
+ },
+ {
+  "season": 2026,
+  "team": "Arkansas State",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 523
+ },
+ {
+  "season": 2026,
+  "team": "Army",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Army",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 648
+ },
+ {
+  "season": 2026,
+  "team": "Army",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 165
+ },
+ {
+  "season": 2026,
+  "team": "Auburn",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Auburn",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 389
+ },
+ {
+  "season": 2026,
+  "team": "Auburn",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 436
+ },
+ {
+  "season": 2026,
+  "team": "Ball State",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Ball State",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 165
+ },
+ {
+  "season": 2026,
+  "team": "Ball State",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 671
+ },
+ {
+  "season": 2026,
+  "team": "Baylor",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Baylor",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 436
+ },
+ {
+  "season": 2026,
+  "team": "Baylor",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 389
+ },
+ {
+  "season": 2026,
+  "team": "Boise State",
+  "conference": "Pac-12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Boise State",
+  "conference": "Pac-12",
+  "statName": "totalYards",
+  "statValue": 274
+ },
+ {
+  "season": 2026,
+  "team": "Boise State",
+  "conference": "Pac-12",
+  "statName": "totalYardsOpponent",
+  "statValue": 497
+ },
+ {
+  "season": 2026,
+  "team": "Boston College",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Boston College",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 388
+ },
+ {
+  "season": 2026,
+  "team": "Boston College",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 339
+ },
+ {
+  "season": 2026,
+  "team": "Bowling Green",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Bowling Green",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 366
+ },
+ {
+  "season": 2026,
+  "team": "Bowling Green",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 464
+ },
+ {
+  "season": 2026,
+  "team": "Buffalo",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Buffalo",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 340
+ },
+ {
+  "season": 2026,
+  "team": "Buffalo",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 276
+ },
+ {
+  "season": 2026,
+  "team": "BYU",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "BYU",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 521
+ },
+ {
+  "season": 2026,
+  "team": "BYU",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 184
+ },
+ {
+  "season": 2026,
+  "team": "California",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "California",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 410
+ },
+ {
+  "season": 2026,
+  "team": "California",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 461
+ },
+ {
+  "season": 2026,
+  "team": "Central Michigan",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Central Michigan",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 149
+ },
+ {
+  "season": 2026,
+  "team": "Central Michigan",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 364
+ },
+ {
+  "season": 2026,
+  "team": "Charlotte",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Charlotte",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 538
+ },
+ {
+  "season": 2026,
+  "team": "Charlotte",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 400
+ },
+ {
+  "season": 2026,
+  "team": "Cincinnati",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Cincinnati",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 339
+ },
+ {
+  "season": 2026,
+  "team": "Cincinnati",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 388
+ },
+ {
+  "season": 2026,
+  "team": "Clemson",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Clemson",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 145
+ },
+ {
+  "season": 2026,
+  "team": "Clemson",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 644
+ },
+ {
+  "season": 2026,
+  "team": "Coastal Carolina",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Coastal Carolina",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 425
+ },
+ {
+  "season": 2026,
+  "team": "Coastal Carolina",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 413
+ },
+ {
+  "season": 2026,
+  "team": "Colorado",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Colorado",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 307
+ },
+ {
+  "season": 2026,
+  "team": "Colorado",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 288
+ },
+ {
+  "season": 2026,
+  "team": "Colorado State",
+  "conference": "Pac-12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Colorado State",
+  "conference": "Pac-12",
+  "statName": "totalYards",
+  "statValue": 396
+ },
+ {
+  "season": 2026,
+  "team": "Colorado State",
+  "conference": "Pac-12",
+  "statName": "totalYardsOpponent",
+  "statValue": 273
+ },
+ {
+  "season": 2026,
+  "team": "Delaware",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Delaware",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 547
+ },
+ {
+  "season": 2026,
+  "team": "Delaware",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 244
+ },
+ {
+  "season": 2026,
+  "team": "Duke",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Duke",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 381
+ },
+ {
+  "season": 2026,
+  "team": "Duke",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 258
+ },
+ {
+  "season": 2026,
+  "team": "East Carolina",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "East Carolina",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 162
+ },
+ {
+  "season": 2026,
+  "team": "East Carolina",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 487
+ },
+ {
+  "season": 2026,
+  "team": "Eastern Michigan",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "Eastern Michigan",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 629
+ },
+ {
+  "season": 2026,
+  "team": "Eastern Michigan",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 721
+ },
+ {
+  "season": 2026,
+  "team": "Florida",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Florida",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 624
+ },
+ {
+  "season": 2026,
+  "team": "Florida",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 396
+ },
+ {
+  "season": 2026,
+  "team": "Florida Atlantic",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Florida Atlantic",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 396
+ },
+ {
+  "season": 2026,
+  "team": "Florida Atlantic",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 624
+ },
+ {
+  "season": 2026,
+  "team": "Florida International",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Florida International",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 381
+ },
+ {
+  "season": 2026,
+  "team": "Florida International",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 208
+ },
+ {
+  "season": 2026,
+  "team": "Fresno State",
+  "conference": "Pac-12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Fresno State",
+  "conference": "Pac-12",
+  "statName": "totalYards",
+  "statValue": 116
+ },
+ {
+  "season": 2026,
+  "team": "Fresno State",
+  "conference": "Pac-12",
+  "statName": "totalYardsOpponent",
+  "statValue": 552
+ },
+ {
+  "season": 2026,
+  "team": "Georgia",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Georgia",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 660
+ },
+ {
+  "season": 2026,
+  "team": "Georgia",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 109
+ },
+ {
+  "season": 2026,
+  "team": "Georgia Southern",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Georgia Southern",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 424
+ },
+ {
+  "season": 2026,
+  "team": "Georgia Southern",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 35
+ },
+ {
+  "season": 2026,
+  "team": "Georgia State",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Georgia State",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 563
+ },
+ {
+  "season": 2026,
+  "team": "Georgia State",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 209
+ },
+ {
+  "season": 2026,
+  "team": "Georgia Tech",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Georgia Tech",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 288
+ },
+ {
+  "season": 2026,
+  "team": "Georgia Tech",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 307
+ },
+ {
+  "season": 2026,
+  "team": "Hawai'i",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "Hawai'i",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 616
+ },
+ {
+  "season": 2026,
+  "team": "Hawai'i",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 847
+ },
+ {
+  "season": 2026,
+  "team": "Houston",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Houston",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 533
+ },
+ {
+  "season": 2026,
+  "team": "Houston",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 402
+ },
+ {
+  "season": 2026,
+  "team": "Illinois",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Illinois",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 332
+ },
+ {
+  "season": 2026,
+  "team": "Illinois",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 413
+ },
+ {
+  "season": 2026,
+  "team": "Indiana",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Indiana",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 365
+ },
+ {
+  "season": 2026,
+  "team": "Indiana",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 367
+ },
+ {
+  "season": 2026,
+  "team": "Iowa",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Iowa",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 507
+ },
+ {
+  "season": 2026,
+  "team": "Iowa",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 120
+ },
+ {
+  "season": 2026,
+  "team": "Iowa State",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Iowa State",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 303
+ },
+ {
+  "season": 2026,
+  "team": "Iowa State",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 209
+ },
+ {
+  "season": 2026,
+  "team": "Jacksonville State",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "Jacksonville State",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 696
+ },
+ {
+  "season": 2026,
+  "team": "Jacksonville State",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 658
+ },
+ {
+  "season": 2026,
+  "team": "James Madison",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "James Madison",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 291
+ },
+ {
+  "season": 2026,
+  "team": "James Madison",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 321
+ },
+ {
+  "season": 2026,
+  "team": "Kansas",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Kansas",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 613
+ },
+ {
+  "season": 2026,
+  "team": "Kansas",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 146
+ },
+ {
+  "season": 2026,
+  "team": "Kansas State",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Kansas State",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 559
+ },
+ {
+  "season": 2026,
+  "team": "Kansas State",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 122
+ },
+ {
+  "season": 2026,
+  "team": "Kennesaw State",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Kennesaw State",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 508
+ },
+ {
+  "season": 2026,
+  "team": "Kennesaw State",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 160
+ },
+ {
+  "season": 2026,
+  "team": "Kent State",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Kent State",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 179
+ },
+ {
+  "season": 2026,
+  "team": "Kent State",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 645
+ },
+ {
+  "season": 2026,
+  "team": "Kentucky",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Kentucky",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 506
+ },
+ {
+  "season": 2026,
+  "team": "Kentucky",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 305
+ },
+ {
+  "season": 2026,
+  "team": "Liberty",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Liberty",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 321
+ },
+ {
+  "season": 2026,
+  "team": "Liberty",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 291
+ },
+ {
+  "season": 2026,
+  "team": "Louisiana",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Louisiana",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 474
+ },
+ {
+  "season": 2026,
+  "team": "Louisiana",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 205
+ },
+ {
+  "season": 2026,
+  "team": "Louisiana Tech",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Louisiana Tech",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 528
+ },
+ {
+  "season": 2026,
+  "team": "Louisiana Tech",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 129
+ },
+ {
+  "season": 2026,
+  "team": "LSU",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "LSU",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 644
+ },
+ {
+  "season": 2026,
+  "team": "LSU",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 145
+ },
+ {
+  "season": 2026,
+  "team": "Marshall",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Marshall",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 147
+ },
+ {
+  "season": 2026,
+  "team": "Marshall",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 487
+ },
+ {
+  "season": 2026,
+  "team": "Maryland",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Maryland",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 646
+ },
+ {
+  "season": 2026,
+  "team": "Maryland",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 85
+ },
+ {
+  "season": 2026,
+  "team": "Massachusetts",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Massachusetts",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 397
+ },
+ {
+  "season": 2026,
+  "team": "Massachusetts",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 349
+ },
+ {
+  "season": 2026,
+  "team": "Memphis",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "Memphis",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 941
+ },
+ {
+  "season": 2026,
+  "team": "Memphis",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 894
+ },
+ {
+  "season": 2026,
+  "team": "Miami",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Miami",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 549
+ },
+ {
+  "season": 2026,
+  "team": "Miami",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 299
+ },
+ {
+  "season": 2026,
+  "team": "Miami (OH)",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Miami (OH)",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 289
+ },
+ {
+  "season": 2026,
+  "team": "Miami (OH)",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 646
+ },
+ {
+  "season": 2026,
+  "team": "Michigan",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Michigan",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 276
+ },
+ {
+  "season": 2026,
+  "team": "Michigan",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 221
+ },
+ {
+  "season": 2026,
+  "team": "Michigan State",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Michigan State",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 397
+ },
+ {
+  "season": 2026,
+  "team": "Michigan State",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 273
+ },
+ {
+  "season": 2026,
+  "team": "Middle Tennessee",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Middle Tennessee",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 396
+ },
+ {
+  "season": 2026,
+  "team": "Middle Tennessee",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 290
+ },
+ {
+  "season": 2026,
+  "team": "Minnesota",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Minnesota",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 495
+ },
+ {
+  "season": 2026,
+  "team": "Minnesota",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 110
+ },
+ {
+  "season": 2026,
+  "team": "Mississippi State",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Mississippi State",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 762
+ },
+ {
+  "season": 2026,
+  "team": "Mississippi State",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 278
+ },
+ {
+  "season": 2026,
+  "team": "Missouri",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Missouri",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 562
+ },
+ {
+  "season": 2026,
+  "team": "Missouri",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 198
+ },
+ {
+  "season": 2026,
+  "team": "Missouri State",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Missouri State",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 67
+ },
+ {
+  "season": 2026,
+  "team": "Missouri State",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 505
+ },
+ {
+  "season": 2026,
+  "team": "Navy",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Navy",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 527
+ },
+ {
+  "season": 2026,
+  "team": "Navy",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 246
+ },
+ {
+  "season": 2026,
+  "team": "NC State",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "NC State",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 168
+ },
+ {
+  "season": 2026,
+  "team": "NC State",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 413
+ },
+ {
+  "season": 2026,
+  "team": "Nebraska",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Nebraska",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 523
+ },
+ {
+  "season": 2026,
+  "team": "Nebraska",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 303
+ },
+ {
+  "season": 2026,
+  "team": "Nevada",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Nevada",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 486
+ },
+ {
+  "season": 2026,
+  "team": "Nevada",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 367
+ },
+ {
+  "season": 2026,
+  "team": "New Mexico",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "New Mexico",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 364
+ },
+ {
+  "season": 2026,
+  "team": "New Mexico",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 149
+ },
+ {
+  "season": 2026,
+  "team": "New Mexico State",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "New Mexico State",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 849
+ },
+ {
+  "season": 2026,
+  "team": "New Mexico State",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 656
+ },
+ {
+  "season": 2026,
+  "team": "North Carolina",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "North Carolina",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 322
+ },
+ {
+  "season": 2026,
+  "team": "North Carolina",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 281
+ },
+ {
+  "season": 2026,
+  "team": "North Dakota State",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "North Dakota State",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 746
+ },
+ {
+  "season": 2026,
+  "team": "North Dakota State",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 305
+ },
+ {
+  "season": 2026,
+  "team": "Northern Illinois",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Northern Illinois",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 120
+ },
+ {
+  "season": 2026,
+  "team": "Northern Illinois",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 507
+ },
+ {
+  "season": 2026,
+  "team": "North Texas",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "North Texas",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 367
+ },
+ {
+  "season": 2026,
+  "team": "North Texas",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 365
+ },
+ {
+  "season": 2026,
+  "team": "Ohio",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Ohio",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 303
+ },
+ {
+  "season": 2026,
+  "team": "Ohio",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 523
+ },
+ {
+  "season": 2026,
+  "team": "Ohio State",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Ohio State",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 671
+ },
+ {
+  "season": 2026,
+  "team": "Ohio State",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 165
+ },
+ {
+  "season": 2026,
+  "team": "Oklahoma",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Oklahoma",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 401
+ },
+ {
+  "season": 2026,
+  "team": "Oklahoma",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 198
+ },
+ {
+  "season": 2026,
+  "team": "Oklahoma State",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Oklahoma State",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 368
+ },
+ {
+  "season": 2026,
+  "team": "Oklahoma State",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 361
+ },
+ {
+  "season": 2026,
+  "team": "Old Dominion",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Old Dominion",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 319
+ },
+ {
+  "season": 2026,
+  "team": "Old Dominion",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 220
+ },
+ {
+  "season": 2026,
+  "team": "Oregon",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Oregon",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 497
+ },
+ {
+  "season": 2026,
+  "team": "Oregon",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 274
+ },
+ {
+  "season": 2026,
+  "team": "Oregon State",
+  "conference": "Pac-12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Oregon State",
+  "conference": "Pac-12",
+  "statName": "totalYards",
+  "statValue": 402
+ },
+ {
+  "season": 2026,
+  "team": "Oregon State",
+  "conference": "Pac-12",
+  "statName": "totalYardsOpponent",
+  "statValue": 533
+ },
+ {
+  "season": 2026,
+  "team": "Penn State",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Penn State",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 487
+ },
+ {
+  "season": 2026,
+  "team": "Penn State",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 147
+ },
+ {
+  "season": 2026,
+  "team": "Pittsburgh",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Pittsburgh",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 646
+ },
+ {
+  "season": 2026,
+  "team": "Pittsburgh",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 289
+ },
+ {
+  "season": 2026,
+  "team": "Purdue",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Purdue",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 523
+ },
+ {
+  "season": 2026,
+  "team": "Purdue",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 284
+ },
+ {
+  "season": 2026,
+  "team": "Rice",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Rice",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 493
+ },
+ {
+  "season": 2026,
+  "team": "Rice",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 244
+ },
+ {
+  "season": 2026,
+  "team": "Rutgers",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Rutgers",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 349
+ },
+ {
+  "season": 2026,
+  "team": "Rutgers",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 397
+ },
+ {
+  "season": 2026,
+  "team": "Sacramento State",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "Sacramento State",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 721
+ },
+ {
+  "season": 2026,
+  "team": "Sacramento State",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 495
+ },
+ {
+  "season": 2026,
+  "team": "Sam Houston",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Sam Houston",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 373
+ },
+ {
+  "season": 2026,
+  "team": "Sam Houston",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 342
+ },
+ {
+  "season": 2026,
+  "team": "San Diego State",
+  "conference": "Pac-12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "San Diego State",
+  "conference": "Pac-12",
+  "statName": "totalYards",
+  "statValue": 394
+ },
+ {
+  "season": 2026,
+  "team": "San Diego State",
+  "conference": "Pac-12",
+  "statName": "totalYardsOpponent",
+  "statValue": 375
+ },
+ {
+  "season": 2026,
+  "team": "San José State",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "San José State",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 789
+ },
+ {
+  "season": 2026,
+  "team": "San José State",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 786
+ },
+ {
+  "season": 2026,
+  "team": "South Alabama",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "South Alabama",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 395
+ },
+ {
+  "season": 2026,
+  "team": "South Alabama",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 231
+ },
+ {
+  "season": 2026,
+  "team": "South Carolina",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "South Carolina",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 645
+ },
+ {
+  "season": 2026,
+  "team": "South Carolina",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 179
+ },
+ {
+  "season": 2026,
+  "team": "Southern Miss",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Southern Miss",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 543
+ },
+ {
+  "season": 2026,
+  "team": "Southern Miss",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 223
+ },
+ {
+  "season": 2026,
+  "team": "South Florida",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "South Florida",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 208
+ },
+ {
+  "season": 2026,
+  "team": "South Florida",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 381
+ },
+ {
+  "season": 2026,
+  "team": "Syracuse",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Syracuse",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 513
+ },
+ {
+  "season": 2026,
+  "team": "Syracuse",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 159
+ },
+ {
+  "season": 2026,
+  "team": "TCU",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "TCU",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 281
+ },
+ {
+  "season": 2026,
+  "team": "TCU",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 322
+ },
+ {
+  "season": 2026,
+  "team": "Temple",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Temple",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 369
+ },
+ {
+  "season": 2026,
+  "team": "Temple",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 292
+ },
+ {
+  "season": 2026,
+  "team": "Tennessee",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Tennessee",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 638
+ },
+ {
+  "season": 2026,
+  "team": "Tennessee",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 221
+ },
+ {
+  "season": 2026,
+  "team": "Texas",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Texas",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 516
+ },
+ {
+  "season": 2026,
+  "team": "Texas",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 349
+ },
+ {
+  "season": 2026,
+  "team": "Texas A&M",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Texas A&M",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 505
+ },
+ {
+  "season": 2026,
+  "team": "Texas A&M",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 67
+ },
+ {
+  "season": 2026,
+  "team": "Texas State",
+  "conference": "Pac-12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Texas State",
+  "conference": "Pac-12",
+  "statName": "totalYards",
+  "statValue": 349
+ },
+ {
+  "season": 2026,
+  "team": "Texas State",
+  "conference": "Pac-12",
+  "statName": "totalYardsOpponent",
+  "statValue": 516
+ },
+ {
+  "season": 2026,
+  "team": "Texas Tech",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Texas Tech",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 471
+ },
+ {
+  "season": 2026,
+  "team": "Texas Tech",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 194
+ },
+ {
+  "season": 2026,
+  "team": "Toledo",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Toledo",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 273
+ },
+ {
+  "season": 2026,
+  "team": "Toledo",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 397
+ },
+ {
+  "season": 2026,
+  "team": "Troy",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Troy",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 342
+ },
+ {
+  "season": 2026,
+  "team": "Troy",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 373
+ },
+ {
+  "season": 2026,
+  "team": "Tulane",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Tulane",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 258
+ },
+ {
+  "season": 2026,
+  "team": "Tulane",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 381
+ },
+ {
+  "season": 2026,
+  "team": "Tulsa",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Tulsa",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 361
+ },
+ {
+  "season": 2026,
+  "team": "Tulsa",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 368
+ },
+ {
+  "season": 2026,
+  "team": "UAB",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "UAB",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 413
+ },
+ {
+  "season": 2026,
+  "team": "UAB",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 332
+ },
+ {
+  "season": 2026,
+  "team": "UCF",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "UCF",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 560
+ },
+ {
+  "season": 2026,
+  "team": "UCF",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 181
+ },
+ {
+  "season": 2026,
+  "team": "UCLA",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "UCLA",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 461
+ },
+ {
+  "season": 2026,
+  "team": "UCLA",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 410
+ },
+ {
+  "season": 2026,
+  "team": "UConn",
+  "conference": "FBS Independents",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "UConn",
+  "conference": "FBS Independents",
+  "statName": "totalYards",
+  "statValue": 671
+ },
+ {
+  "season": 2026,
+  "team": "UConn",
+  "conference": "FBS Independents",
+  "statName": "totalYardsOpponent",
+  "statValue": 209
+ },
+ {
+  "season": 2026,
+  "team": "UL Monroe",
+  "conference": "Sun Belt",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "UL Monroe",
+  "conference": "Sun Belt",
+  "statName": "totalYards",
+  "statValue": 278
+ },
+ {
+  "season": 2026,
+  "team": "UL Monroe",
+  "conference": "Sun Belt",
+  "statName": "totalYardsOpponent",
+  "statValue": 762
+ },
+ {
+  "season": 2026,
+  "team": "UNLV",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "UNLV",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 824
+ },
+ {
+  "season": 2026,
+  "team": "UNLV",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 712
+ },
+ {
+  "season": 2026,
+  "team": "USC",
+  "conference": "Big Ten",
+  "statName": "games",
+  "statValue": 2
+ },
+ {
+  "season": 2026,
+  "team": "USC",
+  "conference": "Big Ten",
+  "statName": "totalYards",
+  "statValue": 1057
+ },
+ {
+  "season": 2026,
+  "team": "USC",
+  "conference": "Big Ten",
+  "statName": "totalYardsOpponent",
+  "statValue": 452
+ },
+ {
+  "season": 2026,
+  "team": "Utah",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Utah",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 633
+ },
+ {
+  "season": 2026,
+  "team": "Utah",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 225
+ },
+ {
+  "season": 2026,
+  "team": "Utah State",
+  "conference": "Pac-12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Utah State",
+  "conference": "Pac-12",
+  "statName": "totalYards",
+  "statValue": 407
+ },
+ {
+  "season": 2026,
+  "team": "Utah State",
+  "conference": "Pac-12",
+  "statName": "totalYardsOpponent",
+  "statValue": 241
+ },
+ {
+  "season": 2026,
+  "team": "UTEP",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "UTEP",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 198
+ },
+ {
+  "season": 2026,
+  "team": "UTEP",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 401
+ },
+ {
+  "season": 2026,
+  "team": "UTSA",
+  "conference": "American Athletic",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "UTSA",
+  "conference": "American Athletic",
+  "statName": "totalYards",
+  "statValue": 525
+ },
+ {
+  "season": 2026,
+  "team": "UTSA",
+  "conference": "American Athletic",
+  "statName": "totalYardsOpponent",
+  "statValue": 422
+ },
+ {
+  "season": 2026,
+  "team": "Vanderbilt",
+  "conference": "SEC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Vanderbilt",
+  "conference": "SEC",
+  "statName": "totalYards",
+  "statValue": 396
+ },
+ {
+  "season": 2026,
+  "team": "Vanderbilt",
+  "conference": "SEC",
+  "statName": "totalYardsOpponent",
+  "statValue": 178
+ },
+ {
+  "season": 2026,
+  "team": "Virginia",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Virginia",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 413
+ },
+ {
+  "season": 2026,
+  "team": "Virginia",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 168
+ },
+ {
+  "season": 2026,
+  "team": "Virginia Tech",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Virginia Tech",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 619
+ },
+ {
+  "season": 2026,
+  "team": "Virginia Tech",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 83
+ },
+ {
+  "season": 2026,
+  "team": "Wake Forest",
+  "conference": "ACC",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Wake Forest",
+  "conference": "ACC",
+  "statName": "totalYards",
+  "statValue": 559
+ },
+ {
+  "season": 2026,
+  "team": "Wake Forest",
+  "conference": "ACC",
+  "statName": "totalYardsOpponent",
+  "statValue": 305
+ },
+ {
+  "season": 2026,
+  "team": "Western Kentucky",
+  "conference": "Conference USA",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Western Kentucky",
+  "conference": "Conference USA",
+  "statName": "totalYards",
+  "statValue": 367
+ },
+ {
+  "season": 2026,
+  "team": "Western Kentucky",
+  "conference": "Conference USA",
+  "statName": "totalYardsOpponent",
+  "statValue": 486
+ },
+ {
+  "season": 2026,
+  "team": "Western Michigan",
+  "conference": "Mid-American",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Western Michigan",
+  "conference": "Mid-American",
+  "statName": "totalYards",
+  "statValue": 221
+ },
+ {
+  "season": 2026,
+  "team": "Western Michigan",
+  "conference": "Mid-American",
+  "statName": "totalYardsOpponent",
+  "statValue": 276
+ },
+ {
+  "season": 2026,
+  "team": "West Virginia",
+  "conference": "Big 12",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "West Virginia",
+  "conference": "Big 12",
+  "statName": "totalYards",
+  "statValue": 413
+ },
+ {
+  "season": 2026,
+  "team": "West Virginia",
+  "conference": "Big 12",
+  "statName": "totalYardsOpponent",
+  "statValue": 425
+ },
+ {
+  "season": 2026,
+  "team": "Wyoming",
+  "conference": "Mountain West",
+  "statName": "games",
+  "statValue": 1
+ },
+ {
+  "season": 2026,
+  "team": "Wyoming",
+  "conference": "Mountain West",
+  "statName": "totalYards",
+  "statValue": 273
+ },
+ {
+  "season": 2026,
+  "team": "Wyoming",
+  "conference": "Mountain West",
+  "statName": "totalYardsOpponent",
+  "statValue": 396
+ }
+]

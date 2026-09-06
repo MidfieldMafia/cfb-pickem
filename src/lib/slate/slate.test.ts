@@ -158,4 +158,32 @@ describe("slate builder", () => {
     ]);
     expect(slate.deadline?.toISOString()).toBe("2026-09-12T16:00:00.000Z");
   });
+
+  test("a game carries its pick-screen detail from the feed, and the refresh updates it even after publish", async () => {
+    const { db, jonah, candidate } = await setup();
+    const week = await openWeek(db, jonah, 2);
+    const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
+    expect(michigan.detail).toMatchObject({
+      venue: "Michigan Stadium",
+      city: "Ann Arbor, MI",
+      tv: "FOX",
+      homeWp: 0.568,
+      spread: "Oklahoma -1.5",
+      home: { rank: 16, record: "1–0", pointsFor: 13 },
+      away: { rank: 10, record: "1–0", pointsFor: 51 },
+    });
+
+    await setTiebreaker(db, jonah, week.id, michigan.id);
+    await publishSlate(db, jonah, week.id, TUESDAY_BEFORE);
+
+    // The forecast moves during the week; nothing else about the game changed.
+    const rainy = recordings["2026-week-2"].weather.map((w) =>
+      w.id === OKLAHOMA_AT_MICHIGAN ? { ...w, temperature: 61.2, weatherConditionCode: 8, weatherCondition: "Rain" } : w,
+    );
+    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id)).toBe(1);
+    const slate = await slateFor(db, week.id);
+    expect(slate.games[0].detail?.weather).toMatchObject({ temperature: 61, icon: "cloud-rain" });
+    // A second refresh with the same feed changes nothing.
+    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id)).toBe(0);
+  });
 });

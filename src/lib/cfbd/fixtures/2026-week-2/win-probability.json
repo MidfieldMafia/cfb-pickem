@@ -1,0 +1,492 @@
+[
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401864502,
+  "homeTeam": "Air Force",
+  "awayTeam": "North Dakota State",
+  "spread": 6.5,
+  "homeWinProbability": 0.327
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401862702,
+  "homeTeam": "Army",
+  "awayTeam": "South Florida",
+  "spread": -3,
+  "homeWinProbability": 0.582
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856671,
+  "homeTeam": "Auburn",
+  "awayTeam": "Southern Miss",
+  "spread": -29.5,
+  "homeWinProbability": 0.979
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401860881,
+  "homeTeam": "Boise State",
+  "awayTeam": "Memphis",
+  "spread": -7.5,
+  "homeWinProbability": 0.698
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858214,
+  "homeTeam": "Boston College",
+  "awayTeam": "Rutgers",
+  "spread": -3.5,
+  "homeWinProbability": 0.595
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856810,
+  "homeTeam": "BYU",
+  "awayTeam": "Arizona",
+  "spread": -7,
+  "homeWinProbability": 0.685
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858219,
+  "homeTeam": "Clemson",
+  "awayTeam": "Georgia Southern",
+  "spread": -23.5,
+  "homeWinProbability": 0.947
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401864571,
+  "homeTeam": "East Carolina",
+  "awayTeam": "App State",
+  "spread": -9.5,
+  "homeWinProbability": 0.744
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401862703,
+  "homeTeam": "Florida Atlantic",
+  "awayTeam": "Navy",
+  "spread": 6.5,
+  "homeWinProbability": 0.327
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401866414,
+  "homeTeam": "Florida International",
+  "awayTeam": "Buffalo",
+  "spread": -10.5,
+  "homeWinProbability": 0.766
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401860883,
+  "homeTeam": "Fresno State",
+  "awayTeam": "Sacramento State",
+  "spread": -18.5,
+  "homeWinProbability": 0.899
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856673,
+  "homeTeam": "Georgia",
+  "awayTeam": "Western Kentucky",
+  "spread": -39.5,
+  "homeWinProbability": 0.997
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856681,
+  "homeTeam": "Georgia Tech",
+  "awayTeam": "Tennessee",
+  "spread": 13.5,
+  "homeWinProbability": 0.176
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401864578,
+  "homeTeam": "Hawai'i",
+  "awayTeam": "New Mexico State",
+  "spread": -10,
+  "homeWinProbability": 0.755
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858217,
+  "homeTeam": "Illinois",
+  "awayTeam": "Duke",
+  "spread": -7.5,
+  "homeWinProbability": 0.698
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856788,
+  "homeTeam": "Iowa",
+  "awayTeam": "Iowa State",
+  "spread": -14.5,
+  "homeWinProbability": 0.841
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856678,
+  "homeTeam": "Kansas",
+  "awayTeam": "Missouri",
+  "spread": 6.5,
+  "homeWinProbability": 0.327
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856781,
+  "homeTeam": "Kansas State",
+  "awayTeam": "Washington State",
+  "spread": -19.5,
+  "homeWinProbability": 0.911
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401869955,
+  "homeTeam": "Kennesaw State",
+  "awayTeam": "Georgia State",
+  "spread": -9.5,
+  "homeWinProbability": 0.744
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856674,
+  "homeTeam": "Kentucky",
+  "awayTeam": "Alabama",
+  "spread": 10.5,
+  "homeWinProbability": 0.234
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401867796,
+  "homeTeam": "LSU",
+  "awayTeam": "Louisiana Tech",
+  "spread": -31.5,
+  "homeWinProbability": 0.985
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401871045,
+  "homeTeam": "Marshall",
+  "awayTeam": "Middle Tennessee",
+  "spread": -17.5,
+  "homeWinProbability": 0.886
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856679,
+  "homeTeam": "Michigan",
+  "awayTeam": "Oklahoma",
+  "spread": -2.5,
+  "homeWinProbability": 0.568
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858440,
+  "homeTeam": "Michigan State",
+  "awayTeam": "Eastern Michigan",
+  "spread": -17.5,
+  "homeWinProbability": 0.886
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856677,
+  "homeTeam": "Minnesota",
+  "awayTeam": "Mississippi State",
+  "spread": 1.5,
+  "homeWinProbability": 0.459
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858441,
+  "homeTeam": "Nebraska",
+  "awayTeam": "Bowling Green",
+  "spread": -28.5,
+  "homeWinProbability": 0.975
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401862705,
+  "homeTeam": "North Texas",
+  "awayTeam": "UNLV",
+  "spread": 5.5,
+  "homeWinProbability": 0.352
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401859184,
+  "homeTeam": "Notre Dame",
+  "awayTeam": "Rice",
+  "spread": -44.5,
+  "homeWinProbability": 0.999
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401866418,
+  "homeTeam": "Ohio",
+  "awayTeam": "Jacksonville State",
+  "spread": -1.5,
+  "homeWinProbability": 0.541
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856782,
+  "homeTeam": "Oklahoma State",
+  "awayTeam": "Oregon",
+  "spread": 22.5,
+  "homeWinProbability": 0.06
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856676,
+  "homeTeam": "Ole Miss",
+  "awayTeam": "Charlotte",
+  "spread": -46.5,
+  "homeWinProbability": 0.999
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856783,
+  "homeTeam": "Oregon State",
+  "awayTeam": "Texas Tech",
+  "spread": 25.5,
+  "homeWinProbability": 0.039
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856790,
+  "homeTeam": "Pittsburgh",
+  "awayTeam": "UCF",
+  "spread": -8.5,
+  "homeWinProbability": 0.721
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858224,
+  "homeTeam": "Purdue",
+  "awayTeam": "Wake Forest",
+  "spread": 4.5,
+  "homeWinProbability": 0.378
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401862707,
+  "homeTeam": "Sam Houston",
+  "awayTeam": "Tulsa",
+  "spread": 14,
+  "homeWinProbability": 0.167
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858216,
+  "homeTeam": "Syracuse",
+  "awayTeam": "California",
+  "spread": -1.5,
+  "homeWinProbability": 0.541
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858442,
+  "homeTeam": "Temple",
+  "awayTeam": "Penn State",
+  "spread": 21.5,
+  "homeWinProbability": 0.069
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856682,
+  "homeTeam": "Texas",
+  "awayTeam": "Ohio State",
+  "spread": -1.5,
+  "homeWinProbability": 0.541
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856683,
+  "homeTeam": "Texas A&M",
+  "awayTeam": "Arizona State",
+  "spread": -14.5,
+  "homeWinProbability": 0.841
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401860884,
+  "homeTeam": "Texas State",
+  "awayTeam": "UTSA",
+  "spread": 1.5,
+  "homeWinProbability": 0.459
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401864575,
+  "homeTeam": "Tulane",
+  "awayTeam": "South Alabama",
+  "spread": -10,
+  "homeWinProbability": 0.755
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401862708,
+  "homeTeam": "UAB",
+  "awayTeam": "UL Monroe",
+  "spread": -10,
+  "homeWinProbability": 0.755
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858443,
+  "homeTeam": "UCLA",
+  "awayTeam": "San Diego State",
+  "spread": -10,
+  "homeWinProbability": 0.755
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858444,
+  "homeTeam": "UConn",
+  "awayTeam": "Maryland",
+  "spread": 13.5,
+  "homeWinProbability": 0.176
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858445,
+  "homeTeam": "USC",
+  "awayTeam": "Louisiana",
+  "spread": -28.5,
+  "homeWinProbability": 0.975
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856670,
+  "homeTeam": "Utah",
+  "awayTeam": "Arkansas",
+  "spread": -11.5,
+  "homeWinProbability": 0.786
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401856684,
+  "homeTeam": "Vanderbilt",
+  "awayTeam": "Delaware",
+  "spread": -20.5,
+  "homeWinProbability": 0.921
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858221,
+  "homeTeam": "Virginia Tech",
+  "awayTeam": "Old Dominion",
+  "spread": -17.5,
+  "homeWinProbability": 0.886
+ },
+ {
+  "season": 2026,
+  "week": 2,
+  "seasonType": "regular",
+  "gameId": 401858446,
+  "homeTeam": "Washington",
+  "awayTeam": "Utah State",
+  "spread": -27.5,
+  "homeWinProbability": 0.971
+ }
+]

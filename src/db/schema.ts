@@ -18,7 +18,7 @@ import {
   uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import type { Rules } from "@/lib/scoring/types";
+import type { GameDetail, Rules } from "@/lib/scoring/types";
 
 const utc = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -72,6 +72,12 @@ export const games = pgTable(
     kickoff: utc("kickoff").notNull(),
     /** Spread snapshot at slate time, home team perspective. Information only. */
     spread: text("spread"),
+    /**
+     * Presentation detail snapshot for the pick screen (venue, TV, win
+     * probability, forecast, each team's form). Refreshed with the feed;
+     * never read by scoring.
+     */
+    detail: jsonb("detail").$type<GameDetail>(),
     homeScore: integer("home_score"),
     awayScore: integer("away_score"),
     status: text("status", { enum: gameStatuses }).notNull().default("scheduled"),
