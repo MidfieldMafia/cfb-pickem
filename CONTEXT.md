@@ -51,7 +51,7 @@ A member's choice of the winning team in one game. Saved the moment it is tapped
 _Avoid_: Prediction, bet, entry, selection
 
 **Lock of the Week**:
-The one pick per week a member marks for double points. Optional; at most one per member per week.
+The one pick per week a member marks for double points. Optional; at most one per member per week. A Lock on a game that is later voided becomes a Dropped Lock.
 _Avoid_: Lock, confidence pick, best bet
 
 **Tiebreaker Guess**:
@@ -59,6 +59,10 @@ A member's predicted combined final score of the Tiebreaker Game for the week.
 
 **Void**:
 A game that will not count for anyone because it was canceled or postponed after the slate was published. A void game scores zero for everyone and drops any Lock placed on it.
+
+**Dropped Lock**:
+A Lock of the Week sitting on a Void game. It stops counting, but it is not destroyed: the member keeps it, the screens tell them why, and restoring the game restores the Lock. Before the Deadline a member may move a dropped Lock to another game; after it, they cannot, and the week goes on without one.
+_Avoid_: Lost lock, cleared lock
 
 **Result Override**:
 A commissioner's manual correction of a game's final score or void status, taking precedence over the data feed.

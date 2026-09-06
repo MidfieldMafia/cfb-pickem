@@ -1,4 +1,4 @@
-import { Check, Lock, X } from "lucide-react";
+import { Check, Lock, LockOpen, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
@@ -76,11 +76,16 @@ function Side({
               className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs font-semibold ${
                 you ? "border-primary" : "border-border"
               }`}
-              title={`${member.displayName}${pick.locked ? " · Lock of the Week" : ""}`}
+              title={`${member.displayName}${pick.locked ? " · Lock of the Week" : ""}${
+                pick.lockDropped ? " · Lock of the Week, dropped: the game is void" : ""
+              }`}
             >
               <Pennant avatarId={member.avatarId} size={20} />
               <span className="max-w-24 truncate">{you ? "You" : member.displayName}</span>
               {pick.locked ? <Lock size={12} aria-label="Lock of the Week" /> : null}
+              {pick.lockDropped ? (
+                <LockOpen size={12} className="text-muted-foreground" aria-label="Lock of the Week, dropped: the game is void" />
+              ) : null}
             </li>
           );
         })}

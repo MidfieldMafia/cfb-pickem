@@ -82,7 +82,7 @@ export async function voidResultAction(_prev: ResultActionState, formData: FormD
   const actor = await requireConsole();
   return attempt(async () => {
     await voidGame(db(), actor, num(formData, "gameId"), String(formData.get("note") ?? ""));
-    return "Voided. It scores zero for everyone and any Lock on it is dropped.";
+    return "Voided. It scores zero for everyone, and any Lock on it is dropped until the game is restored.";
   });
 }
 
@@ -90,6 +90,6 @@ export async function restoreGameAction(_prev: ResultActionState, formData: Form
   const actor = await requireConsole();
   return attempt(async () => {
     await restoreGame(db(), actor, num(formData, "gameId"));
-    return "Restored. Locks the void dropped do not come back.";
+    return "Restored. Dropped Locks count again, except where a member has since moved theirs.";
   });
 }

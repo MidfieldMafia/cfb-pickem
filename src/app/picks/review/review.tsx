@@ -100,6 +100,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         setSheet((current) => ({
           ...fresh,
           lockGameId: touched.current.lock ? current.lockGameId : fresh.lockGameId,
+          lockDropped: touched.current.lock ? current.lockDropped : fresh.lockDropped,
           tiebreakerGuess: touched.current.guess ? current.tiebreakerGuess : fresh.tiebreakerGuess,
         }));
         sync(fresh.serverNow);
@@ -123,12 +124,12 @@ export function Review({ initial }: { initial: SheetJson }) {
   const missing = liveGames.length - pickedCount;
   const lockGame = sheet.games.find((g) => g.id === sheet.lockGameId);
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
-  const lockVoid = !!lockGame?.void;
+  const lockDropped = sheet.lockDropped;
   const tiebreakerGame = sheet.games.find((g) => g.id === sheet.tiebreakerGameId);
   const guessDone = sheet.tiebreakerGuess !== null;
-  const todo = [missing > 0, !lockGame || lockVoid, !guessDone].filter(Boolean).length;
+  const todo = [missing > 0, !lockGame || lockDropped, !guessDone].filter(Boolean).length;
   const steps = liveGames.length + 2;
-  const stepsDone = pickedCount + (lockGame && !lockVoid ? 1 : 0) + (guessDone ? 1 : 0);
+  const stepsDone = pickedCount + (lockGame && !lockDropped ? 1 : 0) + (guessDone ? 1 : 0);
   const firstOpen = liveGames.find((g) => !pickFor(g.id));
   const groups = groupByKickoff(sheet.games);
   const tiebreakerLine = tiebreakerGame
@@ -140,7 +141,9 @@ export function Review({ initial }: { initial: SheetJson }) {
     setLockError(null);
     touched.current.lock = true;
     const previous = sheet.lockGameId;
-    setSheet((s) => ({ ...s, lockGameId: gameId }));
+    const previousDropped = sheet.lockDropped;
+    // The drawer only offers live games, so moving the Lock always clears a Dropped Lock.
+    setSheet((s) => ({ ...s, lockGameId: gameId, lockDropped: false }));
     const result = await put<{ lockGameId: number | null; serverNow: string }>("/api/week/lock", { gameId });
     setLockPending(false);
     if (result.ok) {
@@ -148,7 +151,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       setLockOpen(false);
       return;
     }
-    setSheet((s) => ({ ...s, lockGameId: previous }));
+    setSheet((s) => ({ ...s, lockGameId: previous, lockDropped: previousDropped }));
     setLockError(result.error);
     if (result.locked) setSheet((s) => ({ ...s, locked: true }));
   };
@@ -276,16 +279,16 @@ export function Review({ initial }: { initial: SheetJson }) {
           onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.id}` : "/picks")}
         />
         <StepRow
-          done={!!lockGame && !lockVoid}
+          done={!!lockGame && !lockDropped}
           label="Lock of the Week"
           detail={
             lockGame && lockPick
-              ? lockVoid
-                ? `${teamName(lockGame, lockPick.teamId)} is void; choose another`
+              ? lockDropped
+                ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
                 : `${teamName(lockGame, lockPick.teamId)} counts double`
               : "One pick counts double"
           }
-          action={lockGame && !lockVoid ? "Change" : "Set"}
+          action={lockGame && !lockDropped ? "Change" : "Set"}
           disabled={locked}
           onClick={() => setLockOpen(true)}
         />
@@ -321,7 +324,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         >
           <span
             className={`grid size-9 place-items-center rounded-full ${
-              lockGame && !lockVoid ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+              lockGame && !lockDropped ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
             }`}
           >
             <Lock size={18} />
@@ -331,7 +334,12 @@ export function Review({ initial }: { initial: SheetJson }) {
               <>
                 <span className="font-display text-lg leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
                 <span className="text-xs text-muted-foreground">
-                  {lockVoid ? "That game is void and scores zero; choose another Lock" : "Double points if they win"} ·{" "}
+                  {lockDropped
+                    ? locked
+                      ? "That game is void, so no Lock counts this week"
+                      : "That game is void and scores zero; choose another Lock"
+                    : "Double points if they win"}{" "}
+                  ·{" "}
                   {lockGame.awayTeam} at {lockGame.homeTeam}
                 </span>
               </>
@@ -343,7 +351,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             )}
           </span>
           {locked ? null : (
-            <span className="text-sm font-semibold text-secondary">{lockGame && !lockVoid ? "Change" : "Choose"}</span>
+            <span className="text-sm font-semibold text-secondary">{lockGame && !lockDropped ? "Change" : "Choose"}</span>
           )}
         </button>
         {lockError ? (

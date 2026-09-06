@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
+import { savePick, setLock } from "@/lib/picks/picks";
 import {
   FAMU_AT_MIAMI,
   OHIO_STATE_AT_TEXAS,
@@ -22,6 +23,7 @@ import {
 } from "./slate";
 
 const TUESDAY_BEFORE = new Date("2026-09-08T18:00:00Z");
+const THURSDAY_BEFORE = new Date("2026-09-10T20:00:00Z");
 
 const setup = seedWeek2;
 
@@ -117,6 +119,25 @@ describe("slate builder", () => {
     // Voiding the earliest game does not move the frozen deadline.
     expect(slate.deadline?.toISOString()).toBe("2026-09-12T16:00:00.000Z");
     await expect(setTiebreaker(db, jonah, week.id, michigan.id)).rejects.toBeInstanceOf(InvalidSlate);
+  });
+
+  test("a game carrying a Dropped Lock cannot be removed", async () => {
+    // A Void now leaves the Lock row in place, and locks.game_id is ON DELETE NO ACTION, so a game
+    // deletion under a surviving Lock would raise a foreign key error. Two rules keep them apart:
+    // removeGame refuses on a published slate, and picks and locks only exist once a slate is published.
+    const { db, jonah, grandma, candidate } = await setup();
+    const week = await openWeek(db, jonah, 2);
+    const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
+    const famu = await addGame(db, jonah, week.id, candidate(FAMU_AT_MIAMI));
+    await setTiebreaker(db, jonah, week.id, texas.id);
+    await publishSlate(db, jonah, week.id, TUESDAY_BEFORE);
+
+    await savePick(db, grandma, week.id, famu.id, famu.homeTeamId, THURSDAY_BEFORE);
+    await setLock(db, grandma, week.id, famu.id, THURSDAY_BEFORE);
+    await voidGame(db, jonah, famu.id, "Hurricane");
+
+    expect(await db.query.locks.findMany()).toHaveLength(1);
+    await expect(removeGame(db, jonah, famu.id)).rejects.toBeInstanceOf(SlatePublished);
   });
 
   test("only a commissioner can touch the slate", async () => {

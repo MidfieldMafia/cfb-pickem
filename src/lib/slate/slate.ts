@@ -6,7 +6,7 @@
  */
 import "server-only";
 import { and, asc, desc, eq } from "drizzle-orm";
-import { games, locks, seasons, weeks, type Game, type Member, type Season, type Week } from "@/db/schema";
+import { games, seasons, weeks, type Game, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
@@ -33,8 +33,8 @@ export interface Slate {
   earliestKickoff: Date | null;
 }
 
-/** The last week a season can reach, counting the conference championships. */
-export const MAX_WEEK_NUMBER = 20;
+/** The last week a season can reach: the regular season plus conference championship week. */
+export const MAX_WEEK_NUMBER = 15;
 
 /** Every week number a commissioner can open, for the console's chooser. */
 export const WEEK_NUMBERS = Array.from({ length: MAX_WEEK_NUMBER }, (_, i) => i + 1);
@@ -222,7 +222,15 @@ export async function removeGame(db: Db, actor: Member, gameId: number): Promise
   await db.delete(games).where(eq(games.id, gameId));
 }
 
-/** Void: canceled or postponed after publish. Scores zero for everyone; stays on the slate with the note. Logged. */
+/**
+ * Void: canceled or postponed after publish. Scores zero for everyone; stays
+ * on the slate with the note. Logged.
+ *
+ * A Lock sitting on the game becomes a Dropped Lock: the row stays, the
+ * scoring engine stops counting it (`LockResult.dropped`), and the screens
+ * tell the member why. Deleting it here would be irreversible — `restoreGame`
+ * could not put it back, and after the Deadline the member could not either.
+ */
 export async function voidGame(db: Db, actor: Member, gameId: number, note: string, now: Date = new Date()): Promise<Game> {
   requireCommissioner(actor);
   const game = await loadGame(db, gameId);
@@ -235,8 +243,6 @@ export async function voidGame(db: Db, actor: Member, gameId: number, note: stri
     .set({ void: true, voidNote, updatedAt: now })
     .where(eq(games.id, gameId))
     .returning();
-  // A void game scores zero for everyone, so a Lock on it is worthless: drop it so the member can lock another.
-  await db.delete(locks).where(eq(locks.gameId, gameId));
   await logResultChange(db, actor.id, "void", game, updated, voidNote, now);
   return updated;
 }

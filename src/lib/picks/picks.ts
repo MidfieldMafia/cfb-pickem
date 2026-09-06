@@ -53,8 +53,14 @@ export interface PickSheet {
   deadline: Date;
   /** The member's own picks, in slate order. Unpicked games have no entry. */
   picks: PickRow[];
-  /** The Game carrying the Lock of the Week, or null. */
+  /** The Game carrying the Lock of the Week, or null. May be a Void game — see `lockDropped`. */
   lockGameId: number | null;
+  /**
+   * True when the Lock sits on a Void game: a Dropped Lock. It scores nothing,
+   * and before the Deadline the member may move it to another game. Derived
+   * here so the screens read one field instead of each re-deriving it.
+   */
+  lockDropped: boolean;
   tiebreakerGuess: number | null;
   /** The server clock at read time, for countdowns. */
   serverNow: Date;
@@ -99,13 +105,15 @@ export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date
     const row = byGame.get(game.id);
     if (row) own.push({ gameId: row.gameId, teamId: row.teamId, updatedAt: row.updatedAt });
   }
+  const lockGameId = lock?.gameId ?? null;
   return {
     week: slate.week,
     season: slate.season,
     games: slate.games,
     deadline: slate.week.deadline,
     picks: own,
-    lockGameId: lock?.gameId ?? null,
+    lockGameId,
+    lockDropped: slate.games.some((g) => g.id === lockGameId && g.void),
     tiebreakerGuess: guess?.guess ?? null,
     serverNow: now,
     locked: isLocked(slate.week.deadline, now),
