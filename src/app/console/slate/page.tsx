@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { db } from "@/db";
-import type { Game } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { cfbd } from "@/lib/cfbd";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { requireConsole } from "@/lib/members/current";
 import { plural } from "@/lib/plural";
+import { toGameJson, toSlateCandidates, type GameJson } from "@/lib/slate/json";
 import { activeSeason, isWeekNumber, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
 import { pillClass } from "../pill";
 import {
@@ -70,9 +70,12 @@ export default async function SlateBuilder({
   ]);
   const candidates = feed.games;
   const feedError = feed.error;
-  const onSlate = new Map(slate.games.map((g) => [g.cfbdGameId, g]));
-  const shown = candidates.filter((c) => matches(c, filter, q));
-  const tiebreaker = slate.games.find((g) => g.id === slate.week.tiebreakerGameId) ?? null;
+  const slateGames = slate.games.map(toGameJson);
+  const shown = toSlateCandidates(
+    candidates.filter((c) => matches(c, filter, q)),
+    slate.games,
+  );
+  const tiebreaker = slateGames.find((g) => g.id === slate.week.tiebreakerGameId) ?? null;
   const filterHref = (f: Filter) => {
     const p = new URLSearchParams({ week: String(weekNumber) });
     if (f !== "all") p.set("filter", f);
@@ -147,47 +150,44 @@ export default async function SlateBuilder({
             </p>
           ) : null}
           <ul className="divide-y divide-border">
-            {shown.map((c) => {
-              const picked = onSlate.get(c.cfbdGameId);
-              return (
-                <li
-                  key={c.cfbdGameId}
-                  className={`grid gap-2 p-3 md:grid-cols-[auto_minmax(0,1fr)_11rem_9rem] md:items-center ${
-                    picked ? "bg-muted" : ""
-                  }`}
-                >
-                  <form action={picked ? removeGameAction : addGameAction}>
-                    <input type="hidden" name="weekId" value={week.id} />
-                    {picked ? (
-                      <input type="hidden" name="gameId" value={picked.id} />
-                    ) : (
-                      <input type="hidden" name="cfbdGameId" value={c.cfbdGameId} />
-                    )}
-                    <Button
-                      type="submit"
-                      size="sm"
-                      variant={picked ? "secondary" : "outline"}
-                      disabled={Boolean(picked) && slate.week.published}
-                      aria-label={picked ? `Remove ${c.awayTeam} at ${c.homeTeam}` : `Add ${c.awayTeam} at ${c.homeTeam}`}
-                    >
-                      {picked ? "On slate" : "Add"}
-                    </Button>
-                  </form>
-                  <div>
-                    <TeamName name={c.awayTeam} rank={c.awayRank} /> <span className="text-muted-foreground">at</span>{" "}
-                    <TeamName name={c.homeTeam} rank={c.homeRank} />
-                    <p className="text-xs text-muted-foreground">
-                      {[c.awayConference, c.homeConference].filter(Boolean).join(" · ") || "Non-conference"}
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {c.kickoffTbd ? "Time TBD · " : null}
-                    <LocalTime at={c.kickoff} />
+            {shown.map(({ candidate: c, onSlate: picked }) => (
+              <li
+                key={c.cfbdGameId}
+                className={`grid gap-2 p-3 md:grid-cols-[auto_minmax(0,1fr)_11rem_9rem] md:items-center ${
+                  picked ? "bg-muted" : ""
+                }`}
+              >
+                <form action={picked ? removeGameAction : addGameAction}>
+                  <input type="hidden" name="weekId" value={week.id} />
+                  {picked ? (
+                    <input type="hidden" name="gameId" value={picked.id} />
+                  ) : (
+                    <input type="hidden" name="cfbdGameId" value={c.cfbdGameId} />
+                  )}
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant={picked ? "secondary" : "outline"}
+                    disabled={Boolean(picked) && slate.week.published}
+                    aria-label={picked ? `Remove ${c.awayTeam} at ${c.homeTeam}` : `Add ${c.awayTeam} at ${c.homeTeam}`}
+                  >
+                    {picked ? "On slate" : "Add"}
+                  </Button>
+                </form>
+                <div>
+                  <TeamName name={c.awayTeam} rank={c.awayRank} /> <span className="text-muted-foreground">at</span>{" "}
+                  <TeamName name={c.homeTeam} rank={c.homeRank} />
+                  <p className="text-xs text-muted-foreground">
+                    {[c.awayConference, c.homeConference].filter(Boolean).join(" · ") || "Non-conference"}
                   </p>
-                  <p className="text-sm text-muted-foreground">{c.spread ?? "No line yet"}</p>
-                </li>
-              );
-            })}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {c.kickoffTbd ? "Time TBD · " : null}
+                  <LocalTime at={c.kickoff} />
+                </p>
+                <p className="text-sm text-muted-foreground">{c.spread ?? "No line yet"}</p>
+              </li>
+            ))}
             {shown.length === 0 && !feedError ? (
               <li className="p-3 text-sm text-muted-foreground">No games match.</li>
             ) : null}
@@ -200,7 +200,7 @@ export default async function SlateBuilder({
               <div>
                 <h2>Week {weekNumber} slate</h2>
                 <p className="text-sm text-muted-foreground">
-                  {plural(slate.games.length, "game")} ·{" "}
+                  {plural(slateGames.length, "game")} ·{" "}
                   {tiebreaker ? `Tiebreaker: ${tiebreaker.awayTeam} at ${tiebreaker.homeTeam}` : "flag a Tiebreaker Game"}
                 </p>
               </div>
@@ -211,10 +211,10 @@ export default async function SlateBuilder({
               )}
             </div>
             <ul className="divide-y divide-border">
-              {slate.games.map((g) => (
+              {slateGames.map((g) => (
                 <SlateRow key={g.id} game={g} weekId={week.id} published={slate.week.published} tiebreaker={g.id === slate.week.tiebreakerGameId} />
               ))}
-              {slate.games.length === 0 ? (
+              {slateGames.length === 0 ? (
                 <li className="p-3 text-sm text-muted-foreground">Add games from the candidates list.</li>
               ) : null}
             </ul>
@@ -237,7 +237,7 @@ export default async function SlateBuilder({
             ) : (
               <p className="text-sm text-muted-foreground">Set once the slate has a game.</p>
             )}
-            {slate.week.published ? null : <PublishButton weekId={week.id} gameCount={slate.games.length} />}
+            {slate.week.published ? null : <PublishButton weekId={week.id} gameCount={slateGames.length} />}
           </section>
         </aside>
       </div>
@@ -251,7 +251,7 @@ function SlateRow({
   published,
   tiebreaker,
 }: {
-  game: Game;
+  game: GameJson;
   weekId: number;
   published: boolean;
   tiebreaker: boolean;

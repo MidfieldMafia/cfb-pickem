@@ -89,6 +89,8 @@ describe("the current week", () => {
       source: "feed",
       live: null,
       label: "Final",
+      note: null,
+      feedFinal: null,
     });
     expect(michiganRow.picks.map((p) => p.outcome)).toEqual(["correct"]);
     // The Slate handed back is the refreshed one, not the rows the read started from.

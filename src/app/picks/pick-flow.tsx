@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
 import { put } from "@/lib/picks/client";
 import { useDeadlineClock } from "@/lib/picks/clock";
-import type { GameJson, PickJson, SheetJson } from "@/lib/picks/json";
+import type { PickJson, SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { firstOpenGame, sheetProgress } from "@/lib/picks/progress";
 
 type Status = "saved" | "saving" | "failed";
@@ -31,7 +31,7 @@ const ADVANCE_DELAY_MS = 400;
 const isSaved = (pick: LocalPick | undefined) => pick?.status === "saved";
 
 /** Where the flow opens: the first game still to pick, or the top of the slate. */
-function firstUnpicked(games: GameJson[], picks: LocalPicks): number {
+function firstUnpicked(games: SheetGameJson[], picks: LocalPicks): number {
   const open = firstOpenGame(games, (gameId) => isSaved(picks[gameId]));
   return open ? games.indexOf(open) : 0;
 }
@@ -42,7 +42,7 @@ function ProgressStrip({
   current,
   onJump,
 }: {
-  games: GameJson[];
+  games: SheetGameJson[];
   picks: LocalPicks;
   current: number;
   onJump: (index: number) => void;

@@ -11,6 +11,7 @@ import { cfbdFromEnv } from "@/lib/cfbd/http";
 import { requireMember } from "@/lib/members/current";
 import { remainingLabel } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
+import { toGameJson } from "@/lib/slate/json";
 import { currentWeek } from "@/lib/week/week";
 import { RevealList } from "./reveal";
 
@@ -22,6 +23,7 @@ export default async function Week() {
     cfbd: cfbdFromEnv,
   });
   const slate = week?.slate ?? null;
+  const games = slate?.games.map(toGameJson) ?? [];
   const sheet = week?.sheet ?? null;
   const reveal = week?.reveal ?? null;
   // Every Pick in: whatever is left this week is on the review screen.
@@ -41,7 +43,7 @@ export default async function Week() {
             <p className={SECTION_LABEL}>
               {slate.season.year} · Week {slate.week.weekNumber}
             </p>
-            <h1>{plural(slate.games.length, "game")} this week</h1>
+            <h1>{plural(games.length, "game")} this week</h1>
             {slate.deadline ? (
               <p className="text-sm text-muted-foreground">
                 Picks {sheet?.locked ? "locked" : "lock"}{" "}
@@ -94,7 +96,7 @@ export default async function Week() {
             <RevealList reveal={reveal} viewerId={member.id} />
           ) : (
             <ul className="divide-y divide-border rounded-md border border-border bg-card">
-              {slate.games.map((game) => (
+              {games.map((game) => (
                 <li
                   key={game.id}
                   className={`space-y-1 p-3 ${game.void ? "opacity-60" : ""}`}

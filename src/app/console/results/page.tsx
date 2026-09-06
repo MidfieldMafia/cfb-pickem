@@ -15,6 +15,7 @@ import {
   type ResultAudit,
   type ResultLabel,
 } from "@/lib/results/results";
+import { toGameJson } from "@/lib/slate/json";
 import { activeSeason, isWeekNumber, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
 import {
   chooseResultsWeekAction,
@@ -74,7 +75,11 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
   const slate = await slateFor(database, week.id);
   const log = await resultAuditsFor(database, commissioner, week.id);
   const now = new Date();
-  const rows = slate.games.map((game) => ({ game, result: effectiveResult(game), review: needsReview(game, now) }));
+  const rows = slate.games.map((game) => ({
+    game: toGameJson(game),
+    result: effectiveResult(game),
+    review: needsReview(game, now),
+  }));
   const reviewCount = rows.filter((r) => r.review).length;
 
   return (
@@ -170,14 +175,14 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                           <Badge className="bg-secondary text-secondary-foreground">Tiebreaker</Badge>
                         ) : null}
                       </div>
-                      {result.status === "void" && game.voidNote ? (
-                        <p className="mt-1 text-xs text-muted-foreground">Void: {game.voidNote}</p>
+                      {result.status === "void" && result.note ? (
+                        <p className="mt-1 text-xs text-muted-foreground">Void: {result.note}</p>
                       ) : null}
                       {result.source === "override" ? (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Override: {game.overrideNote}
-                          {game.status === "final" && game.homeScore !== null
-                            ? ` · feed says ${game.awayScore}–${game.homeScore}`
+                          Override: {result.note}
+                          {result.feedFinal
+                            ? ` · feed says ${result.feedFinal.awayScore}–${result.feedFinal.homeScore}`
                             : " · feed has no final"}
                         </p>
                       ) : null}

@@ -13,21 +13,22 @@ import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
 import { weekPicks } from "@/lib/picks/picks";
 import { scoreWeek, type PickOutcome } from "@/lib/scoring";
+import { toGameJson, type GameJson } from "@/lib/slate/json";
 import { slateFor, type Slate } from "@/lib/slate/slate";
 import {
   describeResult,
   effectiveResult,
   logResultChange,
   type GameResult,
-  type LiveScore,
   type ResultLabel,
   type ResultSource,
   type ResultStatus,
+  type Score,
 } from "./audit";
 import { toEngineMember, toEngineWeek } from "./engine";
 
 export { describeResult, effectiveResult };
-export type { GameResult, LiveScore, ResultLabel, ResultSource, ResultStatus };
+export type { GameResult, ResultLabel, ResultSource, ResultStatus, Score };
 
 export class InvalidResult extends Error {}
 
@@ -268,7 +269,7 @@ export interface RevealPick {
 }
 
 export interface RevealGame {
-  game: Game;
+  game: GameJson;
   result: GameResult;
   /** One entry per member who picked this game, in member order. */
   picks: RevealPick[];
@@ -312,7 +313,7 @@ export async function revealFor(db: Db, actor: Member, slate: Slate, now: Date =
           lockDropped: lock !== null && lock.gameId === String(game.id) && lock.dropped,
         });
       }
-      return { game, result: effectiveResult(game), picks };
+      return { game: toGameJson(game), result: effectiveResult(game), picks };
     }),
     serverNow: now,
   };
