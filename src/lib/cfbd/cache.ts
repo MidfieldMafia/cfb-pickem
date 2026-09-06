@@ -1,8 +1,8 @@
-import type { CfbdBettingGame, CfbdClient, CfbdGame, CfbdPollWeek, WeekQuery } from "./types";
+import type { CfbdClient, WeekQuery } from "./types";
 
 /**
  * The shared cache in front of CollegeFootballData. Quota is monthly, so a
- * console page that re-renders on every filter click must not cost three
+ * console page that re-renders on every filter click must not cost ten
  * calls each time. Entries live in process memory for `ttlMs`; `invalidate`
  * forces the next read through (the Refresh button).
  */
@@ -22,10 +22,19 @@ export function cachingCfbd(inner: CfbdClient, ttlMs: number, now: () => number 
     return value;
   }
 
+  const weekKey = (name: string, q: WeekQuery) => `${name}:${q.year}:${q.week}`;
+
   return {
-    games: (q: WeekQuery) => remember<CfbdGame[]>(`games:${q.year}:${q.week}`, () => inner.games(q)),
-    rankings: (year: number) => remember<CfbdPollWeek[]>(`rankings:${year}`, () => inner.rankings(year)),
-    lines: (q: WeekQuery) => remember<CfbdBettingGame[]>(`lines:${q.year}:${q.week}`, () => inner.lines(q)),
+    games: (q) => remember(weekKey("games", q), () => inner.games(q)),
+    rankings: (year) => remember(`rankings:${year}`, () => inner.rankings(year)),
+    lines: (q) => remember(weekKey("lines", q), () => inner.lines(q)),
+    seasonGames: (year) => remember(`seasonGames:${year}`, () => inner.seasonGames(year)),
+    records: (year) => remember(`records:${year}`, () => inner.records(year)),
+    teamStats: (year) => remember(`teamStats:${year}`, () => inner.teamStats(year)),
+    media: (q) => remember(weekKey("media", q), () => inner.media(q)),
+    pregameWinProbability: (q) => remember(weekKey("wp", q), () => inner.pregameWinProbability(q)),
+    venues: () => remember("venues", () => inner.venues()),
+    weather: (q) => remember(weekKey("weather", q), () => inner.weather(q)),
     invalidate: () => entries.clear(),
   };
 }

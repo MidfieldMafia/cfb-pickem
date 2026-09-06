@@ -1,3 +1,4 @@
+import { weekDetails, type GameDetail } from "./details";
 import type { CfbdClient, CfbdGame, CfbdPollWeek, WeekQuery } from "./types";
 
 /** A game a commissioner can put on a Slate: the feed's game plus rank and spread. */
@@ -15,6 +16,8 @@ export interface CandidateGame {
   kickoffTbd: boolean;
   /** "Texas -1.5"; information only. Null when no sportsbook has posted a line. */
   spread: string | null;
+  /** Pick-screen detail: venue, TV, win probability, forecast, each team's form. */
+  detail: GameDetail;
 }
 
 const POLL_PREFERENCE = ["AP Top 25", "Coaches Poll"];
@@ -38,10 +41,11 @@ export function rankLookup(pollWeeks: CfbdPollWeek[], week: number): Map<number,
 }
 
 export async function weekCandidates(cfbd: CfbdClient, query: WeekQuery): Promise<CandidateGame[]> {
-  const [games, pollWeeks, betting] = await Promise.all([
+  const [games, pollWeeks, betting, details] = await Promise.all([
     cfbd.games(query),
     cfbd.rankings(query.year),
     cfbd.lines(query),
+    weekDetails(cfbd, query),
   ]);
   const ranks = rankLookup(pollWeeks, query.week);
   const spreads = new Map<number, string>();
@@ -50,11 +54,16 @@ export async function weekCandidates(cfbd: CfbdClient, query: WeekQuery): Promis
     if (line) spreads.set(game.id, line.formattedSpread ?? `${line.spread}`);
   }
   return games
-    .map((game) => toCandidate(game, ranks, spreads))
+    .map((game) => toCandidate(game, ranks, spreads, details.get(game.id)!))
     .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime() || a.cfbdGameId - b.cfbdGameId);
 }
 
-function toCandidate(game: CfbdGame, ranks: Map<number, number>, spreads: Map<number, string>): CandidateGame {
+function toCandidate(
+  game: CfbdGame,
+  ranks: Map<number, number>,
+  spreads: Map<number, string>,
+  detail: GameDetail,
+): CandidateGame {
   return {
     cfbdGameId: game.id,
     homeTeamId: game.homeId,
@@ -68,5 +77,6 @@ function toCandidate(game: CfbdGame, ranks: Map<number, number>, spreads: Map<nu
     kickoff: new Date(game.startDate),
     kickoffTbd: game.startTimeTBD,
     spread: spreads.get(game.id) ?? null,
+    detail,
   };
 }

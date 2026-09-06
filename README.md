@@ -82,8 +82,15 @@ only be moved earlier. Publishing freezes the Deadline and shows the slate to me
 `/week`; after that a game can only be voided, with a note, never removed. Kickoff times
 render in each viewer's own time zone.
 
+Adding a game also snapshots its pick-screen detail into `games.detail`: venue and city,
+TV outlet, pregame win probability and spread, the forecast, and each team's record and
+per-game points and yards (from `/records`, `/stats/season`, the season's `/games`,
+`/games/media`, `/metrics/wp/pregame`, `/venues`, and `/games/weather`). "Refresh from feed"
+re-reads it, published or not, so the forecast can move during the week.
+
 The CollegeFootballData client lives in `src/lib/cfbd/`. Tests never call the real API:
-they replay the recorded Week 2 2026 responses in `src/lib/cfbd/fixtures/`.
+they replay the recorded Week 2 2026 responses in `src/lib/cfbd/fixtures/` (the season-wide
+responses are trimmed to the teams and venues in that week's games).
 
 ## Seeding and signing in
 
