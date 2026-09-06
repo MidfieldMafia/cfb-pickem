@@ -9,7 +9,7 @@ import { plural } from "@/lib/plural";
 import { relativeTime } from "@/lib/relative-time";
 import { regenerateAction, setActiveAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
-import { CopyLinkButton } from "./copy-link-button";
+import { CopyButton } from "@/components/copy-button";
 
 function maskedLink(link: string): string {
   const url = new URL(link);
@@ -60,7 +60,7 @@ export default async function Members() {
               </div>
               <div className="flex items-center gap-2">
                 <code className="rounded bg-muted px-2 py-1 text-xs">{maskedLink(link)}</code>
-                <CopyLinkButton link={link} />
+                <CopyButton text={link} />
               </div>
               <p className="text-sm text-muted-foreground">
                 {member.lastSeenAt ? `Opened ${relativeTime(member.lastSeenAt)}` : "Never opened"}

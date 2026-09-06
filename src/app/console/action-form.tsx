@@ -2,16 +2,21 @@
 
 import { useActionState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import type { ResultActionState } from "./actions";
 
-type Action = (prev: ResultActionState, formData: FormData) => Promise<ResultActionState>;
+/** What every console edit answers with: a refusal to show, or a sentence saying what happened. */
+export interface ActionState {
+  error?: string;
+  done?: string;
+}
+
+type Action = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 /**
- * One form per result edit. Hidden fields carry the ids; `children` are the
- * visible inputs (scores, a note); the message under the button is the
- * action's own answer, so a refused edit reads as a sentence, not a crash.
+ * One form per console edit. Hidden fields carry the ids; `children` are the
+ * visible inputs (scores, a note, a guess); the message under the button is
+ * the action's own answer, so a refused edit reads as a sentence, not a crash.
  */
-export function ResultForm({
+export function ActionForm({
   action,
   hidden,
   children,
@@ -30,7 +35,7 @@ export function ResultForm({
   size?: "sm" | "default";
   className?: string;
 }) {
-  const [state, formAction, pending] = useActionState<ResultActionState, FormData>(action, {});
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(action, {});
   return (
     <form action={formAction} className={className ?? "space-y-2"}>
       {Object.entries(hidden).map(([name, value]) => (
@@ -42,6 +47,14 @@ export function ResultForm({
           {pending ? pendingLabel : submit}
         </Button>
       </div>
+      <ActionMessage state={state} />
+    </form>
+  );
+}
+
+export function ActionMessage({ state }: { state: ActionState }) {
+  return (
+    <>
       {state.error ? (
         <p role="alert" className="text-sm font-semibold text-destructive">
           {state.error}
@@ -52,6 +65,6 @@ export function ResultForm({
           {state.done}
         </p>
       ) : null}
-    </form>
+    </>
   );
 }

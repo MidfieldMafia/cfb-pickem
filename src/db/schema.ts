@@ -204,8 +204,14 @@ export const tiebreakerGuesses = pgTable(
 );
 
 export const pickAuditKinds = ["pick", "lock", "tiebreaker_guess"] as const;
+export type PickAuditKind = (typeof pickAuditKinds)[number];
 
-/** One row per commissioner edit of another member's pick, Lock, or Tiebreaker Guess. */
+/**
+ * One row per commissioner edit of a member's pick, Lock, or Tiebreaker
+ * Guess from the console, their own included: a change after the Deadline
+ * is on the record whoever it was for. Values are team names or the guess
+ * as text, so the log reads without joins.
+ */
 export const pickAudits = pgTable(
   "pick_audits",
   {
