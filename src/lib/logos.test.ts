@@ -13,10 +13,13 @@ describe("logo index", () => {
     expect(findLogo("Texas A&M")?.slug).toBe("texas-aandm");
   });
 
-  it("falls back to the border token rather than inventing a color", () => {
-    // Akron is one of the 105 schools shipped without a verified color pair.
-    expect(findLogo("Akron")?.colors).toBeUndefined();
-    expect(teamColor("Akron")).toBe(FALLBACK_TEAM_COLOR);
+  it("carries a color pair for every school", () => {
+    expect(teamLogos.filter((t) => !t.colors).map((t) => t.slug)).toEqual([]);
+  });
+
+  it("falls back to the border token for a school it does not know", () => {
+    expect(findLogo("Hogwarts")).toBeUndefined();
+    expect(teamColor("Hogwarts")).toBe(FALLBACK_TEAM_COLOR);
   });
 
   it("points every entry at files that exist in public/", () => {

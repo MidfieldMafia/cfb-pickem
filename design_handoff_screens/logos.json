@@ -16,7 +16,12 @@
   "slug": "arkansas",
   "espnId": 8,
   "file": "logos/arkansas.png",
-  "small": "logos/espn/8.png"
+  "small": "logos/espn/8.png",
+  "colors": {
+   "primary": "#9D2235",
+   "secondary": "#FFFFFF",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Auburn",
@@ -83,7 +88,12 @@
   "slug": "mississippi-state",
   "espnId": 344,
   "file": "logos/mississippi-state.png",
-  "small": "logos/espn/344.png"
+  "small": "logos/espn/344.png",
+  "colors": {
+   "primary": "#660000",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Missouri",
@@ -126,7 +136,12 @@
   "slug": "south-carolina",
   "espnId": 2579,
   "file": "logos/south-carolina.png",
-  "small": "logos/espn/2579.png"
+  "small": "logos/espn/2579.png",
+  "colors": {
+   "primary": "#73000A",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Tennessee",
@@ -181,14 +196,24 @@
   "slug": "illinois",
   "espnId": 356,
   "file": "logos/illinois.png",
-  "small": "logos/espn/356.png"
+  "small": "logos/espn/356.png",
+  "colors": {
+   "primary": "#13294b",
+   "secondary": "#E84A27",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Indiana",
   "slug": "indiana",
   "espnId": 84,
   "file": "logos/indiana.png",
-  "small": "logos/espn/84.png"
+  "small": "logos/espn/84.png",
+  "colors": {
+   "primary": "#990000",
+   "secondary": "#EEEDEB",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Iowa",
@@ -207,7 +232,12 @@
   "slug": "maryland",
   "espnId": 120,
   "file": "logos/maryland.png",
-  "small": "logos/espn/120.png"
+  "small": "logos/espn/120.png",
+  "colors": {
+   "primary": "#E03a3e",
+   "secondary": "#ffd520",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Michigan",
@@ -226,28 +256,48 @@
   "slug": "michigan-state",
   "espnId": 127,
   "file": "logos/michigan-state.png",
-  "small": "logos/espn/127.png"
+  "small": "logos/espn/127.png",
+  "colors": {
+   "primary": "#18453B",
+   "secondary": "#FFFFFF",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Minnesota",
   "slug": "minnesota",
   "espnId": 135,
   "file": "logos/minnesota.png",
-  "small": "logos/espn/135.png"
+  "small": "logos/espn/135.png",
+  "colors": {
+   "primary": "#7A0019",
+   "secondary": "#FFCC33",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Nebraska",
   "slug": "nebraska",
   "espnId": 158,
   "file": "logos/nebraska.png",
-  "small": "logos/espn/158.png"
+  "small": "logos/espn/158.png",
+  "colors": {
+   "primary": "#e41c38",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Northwestern",
   "slug": "northwestern",
   "espnId": 77,
   "file": "logos/northwestern.png",
-  "small": "logos/espn/77.png"
+  "small": "logos/espn/77.png",
+  "colors": {
+   "primary": "#4E2A84",
+   "secondary": "#FFFFFF",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Ohio State",
@@ -290,21 +340,36 @@
   "slug": "purdue",
   "espnId": 2509,
   "file": "logos/purdue.png",
-  "small": "logos/espn/2509.png"
+  "small": "logos/espn/2509.png",
+  "colors": {
+   "primary": "#ceb888",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Rutgers",
   "slug": "rutgers",
   "espnId": 164,
   "file": "logos/rutgers.png",
-  "small": "logos/espn/164.png"
+  "small": "logos/espn/164.png",
+  "colors": {
+   "primary": "#cc0033",
+   "secondary": "#5F6A72",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UCLA",
   "slug": "ucla",
   "espnId": 26,
   "file": "logos/ucla.png",
-  "small": "logos/espn/26.png"
+  "small": "logos/espn/26.png",
+  "colors": {
+   "primary": "#2d68c4",
+   "secondary": "#f2a900",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "USC",
@@ -335,7 +400,12 @@
   "slug": "wisconsin",
   "espnId": 275,
   "file": "logos/wisconsin.png",
-  "small": "logos/espn/275.png"
+  "small": "logos/espn/275.png",
+  "colors": {
+   "primary": "#c5050c",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Arizona",
@@ -354,7 +424,12 @@
   "slug": "arizona-state",
   "espnId": 9,
   "file": "logos/arizona-state.png",
-  "small": "logos/espn/9.png"
+  "small": "logos/espn/9.png",
+  "colors": {
+   "primary": "#8C1D40",
+   "secondary": "#FFC627",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Baylor",
@@ -385,21 +460,36 @@
   "slug": "cincinnati",
   "espnId": 2132,
   "file": "logos/cincinnati.png",
-  "small": "logos/espn/2132.png"
+  "small": "logos/espn/2132.png",
+  "colors": {
+   "primary": "#E00122",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Colorado",
   "slug": "colorado",
   "espnId": 38,
   "file": "logos/colorado.png",
-  "small": "logos/espn/38.png"
+  "small": "logos/espn/38.png",
+  "colors": {
+   "primary": "#FFC627",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Houston",
   "slug": "houston",
   "espnId": 248,
   "file": "logos/houston.png",
-  "small": "logos/espn/248.png"
+  "small": "logos/espn/248.png",
+  "colors": {
+   "primary": "#C8102E",
+   "secondary": "#76232F",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Iowa State",
@@ -418,7 +508,12 @@
   "slug": "kansas",
   "espnId": 2305,
   "file": "logos/kansas.png",
-  "small": "logos/espn/2305.png"
+  "small": "logos/espn/2305.png",
+  "colors": {
+   "primary": "#0051BA",
+   "secondary": "#E8000D",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Kansas State",
@@ -437,28 +532,48 @@
   "slug": "oklahoma-state",
   "espnId": 197,
   "file": "logos/oklahoma-state.png",
-  "small": "logos/espn/197.png"
+  "small": "logos/espn/197.png",
+  "colors": {
+   "primary": "#FF7300",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "TCU",
   "slug": "tcu",
   "espnId": 2628,
   "file": "logos/tcu.png",
-  "small": "logos/espn/2628.png"
+  "small": "logos/espn/2628.png",
+  "colors": {
+   "primary": "#4d1979",
+   "secondary": "#a3a9ac",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Texas Tech",
   "slug": "texas-tech",
   "espnId": 2641,
   "file": "logos/texas-tech.png",
-  "small": "logos/espn/2641.png"
+  "small": "logos/espn/2641.png",
+  "colors": {
+   "primary": "#CC0000",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UCF",
   "slug": "ucf",
   "espnId": 2116,
   "file": "logos/ucf.png",
-  "small": "logos/espn/2116.png"
+  "small": "logos/espn/2116.png",
+  "colors": {
+   "primary": "#ffc904",
+   "secondary": "#ba9b37",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Utah",
@@ -477,21 +592,36 @@
   "slug": "west-virginia",
   "espnId": 277,
   "file": "logos/west-virginia.png",
-  "small": "logos/espn/277.png"
+  "small": "logos/espn/277.png",
+  "colors": {
+   "primary": "#002855",
+   "secondary": "#EAAA00",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Boston College",
   "slug": "boston-college",
   "espnId": 103,
   "file": "logos/boston-college.png",
-  "small": "logos/espn/103.png"
+  "small": "logos/espn/103.png",
+  "colors": {
+   "primary": "#98002E",
+   "secondary": "#BC9B6A",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "California",
   "slug": "california",
   "espnId": 25,
   "file": "logos/california.png",
-  "small": "logos/espn/25.png"
+  "small": "logos/espn/25.png",
+  "colors": {
+   "primary": "#003262",
+   "secondary": "#3B7EA1",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Clemson",
@@ -510,7 +640,12 @@
   "slug": "duke",
   "espnId": 150,
   "file": "logos/duke.png",
-  "small": "logos/espn/150.png"
+  "small": "logos/espn/150.png",
+  "colors": {
+   "primary": "#003087",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Florida State",
@@ -529,14 +664,24 @@
   "slug": "georgia-tech",
   "espnId": 59,
   "file": "logos/georgia-tech.png",
-  "small": "logos/espn/59.png"
+  "small": "logos/espn/59.png",
+  "colors": {
+   "primary": "#A28D5B",
+   "secondary": "#003057",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Louisville",
   "slug": "louisville",
   "espnId": 97,
   "file": "logos/louisville.png",
-  "small": "logos/espn/97.png"
+  "small": "logos/espn/97.png",
+  "colors": {
+   "primary": "#AD0000",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Miami",
@@ -555,56 +700,96 @@
   "slug": "north-carolina",
   "espnId": 153,
   "file": "logos/north-carolina.png",
-  "small": "logos/espn/153.png"
+  "small": "logos/espn/153.png",
+  "colors": {
+   "primary": "#7BAFD4",
+   "secondary": "#FFFFFF",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "NC State",
   "slug": "nc-state",
   "espnId": 152,
   "file": "logos/nc-state.png",
-  "small": "logos/espn/152.png"
+  "small": "logos/espn/152.png",
+  "colors": {
+   "primary": "#CC0000",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Pittsburgh",
   "slug": "pittsburgh",
   "espnId": 221,
   "file": "logos/pittsburgh.png",
-  "small": "logos/espn/221.png"
+  "small": "logos/espn/221.png",
+  "colors": {
+   "primary": "#003594",
+   "secondary": "#FFB81C",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "SMU",
   "slug": "smu",
   "espnId": 2567,
   "file": "logos/smu.png",
-  "small": "logos/espn/2567.png"
+  "small": "logos/espn/2567.png",
+  "colors": {
+   "primary": "#0033A0",
+   "secondary": "#C8102E",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Stanford",
   "slug": "stanford",
   "espnId": 24,
   "file": "logos/stanford.png",
-  "small": "logos/espn/24.png"
+  "small": "logos/espn/24.png",
+  "colors": {
+   "primary": "#8C1515",
+   "secondary": "#4D4F53",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Syracuse",
   "slug": "syracuse",
   "espnId": 183,
   "file": "logos/syracuse.png",
-  "small": "logos/espn/183.png"
+  "small": "logos/espn/183.png",
+  "colors": {
+   "primary": "#F76900",
+   "secondary": "#FFFFFF",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Virginia",
   "slug": "virginia",
   "espnId": 258,
   "file": "logos/virginia.png",
-  "small": "logos/espn/258.png"
+  "small": "logos/espn/258.png",
+  "colors": {
+   "primary": "#232D4B",
+   "secondary": "#F84C1E",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Virginia Tech",
   "slug": "virginia-tech",
   "espnId": 259,
   "file": "logos/virginia-tech.png",
-  "small": "logos/espn/259.png"
+  "small": "logos/espn/259.png",
+  "colors": {
+   "primary": "#630031",
+   "secondary": "#cf4420",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Wake Forest",
@@ -635,475 +820,815 @@
   "slug": "uconn",
   "espnId": 41,
   "file": "logos/uconn.png",
-  "small": "logos/espn/41.png"
+  "small": "logos/espn/41.png",
+  "colors": {
+   "primary": "#000e2f",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Army",
   "slug": "army",
   "espnId": 349,
   "file": "logos/army.png",
-  "small": "logos/espn/349.png"
+  "small": "logos/espn/349.png",
+  "colors": {
+   "primary": "#D4BF91",
+   "secondary": "#B2B4B3",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Charlotte",
   "slug": "charlotte",
   "espnId": 2429,
   "file": "logos/charlotte.png",
-  "small": "logos/espn/2429.png"
+  "small": "logos/espn/2429.png",
+  "colors": {
+   "primary": "#046A38",
+   "secondary": "#B9975B",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "East Carolina",
   "slug": "east-carolina",
   "espnId": 151,
   "file": "logos/east-carolina.png",
-  "small": "logos/espn/151.png"
+  "small": "logos/espn/151.png",
+  "colors": {
+   "primary": "#592A8A",
+   "secondary": "#FDC82F",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Florida Atlantic",
   "slug": "florida-atlantic",
   "espnId": 2226,
   "file": "logos/florida-atlantic.png",
-  "small": "logos/espn/2226.png"
+  "small": "logos/espn/2226.png",
+  "colors": {
+   "primary": "#003366",
+   "secondary": "#CC0000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Memphis",
   "slug": "memphis",
   "espnId": 235,
   "file": "logos/memphis.png",
-  "small": "logos/espn/235.png"
+  "small": "logos/espn/235.png",
+  "colors": {
+   "primary": "#003087",
+   "secondary": "#898D8D",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Navy",
   "slug": "navy",
   "espnId": 2426,
   "file": "logos/navy.png",
-  "small": "logos/espn/2426.png"
+  "small": "logos/espn/2426.png",
+  "colors": {
+   "primary": "#00205B",
+   "secondary": "#C5B783",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "North Texas",
   "slug": "north-texas",
   "espnId": 249,
   "file": "logos/north-texas.png",
-  "small": "logos/espn/249.png"
+  "small": "logos/espn/249.png",
+  "colors": {
+   "primary": "#00853E",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Rice",
   "slug": "rice",
   "espnId": 242,
   "file": "logos/rice.png",
-  "small": "logos/espn/242.png"
+  "small": "logos/espn/242.png",
+  "colors": {
+   "primary": "#00205B",
+   "secondary": "#C1C6C8",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "South Florida",
   "slug": "south-florida",
   "espnId": 58,
   "file": "logos/south-florida.png",
-  "small": "logos/espn/58.png"
+  "small": "logos/espn/58.png",
+  "colors": {
+   "primary": "#006747",
+   "secondary": "#CFC493",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Temple",
   "slug": "temple",
   "espnId": 218,
   "file": "logos/temple.png",
-  "small": "logos/espn/218.png"
+  "small": "logos/espn/218.png",
+  "colors": {
+   "primary": "#9D2235",
+   "secondary": "#FFCD00",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Tulane",
   "slug": "tulane",
   "espnId": 2655,
   "file": "logos/tulane.png",
-  "small": "logos/espn/2655.png"
+  "small": "logos/espn/2655.png",
+  "colors": {
+   "primary": "#006747",
+   "secondary": "#43B02A",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Tulsa",
   "slug": "tulsa",
   "espnId": 202,
   "file": "logos/tulsa.png",
-  "small": "logos/espn/202.png"
+  "small": "logos/espn/202.png",
+  "colors": {
+   "primary": "#002D72",
+   "secondary": "#C8102E",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UAB",
   "slug": "uab",
   "espnId": 5,
   "file": "logos/uab.png",
-  "small": "logos/espn/5.png"
+  "small": "logos/espn/5.png",
+  "colors": {
+   "primary": "#006341",
+   "secondary": "#CC8A00",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UTSA",
   "slug": "utsa",
   "espnId": 2636,
   "file": "logos/utsa.png",
-  "small": "logos/espn/2636.png"
+  "small": "logos/espn/2636.png",
+  "colors": {
+   "primary": "#f15a22",
+   "secondary": "#0C2340",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Air Force",
   "slug": "air-force",
   "espnId": 2005,
   "file": "logos/air-force.png",
-  "small": "logos/espn/2005.png"
+  "small": "logos/espn/2005.png",
+  "colors": {
+   "primary": "#003087",
+   "secondary": "#8A8D8F",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Boise State",
   "slug": "boise-state",
   "espnId": 68,
   "file": "logos/boise-state.png",
-  "small": "logos/espn/68.png"
+  "small": "logos/espn/68.png",
+  "colors": {
+   "primary": "#D64309",
+   "secondary": "#0033A0",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Colorado State",
   "slug": "colorado-state",
   "espnId": 36,
   "file": "logos/colorado-state.png",
-  "small": "logos/espn/36.png"
+  "small": "logos/espn/36.png",
+  "colors": {
+   "primary": "#1E4D2B",
+   "secondary": "#C8C372",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Fresno State",
   "slug": "fresno-state",
   "espnId": 278,
   "file": "logos/fresno-state.png",
-  "small": "logos/espn/278.png"
+  "small": "logos/espn/278.png",
+  "colors": {
+   "primary": "#db0032",
+   "secondary": "#002e6d",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Hawai'i",
   "slug": "hawaii",
   "espnId": 62,
   "file": "logos/hawaii.png",
-  "small": "logos/espn/62.png"
+  "small": "logos/espn/62.png",
+  "colors": {
+   "primary": "#024731",
+   "secondary": "#c8c8c8",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Nevada",
   "slug": "nevada",
   "espnId": 2440,
   "file": "logos/nevada.png",
-  "small": "logos/espn/2440.png"
+  "small": "logos/espn/2440.png",
+  "colors": {
+   "primary": "#003366",
+   "secondary": "#807f84",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "New Mexico",
   "slug": "new-mexico",
   "espnId": 167,
   "file": "logos/new-mexico.png",
-  "small": "logos/espn/167.png"
+  "small": "logos/espn/167.png",
+  "colors": {
+   "primary": "#BA0C2F",
+   "secondary": "#a7a8aa",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "San Diego State",
   "slug": "san-diego-state",
   "espnId": 21,
   "file": "logos/san-diego-state.png",
-  "small": "logos/espn/21.png"
+  "small": "logos/espn/21.png",
+  "colors": {
+   "primary": "#a6192e",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "San José State",
   "slug": "san-jose-state",
   "espnId": 23,
   "file": "logos/san-jose-state.png",
-  "small": "logos/espn/23.png"
+  "small": "logos/espn/23.png",
+  "colors": {
+   "primary": "#0055A2",
+   "secondary": "#E5A823",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UNLV",
   "slug": "unlv",
   "espnId": 2439,
   "file": "logos/unlv.png",
-  "small": "logos/espn/2439.png"
+  "small": "logos/espn/2439.png",
+  "colors": {
+   "primary": "#CF0A2C",
+   "secondary": "#CAC8C8",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Utah State",
   "slug": "utah-state",
   "espnId": 328,
   "file": "logos/utah-state.png",
-  "small": "logos/espn/328.png"
+  "small": "logos/espn/328.png",
+  "colors": {
+   "primary": "#00263A",
+   "secondary": "#8a8d8f",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Wyoming",
   "slug": "wyoming",
   "espnId": 2751,
   "file": "logos/wyoming.png",
-  "small": "logos/espn/2751.png"
+  "small": "logos/espn/2751.png",
+  "colors": {
+   "primary": "#ffc425",
+   "secondary": "#492f24",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Oregon State",
   "slug": "oregon-state",
   "espnId": 204,
   "file": "logos/oregon-state.png",
-  "small": "logos/espn/204.png"
+  "small": "logos/espn/204.png",
+  "colors": {
+   "primary": "#dc4405",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Washington State",
   "slug": "washington-state",
   "espnId": 265,
   "file": "logos/washington-state.png",
-  "small": "logos/espn/265.png"
+  "small": "logos/espn/265.png",
+  "colors": {
+   "primary": "#981E32",
+   "secondary": "#5E6A71",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Appalachian State",
   "slug": "appalachian-state",
   "espnId": 2026,
   "file": "logos/appalachian-state.png",
-  "small": "logos/espn/2026.png"
+  "small": "logos/espn/2026.png",
+  "colors": {
+   "primary": "#222222",
+   "secondary": "#ffcc00",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Arkansas State",
   "slug": "arkansas-state",
   "espnId": 2032,
   "file": "logos/arkansas-state.png",
-  "small": "logos/espn/2032.png"
+  "small": "logos/espn/2032.png",
+  "colors": {
+   "primary": "#cc092f",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Coastal Carolina",
   "slug": "coastal-carolina",
   "espnId": 324,
   "file": "logos/coastal-carolina.png",
-  "small": "logos/espn/324.png"
+  "small": "logos/espn/324.png",
+  "colors": {
+   "primary": "#006f71",
+   "secondary": "#A27752",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Georgia Southern",
   "slug": "georgia-southern",
   "espnId": 290,
   "file": "logos/georgia-southern.png",
-  "small": "logos/espn/290.png"
+  "small": "logos/espn/290.png",
+  "colors": {
+   "primary": "#011e41",
+   "secondary": "#A3AAAE",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Georgia State",
   "slug": "georgia-state",
   "espnId": 2247,
   "file": "logos/georgia-state.png",
-  "small": "logos/espn/2247.png"
+  "small": "logos/espn/2247.png",
+  "colors": {
+   "primary": "#0039A6",
+   "secondary": "#C60C30",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "James Madison",
   "slug": "james-madison",
   "espnId": 256,
   "file": "logos/james-madison.png",
-  "small": "logos/espn/256.png"
+  "small": "logos/espn/256.png",
+  "colors": {
+   "primary": "#450084",
+   "secondary": "#CBB677",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Louisiana",
   "slug": "louisiana",
   "espnId": 309,
   "file": "logos/louisiana.png",
-  "small": "logos/espn/309.png"
+  "small": "logos/espn/309.png",
+  "colors": {
+   "primary": "#ce181e",
+   "secondary": "#0a0203",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UL Monroe",
   "slug": "ul-monroe",
   "espnId": 2433,
   "file": "logos/ul-monroe.png",
-  "small": "logos/espn/2433.png"
+  "small": "logos/espn/2433.png",
+  "colors": {
+   "primary": "#840029",
+   "secondary": "#FDB913",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Marshall",
   "slug": "marshall",
   "espnId": 276,
   "file": "logos/marshall.png",
-  "small": "logos/espn/276.png"
+  "small": "logos/espn/276.png",
+  "colors": {
+   "primary": "#00B140",
+   "secondary": "#A2AAAD",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Old Dominion",
   "slug": "old-dominion",
   "espnId": 295,
   "file": "logos/old-dominion.png",
-  "small": "logos/espn/295.png"
+  "small": "logos/espn/295.png",
+  "colors": {
+   "primary": "#003057",
+   "secondary": "#7C878E",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "South Alabama",
   "slug": "south-alabama",
   "espnId": 6,
   "file": "logos/south-alabama.png",
-  "small": "logos/espn/6.png"
+  "small": "logos/espn/6.png",
+  "colors": {
+   "primary": "#00205B",
+   "secondary": "#BF0D3E",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Southern Miss",
   "slug": "southern-miss",
   "espnId": 2572,
   "file": "logos/southern-miss.png",
-  "small": "logos/espn/2572.png"
+  "small": "logos/espn/2572.png",
+  "colors": {
+   "primary": "#000000",
+   "secondary": "#FFAB00",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Texas State",
   "slug": "texas-state",
   "espnId": 326,
   "file": "logos/texas-state.png",
-  "small": "logos/espn/326.png"
+  "small": "logos/espn/326.png",
+  "colors": {
+   "primary": "#501214",
+   "secondary": "#8d734a",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Troy",
   "slug": "troy",
   "espnId": 2653,
   "file": "logos/troy.png",
-  "small": "logos/espn/2653.png"
+  "small": "logos/espn/2653.png",
+  "colors": {
+   "primary": "#8a2432",
+   "secondary": "#b3b5b8",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Akron",
   "slug": "akron",
   "espnId": 2006,
   "file": "logos/akron.png",
-  "small": "logos/espn/2006.png"
+  "small": "logos/espn/2006.png",
+  "colors": {
+   "primary": "#041E42",
+   "secondary": "#A89968",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Ball State",
   "slug": "ball-state",
   "espnId": 2050,
   "file": "logos/ball-state.png",
-  "small": "logos/espn/2050.png"
+  "small": "logos/espn/2050.png",
+  "colors": {
+   "primary": "#BA0C2F",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Bowling Green",
   "slug": "bowling-green",
   "espnId": 189,
   "file": "logos/bowling-green.png",
-  "small": "logos/espn/189.png"
+  "small": "logos/espn/189.png",
+  "colors": {
+   "primary": "#FE5000",
+   "secondary": "#4F2C1D",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Buffalo",
   "slug": "buffalo",
   "espnId": 2084,
   "file": "logos/buffalo.png",
-  "small": "logos/espn/2084.png"
+  "small": "logos/espn/2084.png",
+  "colors": {
+   "primary": "#005BBB",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Central Michigan",
   "slug": "central-michigan",
   "espnId": 2117,
   "file": "logos/central-michigan.png",
-  "small": "logos/espn/2117.png"
+  "small": "logos/espn/2117.png",
+  "colors": {
+   "primary": "#6A0032",
+   "secondary": "#FFC82E",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Eastern Michigan",
   "slug": "eastern-michigan",
   "espnId": 2199,
   "file": "logos/eastern-michigan.png",
-  "small": "logos/espn/2199.png"
+  "small": "logos/espn/2199.png",
+  "colors": {
+   "primary": "#006633",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Kent State",
   "slug": "kent-state",
   "espnId": 2309,
   "file": "logos/kent-state.png",
-  "small": "logos/espn/2309.png"
+  "small": "logos/espn/2309.png",
+  "colors": {
+   "primary": "#002664",
+   "secondary": "#EAAB00",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UMass",
   "slug": "umass",
   "espnId": 113,
   "file": "logos/umass.png",
-  "small": "logos/espn/113.png"
+  "small": "logos/espn/113.png",
+  "colors": {
+   "primary": "#971B2F",
+   "secondary": "#572932",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Miami (OH)",
   "slug": "miami-oh",
   "espnId": 193,
   "file": "logos/miami-oh.png",
-  "small": "logos/espn/193.png"
+  "small": "logos/espn/193.png",
+  "colors": {
+   "primary": "#b61e2e",
+   "secondary": "#000000",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Northern Illinois",
   "slug": "northern-illinois",
   "espnId": 2459,
   "file": "logos/northern-illinois.png",
-  "small": "logos/espn/2459.png"
+  "small": "logos/espn/2459.png",
+  "colors": {
+   "primary": "#BA0C2F",
+   "secondary": "#8A8D8F",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Ohio",
   "slug": "ohio",
   "espnId": 195,
   "file": "logos/ohio.png",
-  "small": "logos/espn/195.png"
+  "small": "logos/espn/195.png",
+  "colors": {
+   "primary": "#00694E",
+   "secondary": "#CDA077",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Toledo",
   "slug": "toledo",
   "espnId": 2649,
   "file": "logos/toledo.png",
-  "small": "logos/espn/2649.png"
+  "small": "logos/espn/2649.png",
+  "colors": {
+   "primary": "#15397F",
+   "secondary": "#005CB9",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Western Michigan",
   "slug": "western-michigan",
   "espnId": 2711,
   "file": "logos/western-michigan.png",
-  "small": "logos/espn/2711.png"
+  "small": "logos/espn/2711.png",
+  "colors": {
+   "primary": "#6C4023",
+   "secondary": "#B5A167",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Delaware",
   "slug": "delaware",
   "espnId": 48,
   "file": "logos/delaware.png",
-  "small": "logos/espn/48.png"
+  "small": "logos/espn/48.png",
+  "colors": {
+   "primary": "#00539f",
+   "secondary": "#FFDD31",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "FIU",
   "slug": "fiu",
   "espnId": 2229,
   "file": "logos/fiu.png",
-  "small": "logos/espn/2229.png"
+  "small": "logos/espn/2229.png",
+  "colors": {
+   "primary": "#081E3F",
+   "secondary": "#B6862C",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Jacksonville State",
   "slug": "jacksonville-state",
   "espnId": 55,
   "file": "logos/jacksonville-state.png",
-  "small": "logos/espn/55.png"
+  "small": "logos/espn/55.png",
+  "colors": {
+   "primary": "#CC0000",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Kennesaw State",
   "slug": "kennesaw-state",
   "espnId": 338,
   "file": "logos/kennesaw-state.png",
-  "small": "logos/espn/338.png"
+  "small": "logos/espn/338.png",
+  "colors": {
+   "primary": "#FDBB30",
+   "secondary": "#0B1315",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Liberty",
   "slug": "liberty",
   "espnId": 2335,
   "file": "logos/liberty.png",
-  "small": "logos/espn/2335.png"
+  "small": "logos/espn/2335.png",
+  "colors": {
+   "primary": "#002d62",
+   "secondary": "#c41230",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Louisiana Tech",
   "slug": "louisiana-tech",
   "espnId": 2348,
   "file": "logos/louisiana-tech.png",
-  "small": "logos/espn/2348.png"
+  "small": "logos/espn/2348.png",
+  "colors": {
+   "primary": "#002F8B",
+   "secondary": "#E31B23",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Middle Tennessee",
   "slug": "middle-tennessee",
   "espnId": 2393,
   "file": "logos/middle-tennessee.png",
-  "small": "logos/espn/2393.png"
+  "small": "logos/espn/2393.png",
+  "colors": {
+   "primary": "#000000",
+   "secondary": "#0066CC",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Missouri State",
   "slug": "missouri-state",
   "espnId": 2623,
   "file": "logos/missouri-state.png",
-  "small": "logos/espn/2623.png"
+  "small": "logos/espn/2623.png",
+  "colors": {
+   "primary": "#5E0009",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "New Mexico State",
   "slug": "new-mexico-state",
   "espnId": 166,
   "file": "logos/new-mexico-state.png",
-  "small": "logos/espn/166.png"
+  "small": "logos/espn/166.png",
+  "colors": {
+   "primary": "#861F41",
+   "secondary": "#97999B",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Sam Houston",
   "slug": "sam-houston",
   "espnId": 2534,
   "file": "logos/sam-houston.png",
-  "small": "logos/espn/2534.png"
+  "small": "logos/espn/2534.png",
+  "colors": {
+   "primary": "#fe5100",
+   "secondary": "#ffffff",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "UTEP",
   "slug": "utep",
   "espnId": 2638,
   "file": "logos/utep.png",
-  "small": "logos/espn/2638.png"
+  "small": "logos/espn/2638.png",
+  "colors": {
+   "primary": "#FF8200",
+   "secondary": "#041E42",
+   "source": "official (user-provided)"
+  }
  },
  {
   "school": "Western Kentucky",
   "slug": "western-kentucky",
   "espnId": 98,
   "file": "logos/western-kentucky.png",
-  "small": "logos/espn/98.png"
+  "small": "logos/espn/98.png",
+  "colors": {
+   "primary": "#c60c30",
+   "secondary": "#1E1E1E",
+   "source": "official (user-provided)"
+  }
  }
 ]
