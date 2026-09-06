@@ -54,23 +54,23 @@ describe("the current week", () => {
     expect(current.slate.week.tiebreakerGameId).toBe(texas.id);
 
     // The Reveal is never open before the Deadline, asked for or not.
-    expect(current.reveal).toBeNull();
-    expect((await currentWeek(db, grandma, THURSDAY, { reveal: true }))!.reveal).toBeNull();
+    expect(current.result).toBeNull();
+    expect((await currentWeek(db, grandma, THURSDAY, { graded: true }))!.result).toBeNull();
   });
 
-  test("opens the reveal after the deadline, and only for the screen that asks", async () => {
+  test("grades the week after the deadline, and only for the screen that asks", async () => {
     const { db, jonah, grandma, week, michigan } = await publishWeek2();
     await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
     await savePick(db, jonah, week.id, michigan.id, michigan.awayTeamId, THURSDAY);
 
-    // Locked, but nobody asked: the Reveal costs a read per member, so it stays unbuilt.
+    // Locked, but nobody asked: grading costs a read per member, so it stays undone.
     const quiet = (await currentWeek(db, grandma, SUNDAY))!;
     expect(quiet.locked).toBe(true);
-    expect(quiet.reveal).toBeNull();
+    expect(quiet.result).toBeNull();
 
-    const shown = (await currentWeek(db, grandma, SUNDAY, { reveal: true }))!;
-    expect(shown.reveal!.members.map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
-    const michiganRow = shown.reveal!.games.find((g) => g.game.id === michigan.id)!;
+    const shown = (await currentWeek(db, grandma, SUNDAY, { graded: true }))!;
+    expect(shown.result!.reveal.members.map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
+    const michiganRow = shown.result!.reveal.games.find((g) => g.game.id === michigan.id)!;
     expect(michiganRow.picks.map((p) => p.memberId).sort()).toEqual([jonah.id, grandma.id].sort());
   });
 
@@ -79,9 +79,9 @@ describe("the current week", () => {
     await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
     const feed = feedWithMichiganFinal();
 
-    const graded = (await currentWeek(db, grandma, SUNDAY, { reveal: true, cfbd: () => feed }))!;
+    const graded = (await currentWeek(db, grandma, SUNDAY, { graded: true, cfbd: () => feed }))!;
     expect(feed.calls).toBe(1);
-    const michiganRow = graded.reveal!.games.find((g) => g.game.id === michigan.id)!;
+    const michiganRow = graded.result!.reveal.games.find((g) => g.game.id === michigan.id)!;
     expect(michiganRow.result).toEqual({
       status: "final",
       awayScore: 24,
@@ -91,11 +91,16 @@ describe("the current week", () => {
       label: "Final",
     });
     expect(michiganRow.picks.map((p) => p.outcome)).toEqual(["correct"]);
+    // The board and the Weekly Score come out of the same pass, over the same refreshed rows.
+    expect(graded.result!.scores.map((s) => [s.member.displayName, s.points])).toEqual([
+      ["Grandma", 10],
+      ["Jonah", 0],
+    ]);
     // The Slate handed back is the refreshed one, not the rows the read started from.
     expect(graded.slate.games.find((g) => g.id === michigan.id)).toMatchObject({ status: "final", homeScore: 27 });
 
     // The stale gate still bounds it: a second visit inside the interval does not call again.
-    await currentWeek(db, grandma, SUNDAY, { reveal: true, cfbd: () => feed });
+    await currentWeek(db, grandma, SUNDAY, { graded: true, cfbd: () => feed });
     expect(feed.calls).toBe(1);
   });
 
@@ -103,8 +108,8 @@ describe("the current week", () => {
     const { db, grandma, week, michigan } = await publishWeek2();
     await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
 
-    const current = (await currentWeek(db, grandma, SUNDAY, { reveal: true, cfbd: angryFeed }))!;
+    const current = (await currentWeek(db, grandma, SUNDAY, { graded: true, cfbd: angryFeed }))!;
     expect(current.locked).toBe(true);
-    expect(current.reveal!.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("pending");
+    expect(current.result!.reveal.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("pending");
   });
 });
