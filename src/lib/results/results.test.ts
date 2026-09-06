@@ -78,6 +78,16 @@ async function setup() {
   };
 }
 
+/** Why the database turned a write away. Drizzle's own message is the SQL; the constraint is on the cause. */
+async function refusal(query: Promise<unknown>): Promise<string> {
+  try {
+    await query;
+  } catch (error) {
+    return String((error as Error).cause ?? error);
+  }
+  throw new Error("The database accepted a row it should have refused.");
+}
+
 describe("results ingest", () => {
   test("pulls final scores for the week's games, marks them final, and is safe to run again", async () => {
     const { db, week, miami, michigan, texas, reload, ingest } = await setup();
@@ -89,6 +99,15 @@ describe("results ingest", () => {
     expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
     // Not completed but scoring: in progress, with the running score, never final.
     expect(await reload(texas.id)).toMatchObject({ status: "in_progress", awayScore: 3, homeScore: 0 });
+    // The running score rides along as `live`, so a screen can show it without counting it.
+    expect(effectiveResult(await reload(texas.id))).toEqual({
+      status: "pending",
+      homeScore: null,
+      awayScore: null,
+      source: null,
+      live: { awayScore: 3, homeScore: 0 },
+      label: "In progress",
+    });
     expect((await db.query.weeks.findFirst({ where: eq(weeks.id, week.id) }))!.scoreboardFetchedAt).toEqual(
       SATURDAY_EVENING,
     );
@@ -100,12 +119,38 @@ describe("results ingest", () => {
     expect(await reload(texas.id)).toMatchObject({ status: "final", awayScore: 31, homeScore: 28 });
   });
 
+  test("the database refuses a game that says final without both scores", async () => {
+    const { db, week } = await setup();
+    const row = {
+      weekId: week.id,
+      cfbdGameId: 999,
+      homeTeamId: 1,
+      homeTeam: "Texas",
+      awayTeamId: 2,
+      awayTeam: "Ohio State",
+      kickoff: SATURDAY_EVENING,
+      status: "final" as const,
+    };
+    expect(await refusal(db.insert(games).values(row))).toMatch(/games_final_has_scores/);
+    expect(await refusal(db.insert(games).values({ ...row, awayScore: 3 }))).toMatch(/games_final_has_scores/);
+    // Both scores, or not final at all: fine.
+    await db.insert(games).values({ ...row, awayScore: 3, homeScore: 0 });
+    await db.insert(games).values({ ...row, cfbdGameId: 998, status: "scheduled" });
+  });
+
   test("a game the feed never completes stays pending and is flagged for review hours after kickoff", async () => {
     const { texas, michigan, reload, ingest } = await setup();
     await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SUNDAY);
 
     const pending = await reload(texas.id);
-    expect(effectiveResult(pending)).toEqual({ status: "pending", homeScore: null, awayScore: null, source: null });
+    expect(effectiveResult(pending)).toEqual({
+      status: "pending",
+      homeScore: null,
+      awayScore: null,
+      source: null,
+      live: null,
+      label: "Scheduled",
+    });
     expect(needsReview(pending, SATURDAY_EVENING)).toBe(false); // it has not kicked off yet
     expect(needsReview(pending, new Date("2026-09-13T03:00:00Z"))).toBe(false); // 3.5 hours in: could still be playing
     expect(needsReview(pending, SUNDAY)).toBe(true); // 12.5 hours later with no final: postponed or the feed is stuck
@@ -166,7 +211,14 @@ describe("result overrides", () => {
 
     await overrideResult(db, jonah, michigan.id, { awayScore: 30, homeScore: 27, note: "Feed missed the late FG" });
     let game = await reload(michigan.id);
-    expect(effectiveResult(game)).toEqual({ status: "final", awayScore: 30, homeScore: 27, source: "override" });
+    expect(effectiveResult(game)).toEqual({
+      status: "final",
+      awayScore: 30,
+      homeScore: 27,
+      source: "override",
+      live: null,
+      label: "Final · override",
+    });
     // The feed columns stay what the feed said, and a re-ingest does not disturb the override.
     expect(game).toMatchObject({ awayScore: 24, homeScore: 27, overrideAwayScore: 30, overrideHomeScore: 27 });
     await ingest(feed, SUNDAY);
@@ -174,11 +226,25 @@ describe("result overrides", () => {
 
     // An override on a game the feed has not finished makes it final on its own.
     await overrideResult(db, jonah, texas.id, { awayScore: 31, homeScore: 28, note: "Feed stuck on Sunday" });
-    expect(effectiveResult(await reload(texas.id))).toEqual({ status: "final", awayScore: 31, homeScore: 28, source: "override" });
+    expect(effectiveResult(await reload(texas.id))).toEqual({
+      status: "final",
+      awayScore: 31,
+      homeScore: 28,
+      source: "override",
+      live: null,
+      label: "Final · override",
+    });
 
     await clearOverride(db, jonah, michigan.id);
     game = await reload(michigan.id);
-    expect(effectiveResult(game)).toEqual({ status: "final", awayScore: 24, homeScore: 27, source: "feed" });
+    expect(effectiveResult(game)).toEqual({
+      status: "final",
+      awayScore: 24,
+      homeScore: 27,
+      source: "feed",
+      live: null,
+      label: "Final",
+    });
     expect(game.overrideNote).toBeNull();
 
     const log = await resultAuditsFor(db, jonah, week.id);
@@ -196,7 +262,14 @@ describe("result overrides", () => {
     await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SATURDAY_EVENING);
 
     await voidGame(db, jonah, michigan.id, "Lightning; never resumed");
-    expect(effectiveResult(await reload(michigan.id))).toEqual({ status: "void", homeScore: null, awayScore: null, source: null });
+    expect(effectiveResult(await reload(michigan.id))).toEqual({
+      status: "void",
+      homeScore: null,
+      awayScore: null,
+      source: null,
+      live: null,
+      label: "Void",
+    });
     await expect(overrideResult(db, jonah, michigan.id, { awayScore: 24, homeScore: 27, note: "n" })).rejects.toThrow(
       /void/i,
     );
@@ -204,7 +277,14 @@ describe("result overrides", () => {
 
     const restored = await restoreGame(db, jonah, michigan.id);
     expect(restored).toMatchObject({ void: false, voidNote: null });
-    expect(effectiveResult(restored)).toEqual({ status: "final", awayScore: 24, homeScore: 27, source: "feed" });
+    expect(effectiveResult(restored)).toEqual({
+      status: "final",
+      awayScore: 24,
+      homeScore: 27,
+      source: "feed",
+      live: null,
+      label: "Final",
+    });
     await expect(restoreGame(db, jonah, michigan.id)).rejects.toThrow(/not void/i);
 
     const log = await resultAuditsFor(db, jonah, week.id);
@@ -229,7 +309,14 @@ describe("the reveal", () => {
 
     const [miamiRow, michiganRow, texasRow] = reveal.games;
     // A final game grades each pick; an unpicked game leaves the member off the game.
-    expect(michiganRow.result).toEqual({ status: "final", awayScore: 24, homeScore: 27, source: "feed" });
+    expect(michiganRow.result).toEqual({
+      status: "final",
+      awayScore: 24,
+      homeScore: 27,
+      source: "feed",
+      live: null,
+      label: "Final",
+    });
     expect(michiganRow.picks).toEqual([
       { memberId: jonah.id, teamId: michigan.awayTeamId, outcome: "incorrect", locked: false, lockDropped: false },
       { memberId: grandma.id, teamId: michigan.homeTeamId, outcome: "correct", locked: true, lockDropped: false },

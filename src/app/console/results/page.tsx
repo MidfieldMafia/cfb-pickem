@@ -1,5 +1,4 @@
 import { db } from "@/db";
-import type { Game } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import {
   REVIEW_AFTER_MS,
   type GameResult,
   type ResultAudit,
+  type ResultLabel,
 } from "@/lib/results/results";
 import { activeSeason, isWeekNumber, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
 import {
@@ -38,18 +38,19 @@ function Team({ name, rank }: { name: string; rank: number | null }) {
   );
 }
 
-function StatusBadge({ game, result, now }: { game: Game; result: GameResult; now: Date }) {
-  if (result.status === "void") return <Badge variant="outline">Void</Badge>;
-  if (result.status === "final") {
-    return (
-      <Badge className={result.source === "override" ? "bg-secondary text-secondary-foreground" : ""}>
-        {result.source === "override" ? "Final · override" : "Final"}
-      </Badge>
-    );
-  }
-  if (needsReview(game, now)) return <Badge variant="destructive">Needs review</Badge>;
-  if (game.status === "in_progress") return <Badge className="bg-live text-live-foreground">In progress</Badge>;
-  return <Badge variant="outline">Scheduled</Badge>;
+/** How each of the result's five words is dressed. The words themselves come from the result. */
+const TONES: Record<ResultLabel, { variant?: "outline"; className?: string }> = {
+  Scheduled: { variant: "outline" },
+  "In progress": { className: "bg-live text-live-foreground" },
+  Final: {},
+  "Final · override": { className: "bg-secondary text-secondary-foreground" },
+  Void: { variant: "outline" },
+};
+
+/** The result's label, unless the game is overdue for a commissioner's attention. */
+function StatusBadge({ result, review }: { result: GameResult; review: boolean }) {
+  if (review) return <Badge variant="destructive">Needs review</Badge>;
+  return <Badge {...TONES[result.label]}>{result.label}</Badge>;
 }
 
 const KINDS: Record<ResultAudit["kind"], string> = {
@@ -158,8 +159,8 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {rows.map(({ game, result }) => (
-                  <tr key={game.id} className={`align-top ${game.void ? "opacity-70" : ""}`}>
+                {rows.map(({ game, result, review }) => (
+                  <tr key={game.id} className={`align-top ${result.status === "void" ? "opacity-70" : ""}`}>
                     <td className="p-3">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <Team name={game.awayTeam} rank={game.awayRank} />
@@ -169,7 +170,7 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                           <Badge className="bg-secondary text-secondary-foreground">Tiebreaker</Badge>
                         ) : null}
                       </div>
-                      {game.void && game.voidNote ? (
+                      {result.status === "void" && game.voidNote ? (
                         <p className="mt-1 text-xs text-muted-foreground">Void: {game.voidNote}</p>
                       ) : null}
                       {result.source === "override" ? (
@@ -185,16 +186,16 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                       <LocalTime at={game.kickoff} style="slot" />
                     </td>
                     <td className="p-3 text-right font-display text-lg font-black tabular-nums">
-                      {result.awayScore ?? (game.status === "in_progress" ? game.awayScore : "–")}
+                      {result.awayScore ?? result.live?.awayScore ?? "–"}
                     </td>
                     <td className="p-3 text-right font-display text-lg font-black tabular-nums">
-                      {result.homeScore ?? (game.status === "in_progress" ? game.homeScore : "–")}
+                      {result.homeScore ?? result.live?.homeScore ?? "–"}
                     </td>
                     <td className="p-3 whitespace-nowrap">
-                      <StatusBadge game={game} result={result} now={now} />
+                      <StatusBadge result={result} review={review} />
                     </td>
                     <td className="p-3">
-                      {game.void ? (
+                      {result.status === "void" ? (
                         <ResultForm
                           action={restoreGameAction}
                           hidden={{ gameId: game.id }}

@@ -1,0 +1,1 @@
+ALTER TABLE "games" ADD CONSTRAINT "games_final_has_scores" CHECK ("games"."status" <> 'final' or ("games"."home_score" is not null and "games"."away_score" is not null));

@@ -82,7 +82,14 @@ describe("the current week", () => {
     const graded = (await currentWeek(db, grandma, SUNDAY, { reveal: true, cfbd: () => feed }))!;
     expect(feed.calls).toBe(1);
     const michiganRow = graded.reveal!.games.find((g) => g.game.id === michigan.id)!;
-    expect(michiganRow.result).toEqual({ status: "final", awayScore: 24, homeScore: 27, source: "feed" });
+    expect(michiganRow.result).toEqual({
+      status: "final",
+      awayScore: 24,
+      homeScore: 27,
+      source: "feed",
+      live: null,
+      label: "Final",
+    });
     expect(michiganRow.picks.map((p) => p.outcome)).toEqual(["correct"]);
     // The Slate handed back is the refreshed one, not the rows the read started from.
     expect(graded.slate.games.find((g) => g.id === michigan.id)).toMatchObject({ status: "final", homeScore: 27 });

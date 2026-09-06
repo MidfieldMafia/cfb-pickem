@@ -75,6 +75,30 @@ done
 Never reach for `npm run build` here. It runs `drizzle-kit migrate` against the
 shared database first. See the Checks section of `CLAUDE.md`.
 
+### A worktree has no `node_modules`
+
+`next dev` will not serve a worktree that has not been installed into. It starts,
+prints `Ready`, and then answers every route with a 500:
+
+```
+⨯ Error [PageNotFoundError]: Cannot find module for page: route not found /api/health/route
+```
+
+Turbopack takes the nearest lockfile as the workspace root, finds the worktree's
+own `package-lock.json`, then finds no `next` beneath it, and compiles nothing.
+The fix is a real install in the worktree:
+
+```bash
+npm ci --no-audit --no-fund
+```
+
+Do not substitute a symlink or a junction to the main checkout's `node_modules`.
+Turbopack rejects it outright and panics:
+
+```
+Symlink [project]/node_modules is invalid, it points out of the filesystem root
+```
+
 ### A worktree has no `.env.local`
 
 `.env` files are gitignored, so a fresh worktree does not get one and `db()`
