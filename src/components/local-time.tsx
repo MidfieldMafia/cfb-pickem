@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { formatterFor } from "@/lib/intl-time";
 
-export type TimeStyle = "kickoff" | "deadline";
+export type TimeStyle = "kickoff" | "deadline" | "slot";
 
 const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
   /** "Sat, Sep 12, 3:30 PM" */
@@ -17,6 +17,8 @@ const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
     minute: "2-digit",
     timeZoneName: "short",
   },
+  /** "Sat 12:00 PM" — the kickoff slot on the Reveal and the results console. */
+  slot: { weekday: "short", hour: "numeric", minute: "2-digit" },
 };
 
 function formatLocal(at: Date, style: TimeStyle, timeZone?: string): string {

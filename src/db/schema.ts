@@ -44,6 +44,12 @@ export const weeks = pgTable(
     deadline: utc("deadline"),
     published: boolean("published").notNull().default(false),
     tiebreakerGameId: integer("tiebreaker_game_id").references((): AnyPgColumn => games.id),
+    /**
+     * When scores were last pulled from CollegeFootballData for this Week.
+     * Shared across Vercel instances: a refresh claims it atomically, so
+     * member traffic schedules the feed calls without exceeding the quota.
+     */
+    scoreboardFetchedAt: utc("scoreboard_fetched_at"),
     createdAt: utc("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("weeks_season_week_idx").on(t.seasonId, t.weekNumber)],
@@ -212,6 +218,33 @@ export const pickAudits = pgTable(
     changedAt: utc("changed_at").notNull().defaultNow(),
   },
   (t) => [index("pick_audits_member_week_idx").on(t.memberId, t.weekId)],
+);
+
+export const resultAuditKinds = ["override", "clear_override", "void", "restore"] as const;
+export type ResultAuditKind = (typeof resultAuditKinds)[number];
+
+/**
+ * One row per commissioner change to a Game's result: a Result Override set
+ * or cleared, a Void, or a restore. Values are the effective score before
+ * and after, as "away-home" text, so the log reads without joins.
+ */
+export const resultAudits = pgTable(
+  "result_audits",
+  {
+    id: serial("id").primaryKey(),
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => games.id),
+    kind: text("kind", { enum: resultAuditKinds }).notNull(),
+    previousValue: text("previous_value"),
+    newValue: text("new_value"),
+    note: text("note"),
+    changedBy: integer("changed_by")
+      .notNull()
+      .references(() => members.id),
+    changedAt: utc("changed_at").notNull().defaultNow(),
+  },
+  (t) => [index("result_audits_game_idx").on(t.gameId)],
 );
 
 export const seasonsRelations = relations(seasons, ({ many }) => ({ weeks: many(weeks) }));
