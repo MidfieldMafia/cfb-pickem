@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { cfbdFromEnv } from "@/lib/cfbd/http";
 import { requireConsole } from "@/lib/members/current";
+import { safeInteger } from "@/lib/parse";
 import { plural } from "@/lib/plural";
 import {
   clearOverride,
@@ -23,8 +24,8 @@ export interface ResultActionState {
 const RESULTS_PATH = "/console/results";
 
 function num(formData: FormData, name: string): number {
-  const value = Number(formData.get(name));
-  if (!Number.isFinite(value)) throw new InvalidResult(`Missing ${name}.`);
+  const value = safeInteger(formData.get(name));
+  if (value === null) throw new InvalidResult(`Missing ${name}.`);
   return value;
 }
 
