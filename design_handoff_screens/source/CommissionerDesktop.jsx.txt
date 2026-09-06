@@ -1,0 +1,177 @@
+const { Button, Badge, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Avatar, Icon, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } = window.SaturdaySlateDesignSystem_a838ed;
+const NUM = { textAlign: "right", fontVariantNumeric: "tabular-nums" };
+const SECTIONS = [["slate", "Slate builder", "list-plus"], ["members", "Members", "users"], ["picks", "Who hasn't picked", "clipboard-check"], ["results", "Result overrides", "pencil"]];
+const LINKS = { jonah: "7f3a", alex: "c21e", grandma: "9b04", "uncle-rick": "e77d", "cousin-em": "40a9", dad: "b8c2", "aunt-jo": "1d5f", marcus: "6ea0", kayla: "3f71", papaw: "aa19", tessa: "d40b", "little-ben": "82e6" };
+const toMin = t => { const m = /(\d+):(\d+) (AM|PM)/.exec(t); if (!m) return 1e9; return ((+m[1] % 12) + (m[3] === "PM" ? 12 : 0)) * 60 + +m[2]; };
+
+function Check({ on, onChange, label }) {
+  return <button role="checkbox" aria-checked={on} aria-label={label} onClick={onChange} style={{ width: 44, height: 44, display: "grid", placeItems: "center", border: 0, background: "transparent", cursor: "pointer", margin: "-12px 0" }}>
+    <span style={{ width: 20, height: 20, borderRadius: "var(--radius-sm)", border: "1px solid " + (on ? "var(--primary)" : "var(--border)"), background: on ? "var(--primary)" : "var(--card)", color: "var(--primary-foreground)", display: "grid", placeItems: "center" }}>{on && <Icon name="check" size={14} strokeWidth={3} />}</span></button>;
+}
+
+function SlateBuilder() {
+  const [cands, setCands] = React.useState(CANDIDATES);
+  const [q, setQ] = React.useState("");
+  const [deadline, setDeadline] = React.useState("Sat 12:00 PM");
+  const [published, setPublished] = React.useState(false);
+  const chosen = cands.filter(c => c.on); const tb = chosen.find(c => c.tiebreaker);
+  const toggle = id => setCands(cs => cs.map(c => c.id === id ? { ...c, on: !c.on } : c));
+  const setTb = id => setCands(cs => cs.map(c => ({ ...c, tiebreaker: c.id === id })));
+  const shown = cands.filter(c => (c.away + c.home).toLowerCase().includes(q.toLowerCase()));
+  return <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 16, alignItems: "start" }}>
+    <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderBottom: "1px solid var(--border)" }}>
+        <div style={{ flex: 1, display: "grid" }}><span style={{ ...DISPLAY, fontSize: 18 }}>Game candidates</span><span style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Week 2 · Sep 12 · from CollegeFootballData, FBS only</span></div>
+        <div style={{ position: "relative", width: 260 }}><Icon name="search" size={16} style={{ position: "absolute", left: 12, top: 14, color: "var(--muted-foreground)" }} /><Input placeholder="Find a team" value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 36 }} /></div>
+      </div>
+      <Table>
+        <TableHeader><TableRow><TableHead style={{ width: 44, paddingLeft: 12 }}></TableHead><TableHead>Game</TableHead><TableHead>Kickoff</TableHead><TableHead>TV</TableHead><TableHead>Spread</TableHead></TableRow></TableHeader>
+        <TableBody>{shown.map(c => <TableRow key={c.id} style={{ height: 48, background: c.on ? "var(--accent)" : "transparent" }}>
+          <TableCell style={{ paddingLeft: 12 }}><Check on={c.on} onChange={() => toggle(c.id)} label={`${c.away} at ${c.home}`} /></TableCell>
+          <TableCell style={{ ...DISPLAY, fontSize: 16 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><TeamLogo team={c.away} size={22} />{c.away} <span style={{ fontFamily: "var(--font-sans)", fontWeight: 500, color: "var(--muted-foreground)" }}>at</span> <TeamLogo team={c.home} size={22} />{c.home}</span></TableCell>
+          <TableCell style={{ color: "var(--muted-foreground)" }}>{c.time}</TableCell>
+          <TableCell style={{ color: "var(--muted-foreground)" }}>{c.tv}</TableCell>
+          <TableCell style={{ fontVariantNumeric: "tabular-nums" }}>{c.spread}</TableCell>
+        </TableRow>)}</TableBody>
+      </Table>
+    </Card>
+    <div style={{ display: "grid", gap: 12, position: "sticky", top: 16 }}>
+      <Card style={{ padding: 12, gap: 12 }}>
+        <CardHeader style={{ padding: 0 }} action={<Badge variant={published ? "default" : "outline"}>{published ? "Published" : "Draft"}</Badge>}><CardTitle style={{ ...DISPLAY, fontSize: 18 }}>Week 2 slate</CardTitle><CardDescription>{chosen.length} of 10 games · pick the Tiebreaker Game on the right</CardDescription></CardHeader>
+        <CardContent style={{ padding: 0, display: "grid", gap: 4 }}>
+          {chosen.map(c => <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, borderTop: "1px solid var(--border)" }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}><TeamLogo team={c.away} size={18} />{c.away} at <TeamLogo team={c.home} size={18} />{c.home}</span>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{c.time.replace("Sat ", "")}</span>
+            <button role="radio" aria-checked={!!c.tiebreaker} aria-label="Tiebreaker Game" onClick={() => setTb(c.id)} style={{ minWidth: 44, height: 44, border: 0, background: "transparent", cursor: "pointer", display: "grid", placeItems: "center", color: c.tiebreaker ? "var(--secondary)" : "var(--muted-foreground)" }}><Icon name={c.tiebreaker ? "circle-check" : "circle"} size={18} /></button>
+            <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => toggle(c.id)}><Icon name="x" /></Button></div>)}
+          {chosen.length === 0 && <div style={{ fontSize: 14, color: "var(--muted-foreground)", padding: "8px 0" }}>Check games on the left to build the slate.</div>}
+        </CardContent>
+      </Card>
+      <Card style={{ padding: 12, gap: 8 }}>
+        <div style={LABEL}>Deadline</div>
+        <div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Defaults to the earliest kickoff ({chosen[0] ? chosen.map(c => c.time).sort((a, b) => toMin(a) - toMin(b))[0] : "—"}). Move it earlier, never later.</div>
+        <Input value={deadline} onChange={e => setDeadline(e.target.value)} />
+        <div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Tiebreaker: {tb ? `${tb.away} at ${tb.home}` : <span style={{ color: "var(--secondary)", fontWeight: 600 }}>none chosen</span>}</div>
+        <Button onClick={() => setPublished(true)} disabled={published || chosen.length !== 10 || !tb}><Icon name="send" />{published ? `Published to ${MEMBERS.length} members` : "Publish slate"}</Button>
+        {!published && (chosen.length !== 10 || !tb) && <div style={{ fontSize: 12, color: "var(--muted-foreground)", textAlign: "center" }}>Needs exactly 10 games and a Tiebreaker Game.</div>}
+      </Card>
+    </div>
+  </div>;
+}
+
+function Members() {
+  const [regen, setRegen] = React.useState(null);
+  const [copied, setCopied] = React.useState(null);
+  const [name, setName] = React.useState(""); const [phone, setPhone] = React.useState("");
+  const seen = { jonah: "Today, 9:12 AM", alex: "Today, 8:40 AM", grandma: "Yesterday", "uncle-rick": "Sat", "cousin-em": "Sat", dad: "Today, 7:55 AM", "aunt-jo": "Yesterday", marcus: "Today, 10:31 AM", kayla: "Yesterday", papaw: "Two weeks ago", tessa: "Today, 6:20 AM", "little-ben": "Sat" };
+  return <div style={{ display: "grid", gap: 16 }}>
+    <Card style={{ padding: 12, gap: 8 }}>
+      <div style={LABEL}>Add a member</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "end" }}>
+        <label style={{ display: "grid", gap: 4, fontSize: 14, fontWeight: 600 }}>Name<Input value={name} onChange={e => setName(e.target.value)} placeholder="Aunt Jo" /></label>
+        <label style={{ display: "grid", gap: 4, fontSize: 14, fontWeight: 600 }}>Phone (for the Magic Link text)<Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(256) 555-0140" inputMode="tel" /></label>
+        <Button disabled={!name.trim()}><Icon name="user-plus" />Create Magic Link</Button>
+      </div>
+    </Card>
+    <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
+      <Table>
+        <TableHeader><TableRow><TableHead style={{ paddingLeft: 12 }}>Member</TableHead><TableHead>Role</TableHead><TableHead>Magic Link</TableHead><TableHead>Last opened</TableHead><TableHead style={{ textAlign: "right", paddingRight: 12 }}>Actions</TableHead></TableRow></TableHeader>
+        <TableBody>{MEMBERS.map(m => <React.Fragment key={m.id}><TableRow style={{ height: 60 }}>
+          <TableCell style={{ paddingLeft: 12 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><Avatar size={36} src={P(m.pennant)} /><span style={{ fontWeight: 600 }}>{m.name}</span></span></TableCell>
+          <TableCell>{m.commissioner ? <Badge variant="secondary"><Icon name="shield" size={12} />Commissioner</Badge> : <span style={{ color: "var(--muted-foreground)" }}>Member</span>}</TableCell>
+          <TableCell><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 13, background: "var(--muted)", padding: "4px 8px", borderRadius: "var(--radius-sm)" }}>slate.mabry.family/m/••••{LINKS[m.id]}</code><Button variant="ghost" size="sm" onClick={() => { setCopied(m.id); setTimeout(() => setCopied(null), 1200); }}><Icon name={copied === m.id ? "check" : "copy"} />{copied === m.id ? "Copied" : "Copy"}</Button></span></TableCell>
+          <TableCell style={{ color: "var(--muted-foreground)" }}>{seen[m.id]}</TableCell>
+          <TableCell style={{ textAlign: "right", paddingRight: 12 }}><span style={{ display: "inline-flex", gap: 4 }}><Button variant="outline" size="sm" onClick={() => setRegen(regen === m.id ? null : m.id)}><Icon name="refresh-cw" />Regenerate</Button><Button variant="ghost" size="icon" aria-label="More"><Icon name="more-horizontal" /></Button></span></TableCell>
+        </TableRow>
+        {regen === m.id && <TableRow style={{ background: "var(--accent)" }}><TableCell colSpan={5} style={{ padding: 12, paddingLeft: 12 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><Icon name="triangle-alert" size={18} style={{ color: "var(--destructive)" }} /><span style={{ flex: 1, fontSize: 14 }}>Regenerating {m.name}'s Magic Link signs them out on every device. Text them the new one.</span><Button variant="destructive" size="sm" onClick={() => setRegen(null)}>Regenerate Magic Link</Button><Button variant="ghost" size="sm" onClick={() => setRegen(null)}>Cancel</Button></div></TableCell></TableRow>}
+        </React.Fragment>)}</TableBody>
+      </Table>
+    </Card>
+  </div>;
+}
+
+function PickStatus() {
+  const slate = GAMES.filter(g => g.status !== "void");
+  const rows = MEMBERS.map(m => { const n = slate.filter(g => PICKS[m.id][g.id]).length; return { m, n, lock: !!LOCKS[m.id], guess: GUESSES[m.id], done: n === slate.length && !!LOCKS[m.id] && GUESSES[m.id] != null }; });
+  const done = rows.filter(r => r.done).length;
+  const [nudged, setNudged] = React.useState({});
+  return <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 320px", gap: 16, alignItems: "start" }}>
+    <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
+      <Table>
+        <TableHeader><TableRow><TableHead style={{ paddingLeft: 12 }}>Member</TableHead><TableHead>Picks</TableHead><TableHead>Lock of the Week</TableHead><TableHead>Tiebreaker Guess</TableHead><TableHead style={{ textAlign: "right", paddingRight: 12 }}></TableHead></TableRow></TableHeader>
+        <TableBody>{rows.map(r => <TableRow key={r.m.id} style={{ height: 60 }}>
+          <TableCell style={{ paddingLeft: 12 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><Avatar size={36} src={P(r.m.pennant)} /><span style={{ fontWeight: 600 }}>{r.m.name}</span></span></TableCell>
+          <TableCell><span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><span style={{ display: "flex", gap: 2 }}>{slate.map(g => <span key={g.id} style={{ width: 10, height: 8, borderRadius: 2, background: PICKS[r.m.id][g.id] ? "var(--primary)" : "var(--muted)" }} />)}</span><span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{r.n} of {slate.length}</span></span></TableCell>
+          <TableCell>{r.lock ? <Badge variant="locked"><Icon name="lock" size={12} />{PICKS[r.m.id][LOCKS[r.m.id]]}</Badge> : <Badge variant="pending">Not set</Badge>}</TableCell>
+          <TableCell style={{ fontVariantNumeric: "tabular-nums" }}>{r.guess != null ? r.guess : <Badge variant="pending">Not set</Badge>}</TableCell>
+          <TableCell style={{ textAlign: "right", paddingRight: 12 }}>{r.done ? <Badge variant="win">Done</Badge> : <Button variant="outline" size="sm" disabled={!!nudged[r.m.id]} onClick={() => setNudged(n => ({ ...n, [r.m.id]: true }))}><Icon name={nudged[r.m.id] ? "check" : "message-square"} />{nudged[r.m.id] ? "Nudge sent" : "Text a nudge"}</Button>}</TableCell>
+        </TableRow>)}</TableBody>
+      </Table>
+    </Card>
+    <div style={{ display: "grid", gap: 12 }}>
+      <Card style={{ padding: 12, gap: 4 }}>
+        <div style={LABEL}>Week 1 Deadline</div>
+        <div style={{ ...DISPLAY, fontSize: 28, lineHeight: "32px" }}>Sat 12:00 PM</div>
+        <div style={{ fontSize: 14, color: "var(--muted-foreground" }}>Locks in <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--foreground)" }}>{useCountdown()}</span></div>
+      </Card>
+      <Card style={{ padding: 12, gap: 4 }}>
+        <div style={LABEL}>Ready</div>
+        <div style={{ ...DISPLAY, fontSize: 28, lineHeight: "32px" }}>{done} of {MEMBERS.length}</div>
+        <div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Members with every pick, a Lock and a Tiebreaker Guess. Reminders go out automatically 2 hours before the Deadline.</div>
+      </Card>
+    </div>
+  </div>;
+}
+
+function ResultOverrides() {
+  const [games, setGames] = React.useState(GAMES);
+  const [editing, setEditing] = React.useState(null);
+  const set = (id, patch) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...patch } : g));
+  return <div style={{ display: "grid", gap: 16 }}>
+    <div style={{ fontSize: 14, color: "var(--muted-foreground)", maxWidth: 720 }}>Scores come from CollegeFootballData every few minutes. Override only when the feed is wrong or a game will not be played. Voiding a game scores zero for everyone and drops any Lock on it.</div>
+    <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
+      <Table>
+        <TableHeader><TableRow><TableHead style={{ paddingLeft: 12 }}>Game</TableHead><TableHead>Kickoff</TableHead><TableHead style={NUM}>Away</TableHead><TableHead style={NUM}>Home</TableHead><TableHead>Status</TableHead><TableHead style={{ textAlign: "right", paddingRight: 12 }}>Override</TableHead></TableRow></TableHeader>
+        <TableBody>{games.map(g => { const ed = editing === g.id; const voided = g.status === "void"; return <TableRow key={g.id} style={{ height: 56, opacity: voided ? .7 : 1, background: ed ? "var(--accent)" : "transparent" }}>
+          <TableCell style={{ paddingLeft: 12, ...DISPLAY, fontSize: 16 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><TeamLogo team={g.away} size={22} />{g.away} <span style={{ fontFamily: "var(--font-sans)", fontWeight: 500, color: "var(--muted-foreground)" }}>at</span> <TeamLogo team={g.home} size={22} />{g.home}{g.tiebreaker && <Badge variant="secondary" style={{ marginLeft: 8 }}>Tiebreaker</Badge>}</span></TableCell>
+          <TableCell style={{ color: "var(--muted-foreground)" }}>{g.time}</TableCell>
+          <TableCell style={NUM}>{ed ? <Input defaultValue={g.awayScore ?? ""} inputMode="numeric" style={{ width: 72, textAlign: "right" }} onChange={e => set(g.id, { awayScore: +e.target.value })} /> : <span style={{ ...DISPLAY, fontSize: 18 }}>{g.awayScore ?? "–"}</span>}</TableCell>
+          <TableCell style={NUM}>{ed ? <Input defaultValue={g.homeScore ?? ""} inputMode="numeric" style={{ width: 72, textAlign: "right" }} onChange={e => set(g.id, { homeScore: +e.target.value })} /> : <span style={{ ...DISPLAY, fontSize: 18 }}>{g.homeScore ?? "–"}</span>}</TableCell>
+          <TableCell>{voided ? <Badge variant="outline">Void</Badge> : g.status === "live" ? <Badge variant="live"><Icon name="radio" size={12} />{g.clock}</Badge> : g.status === "final" ? <Badge variant="default">Final{g.overridden ? " · overridden" : ""}</Badge> : <Badge variant="pending">Scheduled</Badge>}</TableCell>
+          <TableCell style={{ textAlign: "right", paddingRight: 12 }}><span style={{ display: "inline-flex", gap: 4 }}>
+            {voided ? <Button variant="outline" size="sm" onClick={() => set(g.id, { status: "scheduled", time: "Sat 7:30 PM" })}><Icon name="undo-2" />Restore game</Button>
+            : ed ? <><Button size="sm" onClick={() => { set(g.id, { status: "final", overridden: true, clock: undefined }); setEditing(null); }}><Icon name="check" />Save as Final</Button><Button variant="ghost" size="sm" onClick={() => setEditing(null)}>Cancel</Button></>
+            : <><Button variant="outline" size="sm" onClick={() => setEditing(g.id)}><Icon name="pencil" />Set score</Button><Button variant="ghost" size="sm" onClick={() => set(g.id, { status: "void" })} style={{ color: "var(--destructive)" }}><Icon name="ban" />Void</Button></>}
+          </span></TableCell>
+        </TableRow>; })}</TableBody>
+      </Table>
+    </Card>
+  </div>;
+}
+
+const TITLES = { slate: ["Slate builder", "Week 2 · publish by Thursday so everyone has two days to pick"], members: ["Members", `${MEMBERS.length} members · 2 commissioners`], picks: ["Who hasn't picked", "Week 1 · Deadline Sat 12:00 PM"], results: ["Result overrides", "Week 1 · scores from CollegeFootballData"] };
+function CommissionerDesktop({ section: initial }) {
+  const [sec, setSec] = React.useState(initial || "slate");
+  const Body = { slate: SlateBuilder, members: Members, picks: PickStatus, results: ResultOverrides }[sec];
+  const alex = MEMBERS.find(m => m.id === "alex");
+  return <div style={{ display: "grid", gridTemplateColumns: "220px minmax(0,1fr)", gridTemplateRows: "56px minmax(0,1fr)", minHeight: "100%", background: "var(--background)" }}>
+    <header style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 12, padding: "0 20px", borderBottom: "1px solid var(--border)", background: "var(--card)" }}>
+      <img src="../../assets/brand/mark.svg" alt="" style={{ width: 32, height: 32 }} />
+      <span style={{ ...DISPLAY, fontSize: 18, letterSpacing: ".02em" }}>SATURDAY SLATE</span>
+      <span style={{ ...LABEL, borderLeft: "1px solid var(--border)", paddingLeft: 12 }}>Commissioner console</span>
+      <span style={{ flex: 1 }} />
+      <Badge variant="secondary">2026 · Week 1 in progress</Badge>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 600 }}><Avatar size={28} src={P(alex.pennant)} />{alex.name}</span>
+    </header>
+    <nav style={{ borderRight: "1px solid var(--border)", padding: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+      {SECTIONS.map(([id, label, icon]) => { const on = sec === id; return <button key={id} onClick={() => setSec(id)} aria-current={on ? "page" : undefined} style={{ minHeight: 44, display: "flex", alignItems: "center", gap: 10, padding: "0 12px", border: 0, borderRadius: "var(--radius-md)", background: on ? "var(--primary)" : "transparent", color: on ? "var(--primary-foreground)" : "var(--foreground)", fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}><Icon name={icon} size={18} />{label}</button>; })}
+      <span style={{ flex: 1 }} />
+      <a href="index.html?tab=picks" style={{ minHeight: 44, display: "flex", alignItems: "center", gap: 10, padding: "0 12px", color: "var(--muted-foreground)", fontSize: 14, fontWeight: 600, textDecoration: "none" }}><Icon name="smartphone" size={18} />Open the app</a>
+    </nav>
+    <main style={{ padding: "20px 24px 32px", overflow: "auto", display: "grid", gap: 16, alignContent: "start" }}>
+      <div><h1 style={{ ...DISPLAY, fontSize: 28, lineHeight: "32px", margin: 0 }}>{TITLES[sec][0]}</h1><div style={{ fontSize: 14, color: "var(--muted-foreground)", marginTop: 2 }}>{TITLES[sec][1]}</div></div>
+      <Body />
+    </main>
+  </div>;
+}
+Object.assign(window, { CommissionerDesktop });

@@ -1,0 +1,37 @@
+const { Button, Badge, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Icon, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } = window.SaturdaySlateDesignSystem_a838ed;
+
+function CommissionerScreen() {
+  const [regen, setRegen] = React.useState(null);
+  const [published, setPublished] = React.useState(false);
+  const [deadline, setDeadline] = React.useState("Sat 12:00 PM");
+  return <>
+    <AppHeader title="Commissioner" sub="Week 2 slate · members" />
+    <div style={{ display: "grid", gap: 12, padding: "0 16px 24px" }}>
+      <Card style={{ gap: 12, padding: 12 }}>
+        <CardHeader style={{ padding: 0 }} action={<Badge variant={published ? "default" : "outline"}>{published ? "Published" : "Draft"}</Badge>}><CardTitle style={{ ...DISPLAY, fontSize: 18 }}>Week 2 slate</CardTitle><CardDescription>10 games · Tiebreaker: Oregon at Ohio State</CardDescription></CardHeader>
+        <CardContent style={{ padding: 0, display: "grid", gap: 8 }}>
+          <div style={{ ...LABEL }}>Deadline</div>
+          <div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Defaults to the earliest kickoff. Move it earlier, never later.</div>
+          <Input value={deadline} onChange={e => setDeadline(e.target.value)} />
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}><Button variant="outline" style={{ flex: 1 }}><Icon name="list-plus" />Edit games</Button><Button style={{ flex: 1 }} onClick={() => setPublished(true)} disabled={published}><Icon name="send" />{published ? "Published" : "Publish slate"}</Button></div>
+        </CardContent>
+      </Card>
+      <SectionLabel style={{ padding: "4px 0 0" }}>Members</SectionLabel>
+      <Card style={{ padding: "0 12px", gap: 0 }}>
+        {MEMBERS.map((m, i) => <div key={m.id} style={{ borderTop: i ? "1px solid var(--border)" : 0, padding: "6px 0" }}><MemberRow member={m} right={<Button variant="ghost" size="icon" aria-label="Regenerate magic link" onClick={() => setRegen(m)}><Icon name="link" /></Button>} /></div>)}
+      </Card>
+      <Button variant="outline"><Icon name="user-plus" />Add member</Button>
+      <SectionLabel style={{ padding: "4px 0 0" }}>Result overrides</SectionLabel>
+      <Card style={{ gap: 8, padding: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ ...DISPLAY, fontSize: 18, flex: 1 }}>Iowa State at Kansas State</span><Badge variant="outline">Void</Badge></div>
+        <div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Postponed after publish. Scores zero for everyone; Alex's Lock was dropped.</div>
+        <Button variant="ghost" size="sm" style={{ alignSelf: "flex-start", paddingLeft: 8 }}><Icon name="undo-2" />Restore game</Button>
+      </Card>
+    </div>
+    <Sheet open={!!regen} onOpenChange={() => setRegen(null)}>
+      {regen && <><DrawerHeader><DrawerTitle>Regenerate {regen.name}'s magic link</DrawerTitle><DrawerDescription>The old link stops working on every device. Send the new one by text.</DrawerDescription></DrawerHeader>
+      <DrawerFooter><Button variant="destructive" onClick={() => setRegen(null)}>Regenerate magic link</Button><Button variant="ghost" onClick={() => setRegen(null)}>Cancel</Button></DrawerFooter></>}
+    </Sheet>
+  </>;
+}
+Object.assign(window, { CommissionerScreen });

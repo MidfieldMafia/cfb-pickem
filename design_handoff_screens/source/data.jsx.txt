@@ -1,0 +1,94 @@
+// Shared fake data for the Saturday Slate UI kit — from src/lib/scoring/fixtures/week-1-2026.ts
+const P = n => `../../assets/avatars/pennants/${String(n).padStart(2, "0")}.svg`;
+// School logo by display name (assets/logos/logos.json slugs): LOGO("Texas A&M") → texas-aandm.png
+const LOGO = team => `../../assets/logos/${team.toLowerCase().replace(/['’()]/g, "").replace(/&/g, "and").replace(/é/g, "e").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.png`;
+// Official school colors [primary, secondary] for slate teams (assets/logos/logos.json)
+const TEAM_COLORS = {"Alabama":["#9E1B32","#828A8F"],"Auburn":["#0C2340","#E87722"],"Florida":["#0021A5","#FA4616"],"Georgia":["#BA0C2F","#000000"],"Kentucky":["#0033A0","#FFFFFF"],"LSU":["#461D7C","#FDD023"],"Missouri":["#F1B82D","#000000"],"Oklahoma":["#841617","#FDF9D8"],"Ole Miss":["#CE1126","#14213D"],"Tennessee":["#FF8200","#58595B"],"Texas":["#BF5700","#333F48"],"Texas A&M":["#500000","#FFFFFF"],"Vanderbilt":["#866D4B","#000000"],"Iowa":["#FFCD00","#000000"],"Michigan":["#00274C","#FFCB05"],"Ohio State":["#BB0000","#666666"],"Oregon":["#154733","#FEE123"],"Penn State":["#041E42","#FFFFFF"],"USC":["#990000","#FFCC00"],"Washington":["#4B2E83","#B7A57A"],"Arizona":["#CC0033","#003366"],"Baylor":["#154734","#FFB81C"],"BYU":["#002E5D","#FFFFFF"],"Iowa State":["#C8102E","#F1BE48"],"Kansas State":["#512888","#D1D1D1"],"Utah":["#CC0000","#000000"],"Clemson":["#F56600","#522D80"],"Florida State":["#782F40","#CEB888"],"Miami":["#F47321","#005030"],"Wake Forest":["#9E7E38","#000000"],"Notre Dame":["#0C2340","#C99700"]};
+const teamColor = (team, i = 0) => (TEAM_COLORS[team] || ["var(--foreground)", "var(--border)"])[i];
+function TeamLogo({ team, size = 24, style }) { return <img src={LOGO(team)} alt="" width={size} height={size} style={{ width: size, height: size, objectFit: "contain", flexShrink: 0, ...style }} />; }
+const ME = "cousin-em"; // the viewer in every mock
+const MEMBERS = [
+  { id: "jonah", name: "Jonah", pennant: 1, commissioner: true },
+  { id: "alex", name: "Alex", pennant: 2, commissioner: true },
+  { id: "grandma", name: "Grandma", pennant: 3 },
+  { id: "uncle-rick", name: "Uncle Rick", pennant: 5 },
+  { id: "cousin-em", name: "Cousin Em", pennant: 9 },
+  { id: "dad", name: "Dad", pennant: 4 },
+  { id: "aunt-jo", name: "Aunt Jo", pennant: 6 },
+  { id: "marcus", name: "Marcus", pennant: 7 },
+  { id: "kayla", name: "Kayla", pennant: 8 },
+  { id: "papaw", name: "Papaw", pennant: 10 },
+  { id: "tessa", name: "Tessa", pennant: 11 },
+  { id: "little-ben", name: "Little Ben", pennant: 12 },
+];
+const GAMES = [
+  { id: "g1", weather: { temp: 78, precip: 10, icon: "sun", wind: 6 }, venue: "Sanford Stadium", city: "Athens, GA", tv: "ABC", homeWp: 0.68, home: "Georgia", away: "Clemson", homeScore: 34, awayScore: 21, status: "final", time: "Sat 12:00 PM", spread: "Georgia −6.5" },
+  { id: "g2", weather: { temp: 71, precip: 20, icon: "cloud-sun", wind: 9 }, venue: "Ohio Stadium", city: "Columbus, OH", tv: "FOX", homeWp: 0.55, home: "Ohio State", away: "Texas", homeScore: 17, awayScore: 24, status: "final", time: "Sat 12:00 PM", spread: "Ohio State −2.5" },
+  { id: "g3", weather: { temp: 88, precip: 35, icon: "cloud-sun-rain", wind: 5 }, venue: "Bryant-Denny Stadium", city: "Tuscaloosa, AL", tv: "CBS", homeWp: 0.81, home: "Alabama", away: "Florida State", homeScore: 28, awayScore: 10, status: "live", clock: "Q3 · 8:12", time: "Sat 3:30 PM", spread: "Alabama −13.5" },
+  { id: "g4", weather: { temp: 91, precip: 55, icon: "cloud-rain", wind: 8 }, venue: "Tiger Stadium", city: "Baton Rouge, LA", tv: "ESPN", homeWp: 0.61, home: "LSU", away: "Oklahoma", homeScore: 14, awayScore: 17, status: "live", clock: "Q2 · 1:04", time: "Sat 3:30 PM", spread: "LSU −4" },
+  { id: "g5", weather: { temp: 64, precip: 5, icon: "sun", wind: 12 }, venue: "Michigan Stadium", city: "Ann Arbor, MI", tv: "NBC", homeWp: 0.52, home: "Michigan", away: "Notre Dame", homeScore: null, awayScore: null, status: "scheduled", time: "Sat 7:30 PM", spread: "Michigan −1" },
+  { id: "g6", weather: { temp: 74, precip: 15, icon: "cloud-sun", wind: 4 }, venue: "Neyland Stadium", city: "Knoxville, TN", tv: "ESPN", homeWp: 0.7, home: "Tennessee", away: "Auburn", homeScore: null, awayScore: null, status: "scheduled", time: "Sat 7:30 PM", tiebreaker: true, spread: "Tennessee −7" },
+  { id: "g7", weather: { temp: 62, precip: 40, icon: "cloud-rain", wind: 10 }, venue: "Autzen Stadium", city: "Eugene, OR", tv: "FOX", homeWp: 0.74, home: "Oregon", away: "Washington", homeScore: null, awayScore: null, status: "scheduled", time: "Sat 7:30 PM", spread: "Oregon −9.5" },
+  { id: "g8", weather: { temp: 59, precip: 10, icon: "moon", wind: 7 }, venue: "Beaver Stadium", city: "University Park, PA", tv: "ABC", homeWp: 0.58, home: "Penn State", away: "USC", homeScore: null, awayScore: null, status: "scheduled", time: "Sat 7:30 PM", spread: "Penn State −3" },
+  { id: "g9", weather: { temp: 83, precip: 0, icon: "moon", wind: 3 }, venue: "Vaught-Hemingway Stadium", city: "Oxford, MS", tv: "SECN", homeWp: 0.76, home: "Ole Miss", away: "Kentucky", homeScore: null, awayScore: null, status: "scheduled", time: "Sat 7:30 PM", spread: "Ole Miss −10" },
+  { id: "g10", weather: { temp: 70, precip: 0, icon: "cloud", wind: 14 }, venue: "Jack Trice Stadium", city: "Ames, IA", tv: "FS1", homeWp: 0.5, home: "Iowa State", away: "Kansas State", homeScore: null, awayScore: null, status: "void", time: "Postponed", spread: "Pick" },
+];
+// The same week after every game went final — for the Results & Reveal screen
+const FINAL_SCORES = { g3: [28, 17], g4: [24, 20], g5: [24, 27], g6: [42, 31], g7: [35, 31], g8: [23, 20], g9: [38, 17] };
+const WEEK_FINAL = GAMES.map(g => g.status === "void" ? g : FINAL_SCORES[g.id] ? { ...g, status: "final", clock: undefined, homeScore: FINAL_SCORES[g.id][0], awayScore: FINAL_SCORES[g.id][1] } : g);
+const PICKS = {
+  jonah: { g1: "Georgia", g2: "Ohio State", g3: "Alabama", g4: "LSU", g5: "Notre Dame", g6: "Tennessee", g7: "Oregon", g8: "Penn State", g9: "Ole Miss", g10: "Iowa State" },
+  alex: { g1: "Georgia", g2: "Texas", g3: "Alabama", g4: "Oklahoma", g5: "Michigan", g6: "Auburn", g7: "Oregon", g8: "USC", g9: "Ole Miss", g10: "Kansas State" },
+  grandma: { g1: "Georgia", g2: "Texas", g3: "Alabama", g4: "Oklahoma", g5: "Notre Dame", g6: "Tennessee", g7: "Washington", g8: "Penn State", g9: "Kentucky" },
+  "uncle-rick": { g1: "Clemson", g2: "Ohio State", g3: "Florida State", g4: "LSU", g5: "Michigan", g6: "Auburn", g7: "Washington", g8: "USC", g9: "Kentucky", g10: "Iowa State" },
+  "cousin-em": { g1: "Georgia", g2: "Ohio State", g3: "Alabama", g4: "LSU", g5: "Michigan", g6: "Tennessee", g7: "Oregon", g8: "USC", g9: "Ole Miss", g10: "Iowa State" },
+  dad: { g1: "Georgia", g2: "Texas", g3: "Alabama", g4: "Oklahoma", g5: "Michigan", g6: "Tennessee", g7: "Oregon", g8: "Penn State", g9: "Ole Miss", g10: "Iowa State" },
+  "aunt-jo": { g1: "Clemson", g2: "Texas", g3: "Alabama", g4: "LSU", g5: "Notre Dame", g6: "Tennessee", g7: "Washington", g8: "Penn State", g9: "Ole Miss" },
+  marcus: { g1: "Georgia", g2: "Ohio State", g3: "Florida State", g4: "Oklahoma", g5: "Notre Dame", g6: "Auburn", g7: "Oregon", g8: "USC", g9: "Kentucky", g10: "Kansas State" },
+  kayla: { g1: "Georgia", g2: "Texas", g3: "Alabama", g4: "Oklahoma", g5: "Notre Dame", g6: "Tennessee", g7: "Oregon", g8: "Penn State", g9: "Ole Miss", g10: "Iowa State" },
+  papaw: { g1: "Clemson", g2: "Ohio State", g3: "Alabama", g4: "LSU", g5: "Michigan", g6: "Tennessee", g7: "Oregon", g8: "Penn State", g9: "Ole Miss" },
+  tessa: { g1: "Georgia", g2: "Texas", g3: "Alabama", g4: "Oklahoma", g5: "Notre Dame", g6: "Auburn", g7: "Washington", g8: "USC", g9: "Ole Miss", g10: "Kansas State" },
+  "little-ben": { g1: "Georgia", g2: "Ohio State", g3: "Alabama", g4: "LSU", g5: "Michigan", g6: "Tennessee", g7: "Washington", g8: "Penn State", g9: "Kentucky", g10: "Iowa State" },
+};
+const IN_PROGRESS = ["g1", "g2", "g3"]; // what Cousin Em has picked so far, for the Pick entry mock
+const LOCKS = { jonah: "g3", alex: "g10", grandma: "g2", "uncle-rick": "g1", "cousin-em": "g5", dad: "g1", "aunt-jo": "g3", marcus: "g5", kayla: "g9", papaw: "g6", tessa: "g4", "little-ben": "g3" };
+const GUESSES = { jonah: 70, alex: 77, grandma: 66, "uncle-rick": 51, "cousin-em": 64, dad: 61, "aunt-jo": 58, marcus: 74, kayla: 69, papaw: 45, tessa: 80, "little-ben": 88 };
+// Weekly Score so far: 10 per correct pick, 20 for the Lock, only games with a result count
+function weekScore(id, games) { let pts = 0, w = 0, l = 0; for (const g of games) { const lead = leading(g); if (!lead || lead === "tie" || g.status === "void") continue; const pick = PICKS[id][g.id]; if (!pick) continue; if (pick === lead) { w++; pts += LOCKS[id] === g.id ? 20 : 10; } else l++; } return { pts, w, l }; }
+// Tiebreaker: combined final score of the Tiebreaker Game; closest guess wins ties
+const TIEBREAKER = WEEK_FINAL.find(g => g.tiebreaker);
+const TB_TOTAL = TIEBREAKER.homeScore + TIEBREAKER.awayScore;
+const tbDelta = id => GUESSES[id] == null ? Infinity : Math.abs(GUESSES[id] - TB_TOTAL);
+// Week 1 winner: most points, then closest Tiebreaker Guess
+const WEEKLY_WINNER = MEMBERS.map(m => ({ id: m.id, pts: weekScore(m.id, WEEK_FINAL).pts, d: tbDelta(m.id) })).sort((a, b) => b.pts - a.pts || a.d - b.d)[0].id;
+// Season standings, derived from the same scoring as every other screen so the two can't drift.
+// One week played, so the season total IS the Week 1 score; Weekly Wins go to the week's top score.
+const LEADERBOARD = (() => {
+  const rows = MEMBERS.map(m => { const s = weekScore(m.id, WEEK_FINAL); return { id: m.id, pts: s.pts, w: s.w, l: s.l, avg: s.pts, wins: m.id === WEEKLY_WINNER ? 1 : 0 }; }).sort((a, b) => b.pts - a.pts || b.wins - a.wins || tbDelta(a.id) - tbDelta(b.id));
+  let rank = 0, prev = null;
+  rows.forEach((r, i) => { if (r.pts !== prev) { rank = i + 1; prev = r.pts; } r.rank = rank; });
+  return rows;
+})();
+// Week 2 game candidates from CollegeFootballData, for the slate builder
+const CANDIDATES = [
+  { id: "c1", away: "Oregon", home: "Ohio State", time: "Sat 12:00 PM", spread: "Ohio State −3", tv: "FOX", on: true, tiebreaker: true },
+  { id: "c2", away: "Texas", home: "Michigan", time: "Sat 12:00 PM", spread: "Texas −4.5", tv: "FOX", on: true },
+  { id: "c3", away: "Georgia", home: "Alabama", time: "Sat 3:30 PM", spread: "Alabama −2", tv: "CBS", on: true },
+  { id: "c4", away: "Notre Dame", home: "USC", time: "Sat 7:30 PM", spread: "Notre Dame −6", tv: "NBC", on: true },
+  { id: "c5", away: "Penn State", home: "Iowa", time: "Sat 7:30 PM", spread: "Penn State −8.5", tv: "NBC", on: true },
+  { id: "c6", away: "LSU", home: "Florida", time: "Sat 7:00 PM", spread: "LSU −3", tv: "ESPN", on: true },
+  { id: "c7", away: "Clemson", home: "Miami", time: "Sat 7:30 PM", spread: "Miami −1.5", tv: "ABC", on: true },
+  { id: "c8", away: "Oklahoma", home: "Texas A&M", time: "Sat 3:30 PM", spread: "Texas A&M −7", tv: "ABC", on: true },
+  { id: "c9", away: "Tennessee", home: "Kentucky", time: "Sat 12:00 PM", spread: "Tennessee −10", tv: "ESPN", on: true },
+  { id: "c10", away: "Utah", home: "BYU", time: "Sat 10:15 PM", spread: "Utah −2.5", tv: "ESPN", on: true },
+  { id: "c11", away: "Kansas State", home: "Arizona", time: "Sat 10:30 PM", spread: "Kansas State −5", tv: "FS1", on: false },
+  { id: "c12", away: "Ole Miss", home: "Wake Forest", time: "Sat 12:00 PM", spread: "Ole Miss −17", tv: "ESPN2", on: false },
+  { id: "c13", away: "Missouri", home: "Vanderbilt", time: "Sat 4:00 PM", spread: "Missouri −6", tv: "SECN", on: false },
+  { id: "c14", away: "Iowa State", home: "Baylor", time: "Sat 8:00 PM", spread: "Iowa State −3", tv: "FS1", on: false },
+];
+// who's currently winning a game (null if no score)
+function leading(g) { if (g.homeScore == null) return null; if (g.homeScore === g.awayScore) return "tie"; return g.homeScore > g.awayScore ? g.home : g.away; }
+// Team form from CFBD /rankings, /records, /games and /stats/season — [rank or null, W-L, last three newest first, pts/g, pts allowed/g, yds/g, yds allowed/g]
+const TEAM_INFO = { Georgia: [1, "2–0", "WWW", 38.5, 14, 468, 281], Clemson: [12, "1–1", "LWW", 31, 20.5, 422, 336], "Ohio State": [3, "2–0", "WWW", 41.5, 9.5, 491, 244], Texas: [4, "2–0", "WWW", 36, 12.5, 455, 262], Alabama: [5, "1–1", "WLW", 33.5, 19, 447, 318], "Florida State": [null, "0–2", "LLW", 17.5, 27, 331, 402], LSU: [9, "2–0", "WWL", 34, 18.5, 462, 330], Oklahoma: [15, "2–0", "WWW", 30.5, 13, 404, 289], Michigan: [10, "1–1", "LWW", 27, 17.5, 378, 301], "Notre Dame": [7, "2–0", "WWW", 35.5, 11, 438, 270], Tennessee: [11, "2–0", "WWW", 44, 15.5, 512, 296], Auburn: [null, "1–1", "WLW", 28.5, 21, 401, 352], Oregon: [2, "2–0", "WWW", 40, 12, 486, 258], Washington: [22, "2–0", "WWL", 32.5, 17, 433, 322], "Penn State": [6, "2–0", "WWW", 37, 10.5, 458, 251], USC: [19, "1–1", "LWW", 34.5, 24.5, 470, 371], "Ole Miss": [8, "2–0", "WWW", 43, 13.5, 528, 277], Kentucky: [null, "1–1", "LWW", 22, 20.5, 352, 340], "Iowa State": [20, "2–0", "WWW", 29.5, 16, 398, 309], "Kansas State": [17, "1–1", "WLW", 31.5, 22, 417, 358] };
+const teamInfo = team => TEAM_INFO[team] || [null, "0–0", "", 0, 0, 0, 0];
+Object.assign(window, { P, LOGO, TeamLogo, IN_PROGRESS, TEAM_COLORS, teamColor, TEAM_INFO, teamInfo, ME, MEMBERS, GAMES, WEEK_FINAL, PICKS, LOCKS, GUESSES, LEADERBOARD, CANDIDATES, leading, weekScore, TIEBREAKER, TB_TOTAL, tbDelta, WEEKLY_WINNER });

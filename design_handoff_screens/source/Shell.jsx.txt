@@ -1,0 +1,31 @@
+const { Button, Badge, Avatar, Icon, Drawer } = window.SaturdaySlateDesignSystem_a838ed;
+const LABEL = { fontSize: 12, lineHeight: "16px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--secondary)" };
+const DISPLAY = { fontFamily: "var(--font-display)", fontWeight: 900, letterSpacing: "-.01em" };
+
+function AppHeader({ title, sub, right }) {
+  return <header style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 12 }}>
+    <img src="../../assets/brand/mark.svg" alt="" style={{ width: 36, height: 36 }} />
+    <div style={{ flex: 1, minWidth: 0 }}><h1 style={{ ...DISPLAY, fontSize: 22, lineHeight: "28px", margin: 0 }}>{title}</h1>{sub && <div style={{ fontSize: 14, lineHeight: "20px", color: "var(--muted-foreground)" }}>{sub}</div>}</div>
+    {right}
+  </header>;
+}
+
+const NAV = [["picks", "Picks", "clipboard-check"], ["live", "Live Board", "radio"], ["leaderboard", "Leaderboard", "trophy"], ["commish", "Commissioner", "shield"]];
+function BottomNav({ active, onChange }) {
+  return <nav style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", borderTop: "1px solid var(--border)", background: "var(--card)", paddingBottom: 8 }}>
+    {NAV.map(([id, label, icon]) => { const on = id === active; return <button key={id} onClick={() => onChange(id)} style={{ minHeight: 56, border: 0, background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", color: on ? "var(--primary-foreground)" : "var(--muted-foreground)", fontFamily: "var(--font-sans)", fontSize: 11, fontWeight: 700, padding: 6 }}>
+      <span style={{ display: "grid", placeItems: "center", width: 56, height: 28, borderRadius: 9999, background: on ? "var(--primary)" : "transparent" }}><Icon name={icon} size={18} /></span>
+      <span style={{ color: on ? "var(--foreground)" : "var(--muted-foreground)" }}>{label}</span></button>; })}
+  </nav>;
+}
+
+function SectionLabel({ children, style }) { return <div style={{ ...LABEL, padding: "12px 16px 4px", ...style }}>{children}</div>; }
+
+function MemberRow({ member, right, size = 44 }) {
+  return <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52 }}>
+    <Avatar size={size} src={P(member.pennant)} alt="" /><div style={{ flex: 1, fontWeight: 600 }}>{member.name}{member.commissioner && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>Commissioner</span>}</div>{right}</div>;
+}
+
+// Mount drawers outside the scrolling .screen so the sheet sits at the frame bottom regardless of scroll position
+function Sheet(props) { const host = document.getElementById("sheet"); return host ? ReactDOM.createPortal(<Drawer inline {...props} />, host) : null; }
+Object.assign(window, { AppHeader, BottomNav, SectionLabel, MemberRow, Sheet, LABEL, DISPLAY });

@@ -1,0 +1,41 @@
+const { Badge, Card, Avatar, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Icon } = window.SaturdaySlateDesignSystem_a838ed;
+const R = { textAlign: "right", fontVariantNumeric: "tabular-nums" };
+
+function LeaderboardScreen() {
+  const [view, setView] = React.useState("table");
+  const rows = LEADERBOARD.map(r => ({ ...r, m: MEMBERS.find(x => x.id === r.id), me: r.id === ME }));
+  return <>
+    <AppHeader title="Leaderboard" sub="2026 season · after Week 1" />
+    <div role="tablist" style={{ display: "flex", gap: 8, padding: "4px 16px 12px" }}>
+      {[["table", "Table"], ["cards", "Cards"]].map(([id, l]) => <button key={id} role="tab" aria-selected={view === id} onClick={() => setView(id)} style={{ minHeight: 44, padding: "0 16px", borderRadius: 9999, border: "1px solid " + (view === id ? "var(--primary)" : "var(--border)"), background: view === id ? "var(--primary)" : "transparent", color: view === id ? "var(--primary-foreground)" : "var(--foreground)", fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{l}</button>)}
+    </div>
+    <div style={{ padding: "0 16px 24px", display: "grid", gap: 12 }}>
+      {view === "table" ? <Card style={{ padding: "4px 0 8px", gap: 0, overflow: "hidden" }}>
+        <Table>
+          <TableHeader><TableRow><TableHead style={{ width: 24, paddingLeft: 12 }}>#</TableHead><TableHead>Member</TableHead><TableHead style={R}>Pts</TableHead><TableHead style={R}>W–L</TableHead><TableHead style={R}>Wins</TableHead><TableHead style={{ ...R, paddingRight: 12 }}>Avg</TableHead></TableRow></TableHeader>
+          <TableBody>{rows.map(r => <TableRow key={r.id} data-state={r.me ? "selected" : undefined} style={{ height: 52, background: r.me ? "var(--accent)" : "transparent" }}>
+            <TableCell style={{ color: "var(--muted-foreground)", paddingLeft: 12, paddingRight: 0 }}>{r.rank}</TableCell>
+            <TableCell style={{ whiteSpace: "normal" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Avatar size={28} src={P(r.m.pennant)} /><span style={{ fontWeight: r.me ? 800 : 600 }}>{r.me ? "You" : r.m.name}</span>{r.rank === 1 && <Badge variant="leader" aria-label="Leader" style={{ padding: "2px 6px" }}><Icon name="trophy" size={12} /></Badge>}</span></TableCell>
+            <TableCell style={{ ...R, ...DISPLAY, fontSize: 18 }}>{r.pts}</TableCell>
+            <TableCell style={R}>{r.w}–{r.l}</TableCell>
+            <TableCell style={R}>{r.wins}</TableCell>
+            <TableCell style={{ ...R, paddingRight: 12 }}>{r.avg}</TableCell>
+          </TableRow>)}</TableBody>
+        </Table>
+      </Card>
+      : rows.map(r => <Card key={r.id} style={{ padding: 12, gap: 8, border: r.me ? "2px solid var(--primary)" : undefined, background: r.me ? "var(--accent)" : undefined }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ ...DISPLAY, fontSize: 28, width: 32, color: "var(--muted-foreground)" }}>{r.rank}</span>
+          <Avatar size={44} src={P(r.m.pennant)} />
+          <span style={{ flex: 1, display: "grid" }}><span style={{ ...DISPLAY, fontSize: 18 }}>{r.me ? "You" : r.m.name}</span><span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{r.m.commissioner ? "Commissioner" : "Member"}</span></span>
+          {r.rank === 1 && <Badge variant="leader"><Icon name="trophy" size={12} />Leader</Badge>}
+          <span style={{ ...DISPLAY, fontSize: 28 }}>{r.pts}</span></div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+          {[["Record", `${r.w}–${r.l}`], ["Weekly Wins", r.wins], ["Avg / week", r.avg]].map(([k, v]) => <span key={k} style={{ display: "grid" }}><span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{k}</span><span style={{ ...DISPLAY, fontSize: 18, fontVariantNumeric: "tabular-nums" }}>{v}</span></span>)}
+        </div>
+      </Card>)}
+      <div style={{ fontSize: 14, color: "var(--muted-foreground)", padding: "0 4px" }}>Ties break by Weekly Wins, then by Tiebreaker Guess closeness. Jonah took Week 1 with 90.</div>
+    </div>
+  </>;
+}
+Object.assign(window, { LeaderboardScreen });

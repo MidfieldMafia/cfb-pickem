@@ -150,3 +150,51 @@ export interface SeasonResult {
   weeks: WeekResult[];
   leaderboard: LeaderboardRow[];
 }
+
+/*
+ * Presentation detail below this line. The engine never reads any of it — it is
+ * kept out of `Game` so the scoring contract stays plain data in, plain data
+ * out. Screens join it to a `Game` by id.
+ */
+
+export interface Weather {
+  /** Degrees Fahrenheit. */
+  temperature: number;
+  /** Percent chance of precipitation. The pill hides it below 20. */
+  precipitation: number;
+  /** Lucide icon name: sun, moon, cloud, cloud-sun, cloud-rain, cloud-sun-rain. */
+  icon: string;
+  /** Miles per hour. */
+  wind: number;
+}
+
+/** One team's form going into a game. */
+export interface TeamDetail {
+  /** AP rank, null when unranked. From /rankings. */
+  rank: number | null;
+  /** Display form, e.g. "2–0" with an en dash. From /records. */
+  record: string;
+  /** Per-game averages. From /stats/season. */
+  pointsFor: number;
+  pointsAgainst: number;
+  yardsFor: number;
+  yardsAgainst: number;
+}
+
+export interface GameDetail {
+  gameId: GameId;
+  /** ISO 8601 UTC kickoff. */
+  kickoff: string;
+  venue: string;
+  city: string;
+  /** Broadcaster, null when unannounced. From /games/media. */
+  tv: string | null;
+  /** Pregame win probability for the home team, 0–1. From /metrics/wp/pregame. */
+  homeWp: number | null;
+  /** From the favorite's perspective, e.g. "Georgia −6.5". "Pick" when even. */
+  spread: string;
+  /** Null until the paid-tier /games/weather feed is wired. */
+  weather: Weather | null;
+  home: TeamDetail;
+  away: TeamDetail;
+}

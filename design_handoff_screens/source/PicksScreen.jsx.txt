@@ -1,0 +1,190 @@
+const { Button, Badge, Card, Input, Progress, Icon, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } = window.SaturdaySlateDesignSystem_a838ed;
+const SLATE = GAMES.filter(g => g.status !== "void");
+const DEADLINE = Date.now() + ((1 * 24 + 6) * 3600 + 42 * 60 + 10) * 1000;
+function useCountdown() {
+  const [now, setNow] = React.useState(Date.now());
+  React.useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const s = Math.max(0, Math.floor((DEADLINE - now) / 1000)); const pad = n => String(n).padStart(2, "0");
+  return `${Math.floor(s / 86400)}d ${pad(Math.floor(s / 3600) % 24)}h ${pad(Math.floor(s / 60) % 60)}m ${pad(s % 60)}s`;
+}
+
+// One segment per game: pine when picked, outlined when current, muted otherwise. Tap to jump.
+function ProgressStrip({ picks, current, onJump }) {
+  return <div style={{ display: "flex", gap: 4, padding: "0 16px" }}>
+    {SLATE.map((g, i) => { const done = !!picks[g.id]; const cur = i === current; return <button key={g.id} onClick={() => onJump(i)} aria-label={`Game ${i + 1}${done ? ", picked" : ""}`} aria-current={cur} style={{ flex: 1, height: 44, padding: "18px 0", border: 0, background: "transparent", cursor: "pointer" }}>
+      <span style={{ display: "block", height: 8, borderRadius: 9999, background: done ? "var(--primary)" : "var(--muted)", boxShadow: cur ? "0 0 0 2px var(--background), 0 0 0 4px var(--primary)" : "none" }} /></button>; })}
+  </div>;
+}
+
+function TeamTile({ team, picked, other, onPick, side = "home" }) {
+  const info = teamInfo(team);
+  const inner = side === "away" ? { right: 10 } : { left: 10 }, outer = side === "away" ? { left: 10 } : { right: 10 };
+  return <button onClick={onPick} aria-pressed={picked} style={{ flex: 1, minWidth: 0, minHeight: 124, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", padding: "12px 10px", gap: 4, border: picked ? "2px solid var(--primary)" : "1px solid var(--border)", background: picked ? "var(--primary)" : "var(--card)", color: picked ? "var(--primary-foreground)" : other ? "var(--muted-foreground)" : "var(--foreground)", borderRadius: "var(--radius-xl)", cursor: "pointer", textAlign: "center", position: "relative" }}>
+    {info[0] && <span style={{ position: "absolute", top: 10, ...inner, ...DISPLAY, fontSize: 16, lineHeight: "20px", padding: "2px 8px", borderRadius: 9999, background: picked ? "var(--primary-foreground)" : "var(--muted)", color: picked ? "var(--primary)" : "var(--foreground)", opacity: other ? .7 : 1 }}>#{info[0]}</span>}
+    {picked && <span style={{ position: "absolute", top: 10, ...outer, width: 28, height: 28, borderRadius: 9999, background: "var(--primary-foreground)", color: "var(--primary)", display: "grid", placeItems: "center" }}><Icon name="check" size={18} strokeWidth={3} /></span>}
+    <span style={{ flex: 1, alignSelf: "stretch", position: "relative", minHeight: 0, margin: "8px 4px" }}><TeamLogo team={team} size={140} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", opacity: other ? .6 : 1, filter: picked ? "drop-shadow(0 2px 6px rgba(0,0,0,.35))" : "none" }} /></span>
+    <span style={{ display: "grid", gap: 6, justifyItems: "center", width: "100%" }}><span style={{ ...DISPLAY, fontSize: 22, lineHeight: "26px", textWrap: "balance" }}>{team}</span><span aria-hidden style={{ display: "block", height: 6, width: "70%", borderRadius: 9999, background: teamColor(team), boxShadow: picked ? "0 0 0 2px var(--primary-foreground)" : "none", opacity: other ? .5 : 1 }} /><span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: picked ? "var(--primary-foreground)" : "var(--muted-foreground)", opacity: other ? .7 : 1 }}>{info[1]}</span>
+      </span></button>;
+}
+
+// Pregame win probability from CFBD /metrics/wp/pregame, shown as a split bar in school colors
+function pairColors(game) {
+  const rgb = x => { const m = /^#([0-9a-f]{6})$/i.exec(x); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+  const a = teamColor(game.away), hp = teamColor(game.home), ra = rgb(a), rh = rgb(hp);
+  const close = ra && rh && Math.hypot(ra[0] - rh[0], ra[1] - rh[1], ra[2] - rh[2]) < 80;
+  return [a, close ? teamColor(game.home, 1) : hp];
+}
+// One stat as a split bar: away share on the left, home on the right, the better value in bold
+function StatBar({ game, label, a, h, lowerBetter }) {
+  const [ca, ch] = pairColors(game); const tot = a + h || 1; const pa = Math.round(a / tot * 100);
+  const aBest = lowerBetter ? a < h : a > h;
+  return <div style={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) 44px", alignItems: "center", columnGap: 8, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
+    <span style={{ fontWeight: aBest ? 800 : 500, color: aBest ? "var(--foreground)" : "var(--muted-foreground)" }}>{a}</span>
+    <span style={{ display: "grid", gap: 3 }}><span style={{ ...LABEL, fontSize: 10, lineHeight: "12px", textAlign: "center" }}>{label}</span><span role="img" aria-label={`${label}: ${game.away} ${a}, ${game.home} ${h}`} style={{ display: "flex", height: 6, borderRadius: 9999, overflow: "hidden", gap: 3, background: "var(--border)" }}><span style={{ width: pa + "%", background: ca }} /><span style={{ flex: 1, background: ch }} /></span></span>
+    <span style={{ textAlign: "right", fontWeight: aBest ? 500 : 800, color: aBest ? "var(--muted-foreground)" : "var(--foreground)" }}>{h}</span></div>;
+}
+
+function WinBar({ game }) {
+  const home = Math.round((game.homeWp ?? .5) * 100), away = 100 - home;
+  const [a, h] = pairColors(game);
+  return <div style={{ display: "grid", gap: 4 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}><span><b style={{ color: "var(--foreground)" }}>{away}%</b></span><span style={{ ...LABEL, fontSize: 11 }}>Win probability</span><span><b style={{ color: "var(--foreground)" }}>{home}%</b></span></div>
+    <div role="img" aria-label={`${game.away} ${away}%, ${game.home} ${home}%`} style={{ display: "flex", height: 8, borderRadius: 9999, overflow: "hidden", gap: 3, background: "var(--border)" }}><span style={{ width: away + "%", background: a }} /><span style={{ flex: 1, background: h }} /></div>
+  </div>;
+}
+
+// Compact comparison above the tiles: away value | label | home value, then the win-probability bar
+function MatchupPanel({ game }) {
+  const a = teamInfo(game.away), h = teamInfo(game.home);
+  const spreadFor = t => game.spread.startsWith(t) ? game.spread.slice(t.length).trim() : game.spread === "Pick" ? "PK" : "+" + game.spread.replace(/^.*−/, "");
+  const fav = game.spread === "Pick" ? null : game.spread.replace(/\s[−+].*$/, ""), num = fav ? game.spread.slice(fav.length).trim() : "PK";
+  return <div style={{ display: "grid", gap: 8, padding: "6px 4px 10px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) 44px", alignItems: "center", columnGap: 8, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
+      <span style={{ fontWeight: fav === game.away ? 800 : 500, color: fav === game.away ? "var(--foreground)" : "var(--muted-foreground)" }}>{fav === game.away ? num : fav ? "+" + num.replace("−", "") : "PK"}</span>
+      <span style={{ ...LABEL, fontSize: 10, lineHeight: "12px", textAlign: "center", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>Spread</span>
+      <span style={{ textAlign: "right", fontWeight: fav === game.home ? 800 : 500, color: fav === game.home ? "var(--foreground)" : "var(--muted-foreground)" }}>{fav === game.home ? num : fav ? "+" + num.replace("−", "") : "PK"}</span>
+    </div>
+    <div style={{ display: "grid", gap: 6 }}>
+      <StatBar game={game} label="Points / game" a={a[3]} h={h[3]} />
+      <StatBar game={game} label="Points allowed" a={a[4]} h={h[4]} lowerBetter />
+      <StatBar game={game} label="Yards / game" a={a[5]} h={h[5]} />
+      <StatBar game={game} label="Yards allowed" a={a[6]} h={h[6]} lowerBetter />
+    </div>
+    <WinBar game={game} />
+  </div>;
+}
+
+// One game per screen. Tapping a team saves and advances; the strip on top shows where you are.
+function PickEntry({ picks, setPicks, index, setIndex, onReview }) {
+  const game = SLATE[index]; const pick = picks[game.id];
+  const [saving, setSaving] = React.useState(false);
+  const [flash, setFlash] = React.useState(false);
+  const timer = React.useRef();
+  const choose = team => {
+    setPicks(p => ({ ...p, [game.id]: team })); setSaving(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => { setSaving(false); setFlash(true); setTimeout(() => { setFlash(false); if (index + 1 < SLATE.length) setIndex(index + 1); else onReview(); }, 450); }, 350);
+  };
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const n = SLATE.filter(g => picks[g.id]).length;
+  return <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+    <header style={{ padding: "12px 12px 4px 8px", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+      <Button variant="ghost" size="icon" aria-label="Review picks" onClick={onReview}><Icon name="list" /></Button>
+      <div style={{ flex: 1 }}><div style={{ ...DISPLAY, fontSize: 18, lineHeight: "24px" }}>Week 1</div><div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Game {index + 1} of {SLATE.length} · {n} picked</div></div>
+      <span aria-live="polite" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: saving ? "var(--muted-foreground)" : "var(--win-foreground)", background: saving || !pick ? "transparent" : "var(--win)", border: "1px solid " + (pick && !saving ? "var(--win)" : "var(--border)"), borderRadius: 9999, padding: "4px 10px", minHeight: 28 }}>
+        {saving ? <><Icon name="loader" size={12} />Saving</> : pick ? <><Icon name="check" size={12} strokeWidth={3} />Saved</> : <><Icon name="circle-dashed" size={12} />Pending</>}</span>
+    </header>
+    <ProgressStrip picks={picks} current={index} onJump={setIndex} />
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "8px 16px 12px", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 24 }}>
+        <span style={{ fontSize: 14, color: "var(--muted-foreground)", flex: 1, minWidth: 0, display: "grid", lineHeight: "18px" }}><span>{game.time}{game.tv ? " · " + game.tv : ""}</span><span style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{game.venue} · {game.city}</span></span>
+        {game.tiebreaker && <Badge variant="secondary">Tiebreaker</Badge>}
+        {game.weather && <span title={`Forecast: ${game.weather.temp}°, ${game.weather.precip}% rain, wind ${game.weather.wind} mph`} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 10px", borderRadius: 9999, background: "var(--muted)", color: "var(--foreground)", fontVariantNumeric: "tabular-nums", flexShrink: 0, whiteSpace: "nowrap" }}><span style={{ ...DISPLAY, fontSize: 16, lineHeight: "30px" }}>{game.weather.temp}°</span><Icon name={game.weather.icon} size={18} />{game.weather.precip >= 20 && <span style={{ fontSize: 13, fontWeight: 600, lineHeight: "30px", color: "var(--muted-foreground)" }}>{game.weather.precip}%</span>}</span>}
+      </div>
+      <MatchupPanel game={game} />
+      <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "stretch", gap: 6 }}>
+        <TeamTile team={game.away} side="away" picked={pick === game.away} other={pick && pick !== game.away} onPick={() => choose(game.away)} />
+        <div style={{ ...LABEL, alignSelf: "center", color: "var(--muted-foreground)", width: 24, textAlign: "center", flexShrink: 0 }}>at</div>
+        <TeamTile team={game.home} picked={pick === game.home} other={pick && pick !== game.home} onPick={() => choose(game.home)} />
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, paddingTop: 4, flexShrink: 0 }}>
+        <span style={{ fontSize: 14, color: "var(--muted-foreground)", flex: 1 }}>{flash ? "Saved. Next game…" : "Tap a team. Saved the moment you tap; there is no submit step."}</span>
+        {index + 1 < SLATE.length ? <Button variant="outline" size="sm" onClick={() => setIndex(index + 1)}>Skip for now<Icon name="chevron-right" /></Button> : <Button variant="outline" size="sm" onClick={onReview}>Review picks<Icon name="chevron-right" /></Button>}
+      </div>
+    </div>
+  </div>;
+}
+
+const STEPS = [["picks", "Make every pick", ""], ["lock", "Lock of the Week", "One pick counts double"], ["guess", "Tiebreaker Guess", "Combined final score, Auburn at Tennessee"]];
+const WINDOWS = [["Sat 12:00 PM", "Noon"], ["Sat 3:30 PM", "3:30"], ["Sat 7:30 PM", "Night"]];
+function PickRow({ game, pick, locked, onEdit }) {
+  return <button onClick={onEdit} style={{ width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 10, padding: "6px 12px", border: 0, borderTop: "1px solid var(--border)", background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: "var(--font-sans)", color: "var(--foreground)" }}>
+    {pick ? <TeamLogo team={pick} size={32} /> : <span style={{ width: 32, height: 32, borderRadius: 9999, border: "1px dashed var(--border)", flexShrink: 0 }} />}
+    <span style={{ flex: 1, minWidth: 0, display: "grid", gap: 2 }}><span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{game.away} at {game.home}{game.tiebreaker ? " · Tiebreaker" : ""}</span>
+      {pick ? <span style={{ ...DISPLAY, fontSize: 18, lineHeight: "22px" }}>{pick}</span> : <span style={{ fontSize: 14, fontWeight: 600, color: "var(--secondary)" }}>No pick yet</span>}</span>
+    {locked && <Badge variant="locked"><Icon name="lock" size={12} />Lock</Badge>}
+    <Icon name="chevron-right" size={18} style={{ color: "var(--muted-foreground)" }} /></button>;
+}
+
+// Every pick on one screen. Tap a row to change it; set the Lock; enter the Tiebreaker Guess.
+function Review({ picks, lock, setLock, onEdit, onResume }) {
+  const [lockSheet, setLockSheet] = React.useState(false);
+  const [guess, setGuess] = React.useState("");
+  const left = useCountdown();
+  const n = SLATE.filter(g => picks[g.id]).length; const missing = SLATE.length - n;
+  const lockGame = SLATE.find(g => g.id === lock);
+  const guessRef = React.useRef();
+  const todo = [missing > 0 && "picks", !lock && "lock", !guess.trim() && "guess"].filter(Boolean);
+  return <>
+    <AppHeader title="Week 1 picks" sub={<span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="clock" size={14} />Deadline in <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--foreground)" }}>{left}</span></span>} right={<Badge variant={todo.length ? "pending" : "default"}>{SLATE.length - missing + (lock ? 1 : 0) + (guess.trim() ? 1 : 0)} of {SLATE.length + 2}</Badge>} />
+    <div style={{ padding: "0 16px" }}><Progress value={n / SLATE.length * 100} /></div>
+    <div style={{ padding: "12px 16px 0" }}>
+      <div style={{ display: "grid", gap: 6, padding: 10, borderRadius: "var(--radius-xl)", border: "1px solid " + (todo.length ? "var(--secondary)" : "var(--border)"), background: todo.length ? "var(--accent)" : "var(--card)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 20 }}>
+          <span style={{ ...LABEL, flex: 1, color: todo.length ? "var(--secondary)" : "var(--muted-foreground)" }}>{todo.length ? `${todo.length} thing${todo.length === 1 ? "" : "s"} left before the Deadline` : "You're all set for Week 1"}</span>
+          {!todo.length && <Icon name="check" size={16} strokeWidth={3} style={{ color: "var(--win-foreground)" }} />}
+        </div>
+        {STEPS.map(([key, label, hint]) => { const done = key === "picks" ? !missing : key === "lock" ? !!lock : !!guess.trim(); const act = key === "picks" ? onResume : key === "lock" ? () => setLockSheet(true) : () => (guessRef.current || document.getElementById("tiebreaker-guess"))?.focus();
+          return <button key={key} onClick={done && key !== "picks" ? act : act} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: "0 2px", border: 0, background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: "var(--font-sans)", color: "var(--foreground)" }}>
+            <span style={{ width: 22, height: 22, borderRadius: 9999, flexShrink: 0, display: "grid", placeItems: "center", background: done ? "var(--win)" : "transparent", border: done ? "0" : "2px dashed var(--secondary)", color: "var(--win-foreground)" }}>{done && <Icon name="check" size={14} strokeWidth={3} />}</span>
+            <span style={{ flex: 1, minWidth: 0, display: "grid" }}><span style={{ fontSize: 14, fontWeight: 600, textDecoration: "none" }}>{label}</span><span style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{key === "picks" ? (missing ? `${missing} game${missing === 1 ? "" : "s"} still open` : `All ${SLATE.length} picked`) : key === "lock" ? (lock ? picks[lock] + " counts double" : hint) : (guess.trim() ? guess + " points combined" : hint)}</span></span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: done ? "var(--muted-foreground)" : "var(--secondary)" }}>{done ? "Change" : "Set"}</span></button>; })}
+      </div>
+    </div>
+    {WINDOWS.map(([time, label]) => { const gs = SLATE.filter(g => g.time === time); return <React.Fragment key={time}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "12px 16px 6px" }}><span style={LABEL}>{label}</span><span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{time}</span></div>
+      <div style={{ margin: "0 16px" }}><Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>{gs.map((g, i) => <div key={g.id} style={{ marginTop: i ? 0 : -1 }}><PickRow game={g} pick={picks[g.id]} locked={lock === g.id} onEdit={() => onEdit(SLATE.indexOf(g))} /></div>)}</Card></div>
+    </React.Fragment>; })}
+    <SectionLabel>Lock of the Week</SectionLabel>
+    <div style={{ padding: "0 16px" }}>
+      <button onClick={() => setLockSheet(true)} style={{ width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", background: "var(--card)", cursor: "pointer", textAlign: "left", fontFamily: "var(--font-sans)", color: "var(--foreground)" }}>
+        <span style={{ width: 36, height: 36, borderRadius: 9999, background: lock ? "var(--secondary)" : "var(--muted)", color: lock ? "var(--secondary-foreground)" : "var(--muted-foreground)", display: "grid", placeItems: "center" }}><Icon name="lock" size={18} /></span>
+        <span style={{ flex: 1, display: "grid", gap: 2 }}>{lockGame ? <><span style={{ ...DISPLAY, fontSize: 18, lineHeight: "22px" }}>{picks[lock]}</span><span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Double points if they win · {lockGame.away} at {lockGame.home}</span></> : <><span style={{ fontWeight: 600 }}>Choose your Lock</span><span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>One pick counts double this week.</span></>}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--secondary)" }}>{lock ? "Change" : "Choose"}</span></button>
+    </div>
+    <SectionLabel>Tiebreaker Guess</SectionLabel>
+    <div style={{ padding: "0 16px 24px", display: "grid", gap: 8 }}>
+      <div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Combined final score, Auburn at Tennessee. Closest guess wins ties.</div>
+      <Input ref={guessRef} id="tiebreaker-guess" inputMode="numeric" placeholder="e.g. 52" value={guess} onChange={e => setGuess(e.target.value.replace(/\D/g, ""))} style={{ borderColor: guess.trim() ? undefined : "var(--secondary)" }} />
+    </div>
+    <Sheet open={lockSheet} onOpenChange={() => setLockSheet(false)}>
+      <DrawerHeader><DrawerTitle>Lock of the Week</DrawerTitle><DrawerDescription>Pick one of your picks. It scores 20 instead of 10 if it wins.</DrawerDescription></DrawerHeader>
+      <div style={{ display: "grid", gap: 6, padding: "0 16px", maxHeight: 320, overflowY: "auto" }}>
+        {SLATE.filter(g => picks[g.id]).map(g => { const on = lock === g.id; return <button key={g.id} onClick={() => { setLock(g.id); setLockSheet(false); }} aria-pressed={on} style={{ minHeight: 52, display: "flex", alignItems: "center", gap: 12, padding: "0 12px", border: "1px solid " + (on ? "var(--secondary)" : "var(--border)"), background: on ? "var(--secondary)" : "var(--card)", color: on ? "var(--secondary-foreground)" : "var(--foreground)", borderRadius: "var(--radius-md)", cursor: "pointer", textAlign: "left" }}>
+          <TeamLogo team={picks[g.id]} size={28} /><span style={{ ...DISPLAY, fontSize: 18, flex: 1 }}>{picks[g.id]}</span><span style={{ fontSize: 12, opacity: .8 }}>{g.away} at {g.home}</span>{on && <Icon name="lock" size={16} />}</button>; })}
+      </div>
+      <DrawerFooter><Button variant="ghost" onClick={() => { setLock(null); setLockSheet(false); }}>No Lock this week</Button></DrawerFooter>
+    </Sheet>
+  </>;
+}
+
+function PicksScreen({ view: initial }) {
+  const [picks, setPicks] = React.useState(Object.fromEntries(IN_PROGRESS.map(id => [id, PICKS[ME][id]])));
+  const [lock, setLock] = React.useState(null);
+  const firstOpen = Math.max(0, SLATE.findIndex(g => !picks[g.id]));
+  const [index, setIndex] = React.useState(firstOpen);
+  const [view, setView] = React.useState(initial || "entry");
+  if (view === "entry") return <PickEntry picks={picks} setPicks={setPicks} index={index} setIndex={setIndex} onReview={() => setView("review")} />;
+  return <Review picks={picks} lock={lock} setLock={setLock} onEdit={i => { setIndex(i); setView("entry"); }} onResume={() => { setIndex(Math.max(0, SLATE.findIndex(g => !picks[g.id]))); setView("entry"); }} />;
+}
+Object.assign(window, { PicksScreen, useCountdown });

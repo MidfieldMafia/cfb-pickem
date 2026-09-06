@@ -1,0 +1,74 @@
+const { Button, Avatar, Input, Icon } = window.SaturdaySlateDesignSystem_a838ed;
+const PENNANTS = [["01","Pine Wedge"],["02","Rust Band"],["03","Brass Stripe"],["04","Moss Dot"],["05","Oxblood Bars"],["06","Maroon Chevrons"],["07","Ink Block"],["08","Clay Split"],["09","Ember Arrow"],["10","Ochre Lines"],["11","Fern Field"],["12","Tan Tri"]];
+const INSTALL = {
+  ios: { label: "iPhone · Safari", steps: [["share", "Tap the Share button at the bottom of Safari."], ["square-plus", "Scroll and tap \u201cAdd to Home Screen\u201d."], ["check", "Tap Add. Saturday Slate opens like an app, no browser bar."]] },
+  android: { label: "Android · Chrome", steps: [["more-vertical", "Tap the three-dot menu at the top right of Chrome."], ["download", "Tap \u201cInstall app\u201d (or \u201cAdd to Home screen\u201d)."], ["check", "Tap Install. Find the pennant icon with your other apps."]] },
+};
+
+function Wordmark() {
+  return <div style={{ alignSelf: "center", display: "flex", alignItems: "center", gap: 12 }}>
+    <img src="../../assets/brand/mark.svg" alt="" style={{ width: 44, height: 44 }} />
+    <span style={{ display: "grid", gap: 4 }}><span style={{ ...DISPLAY, fontSize: 22, lineHeight: "24px", letterSpacing: ".02em" }}>SATURDAY SLATE</span><span aria-hidden style={{ height: 3, background: "var(--secondary)" }} /></span>
+  </div>;
+}
+
+// Step 1 — first visit via Magic Link: confirm your display name, pick a pennant. No password, no account.
+function NameStep({ onNext }) {
+  const [name, setName] = React.useState("Cousin Em");
+  const [sel, setSel] = React.useState(null);
+  return <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", padding: "32px 16px 24px", gap: 24 }}>
+    <Wordmark />
+    <div style={{ textAlign: "center", display: "grid", gap: 8 }}>
+      <h1 style={{ ...DISPLAY, fontSize: 28, lineHeight: "32px", margin: 0 }}>Welcome to the 2026 season</h1>
+      <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: 16, lineHeight: "24px" }}>Jonah added you. This link is yours — keep it, it signs you in on any phone.</p>
+    </div>
+    <div style={{ display: "grid", gap: 8 }}>
+      <label htmlFor="display-name" style={LABEL}>Your name on the Leaderboard</label>
+      <Input id="display-name" value={name} onChange={e => setName(e.target.value)} maxLength={20} />
+    </div>
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={LABEL}>Pick your pennant</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+        {PENNANTS.map(([id, label]) => { const on = sel === id; return <button key={id} onClick={() => setSel(id)} aria-pressed={on} aria-label={label} style={{ display: "grid", placeItems: "center", padding: 6, border: on ? "2px solid var(--primary)" : "1px solid var(--border)", borderRadius: "var(--radius-lg)", background: on ? "var(--accent)" : "var(--card)", cursor: "pointer", minHeight: 44 }}>
+          <Avatar size={56} src={P(Number(id))} alt="" style={{ background: "transparent" }} /></button>; })}
+      </div>
+      <div style={{ fontSize: 14, color: "var(--muted-foreground)", textAlign: "center", minHeight: 20 }}>{sel ? PENNANTS.find(p => p[0] === sel)[1] : "Twelve pennants, one per member. Grandma has Brass Stripe."}</div>
+    </div>
+    <div style={{ marginTop: "auto", display: "grid", gap: 8 }}>
+      <Button disabled={!sel || !name.trim()} onClick={onNext}>Continue<Icon name="arrow-right" /></Button>
+    </div>
+  </div>;
+}
+
+// Step 2 — home-screen install, per platform. Skippable; the browser works too.
+function InstallStep({ onDone }) {
+  const [os, setOs] = React.useState("ios");
+  const steps = INSTALL[os].steps;
+  return <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", padding: "32px 16px 24px", gap: 24 }}>
+    <Wordmark />
+    <div style={{ textAlign: "center", display: "grid", gap: 8 }}>
+      <h1 style={{ ...DISPLAY, fontSize: 28, lineHeight: "32px", margin: 0 }}>Put it on your home screen</h1>
+      <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: 16, lineHeight: "24px" }}>One tap on Saturdays instead of digging for the text message.</p>
+    </div>
+    <div role="tablist" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      {Object.entries(INSTALL).map(([id, p]) => { const on = os === id; return <button key={id} role="tab" aria-selected={on} onClick={() => setOs(id)} style={{ minHeight: 44, borderRadius: 9999, border: "1px solid " + (on ? "var(--primary)" : "var(--border)"), background: on ? "var(--primary)" : "transparent", color: on ? "var(--primary-foreground)" : "var(--foreground)", fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{p.label}</button>; })}
+    </div>
+    <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
+      {steps.map(([icon, text], i) => <li key={i} style={{ display: "flex", gap: 12, alignItems: "center", padding: 12, background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)" }}>
+        <span style={{ ...DISPLAY, fontSize: 18, width: 24, color: "var(--secondary)" }}>{i + 1}</span>
+        <span style={{ width: 36, height: 36, borderRadius: 9999, background: "var(--muted)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name={icon} size={18} /></span>
+        <span style={{ fontSize: 16, lineHeight: "22px" }}>{text}</span></li>)}
+    </ol>
+    <div style={{ marginTop: "auto", display: "grid", gap: 8 }}>
+      <Button onClick={onDone}>Done, start picking</Button>
+      <Button variant="ghost" onClick={onDone}>Skip for now</Button>
+      <div style={{ fontSize: 12, textAlign: "center", color: "var(--muted-foreground)" }}>Week 1 picks lock Sat 12:00 PM.</div>
+    </div>
+  </div>;
+}
+
+function WelcomeScreen({ onDone, step: initial = 1 }) {
+  const [step, setStep] = React.useState(initial);
+  return step === 1 ? <NameStep onNext={() => setStep(2)} /> : <InstallStep onDone={onDone} />;
+}
+Object.assign(window, { WelcomeScreen });

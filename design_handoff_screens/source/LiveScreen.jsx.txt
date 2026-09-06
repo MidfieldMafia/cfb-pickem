@@ -1,0 +1,167 @@
+const { Badge, Button, Card, Avatar, Icon, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } = window.SaturdaySlateDesignSystem_a838ed;
+
+// Live Board ↔ Results, shared by both screens
+function BoardToggle({ active, onNav }) {
+  return <div role="tablist" style={{ display: "flex", gap: 8, padding: "4px 16px 8px" }}>
+    {[["live", "Live Board"], ["results", "Week 1 results"]].map(([id, l]) => { const on = active === id; return <button key={id} role="tab" aria-selected={on} onClick={() => onNav(id)} style={{ minHeight: 44, padding: "0 16px", borderRadius: 9999, border: "1px solid " + (on ? "var(--primary)" : "var(--border)"), background: on ? "var(--primary)" : "transparent", color: on ? "var(--primary-foreground)" : "var(--foreground)", fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{l}</button>; })}
+  </div>;
+}
+
+const pickers = (team, game) => MEMBERS.filter(m => PICKS[m.id][game.id] === team);
+// Two school colors, with a fallback when the primaries are nearly the same
+function sideColors(game) {
+  const rgb = x => { const m = /^#([0-9a-f]{6})$/i.exec(x); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+  const a = teamColor(game.away), h = teamColor(game.home), ra = rgb(a), rh = rgb(h);
+  return [a, ra && rh && Math.hypot(ra[0] - rh[0], ra[1] - rh[1], ra[2] - rh[2]) < 80 ? teamColor(game.home, 1) : h];
+}
+
+// Your pick, in the same language as the pick tiles: hollow check until the game is decided,
+// filled green when it hit, red cross when it missed.
+function PickMark({ game, lead, final }) {
+  const settled = final && lead && lead !== "tie" && game.status !== "void";
+  const right = settled && lead === PICKS[ME][game.id];
+  const isLock = LOCKS[ME] === game.id;
+  const bg = !settled ? "transparent" : right ? "var(--win)" : "var(--loss)";
+  const fg = right ? "var(--win-foreground)" : "var(--loss-foreground)";
+  const what = isLock ? "Your Lock of the Week" : "Your pick";
+  const label = settled ? `${what} ${right ? "won" : "lost"}` : what;
+  return <span aria-label={label} title={label} style={{ display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+    <span style={{ width: 20, height: 20, borderRadius: 9999, display: "grid", placeItems: "center", background: bg, border: settled ? 0 : "2px solid var(--primary)", color: settled ? fg : "var(--primary)" }}>
+      <Icon name={settled && !right ? "x" : "check"} size={13} strokeWidth={3} style={{ display: "block" }} /></span>
+    {isLock && <Icon name="lock" size={17} strokeWidth={2.5} style={{ display: "block", color: settled ? (right ? "var(--win)" : "var(--loss)") : "var(--secondary)" }} />}</span>;
+}
+
+// One compact line per side: logo, name, pick count, score. Detail lives in the sheet.
+function TeamLine({ team, score, game, lead, final }) {
+  const dim = final && lead !== team;
+  const mine = PICKS[ME][game.id] === team; const rank = teamInfo(team)[0];
+  // Before kickoff the score slot carries this team's side of the line
+  const fav = game.spread !== "Pick" && game.spread.startsWith(team);
+  const num = game.spread === "Pick" ? "PK" : game.spread.replace(/^.*\s(?=[−+])/, "");
+  const line = game.spread === "Pick" ? "PK" : fav ? num : "+" + num.replace("−", "");
+  return <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0,1fr) auto", alignItems: "center", gap: 8, minHeight: 32 }}>
+    <TeamLogo team={team} size={22} style={{ opacity: dim ? .5 : 1 }} />
+    <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+      {rank && <span aria-label={`Ranked ${rank}`} style={{ fontSize: 12, fontWeight: 700, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{rank}</span>}
+      <span style={{ ...DISPLAY, fontSize: 17, color: dim ? "var(--muted-foreground)" : "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{team}</span>
+      {mine && <PickMark game={game} lead={lead} final={final} />}
+    </span>
+    {score == null
+      ? <span title={game.spread === "Pick" ? "No favorite" : game.spread} style={{ ...DISPLAY, fontSize: 17, lineHeight: "26px", textAlign: "right", minWidth: 34, fontVariantNumeric: "tabular-nums", color: fav ? "var(--foreground)" : "var(--muted-foreground)" }}>{line}</span>
+      : <span style={{ ...DISPLAY, fontSize: 26, lineHeight: "26px", textAlign: "right", minWidth: 34, color: dim ? "var(--muted-foreground)" : "var(--foreground)" }}>{score}</span>}</div>;
+}
+
+// Pick split across the two sides, in school colors
+function SplitBar({ game }) {
+  const [ca, ch] = sideColors(game);
+  const a = pickers(game.away, game).length, h = pickers(game.home, game).length, tot = a + h || 1;
+  return <span role="img" aria-label={`${a} on ${game.away}, ${h} on ${game.home}`} style={{ display: "flex", height: 4, borderRadius: 9999, overflow: "hidden", gap: 2, background: "var(--border)" }}>
+    <span style={{ width: a / tot * 100 + "%", background: ca }} /><span style={{ flex: 1, background: ch }} /></span>;
+}
+
+function LiveGame({ game, onOpen }) {
+  const lead = leading(game); const final = game.status === "final";
+  const myTeam = PICKS[ME][game.id]; const settled = final && lead && lead !== "tie" && game.status !== "void";
+  return <Card asChild style={{ padding: 0, gap: 0, opacity: game.status === "void" ? .7 : 1 }}>
+    <button onClick={onOpen} aria-label={`${game.away} at ${game.home}, details`} style={{ display: "grid", gap: 6, padding: 12, width: "100%", textAlign: "left", background: "transparent", border: 0, cursor: "pointer", font: "inherit", color: "inherit" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 22 }}>
+        <span style={{ fontSize: 13, color: "var(--muted-foreground)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{game.status === "scheduled" ? `${game.time}${game.tv ? " · " + game.tv : ""}` : final ? "Final" : game.status === "void" ? "Postponed" : ""}</span>
+        {game.status === "live" && <Badge variant="live"><Icon name="radio" size={12} />{game.clock}</Badge>}
+        {game.status === "void" && <Badge variant="outline">Void</Badge>}
+        {settled && myTeam === lead && <span style={{ ...DISPLAY, fontSize: 13, padding: "1px 8px", borderRadius: 9999, background: "var(--win)", color: "var(--win-foreground)" }}>+{LOCKS[ME] === game.id ? 20 : 10}</span>}
+        <Icon name="chevron-right" size={16} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+      </div>
+      <TeamLine team={game.away} score={game.awayScore} game={game} lead={lead} final={final} />
+      <TeamLine team={game.home} score={game.homeScore} game={game} lead={lead} final={final} />
+      <SplitBar game={game} />
+    </button></Card>;
+}
+
+// Tap a game for the full picture: everyone's pick, Locks, and what it scored
+function GameSheet({ game, onClose }) {
+  if (!game) return null;
+  const lead = leading(game); const settled = game.status === "final" && lead && lead !== "tie";
+  const live = game.status === "live" && lead && lead !== "tie";
+  return <Sheet open onOpenChange={onClose}>
+    <DrawerHeader><DrawerTitle><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>{game.away} at {game.home}{game.tiebreaker && <Icon name="scale" size={16} style={{ color: "var(--secondary)" }} />}{LOCKS[ME] === game.id && <Icon name="lock" size={16} style={{ color: "var(--secondary)" }} />}</span></DrawerTitle><DrawerDescription>{game.status === "final" ? `Final · ${game.awayScore}–${game.homeScore}` : game.status === "live" ? `${game.clock} · ${game.awayScore}–${game.homeScore}` : game.status === "void" ? "Postponed, scores zero for everyone" : `${game.time} · ${game.spread}`}{game.venue ? " · " + game.venue : ""}</DrawerDescription></DrawerHeader>
+    <div style={{ padding: "0 16px 8px", display: "grid", gap: 10, maxHeight: "calc(100dvh - 240px)", overflowY: "auto" }}>
+      {[game.away, game.home].map(team => { const who = pickers(team, game); const won = settled && lead === team;
+        return <div key={team} style={{ display: "grid", gap: 8, padding: 10, borderRadius: "var(--radius-lg)", border: "1px solid " + (settled ? (won ? "var(--win)" : "var(--loss)") : "var(--border)"), background: "var(--card)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <TeamLogo team={team} size={24} />
+            {teamInfo(team)[0] && <span aria-label={`Ranked ${teamInfo(team)[0]}`} style={{ fontSize: 12, fontWeight: 700, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>{teamInfo(team)[0]}</span>}
+            <span style={{ ...DISPLAY, fontSize: 17, flex: 1, minWidth: 0 }}>{team}</span>
+            {settled ? <Badge variant={won ? "win" : "loss"}>{won ? "Won" : "Lost"}</Badge> : live && <Badge variant="outline">{lead === team ? "Leading" : "Trailing"}</Badge>}
+            <span style={{ fontSize: 13, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>{who.length} of {MEMBERS.length}</span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {who.length === 0 && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Nobody picked this side.</span>}
+            {who.map(m => { const you = m.id === ME; return <span key={m.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, height: 28, padding: "0 10px 0 4px", borderRadius: 9999, background: you ? "var(--primary)" : "var(--muted)", color: you ? "var(--primary-foreground)" : "var(--foreground)" }}>
+              <Avatar size={20} src={P(m.pennant)} alt="" style={{ background: "transparent" }} />
+              <span style={{ fontSize: 13, fontWeight: you ? 800 : 600 }}>{you ? "You" : m.name}</span>
+              {LOCKS[m.id] === game.id && <Icon name="lock" size={12} strokeWidth={3} style={{ color: you ? "var(--primary-foreground)" : "var(--secondary)" }} />}</span>; })}
+          </div>
+        </div>; })}
+      {game.tiebreaker && <div style={{ display: "grid", gap: 8, padding: 10, borderRadius: "var(--radius-lg)", border: "1px solid var(--secondary)", background: "var(--card)" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ ...LABEL, color: "var(--secondary)", flex: 1 }}>Tiebreaker Guesses</span>
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{game.status === "final" ? `Finished ${game.homeScore + game.awayScore}` : "Combined final score"}</span>
+        </div>
+        <div style={{ display: "grid", gap: 2 }}>
+          {MEMBERS.filter(m => GUESSES[m.id] != null).sort((a, b) => game.status === "final" ? tbDelta(a.id) - tbDelta(b.id) : GUESSES[a.id] - GUESSES[b.id]).map(m => { const you = m.id === ME; const total = game.homeScore + game.awayScore;
+            return <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 30, padding: you ? "0 6px" : 0, margin: you ? "0 -6px" : 0, borderRadius: "var(--radius-md)", background: you ? "var(--accent)" : "transparent" }}>
+              <Avatar size={20} src={P(m.pennant)} alt="" style={{ background: "transparent" }} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: you ? 800 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{you ? "You" : m.name}</span>
+              {game.status === "final" && <span style={{ fontSize: 12, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>off by {Math.abs(GUESSES[m.id] - total)}</span>}
+              <span style={{ ...DISPLAY, fontSize: 15, fontVariantNumeric: "tabular-nums", minWidth: 26, textAlign: "right" }}>{GUESSES[m.id]}</span></div>; })}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Closest guess breaks a tie on points. {MEMBERS.filter(m => GUESSES[m.id] == null).length ? `${MEMBERS.filter(m => GUESSES[m.id] == null).length} members have not guessed yet.` : "Everyone has guessed."}</div>
+      </div>}
+      <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>A padlock marks that member's Lock of the Week: 20 points instead of 10 if it wins.</div>
+    </div>
+    <DrawerFooter><Button variant="ghost" onClick={onClose}>Close</Button></DrawerFooter>
+  </Sheet>;
+}
+
+// Your rank stays pinned while the games scroll
+function RankBar({ games, label, suffix = "so far" }) {
+  const me = MEMBERS.find(m => m.id === ME);
+  const s = weekScore(ME, games); const ord = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
+  // Rank from the same games this bar is summarizing, so it can't disagree with the list below it
+  const rank = 1 + MEMBERS.filter(m => weekScore(m.id, games).pts > s.pts).length;
+  return <div style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--background)", padding: "4px 16px 8px", borderBottom: "1px solid var(--border)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--primary)", color: "var(--primary-foreground)", borderRadius: "var(--radius-xl)", padding: "10px 12px", minHeight: 60 }}>
+      <Avatar size={40} src={P(me.pennant)} alt="" style={{ background: "transparent" }} />
+      <span style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", columnGap: 12, alignItems: "baseline" }}>
+        <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", opacity: .85, lineHeight: "16px" }}>You · {label}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", opacity: .85, lineHeight: "16px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{s.w}–{s.l} {suffix}</span>
+        <span style={{ ...DISPLAY, fontSize: 22, lineHeight: "26px" }}>{ord(rank)} of {MEMBERS.length}</span>
+        <span style={{ ...DISPLAY, fontSize: 22, lineHeight: "26px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{s.pts} pts</span>
+      </span>
+    </div></div>;
+}
+
+// Live first, then what hasn't kicked off, then finals and voids — the board should lead with the action
+const BOARD_ORDER = { live: 0, scheduled: 1, final: 2, void: 3 };
+function LiveScreen({ onNav }) {
+  const [open, setOpen] = React.useState(null);
+  const ordered = [...GAMES].sort((a, b) => BOARD_ORDER[a.status] - BOARD_ORDER[b.status]);
+  return <>
+    <AppHeader title="Live Board" sub="Week 1 · Reveal is on, everyone's picks are visible" />
+    <BoardToggle active="live" onNav={onNav} />
+    <RankBar games={GAMES} label="Week 1 so far" />
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 12, padding: "12px 16px 24px" }}>{ordered.map(g => g.tiebreaker
+      ? <div key={g.id} style={{ background: "var(--secondary)", borderRadius: "calc(var(--radius-xl) + 3px)", padding: "0 3px 3px", display: "grid", gap: 3 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px 2px", color: "var(--secondary-foreground)", lineHeight: "16px" }}>
+            <Icon name="scale" size={14} style={{ display: "block", flexShrink: 0 }} />
+            <span style={{ ...LABEL, flex: 1, lineHeight: "16px", color: "var(--secondary-foreground)" }}>Tiebreaker</span>
+            <span style={{ fontSize: 12, opacity: .85, lineHeight: "16px" }}>Your guess</span>
+            <span style={{ ...DISPLAY, fontSize: 14, lineHeight: "16px", fontVariantNumeric: "tabular-nums" }}>{GUESSES[ME] ?? "–"}</span>
+          </div>
+          <LiveGame game={g} onOpen={() => setOpen(g.id)} />
+        </div>
+      : <LiveGame key={g.id} game={g} onOpen={() => setOpen(g.id)} />)}</div>
+    <GameSheet game={GAMES.find(g => g.id === open)} onClose={() => setOpen(null)} />
+  </>;
+}
+Object.assign(window, { LiveScreen, BoardToggle, RankBar, GameSheet, pickers, sideColors });

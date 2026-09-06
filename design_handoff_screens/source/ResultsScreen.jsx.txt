@@ -1,0 +1,72 @@
+const { Badge, Card, Avatar, Icon } = window.SaturdaySlateDesignSystem_a838ed;
+
+// Week results: everyone's Weekly Score, then every game with who was on each side.
+function WeeklyScores() {
+  const rows = MEMBERS.map(m => ({ m, ...weekScore(m.id, WEEK_FINAL), guess: GUESSES[m.id] })).sort((a, b) => b.pts - a.pts || tbDelta(a.m.id) - tbDelta(b.m.id));
+  return <Card style={{ padding: "4px 12px", gap: 0 }}>
+    {rows.map((r, i) => { const me = r.m.id === ME; return <div key={r.m.id} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 48, borderTop: i ? "1px solid var(--border)" : 0, margin: me ? "0 -12px" : 0, padding: me ? "0 12px" : 0, background: me ? "var(--accent)" : "transparent" }}>
+      <span style={{ width: 16, fontSize: 14, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
+      <Avatar size={28} src={P(r.m.pennant)} alt="" />
+      <span style={{ flex: 1, fontWeight: 600 }}>{r.m.name}{me && <span style={{ marginLeft: 6, fontSize: 12, color: "var(--muted-foreground)", fontWeight: 500 }}>you</span>}</span>
+      {r.m.id === WEEKLY_WINNER && <Badge variant="leader"><Icon name="trophy" size={12} />Weekly Win</Badge>}
+      <span style={{ fontSize: 14, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums", minWidth: 32, textAlign: "right" }}>{r.w}–{r.l}</span>
+      <span style={{ ...DISPLAY, fontSize: 18, minWidth: 32, textAlign: "right" }}>{r.pts}</span></div>; })}
+  </Card>;
+}
+
+function ResultSide({ team, score, game, lead }) {
+  const who = MEMBERS.filter(m => PICKS[m.id][game.id] === team);
+  const won = lead === team;
+  return <div style={{ display: "grid", gap: 8, padding: 10, borderRadius: "var(--radius-lg)", border: "1px solid " + (won ? "var(--win)" : "var(--border)"), background: won ? "var(--card)" : "transparent", alignContent: "start", minWidth: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+      <TeamLogo team={team} size={32} style={{ opacity: won ? 1 : .5 }} />
+      <span style={{ ...DISPLAY, fontSize: 28, lineHeight: "32px", color: won ? "var(--foreground)" : "var(--muted-foreground)" }}>{score}</span></div>
+    <div style={{ ...DISPLAY, fontSize: 18, lineHeight: "22px", color: won ? "var(--foreground)" : "var(--muted-foreground)", overflowWrap: "normal", wordBreak: "normal" }}>{team}</div>
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <Badge variant={won ? "win" : "loss"}>{who.length} {who.length === 1 ? "pick" : "picks"}</Badge>
+    </div>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, minHeight: 36 }}>
+      {who.length === 0 && <span style={{ fontSize: 12, color: "var(--muted-foreground)", alignSelf: "center" }}>Nobody</span>}
+      {who.map(m => <span key={m.id} title={m.name} style={{ position: "relative", width: 36, height: 36, borderRadius: 9999, background: "var(--card)", display: "grid", placeItems: "center", boxShadow: `0 0 0 2px ${won ? "var(--win)" : "var(--loss)"}`, opacity: won ? 1 : .75, outline: m.id === ME ? "2px solid var(--primary)" : "none", outlineOffset: 3 }}>
+        <Avatar size={32} src={P(m.pennant)} alt={m.name} style={{ background: "transparent" }} />
+        {LOCKS[m.id] === game.id && <span aria-label="Lock" style={{ position: "absolute", right: -4, bottom: -4, width: 16, height: 16, borderRadius: 9999, background: "var(--secondary)", color: "var(--secondary-foreground)", display: "grid", placeItems: "center", boxShadow: "0 0 0 2px var(--card)" }}><Icon name="lock" size={9} strokeWidth={3} /></span>}</span>)}
+    </div>
+  </div>;
+}
+
+function ResultGame({ game }) {
+  const lead = leading(game);
+  if (game.status === "void") return <Card style={{ gap: 4, padding: 12, opacity: .7 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ ...DISPLAY, fontSize: 16, flex: 1 }}>{game.away} at {game.home}</span><Badge variant="outline">Void</Badge></div>
+    <div style={{ fontSize: 14, color: "var(--muted-foreground)" }}>Postponed after the slate was published. Scores zero for everyone; Alex's Lock was dropped.</div></Card>;
+  return <Card style={{ gap: 8, padding: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 24 }}>
+      <span style={{ fontSize: 14, color: "var(--muted-foreground)", flex: 1 }}>Final · {game.time}</span>
+      {game.tiebreaker && <Badge variant="secondary">Tiebreaker · {game.homeScore + game.awayScore} total</Badge>}
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8 }}>
+      <ResultSide team={game.away} score={game.awayScore} game={game} lead={lead} />
+      <ResultSide team={game.home} score={game.homeScore} game={game} lead={lead} />
+    </div>
+  </Card>;
+}
+
+function ResultsScreen({ onNav }) {
+  const tb = TIEBREAKER, total = TB_TOTAL;
+  const winner = MEMBERS.find(m => m.id === WEEKLY_WINNER); const winnerPts = weekScore(WEEKLY_WINNER, WEEK_FINAL).pts;
+  const closest = MEMBERS.filter(m => GUESSES[m.id] != null).sort((a, b) => tbDelta(a.id) - tbDelta(b.id))[0];
+  const tied = MEMBERS.filter(m => weekScore(m.id, WEEK_FINAL).pts === winnerPts).length > 1;
+  return <>
+    <AppHeader title="Week 1 results" sub={`Final · ${winner.name} took the week with ${winnerPts}`} />
+    <BoardToggle active="results" onNav={onNav} />
+    <RankBar games={WEEK_FINAL} label="Week 1 final" suffix="in Week 1" />
+    <SectionLabel>Weekly Score</SectionLabel>
+    <div style={{ padding: "0 16px", display: "grid", gap: 8 }}>
+      <WeeklyScores />
+      <div style={{ fontSize: 14, color: "var(--muted-foreground)", padding: "0 4px" }}>Tiebreaker Guess: {tb.away} at {tb.home} finished {total}. {closest.name} guessed {GUESSES[closest.id]}, closest of the group{tied ? `, and ${winner.name} won the week on Tiebreaker Guess after tying at ${winnerPts}` : ""}.</div>
+    </div>
+    <SectionLabel>Reveal · every game</SectionLabel>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 12, padding: "0 16px 24px" }}>{WEEK_FINAL.map(g => <ResultGame key={g.id} game={g} />)}</div>
+  </>;
+}
+Object.assign(window, { ResultsScreen });

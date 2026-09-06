@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { findAvatar } from "@/lib/avatars";
 
-/** A member's pennant avatar. 96 on the picker, 44 in lists, 28 inline. */
-export function Pennant({ avatarId, size = 44 }: { avatarId: string | null; size?: 96 | 44 | 28 }) {
+/** A member's pennant avatar. 96 on the picker, 44 in lists, 28 inline, 20 on drawer chips. */
+export function Pennant({ avatarId, size = 44 }: { avatarId: string | null; size?: number }) {
   const avatar = findAvatar(avatarId);
   if (!avatar) {
     return (
