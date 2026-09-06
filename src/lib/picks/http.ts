@@ -9,11 +9,9 @@ import { currentMember } from "@/lib/members/current";
 import { publishedSlate } from "@/lib/slate/slate";
 import { DeadlinePassed, InvalidPick, PicksHidden } from "./picks";
 
-export interface ApiError {
-  error: string;
-  /** True when the Deadline has passed, so the client can flip to its locked state. */
-  locked?: boolean;
-}
+import type { ApiError } from "./client";
+
+export type { ApiError };
 
 export function errorResponse(error: unknown): Response {
   if (error instanceof DeadlinePassed) {
@@ -49,8 +47,13 @@ export async function readBody(request: Request): Promise<Record<string, unknown
   }
 }
 
+/** Postgres `integer` range; anything outside is a bad request, not a database error. */
+const MAX_INT = 2_147_483_647;
+
 export function integer(body: Record<string, unknown>, key: string): number {
   const value = body[key];
-  if (typeof value !== "number" || !Number.isInteger(value)) throw new InvalidPick(`${key} must be a whole number.`);
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > MAX_INT) {
+    throw new InvalidPick(`${key} must be a whole number.`);
+  }
   return value;
 }

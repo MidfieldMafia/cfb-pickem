@@ -11,17 +11,21 @@ const subscribeEverySecond = (onTick: () => void) => {
  * A countdown driven by the server clock. The offset between the server's
  * `serverNow` and the phone's clock is measured when the sheet arrives, so a
  * phone with a wrong clock still counts down to the real Deadline. Call
- * `sync` with a fresher `serverNow` from an API response to re-measure.
+ * `sync` with a fresher `serverNow` from any API response to re-measure.
+ *
+ * Both snapshots are estimates of *server* time: the client one is the phone
+ * clock plus the offset, the hydration one is `serverNow` itself. That keeps a
+ * skewed phone from painting the locked state on first render.
  */
 export function useDeadlineClock(deadline: string, serverNow: string) {
   const [offset, setOffset] = useState(() => new Date(serverNow).getTime() - Date.now());
-  // Whole seconds so the snapshot is stable between ticks; the server renders from its own clock.
-  const nowSeconds = useSyncExternalStore(
+  // Whole seconds so the snapshot is stable between ticks.
+  const serverSeconds = useSyncExternalStore(
     subscribeEverySecond,
-    () => Math.floor(Date.now() / 1000),
+    () => Math.floor((Date.now() + offset) / 1000),
     () => Math.floor(new Date(serverNow).getTime() / 1000),
   );
-  const remainingMs = new Date(deadline).getTime() - (nowSeconds * 1000 + offset);
+  const remainingMs = new Date(deadline).getTime() - serverSeconds * 1000;
   const sync = (freshServerNow: string) => setOffset(new Date(freshServerNow).getTime() - Date.now());
   return { remainingMs, passed: remainingMs <= 0, sync };
 }

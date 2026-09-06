@@ -1,17 +1,18 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleDashed, ListChecks, LoaderCircle, Lock, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { MatchupPanel } from "@/components/picks/matchup-panel";
+import { TeamTile } from "@/components/picks/team-tile";
+import { WeatherPill } from "@/components/picks/weather-pill";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
-import { logoSrc } from "@/lib/logos";
+import { put } from "@/lib/picks/client";
 import { useDeadlineClock } from "@/lib/picks/clock";
-import type { ApiError } from "@/lib/picks/http";
-import type { GameJson, SheetJson } from "@/lib/picks/json";
+import type { GameJson, PickJson, SheetJson } from "@/lib/picks/json";
 
 type Status = "saved" | "saving" | "failed";
 
@@ -21,11 +22,16 @@ interface LocalPick {
   error?: string;
 }
 
+type LocalPicks = Record<number, LocalPick | undefined>;
+
 /** How long the Saved chip shows before the flow moves on. */
 const ADVANCE_DELAY_MS = 400;
 
-function firstUnpicked(games: GameJson[], picks: Record<number, LocalPick | undefined>): number {
-  const index = games.findIndex((g) => !g.void && !picks[g.id]);
+const isSaved = (pick: LocalPick | undefined) => pick?.status === "saved";
+
+/** The first live game without a saved pick; a failed save still counts as open. */
+function firstUnpicked(games: GameJson[], picks: LocalPicks): number {
+  const index = games.findIndex((g) => !g.void && !isSaved(picks[g.id]));
   return index === -1 ? 0 : index;
 }
 
@@ -36,21 +42,20 @@ function ProgressStrip({
   onJump,
 }: {
   games: GameJson[];
-  picks: Record<number, LocalPick | undefined>;
+  picks: LocalPicks;
   current: number;
   onJump: (index: number) => void;
 }) {
   return (
-    <div className="flex gap-1 px-4" role="tablist" aria-label="Games">
+    <nav aria-label="Games" className="flex gap-1 px-4">
       {games.map((g, i) => {
-        const done = !!picks[g.id];
+        const done = isSaved(picks[g.id]);
         const cur = i === current;
         return (
           <button
             key={g.id}
             type="button"
-            role="tab"
-            aria-selected={cur}
+            aria-current={cur ? "step" : undefined}
             aria-label={`Game ${i + 1}${done ? ", picked" : ""}`}
             onClick={() => onJump(i)}
             className="min-h-tap flex-1 py-[18px]"
@@ -63,88 +68,27 @@ function ProgressStrip({
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 }
 
-function TeamTile({
-  name,
-  rank,
-  picked,
-  dimmed,
-  disabled,
-  onPick,
-}: {
-  name: string;
-  rank: number | null;
-  picked: boolean;
-  dimmed: boolean;
-  disabled: boolean;
-  onPick: () => void;
-}) {
-  const logo = logoSrc(name);
-  return (
-    <button
-      type="button"
-      aria-pressed={picked}
-      disabled={disabled}
-      onClick={onPick}
-      className={`relative flex min-h-[124px] min-w-0 flex-1 flex-col items-center justify-end gap-2 rounded-xl border p-3 text-center transition-colors disabled:opacity-70 ${
-        picked
-          ? "border-primary bg-primary text-primary-foreground"
-          : `border-border bg-card ${dimmed ? "text-muted-foreground opacity-60" : "text-foreground"}`
-      }`}
-    >
-      {rank ? (
-        <span
-          className={`absolute left-2 top-2 rounded-full px-2 py-0.5 font-display text-sm font-black ${
-            picked ? "bg-primary-foreground text-primary" : "bg-muted text-foreground"
-          }`}
-        >
-          #{rank}
-        </span>
-      ) : null}
-      {picked ? (
-        <span className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-primary-foreground text-primary">
-          <Check size={18} strokeWidth={3} />
-        </span>
-      ) : null}
-      <span className="relative my-2 min-h-0 w-full flex-1">
-        {logo ? (
-          <Image src={logo} alt="" fill sizes="160px" unoptimized className="object-contain" />
-        ) : null}
-      </span>
-      <span className="font-display text-[22px] font-black leading-[26px] text-balance">{name}</span>
-    </button>
-  );
-}
-
+/** One live region whose text changes, so screen readers announce the transition. */
 function StatusChip({ pick }: { pick: LocalPick | undefined }) {
   const base = "inline-flex min-h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold";
-  if (!pick) {
-    return (
-      <span aria-live="polite" className={`${base} border-border text-foreground`}>
-        <CircleDashed size={12} /> Pending
-      </span>
-    );
-  }
-  if (pick.status === "saving") {
-    return (
-      <span aria-live="polite" className={`${base} border-border text-muted-foreground`}>
-        <LoaderCircle size={12} className="animate-spin" /> Saving
-      </span>
-    );
-  }
-  if (pick.status === "failed") {
-    return (
-      <span aria-live="polite" className={`${base} border-destructive text-destructive`}>
-        <TriangleAlert size={12} /> Not saved
-      </span>
-    );
-  }
+  const state = pick?.status ?? "pending";
+  const look = {
+    pending: `${base} border-border text-foreground`,
+    saving: `${base} border-border text-muted-foreground`,
+    failed: `${base} border-destructive text-destructive`,
+    saved: `${base} border-win bg-win text-win-foreground`,
+  }[state];
   return (
-    <span aria-live="polite" className={`${base} border-win bg-win text-win-foreground`}>
-      <Check size={12} strokeWidth={3} /> Saved
+    <span aria-live="polite" className={look}>
+      {state === "pending" ? <CircleDashed size={12} /> : null}
+      {state === "saving" ? <LoaderCircle size={12} className="animate-spin" /> : null}
+      {state === "failed" ? <TriangleAlert size={12} /> : null}
+      {state === "saved" ? <Check size={12} strokeWidth={3} /> : null}
+      {{ pending: "Pending", saving: "Saving", failed: "Not saved", saved: "Saved" }[state]}
     </span>
   );
 }
@@ -153,12 +97,14 @@ function StatusChip({ pick }: { pick: LocalPick | undefined }) {
  * One game per screen. Tapping a team saves the pick and advances; the strip
  * on top shows where you are and jumps anywhere. Saving is optimistic: the
  * tile fills at once, the chip reports the server's answer, and a failure
- * leaves the tile marked with a retry.
+ * leaves the tile marked with a retry. Each game tracks its own in-flight
+ * save, so jumping ahead mid-request never loses the earlier answer.
  */
 export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId?: number }) {
   const router = useRouter();
   const games = sheet.games;
-  const [picks, setPicks] = useState<Record<number, LocalPick | undefined>>(() =>
+  const liveGames = games.filter((g) => !g.void);
+  const [picks, setPicks] = useState<LocalPicks>(() =>
     Object.fromEntries(sheet.picks.map((p) => [p.gameId, { teamId: p.teamId, status: "saved" as const }])),
   );
   const [index, setIndex] = useState(() => {
@@ -167,17 +113,18 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
   });
   const [lockedByServer, setLockedByServer] = useState(sheet.locked);
   const [lateError, setLateError] = useState<string | null>(null);
-  const { passed } = useDeadlineClock(sheet.deadline, sheet.serverNow);
+  const { passed, sync } = useDeadlineClock(sheet.deadline, sheet.serverNow);
   const locked = lockedByServer || passed;
   const [flash, setFlash] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const attempt = useRef(0);
+  const attempts = useRef(new Map<number, number>());
 
   useEffect(() => () => clearTimeout(advanceTimer.current), []);
 
   const game = games[index];
+  const detail = game.detail;
   const pick = picks[game.id];
-  const pickedCount = games.filter((g) => picks[g.id]?.status !== undefined && picks[g.id]?.status !== "failed").length;
+  const pickedCount = liveGames.filter((g) => isSaved(picks[g.id])).length;
   const last = index + 1 >= games.length;
 
   const goTo = (i: number) => {
@@ -193,37 +140,32 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
 
   const choose = async (teamId: number) => {
     if (locked || game.void) return;
-    const attemptId = ++attempt.current;
-    const previous = picks[game.id];
+    const gameId = game.id;
+    const attemptId = (attempts.current.get(gameId) ?? 0) + 1;
+    attempts.current.set(gameId, attemptId);
+    const previous = picks[gameId];
     clearTimeout(advanceTimer.current);
     setFlash(false);
-    setPicks((p) => ({ ...p, [game.id]: { teamId, status: "saving" } }));
-    let result: LocalPick | undefined;
-    try {
-      const response = await fetch("/api/week/picks", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ gameId: game.id, teamId }),
-      });
-      if (response.ok) {
-        result = { teamId, status: "saved" };
-      } else {
-        const body = (await response.json().catch(() => ({}))) as Partial<ApiError>;
-        if (body.locked) {
-          // The Deadline passed under us: what the server holds is what counts, so show that.
-          setLockedByServer(true);
-          setLateError(body.error ?? "Picks are locked: the deadline has passed.");
-          result = previous?.status === "saved" ? previous : undefined;
-        } else {
-          result = { teamId, status: "failed", error: body.error ?? "Couldn't save that pick." };
-        }
-      }
-    } catch {
-      result = { teamId, status: "failed", error: "No connection. Your pick is not saved yet." };
+    setPicks((p) => ({ ...p, [gameId]: { teamId, status: "saving" } }));
+
+    const result = await put<{ pick: PickJson; serverNow: string }>("/api/week/picks", { gameId, teamId });
+    // A newer tap on this same game supersedes this answer; other games are unaffected.
+    if (attempts.current.get(gameId) !== attemptId) return;
+
+    let next: LocalPick | undefined;
+    if (result.ok) {
+      sync(result.body.serverNow);
+      next = { teamId, status: "saved" };
+    } else if (result.locked) {
+      // The Deadline passed under us: what the server holds is what counts, so show that.
+      setLockedByServer(true);
+      setLateError(result.error);
+      next = isSaved(previous) ? previous : undefined;
+    } else {
+      next = { teamId, status: "failed", error: result.error };
     }
-    if (attemptId !== attempt.current) return;
-    setPicks((p) => ({ ...p, [game.id]: result }));
-    if (result?.status === "saved") {
+    setPicks((p) => ({ ...p, [gameId]: next }));
+    if (next?.status === "saved" && games[index]?.id === gameId) {
       setFlash(true);
       advanceTimer.current = setTimeout(() => {
         setFlash(false);
@@ -241,9 +183,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
           </Link>
         </Button>
         <div className="min-w-0 flex-1">
-          <div className="font-display text-lg font-black leading-6">
-            {sheet.year} · Week {sheet.weekNumber}
-          </div>
+          <div className="font-display text-lg leading-6">Week {sheet.weekNumber}</div>
           <div className="text-sm text-muted-foreground">
             Game {index + 1} of {games.length} · {pickedCount} picked
           </div>
@@ -263,17 +203,37 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
           </div>
         ) : null}
 
-        <div className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <LocalTime at={game.kickoff} />
-          {game.spread ? <span>· {game.spread}</span> : null}
+        <div className="flex min-h-6 items-center gap-2">
+          <span className="grid min-w-0 flex-1 text-sm leading-[18px] text-muted-foreground">
+            <span>
+              <LocalTime at={game.kickoff} />
+              {detail?.tv ? ` · ${detail.tv}` : ""}
+            </span>
+            {detail?.venue ? (
+              <span className="truncate text-xs">
+                {detail.venue}
+                {detail.city ? ` · ${detail.city}` : ""}
+              </span>
+            ) : null}
+          </span>
           {game.id === sheet.tiebreakerGameId ? <Badge variant="secondary">Tiebreaker</Badge> : null}
           {game.void ? <Badge variant="outline">Void{game.voidNote ? `: ${game.voidNote}` : ""}</Badge> : null}
+          {detail?.weather ? <WeatherPill weather={detail.weather} /> : null}
         </div>
+
+        <MatchupPanel
+          awayTeam={game.awayTeam}
+          homeTeam={game.homeTeam}
+          spread={detail?.spread ?? game.spread}
+          detail={detail ? { homeWp: detail.homeWp, weather: detail.weather, home: detail.home, away: detail.away } : null}
+        />
 
         <div className="flex flex-1 items-stretch gap-1.5">
           <TeamTile
             name={game.awayTeam}
             rank={game.awayRank}
+            record={detail?.away.record ?? null}
+            side="away"
             picked={pick?.teamId === game.awayTeamId}
             dimmed={!!pick && pick.teamId !== game.awayTeamId}
             disabled={locked || game.void}
@@ -285,6 +245,8 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
           <TeamTile
             name={game.homeTeam}
             rank={game.homeRank}
+            record={detail?.home.record ?? null}
+            side="home"
             picked={pick?.teamId === game.homeTeamId}
             dimmed={!!pick && pick.teamId !== game.homeTeamId}
             disabled={locked || game.void}
@@ -319,7 +281,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
                 ? "Nothing more to enter this week."
                 : game.void
                   ? "This game is void: it scores zero for everyone."
-                  : "Tap a team. It saves the moment you tap; there is no submit step."}
+                  : "Tap a team. Saved the moment you tap; there is no submit step."}
           </span>
           {last ? (
             <Button asChild variant="outline" size="sm">
@@ -329,7 +291,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
             </Button>
           ) : (
             <Button type="button" variant="outline" size="sm" onClick={() => goTo(index + 1)}>
-              {pick ? "Next" : "Skip for now"} <ChevronRight />
+              {isSaved(pick) ? "Next" : "Skip for now"} <ChevronRight />
             </Button>
           )}
         </div>

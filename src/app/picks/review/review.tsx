@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
+import { TeamLogo } from "@/components/team-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,25 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { LocalTime } from "@/components/local-time";
 import { Wordmark } from "@/components/wordmark";
+import { put } from "@/lib/picks/client";
 import { formatCountdown, useDeadlineClock } from "@/lib/picks/clock";
-import type { ApiError } from "@/lib/picks/http";
-import { teamName, type SheetJson } from "@/lib/picks/json";
-import { MAX_TIEBREAKER_GUESS } from "@/lib/picks/picks";
-
-async function put(path: string, body: unknown): Promise<{ ok: true } | { ok: false; error: string; locked: boolean }> {
-  try {
-    const response = await fetch(path, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (response.ok) return { ok: true };
-    const data = (await response.json().catch(() => ({}))) as Partial<ApiError>;
-    return { ok: false, error: data.error ?? "That didn't save. Try again.", locked: !!data.locked };
-  } catch {
-    return { ok: false, error: "No connection. Try again.", locked: false };
-  }
-}
+import { teamName, type GameJson, type SheetJson } from "@/lib/picks/json";
+import { MAX_TIEBREAKER_GUESS } from "@/lib/picks/limits";
 
 function StepRow({
   done,
@@ -77,6 +65,8 @@ function StepRow({
   );
 }
 
+const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-secondary";
+
 /**
  * Every pick on one screen. Tap a row to change it in the pick flow; choose
  * the Lock of the Week from a drawer of your own picks; type the Tiebreaker
@@ -84,6 +74,7 @@ function StepRow({
  * flips to its locked state without a reload.
  */
 export function Review({ initial }: { initial: SheetJson }) {
+  const router = useRouter();
   const [sheet, setSheet] = useState(initial);
   const [lockedByServer, setLockedByServer] = useState(initial.locked);
   const { remainingMs, passed, sync } = useDeadlineClock(sheet.deadline, sheet.serverNow);
@@ -96,6 +87,9 @@ export function Review({ initial }: { initial: SheetJson }) {
   const [guess, setGuess] = useState(initial.tiebreakerGuess === null ? "" : String(initial.tiebreakerGuess));
   const [guessState, setGuessState] = useState<{ error?: string; saved?: boolean; pending?: boolean }>({});
 
+  // What the member has changed on this screen; a later refetch must not write over it.
+  const touched = useRef({ lock: false, guess: false });
+
   // Re-read the sheet from the API on arrival so the countdown starts from a fresh server clock.
   useEffect(() => {
     let stale = false;
@@ -103,10 +97,16 @@ export function Review({ initial }: { initial: SheetJson }) {
       .then((response) => (response.ok ? (response.json() as Promise<SheetJson>) : null))
       .then((fresh) => {
         if (!fresh || stale) return;
-        setSheet(fresh);
+        setSheet((current) => ({
+          ...fresh,
+          lockGameId: touched.current.lock ? current.lockGameId : fresh.lockGameId,
+          tiebreakerGuess: touched.current.guess ? current.tiebreakerGuess : fresh.tiebreakerGuess,
+        }));
         setLockedByServer(fresh.locked);
         sync(fresh.serverNow);
-        setGuess((current) => (current === "" && fresh.tiebreakerGuess !== null ? String(fresh.tiebreakerGuess) : current));
+        setGuess((current) =>
+          current === "" && !touched.current.guess && fresh.tiebreakerGuess !== null ? String(fresh.tiebreakerGuess) : current,
+        );
       })
       .catch(() => {
         // The server-rendered sheet stands until the network is back.
@@ -124,21 +124,25 @@ export function Review({ initial }: { initial: SheetJson }) {
   const missing = liveGames.length - pickedCount;
   const lockGame = sheet.games.find((g) => g.id === sheet.lockGameId);
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
+  const lockVoid = !!lockGame?.void;
   const tiebreakerGame = sheet.games.find((g) => g.id === sheet.tiebreakerGameId);
   const guessDone = sheet.tiebreakerGuess !== null;
-  const todo = [missing > 0, !lockGame, !guessDone].filter(Boolean).length;
+  const todo = [missing > 0, !lockGame || lockVoid, !guessDone].filter(Boolean).length;
   const steps = liveGames.length + 2;
-  const stepsDone = steps - todo - (missing > 0 ? missing - 1 : 0);
+  const stepsDone = pickedCount + (lockGame && !lockVoid ? 1 : 0) + (guessDone ? 1 : 0);
   const firstOpen = liveGames.find((g) => !pickFor(g.id));
+  const groups = groupByKickoff(sheet.games);
 
   const chooseLock = async (gameId: number | null) => {
     setLockPending(true);
     setLockError(null);
+    touched.current.lock = true;
     const previous = sheet.lockGameId;
     setSheet((s) => ({ ...s, lockGameId: gameId }));
-    const result = await put("/api/week/lock", { gameId });
+    const result = await put<{ lockGameId: number | null; serverNow: string }>("/api/week/lock", { gameId });
     setLockPending(false);
     if (result.ok) {
+      sync(result.body.serverNow);
       setLockOpen(false);
       return;
     }
@@ -155,8 +159,10 @@ export function Review({ initial }: { initial: SheetJson }) {
       return;
     }
     setGuessState({ pending: true });
-    const result = await put("/api/week/tiebreaker", { guess: value });
+    touched.current.guess = true;
+    const result = await put<{ tiebreakerGuess: number; serverNow: string }>("/api/week/tiebreaker", { guess: value });
     if (result.ok) {
+      sync(result.body.serverNow);
       setSheet((s) => ({ ...s, tiebreakerGuess: value }));
       setGuessState({ saved: true });
       return;
@@ -165,14 +171,56 @@ export function Review({ initial }: { initial: SheetJson }) {
     if (result.locked) setLockedByServer(true);
   };
 
+  const pickRow = (game: GameJson) => {
+    const pick = pickFor(game.id);
+    const body = (
+      <>
+        {pick ? (
+          <TeamLogo team={teamName(game, pick.teamId)} size={32} />
+        ) : (
+          <span aria-hidden className="size-8 shrink-0 rounded-full border border-dashed border-border" />
+        )}
+        <span className="grid min-w-0 flex-1 gap-0.5">
+          <span className="text-xs text-muted-foreground">
+            {game.awayTeam} at {game.homeTeam}
+            {game.id === sheet.tiebreakerGameId ? " · Tiebreaker" : ""}
+            {game.void ? ` · Void${game.voidNote ? `: ${game.voidNote}` : ""}` : ""}
+          </span>
+          {pick ? (
+            <span className="font-display text-lg leading-[22px]">{teamName(game, pick.teamId)}</span>
+          ) : (
+            <span className="text-sm font-semibold text-secondary">
+              {game.void ? "Scores zero for everyone" : "No pick yet"}
+            </span>
+          )}
+        </span>
+        {sheet.lockGameId === game.id ? (
+          <Badge variant="secondary">
+            <Lock /> Lock
+          </Badge>
+        ) : null}
+        {locked || game.void ? null : <ChevronRight size={18} className="text-muted-foreground" />}
+      </>
+    );
+    return (
+      <li key={game.id} className={game.void ? "opacity-60" : ""}>
+        {locked || game.void ? (
+          <div className="flex min-h-14 items-center gap-2.5 px-3 py-1.5">{body}</div>
+        ) : (
+          <Link href={`/picks?game=${game.id}`} className="flex min-h-14 items-center gap-2.5 px-3 py-1.5 no-underline">
+            {body}
+          </Link>
+        )}
+      </li>
+    );
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8 pt-6">
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <Wordmark />
-          <h1 className="font-display text-[22px] leading-7">
-            Week {sheet.weekNumber} picks
-          </h1>
+          <h1 className="font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             <Clock size={14} />
             {locked ? (
@@ -181,7 +229,8 @@ export function Review({ initial }: { initial: SheetJson }) {
               </span>
             ) : (
               <span>
-                Deadline in <span className="font-semibold tabular-nums text-foreground">{formatCountdown(remainingMs)}</span>
+                Deadline in{" "}
+                <span className="font-semibold tabular-nums text-foreground">{formatCountdown(remainingMs)}</span>
               </span>
             )}
           </p>
@@ -206,7 +255,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         }`}
       >
         <div className="flex min-h-5 items-center gap-2">
-          <span className={`flex-1 text-xs font-bold uppercase tracking-[0.08em] ${todo && !locked ? "text-secondary" : "text-muted-foreground"}`}>
+          <span className={`flex-1 ${LABEL} ${todo && !locked ? "" : "text-muted-foreground"}`}>
             {locked
               ? `Week ${sheet.weekNumber} is in the books`
               : todo
@@ -221,15 +270,19 @@ export function Review({ initial }: { initial: SheetJson }) {
           detail={missing ? `${missing} game${missing === 1 ? "" : "s"} still open` : `All ${liveGames.length} picked`}
           action={missing ? "Set" : "Change"}
           disabled={locked}
-          onClick={() => {
-            window.location.href = firstOpen ? `/picks?game=${firstOpen.id}` : "/picks";
-          }}
+          onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.id}` : "/picks")}
         />
         <StepRow
-          done={!!lockGame}
+          done={!!lockGame && !lockVoid}
           label="Lock of the Week"
-          detail={lockGame && lockPick ? `${teamName(lockGame, lockPick.teamId)} counts double` : "One pick counts double"}
-          action={lockGame ? "Change" : "Set"}
+          detail={
+            lockGame && lockPick
+              ? lockVoid
+                ? `${teamName(lockGame, lockPick.teamId)} is void; choose another`
+                : `${teamName(lockGame, lockPick.teamId)} counts double`
+              : "One pick counts double"
+          }
+          action={lockGame && !lockVoid ? "Change" : "Set"}
           disabled={locked}
           onClick={() => setLockOpen(true)}
         />
@@ -249,53 +302,20 @@ export function Review({ initial }: { initial: SheetJson }) {
         />
       </section>
 
-      <section>
-        <h2 className="pb-1 pt-2 text-xs font-bold uppercase tracking-[0.08em] text-secondary">Your picks</h2>
-        <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-          {sheet.games.map((game) => {
-            const pick = pickFor(game.id);
-            const row = (
-              <>
-                <span className="grid min-w-0 flex-1 gap-0.5">
-                  <span className="text-xs text-muted-foreground">
-                    {game.awayTeam} at {game.homeTeam}
-                    {game.id === sheet.tiebreakerGameId ? " · Tiebreaker" : ""}
-                    {game.void ? ` · Void${game.voidNote ? `: ${game.voidNote}` : ""}` : ""}
-                  </span>
-                  {pick ? (
-                    <span className="font-display text-lg font-black leading-[22px]">{teamName(game, pick.teamId)}</span>
-                  ) : (
-                    <span className="text-sm font-semibold text-secondary">{game.void ? "Scores zero for everyone" : "No pick yet"}</span>
-                  )}
-                </span>
-                {sheet.lockGameId === game.id ? (
-                  <Badge variant="secondary">
-                    <Lock /> Lock
-                  </Badge>
-                ) : null}
-                {locked || game.void ? null : <ChevronRight size={18} className="text-muted-foreground" />}
-              </>
-            );
-            return (
-              <li key={game.id} className={game.void ? "opacity-60" : ""}>
-                {locked || game.void ? (
-                  <div className="flex min-h-14 items-center gap-2.5 px-3 py-1.5">{row}</div>
-                ) : (
-                  <Link
-                    href={`/picks?game=${game.id}`}
-                    className="flex min-h-14 items-center gap-2.5 px-3 py-1.5 no-underline"
-                  >
-                    {row}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      {groups.map((group) => (
+        <section key={group.kickoff}>
+          <div className="flex items-baseline gap-2 pb-1 pt-2">
+            <h2 className={LABEL}>{windowLabel(group.kickoff)}</h2>
+            <span className="text-xs text-muted-foreground">
+              <LocalTime at={group.kickoff} />
+            </span>
+          </div>
+          <ul className="divide-y divide-border rounded-xl border border-border bg-card">{group.games.map(pickRow)}</ul>
+        </section>
+      ))}
 
       <section>
-        <h2 className="pb-1 pt-2 text-xs font-bold uppercase tracking-[0.08em] text-secondary">Lock of the Week</h2>
+        <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
         <button
           type="button"
           disabled={locked}
@@ -304,7 +324,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         >
           <span
             className={`grid size-9 place-items-center rounded-full ${
-              lockGame ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+              lockGame && !lockVoid ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
             }`}
           >
             <Lock size={18} />
@@ -312,9 +332,10 @@ export function Review({ initial }: { initial: SheetJson }) {
           <span className="grid flex-1 gap-0.5">
             {lockGame && lockPick ? (
               <>
-                <span className="font-display text-lg font-black leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
+                <span className="font-display text-lg leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
                 <span className="text-xs text-muted-foreground">
-                  Double points if they win · {lockGame.awayTeam} at {lockGame.homeTeam}
+                  {lockVoid ? "That game is void and scores zero; choose another Lock" : "Double points if they win"} ·{" "}
+                  {lockGame.awayTeam} at {lockGame.homeTeam}
                 </span>
               </>
             ) : (
@@ -324,7 +345,9 @@ export function Review({ initial }: { initial: SheetJson }) {
               </>
             )}
           </span>
-          {locked ? null : <span className="text-sm font-semibold text-secondary">{lockGame ? "Change" : "Choose"}</span>}
+          {locked ? null : (
+            <span className="text-sm font-semibold text-secondary">{lockGame && !lockVoid ? "Change" : "Choose"}</span>
+          )}
         </button>
         {lockError ? (
           <p role="alert" className="pt-1 text-sm font-semibold text-destructive">
@@ -334,7 +357,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       </section>
 
       <section>
-        <h2 className="pb-1 pt-2 text-xs font-bold uppercase tracking-[0.08em] text-secondary">Tiebreaker Guess</h2>
+        <h2 className={`pb-1 pt-2 ${LABEL}`}>Tiebreaker Guess</h2>
         <form onSubmit={saveGuess} className="grid gap-2">
           <p className="text-sm text-muted-foreground">
             {tiebreakerGame
@@ -378,7 +401,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       </Link>
 
       <Drawer open={lockOpen} onOpenChange={setLockOpen}>
-        <DrawerContent>
+        <DrawerContent className="mx-auto max-w-md">
           <DrawerHeader>
             <DrawerTitle>Lock of the Week</DrawerTitle>
             <DrawerDescription>One of your picks. It scores double if it wins; nothing extra if it loses.</DrawerDescription>
@@ -402,7 +425,8 @@ export function Review({ initial }: { initial: SheetJson }) {
                     on ? "border-secondary bg-secondary text-secondary-foreground" : "border-border bg-card"
                   }`}
                 >
-                  <span className="flex-1 font-display text-lg font-black">{teamName(game, pick.teamId)}</span>
+                  <TeamLogo team={teamName(game, pick.teamId)} size={28} />
+                  <span className="flex-1 font-display text-lg">{teamName(game, pick.teamId)}</span>
                   <span className="text-xs opacity-80">
                     {game.awayTeam} at {game.homeTeam}
                   </span>

@@ -4,6 +4,7 @@
  * strings so the same object serializes from a server component and from a
  * route handler.
  */
+import type { GameDetail } from "@/lib/scoring/types";
 import type { PickSheet } from "./picks";
 
 export interface GameJson {
@@ -18,6 +19,8 @@ export interface GameJson {
   spread: string | null;
   void: boolean;
   voidNote: string | null;
+  /** Venue, TV, line, win probability, forecast, and each team's form. Null for games added before the snapshot existed. */
+  detail: GameDetail | null;
 }
 
 export interface PickJson {
@@ -62,6 +65,7 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
       spread: g.spread,
       void: g.void,
       voidNote: g.voidNote,
+      detail: g.detail,
     })),
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
     lockGameId: sheet.lockGameId,

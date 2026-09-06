@@ -8,6 +8,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
   games,
   locks,
+  members,
   picks,
   tiebreakerGuesses,
   weeks,
@@ -18,11 +19,12 @@ import {
 } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { slateFor } from "@/lib/slate/slate";
+import { MAX_TIEBREAKER_GUESS } from "./limits";
 
 export class InvalidPick extends Error {}
 
 /** The highest combined score the guess field accepts. The record is 145; nobody needs more. */
-export const MAX_TIEBREAKER_GUESS = 200;
+export { MAX_TIEBREAKER_GUESS };
 
 /** Thrown for any pick, lock, or guess change at or after the Deadline. */
 export class DeadlinePassed extends InvalidPick {
@@ -83,8 +85,11 @@ async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> 
 export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<PickSheet> {
   const slate = await slateFor(db, weekId);
   if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
+  const gameIds = slate.games.map((g) => g.id);
   const [rows, lock, guess] = await Promise.all([
-    db.query.picks.findMany({ where: eq(picks.memberId, actor.id) }),
+    gameIds.length
+      ? db.query.picks.findMany({ where: and(eq(picks.memberId, actor.id), inArray(picks.gameId, gameIds)) })
+      : [],
     db.query.locks.findFirst({ where: and(eq(locks.memberId, actor.id), eq(locks.weekId, weekId)) }),
     db.query.tiebreakerGuesses.findFirst({
       where: and(eq(tiebreakerGuesses.memberId, actor.id), eq(tiebreakerGuesses.weekId, weekId)),
@@ -127,13 +132,17 @@ export async function weekPicks(db: Db, _actor: Member, weekId: number, now: Dat
   if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
   if (!isLocked(slate.week.deadline, now)) throw new PicksHidden();
   const gameIds = slate.games.map((g) => g.id);
-  const [rows, lockRows, guessRows] = await Promise.all([
+  const [activeMembers, rows, lockRows, guessRows] = await Promise.all([
+    db.query.members.findMany({ where: eq(members.active, true) }),
     gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
   ]);
   const order = new Map(gameIds.map((id, i) => [id, i]));
-  const byMember = new Map<number, MemberPicks>();
+  // Every active member is on the board, picks or none: a blank week is a row, not an absence.
+  const byMember = new Map<number, MemberPicks>(
+    activeMembers.map((m) => [m.id, { memberId: m.id, picks: [], lockGameId: null, tiebreakerGuess: null }]),
+  );
   const entry = (memberId: number) => {
     let m = byMember.get(memberId);
     if (!m) {
@@ -153,12 +162,14 @@ export async function weekPicks(db: Db, _actor: Member, weekId: number, now: Dat
 export async function savePick(
   db: Db,
   actor: Member,
+  weekId: number,
   gameId: number,
   teamId: number,
   now: Date = new Date(),
 ): Promise<PickRow> {
   const game = await loadGame(db, gameId);
-  await openForPicks(db, game.weekId, now);
+  if (game.weekId !== weekId) throw new InvalidPick("That game is not on this week's slate.");
+  await openForPicks(db, weekId, now);
   if (game.void) throw new InvalidPick("That game is void; it scores zero for everyone.");
   if (teamId !== game.homeTeamId && teamId !== game.awayTeamId) {
     throw new InvalidPick("Pick one of the two teams in the game.");
