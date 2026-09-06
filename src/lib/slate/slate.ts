@@ -10,6 +10,7 @@ import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
+import { noRainChance, type RainChanceSource } from "@/lib/weather/open-meteo";
 
 export class InvalidSlate extends Error {}
 
@@ -227,10 +228,15 @@ export async function voidGame(db: Db, actor: Member, gameId: number, note: stri
  * spread snapshot). Games stay on the slate whatever the feed says; the
  * Deadline is never touched here. Returns how many games changed.
  */
-export async function refreshFromFeed(db: Db, cfbd: CfbdClient, weekId: number): Promise<number> {
+export async function refreshFromFeed(
+  db: Db,
+  cfbd: CfbdClient,
+  weekId: number,
+  rain: RainChanceSource = noRainChance,
+): Promise<number> {
   const slate = await slateFor(db, weekId);
   if (slate.games.length === 0) return 0;
-  const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber });
+  const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const byId = new Map(feed.map((c) => [c.cfbdGameId, c]));
   let changed = 0;
   for (const game of slate.games) {

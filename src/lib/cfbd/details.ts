@@ -1,47 +1,14 @@
 /**
  * Presentation detail for a Game on the pick screen: where and when it is
- * played, who carries it, the pregame win probability, the forecast, and
- * each team's form so far. Joined to a Game by CollegeFootballData id and
- * snapshotted onto the slate; the scoring engine never reads any of it.
+ * played, who carries it, the line and the pregame win probability, the
+ * forecast, and each team's form so far. Produces the `GameDetail` shape the
+ * screens consume, joined to a Game by CollegeFootballData id and snapshotted
+ * onto the slate; the scoring engine never reads any of it.
  */
-import type { CfbdClient, CfbdGame, WeekQuery } from "./types";
-
-/** One team's season so far. Averages are per game played; null before the first game. */
-export interface TeamForm {
-  /** "2–0" with an en dash. */
-  record: string;
-  pointsFor: number | null;
-  pointsAgainst: number | null;
-  yardsFor: number | null;
-  yardsAgainst: number | null;
-}
-
-export interface GameWeather {
-  /** Degrees Fahrenheit. */
-  temperature: number;
-  /** Inches. */
-  precipitation: number;
-  /** Miles per hour. */
-  windSpeed: number;
-  conditionCode: number | null;
-  condition: string | null;
-  indoors: boolean;
-}
-
-export interface GameDetail {
-  venue: string | null;
-  /** "Ann Arbor, MI". */
-  city: string | null;
-  /** The first television outlet, or null when unannounced. */
-  tv: string | null;
-  /** Pregame win probability for the home team, 0 to 1. */
-  homeWinProbability: number | null;
-  /** Points, home perspective: negative when the home team is favored. */
-  homeSpread: number | null;
-  weather: GameWeather | null;
-  home: TeamForm;
-  away: TeamForm;
-}
+import type { GameDetail, TeamDetail, Weather } from "@/lib/scoring/types";
+import type { RainChanceSource } from "@/lib/weather/open-meteo";
+import { rankLookup } from "./rankings";
+import type { CfbdClient, CfbdGame, CfbdGameWeather, CfbdVenue, WeekQuery } from "./types";
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -74,18 +41,97 @@ function pointsByTeam(seasonGames: CfbdGame[]): Map<number, Tally> {
   return tallies;
 }
 
-export async function weekDetails(cfbd: CfbdClient, query: WeekQuery): Promise<Map<number, GameDetail>> {
-  const [games, seasonGames, records, stats, media, winProbability, venues, weather] = await Promise.all([
-    cfbd.games(query),
-    cfbd.seasonGames(query.year),
-    cfbd.records(query.year),
-    cfbd.teamStats(query.year),
-    cfbd.media(query),
-    cfbd.pregameWinProbability(query),
-    cfbd.venues(),
-    cfbd.weather(query),
-  ]);
+/** Hour of day at the venue, for choosing the moon over the sun. Falls back to UTC. */
+function localHour(at: Date, timeZone: string | null): number {
+  try {
+    const text = new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: timeZone ?? "UTC" }).format(at);
+    return Number(text);
+  } catch {
+    return at.getUTCHours();
+  }
+}
 
+/**
+ * Lucide icon for the sky. CollegeFootballData condition codes seen in the
+ * feed: 1 clear, 2 fair, 3 cloudy, 7 light rain, 8 rain, 18 heavy rain shower,
+ * 25 thunderstorm; 0 with no text means unknown, so the chance of rain decides.
+ */
+export function skyIcon(code: number | null, rainChance: number | null, night: boolean): string {
+  switch (code) {
+    case 1:
+      return night ? "moon" : "sun";
+    case 2:
+      return night ? "moon" : "cloud-sun";
+    case 3:
+      return "cloud";
+    case 7:
+      return "cloud-sun-rain";
+    case 8:
+    case 18:
+    case 25:
+      return "cloud-rain";
+    default:
+      if (rainChance !== null && rainChance >= 50) return "cloud-rain";
+      if (rainChance !== null && rainChance >= 20) return "cloud-sun-rain";
+      return night ? "moon" : "cloud-sun";
+  }
+}
+
+function toWeather(
+  w: CfbdGameWeather | undefined,
+  rainChance: number | null,
+  kickoff: Date,
+  venue: CfbdVenue | undefined,
+): Weather | null {
+  if (!w || w.temperature === null || w.gameIndoors) return null;
+  const hour = localHour(kickoff, venue?.timezone ?? null);
+  const night = hour >= 19 || hour < 6;
+  return {
+    temperature: Math.round(w.temperature),
+    precipitation: rainChance,
+    icon: skyIcon(w.weatherConditionCode, rainChance, night),
+    wind: Math.round(w.windSpeed ?? 0),
+  };
+}
+
+/** "Oklahoma -1.5" from the sportsbooks, else from the win-probability model's spread, else "Pick". */
+function spreadText(
+  game: CfbdGame,
+  lines: Map<number, string>,
+  modelSpread: number | null | undefined,
+): string {
+  const line = lines.get(game.id);
+  if (line) return line;
+  if (modelSpread === null || modelSpread === undefined || modelSpread === 0) return "Pick";
+  const favorite = modelSpread < 0 ? game.homeTeam : game.awayTeam;
+  return `${favorite} -${Math.abs(modelSpread)}`;
+}
+
+export async function weekDetails(
+  cfbd: CfbdClient,
+  rain: RainChanceSource,
+  query: WeekQuery,
+): Promise<Map<number, GameDetail>> {
+  const [games, pollWeeks, betting, seasonGames, records, stats, media, winProbability, venues, weather] =
+    await Promise.all([
+      cfbd.games(query),
+      cfbd.rankings(query.year),
+      cfbd.lines(query),
+      cfbd.seasonGames(query.year),
+      cfbd.records(query.year),
+      cfbd.teamStats(query.year),
+      cfbd.media(query),
+      cfbd.pregameWinProbability(query),
+      cfbd.venues(),
+      cfbd.weather(query),
+    ]);
+
+  const ranks = rankLookup(pollWeeks, query.week);
+  const lines = new Map<number, string>();
+  for (const b of betting) {
+    const line = b.lines.find((l) => l.spread !== null);
+    if (line) lines.set(b.id, line.formattedSpread ?? `${line.spread}`);
+  }
   const recordByTeam = new Map(records.map((r) => [r.teamId, r.total]));
   const statsByTeam = new Map<string, Map<string, number>>();
   for (const s of stats) {
@@ -100,12 +146,26 @@ export async function weekDetails(cfbd: CfbdClient, query: WeekQuery): Promise<M
   const venueById = new Map(venues.map((v) => [v.id, v]));
   const weatherByGame = new Map(weather.map((w) => [w.id, w]));
 
-  const form = (teamId: number, team: string): TeamForm => {
+  // One Open-Meteo call for the whole week: every outdoor venue at its kickoff hour.
+  const located = games
+    .map((game) => ({ game, venue: game.venueId === null ? undefined : venueById.get(game.venueId) }))
+    .filter(({ venue }) => venue && venue.latitude !== null && venue.longitude !== null);
+  const chances = await rain.rainChance(
+    located.map(({ game, venue }) => ({
+      latitude: venue!.latitude!,
+      longitude: venue!.longitude!,
+      at: new Date(game.startDate),
+    })),
+  );
+  const rainByGame = new Map(located.map(({ game }, i) => [game.id, chances[i] ?? null]));
+
+  const form = (teamId: number, team: string): TeamDetail => {
     const record = recordByTeam.get(teamId);
     const tally = points.get(teamId);
     const teamStats = statsByTeam.get(team);
     const played = teamStats?.get("games");
     return {
+      rank: ranks.get(teamId) ?? null,
       record: record ? `${record.wins}–${record.losses}${record.ties ? `–${record.ties}` : ""}` : "0–0",
       pointsFor: tally ? round1(tally.pointsFor / tally.games) : null,
       pointsAgainst: tally ? round1(tally.pointsAgainst / tally.games) : null,
@@ -118,24 +178,16 @@ export async function weekDetails(cfbd: CfbdClient, query: WeekQuery): Promise<M
   for (const game of games) {
     const venue = game.venueId === null ? undefined : venueById.get(game.venueId);
     const wp = wpByGame.get(game.id);
-    const w = weatherByGame.get(game.id);
+    const kickoff = new Date(game.startDate);
     details.set(game.id, {
-      venue: game.venue ?? venue?.name ?? null,
-      city: venue?.city ? (venue.state ? `${venue.city}, ${venue.state}` : venue.city) : null,
+      gameId: String(game.id),
+      kickoff: kickoff.toISOString(),
+      venue: game.venue ?? venue?.name ?? "",
+      city: venue?.city ? (venue.state ? `${venue.city}, ${venue.state}` : venue.city) : "",
       tv: tvByGame.get(game.id) ?? null,
-      homeWinProbability: wp?.homeWinProbability ?? null,
-      homeSpread: wp?.spread ?? null,
-      weather:
-        w && w.temperature !== null
-          ? {
-              temperature: w.temperature,
-              precipitation: w.precipitation ?? 0,
-              windSpeed: w.windSpeed ?? 0,
-              conditionCode: w.weatherConditionCode,
-              condition: w.weatherCondition,
-              indoors: w.gameIndoors ?? false,
-            }
-          : null,
+      homeWp: wp?.homeWinProbability ?? null,
+      spread: spreadText(game, lines, wp?.spread),
+      weather: toWeather(weatherByGame.get(game.id), rainByGame.get(game.id) ?? null, kickoff, venue),
       home: form(game.homeId, game.homeTeam),
       away: form(game.awayId, game.awayTeam),
     });

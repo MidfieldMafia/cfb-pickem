@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { cfbd } from "@/lib/cfbd";
 import { weekCandidates } from "@/lib/cfbd/candidates";
 import { requireConsole } from "@/lib/members/current";
+import { openMeteo } from "@/lib/weather/open-meteo";
 import {
   addGame,
   InvalidSlate,
@@ -55,7 +56,7 @@ export async function addGameAction(formData: FormData) {
   const weekId = num(formData, "weekId");
   const cfbdGameId = num(formData, "cfbdGameId");
   const slate = await slateFor(db(), weekId);
-  const candidates = await weekCandidates(cfbd(), { year: slate.season.year, week: slate.week.weekNumber });
+  const candidates = await weekCandidates(cfbd(), { year: slate.season.year, week: slate.week.weekNumber }, openMeteo());
   const candidate = candidates.find((c) => c.cfbdGameId === cfbdGameId);
   if (!candidate) throw new InvalidSlate("That game is no longer in the feed.");
   await addGame(db(), actor, weekId, candidate);
@@ -100,6 +101,6 @@ export async function refreshAction(formData: FormData) {
   await requireConsole();
   const client = cfbd();
   client.invalidate();
-  await refreshFromFeed(db(), client, num(formData, "weekId"));
+  await refreshFromFeed(db(), client, num(formData, "weekId"), openMeteo());
   revalidatePath(SLATE_PATH);
 }

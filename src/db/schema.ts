@@ -18,8 +18,7 @@ import {
   uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import type { GameDetail } from "@/lib/cfbd/details";
-import type { Rules } from "@/lib/scoring/types";
+import type { GameDetail, Rules } from "@/lib/scoring/types";
 
 const utc = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 

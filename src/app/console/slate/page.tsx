@@ -17,6 +17,7 @@ import {
   setTiebreakerAction,
   voidGameAction,
 } from "./actions";
+import { openMeteo } from "@/lib/weather/open-meteo";
 import { DeadlineForm } from "./deadline-form";
 import { PublishButton } from "./publish-button";
 
@@ -64,7 +65,7 @@ export default async function SlateBuilder({
   let candidates: CandidateGame[] = [];
   let feedError: string | null = null;
   try {
-    candidates = await weekCandidates(cfbd(), { year: season.year, week: weekNumber });
+    candidates = await weekCandidates(cfbd(), { year: season.year, week: weekNumber }, openMeteo());
   } catch (error) {
     feedError = error instanceof Error ? error.message : "CollegeFootballData did not answer.";
   }

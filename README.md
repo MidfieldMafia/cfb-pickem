@@ -82,15 +82,21 @@ only be moved earlier. Publishing freezes the Deadline and shows the slate to me
 `/week`; after that a game can only be voided, with a note, never removed. Kickoff times
 render in each viewer's own time zone.
 
-Adding a game also snapshots its pick-screen detail into `games.detail`: venue and city,
-TV outlet, pregame win probability and spread, the forecast, and each team's record and
-per-game points and yards (from `/records`, `/stats/season`, the season's `/games`,
-`/games/media`, `/metrics/wp/pregame`, `/venues`, and `/games/weather`). "Refresh from feed"
-re-reads it, published or not, so the forecast can move during the week.
+Adding a game also snapshots its pick-screen detail into `games.detail`, in the `GameDetail`
+shape from `src/lib/scoring/types.ts`: venue and city, TV outlet, the line, pregame win
+probability, the forecast, and each team's rank, record, and per-game points and yards. The
+CollegeFootballData sources are `/records`, `/stats/season`, the season's `/games` (points;
+the stats feed has none), `/games/media`, `/metrics/wp/pregame`, `/venues`, and
+`/games/weather` (temperature, wind, sky; included in the $1 tier). The chance of rain comes
+from [Open-Meteo](https://open-meteo.com), free and keyless, one call per week for every
+venue at its kickoff hour; kickoffs past its sixteen-day horizon get no figure. "Refresh from
+feed" re-reads all of it, published or not, so the forecast can move during the week.
+Members never trigger a feed call: every screen reads the snapshot.
 
-The CollegeFootballData client lives in `src/lib/cfbd/`. Tests never call the real API:
-they replay the recorded Week 2 2026 responses in `src/lib/cfbd/fixtures/` (the season-wide
-responses are trimmed to the teams and venues in that week's games).
+The CollegeFootballData client lives in `src/lib/cfbd/` and the Open-Meteo client in
+`src/lib/weather/`. Tests never call the real APIs: they replay the recorded Week 2 2026
+responses in each module's `fixtures/` folder (the season-wide responses are trimmed to the
+teams and venues in that week's games).
 
 ## Seeding and signing in
 

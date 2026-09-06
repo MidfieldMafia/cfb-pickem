@@ -167,9 +167,10 @@ describe("slate builder", () => {
       venue: "Michigan Stadium",
       city: "Ann Arbor, MI",
       tv: "FOX",
-      homeWinProbability: 0.568,
-      home: { record: "1–0", pointsFor: 13 },
-      away: { record: "1–0", pointsFor: 51 },
+      homeWp: 0.568,
+      spread: "Oklahoma -1.5",
+      home: { rank: 16, record: "1–0", pointsFor: 13 },
+      away: { rank: 10, record: "1–0", pointsFor: 51 },
     });
 
     await setTiebreaker(db, jonah, week.id, michigan.id);
@@ -181,7 +182,7 @@ describe("slate builder", () => {
     );
     expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id)).toBe(1);
     const slate = await slateFor(db, week.id);
-    expect(slate.games[0].detail?.weather).toMatchObject({ temperature: 61.2, condition: "Rain" });
+    expect(slate.games[0].detail?.weather).toMatchObject({ temperature: 61, icon: "cloud-rain" });
     // A second refresh with the same feed changes nothing.
     expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id)).toBe(0);
   });

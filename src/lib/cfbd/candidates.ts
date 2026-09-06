@@ -1,5 +1,10 @@
-import { weekDetails, type GameDetail } from "./details";
-import type { CfbdClient, CfbdGame, CfbdPollWeek, WeekQuery } from "./types";
+import type { GameDetail } from "@/lib/scoring/types";
+import { noRainChance, type RainChanceSource } from "@/lib/weather/open-meteo";
+import { weekDetails } from "./details";
+import { rankLookup } from "./rankings";
+import type { CfbdClient, CfbdGame, WeekQuery } from "./types";
+
+export { rankLookup };
 
 /** A game a commissioner can put on a Slate: the feed's game plus rank and spread. */
 export interface CandidateGame {
@@ -16,36 +21,24 @@ export interface CandidateGame {
   kickoffTbd: boolean;
   /** "Texas -1.5"; information only. Null when no sportsbook has posted a line. */
   spread: string | null;
-  /** Pick-screen detail: venue, TV, win probability, forecast, each team's form. */
+  /** Pick-screen detail: venue, TV, line, win probability, forecast, each team's form. */
   detail: GameDetail;
 }
 
-const POLL_PREFERENCE = ["AP Top 25", "Coaches Poll"];
-
 /**
- * Ranks for a week come from the most recent poll published on or before it,
- * because the week's own poll is not out until the previous Saturday's games
- * are played. Prefers the AP poll, then the Coaches poll.
+ * Every game in the week with the detail the slate stores. The rain source
+ * defaults to "unknown" so callers without a forecast wired still work.
  */
-export function rankLookup(pollWeeks: CfbdPollWeek[], week: number): Map<number, number> {
-  const eligible = pollWeeks.filter((w) => w.week <= week).sort((a, b) => b.week - a.week);
-  for (const pollWeek of eligible) {
-    for (const name of POLL_PREFERENCE) {
-      const poll = pollWeek.polls.find((p) => p.poll === name);
-      if (poll) {
-        return new Map(poll.ranks.filter((r) => r.rank !== null).map((r) => [r.teamId, r.rank as number]));
-      }
-    }
-  }
-  return new Map();
-}
-
-export async function weekCandidates(cfbd: CfbdClient, query: WeekQuery): Promise<CandidateGame[]> {
+export async function weekCandidates(
+  cfbd: CfbdClient,
+  query: WeekQuery,
+  rain: RainChanceSource = noRainChance,
+): Promise<CandidateGame[]> {
   const [games, pollWeeks, betting, details] = await Promise.all([
     cfbd.games(query),
     cfbd.rankings(query.year),
     cfbd.lines(query),
-    weekDetails(cfbd, query),
+    weekDetails(cfbd, rain, query),
   ]);
   const ranks = rankLookup(pollWeeks, query.week);
   const spreads = new Map<number, string>();

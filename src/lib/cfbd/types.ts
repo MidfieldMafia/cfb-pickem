@@ -107,6 +107,10 @@ export interface CfbdVenue {
   city: string | null;
   state: string | null;
   dome: boolean | null;
+  /** IANA zone, e.g. "America/Detroit"; null for a few small venues. */
+  timezone: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /** GET /games/weather: the forecast (or observation) for one game. Paid tier. */

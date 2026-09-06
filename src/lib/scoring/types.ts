@@ -158,13 +158,17 @@ export interface SeasonResult {
  */
 
 export interface Weather {
-  /** Degrees Fahrenheit. */
+  /** Degrees Fahrenheit. From /games/weather. */
   temperature: number;
-  /** Percent chance of precipitation. The pill hides it below 20. */
-  precipitation: number;
+  /**
+   * Percent chance of precipitation at kickoff, from Open-Meteo (the
+   * CollegeFootballData feed carries amounts, never a chance). The pill hides
+   * it below 20. Null when the kickoff is past the forecast horizon.
+   */
+  precipitation: number | null;
   /** Lucide icon name: sun, moon, cloud, cloud-sun, cloud-rain, cloud-sun-rain. */
   icon: string;
-  /** Miles per hour. */
+  /** Miles per hour. From /games/weather. */
   wind: number;
 }
 
@@ -174,11 +178,15 @@ export interface TeamDetail {
   rank: number | null;
   /** Display form, e.g. "2–0" with an en dash. From /records. */
   record: string;
-  /** Per-game averages. From /stats/season. */
-  pointsFor: number;
-  pointsAgainst: number;
-  yardsFor: number;
-  yardsAgainst: number;
+  /**
+   * Per-game averages: points from the season's completed /games, yards from
+   * /stats/season. Null before a team's first game and for FCS opponents,
+   * whom the FBS stats feed does not cover; the bar renders a dash.
+   */
+  pointsFor: number | null;
+  pointsAgainst: number | null;
+  yardsFor: number | null;
+  yardsAgainst: number | null;
 }
 
 export interface GameDetail {
