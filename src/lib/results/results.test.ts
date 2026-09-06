@@ -25,7 +25,8 @@ import {
   refreshResultsIfStale,
   restoreGame,
   resultAuditsFor,
-  revealFor,
+  seasonResult,
+  weekResult,
 } from "./results";
 
 type Finals = Record<number, [away: number, home: number]>;
@@ -74,7 +75,8 @@ async function setup() {
     ingest: async (feed: CfbdClient, at: Date) => ingestResults(db, feed, await slateFor(db, week.id), at),
     refresh: async (feed: CfbdClient, at: Date) =>
       (await refreshResultsIfStale(db, feed, await slateFor(db, week.id), at)).outcome,
-    revealAt: async (actor: Member, at: Date) => revealFor(db, actor, await slateFor(db, week.id), at),
+    gradeAt: async (actor: Member, at: Date) => weekResult(db, actor, await slateFor(db, week.id), at),
+    revealAt: async (actor: Member, at: Date) => (await weekResult(db, actor, await slateFor(db, week.id), at)).reveal,
   };
 }
 
@@ -371,5 +373,130 @@ describe("the reveal", () => {
       [jonah.id, false, false],
       [grandma.id, true, false],
     ]);
+  });
+});
+
+/** Every game reported: Miami and Michigan win at home, Ohio State wins at Texas 31–28. */
+const ALL_FINAL: Finals = {
+  [FAMU_AT_MIAMI]: [7, 45],
+  [OKLAHOMA_AT_MICHIGAN]: [24, 27],
+  [OHIO_STATE_AT_TEXAS]: [31, 28],
+};
+
+describe("the week result", () => {
+  test("hands back the Weekly Scores and the Weekly Win the board was graded from", async () => {
+    const { jonah, grandma, michigan, ingest, gradeAt } = await setup();
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+
+    const result = await gradeAt(grandma, SUNDAY);
+
+    expect(result.complete).toBe(true);
+    expect(result.week.weekNumber).toBe(2);
+    // Grandma: Michigan locked (20) plus Ohio State (10). Jonah: Miami only.
+    expect(result.scores.map((s) => [s.member.displayName, s.points, s.correct, s.incorrect, s.pending])).toEqual([
+      ["Grandma", 30, 2, 0, 0],
+      ["Jonah", 10, 1, 2, 0],
+    ]);
+    expect(result.scores[0].lockGameId).toBe(michigan.id);
+    expect(result.scores[0].lockDropped).toBe(false);
+    expect(result.scores[1].lockGameId).toBeNull();
+    // Nobody guessed, and a missing guess counts as zero against Texas's 59.
+    expect(result.scores.map((s) => [s.tiebreakerGuess, s.tiebreakerError])).toEqual([
+      [null, 59],
+      [null, 59],
+    ]);
+    expect(result.weeklyWin).toEqual({
+      winners: [{ id: grandma.id, displayName: "Grandma", avatarId: null }],
+      points: 30,
+      decidedBy: "points",
+    });
+    // The same pass produced the board: the Reveal is not a second grading.
+    expect(result.reveal.games.find((g) => g.game.id === michigan.id)!.picks.map((p) => p.outcome)).toEqual([
+      "incorrect",
+      "correct",
+    ]);
+    expect(result.reveal.members.map((m) => m.id)).toEqual([jonah.id, grandma.id]);
+  });
+
+  test("a week with a game still to play is not complete, and says how much is still pending", async () => {
+    const { grandma, gradeAt, ingest } = await setup();
+    await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SATURDAY_EVENING);
+
+    const result = await gradeAt(grandma, SATURDAY_EVENING);
+
+    expect(result.complete).toBe(false);
+    expect(result.scores.map((s) => [s.member.displayName, s.points, s.pending])).toEqual([
+      ["Grandma", 20, 1],
+      ["Jonah", 0, 2],
+    ]);
+    // The Tiebreaker Game has not finished, so there is nothing to measure a guess against yet.
+    expect(result.scores.every((s) => s.tiebreakerError === null)).toBe(true);
+  });
+
+  test("a Dropped Lock is reported on the score, so a member is not read as having set none", async () => {
+    const { db, jonah, week, texas, gradeAt, ingest } = await setup();
+    await setLock(db, jonah, week.id, texas.id, THURSDAY);
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+    await voidGame(db, jonah, texas.id, "Postponed to December");
+
+    const jonahScore = (await gradeAt(jonah, SUNDAY)).scores.find((s) => s.member.id === jonah.id)!;
+
+    expect(jonahScore.lockGameId).toBe(texas.id);
+    expect(jonahScore.lockDropped).toBe(true);
+    // Miami alone, at single points: the Lock was released rather than doubled.
+    expect(jonahScore.points).toBe(10);
+  });
+});
+
+describe("the season leaderboard", () => {
+  test("adds up the played weeks and ranks every member on the season tiebreaks", async () => {
+    const { db, jonah, grandma, ingest } = await setup();
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+
+    const season = await seasonResult(db, grandma, SUNDAY);
+
+    expect(season.season.year).toBe(2026);
+    expect(season.weeks.map((w) => [w.week.weekNumber, w.complete])).toEqual([[2, true]]);
+    expect(season.weeks[0].weeklyWin!.winners.map((m) => m.id)).toEqual([grandma.id]);
+    expect(season.leaderboard).toEqual([
+      {
+        member: { id: grandma.id, displayName: "Grandma", avatarId: null },
+        rank: 1,
+        totalPoints: 30,
+        correct: 2,
+        incorrect: 0,
+        weeklyWins: 1,
+        weeksPlayed: 1,
+        averagePoints: 30,
+        cumulativeTiebreakerError: 59,
+      },
+      {
+        member: { id: jonah.id, displayName: "Jonah", avatarId: null },
+        rank: 2,
+        totalPoints: 10,
+        correct: 1,
+        incorrect: 2,
+        weeklyWins: 0,
+        weeksPlayed: 1,
+        averagePoints: 10,
+        cumulativeTiebreakerError: 59,
+      },
+    ]);
+  });
+
+  test("a published week whose deadline has not passed is not a week played", async () => {
+    const { db, grandma } = await setup();
+
+    // Week 2 is published, but Thursday is inside it: counting it would score every member zero
+    // for a week nobody has picked yet, and drag every average down with it.
+    const season = await seasonResult(db, grandma, THURSDAY);
+
+    expect(season.weeks).toEqual([]);
+    // Everyone is still on the board at zero: an empty season is a table of zeroes, not an empty screen.
+    expect(season.leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints, r.weeksPlayed])).toEqual([
+      ["Jonah", 1, 0, 0],
+      ["Grandma", 1, 0, 0],
+    ]);
+    expect(season.leaderboard.every((r) => r.averagePoints === null)).toBe(true);
   });
 });

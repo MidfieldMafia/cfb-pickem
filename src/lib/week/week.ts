@@ -4,7 +4,7 @@
  * CONTEXT.md.
  *
  * Every screen used to compose this by hand: `publishedSlate`, then
- * `pickSheet`, then the score refresh, then `revealFor`, each re-deriving the
+ * `pickSheet`, then the score refresh, then the grading, each re-deriving the
  * same Week over its own round trip and each absorbing a different answer to
  * "there is no Week". The composition lives here instead. The Week is loaded
  * once and handed to everything that needs it, and no published Week is one
@@ -16,7 +16,7 @@ import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
-import { refreshResultsIfStale, revealFor, type Reveal } from "@/lib/results/results";
+import { refreshResultsIfStale, weekResult, type GradedWeekResult } from "@/lib/results/results";
 import { deadlinePassed, publishedSlate, type Slate } from "@/lib/slate/slate";
 
 /** The published Week for one member at one instant. */
@@ -26,15 +26,19 @@ export interface WeekContext {
   /** True once the server clock has reached the Deadline: picks are closed and the Reveal is open. */
   locked: boolean;
   /**
-   * Everyone's picks, graded. Null before the Deadline, and null after it for
-   * the screens that did not ask for it — building it costs a read per member.
+   * The Week graded: the Reveal board, everyone's Weekly Score, and the
+   * Weekly Win. Null before the Deadline, and null after it for the screens
+   * that did not ask for it — grading costs a read per member.
    */
-  reveal: Reveal | null;
+  result: GradedWeekResult | null;
 }
 
 export interface WeekOptions {
-  /** Load the Reveal too, once the Deadline has passed. Only the week screen shows it. */
-  reveal?: boolean;
+  /**
+   * Grade the Week too, once the Deadline has passed: the board and the
+   * scores arrive together from one pass, so asking for either is this flag.
+   */
+  graded?: boolean;
   /**
    * Keep the scores fresh: member traffic schedules the feed, and a visit
    * after the Deadline pulls CollegeFootballData when a game is past kickoff
@@ -72,9 +76,9 @@ export async function currentWeek(
   const locked = deadlinePassed(published, now);
   // Any feed pull happens before the reads, so the sheet and the Reveal see the same rows.
   const slate = locked && options.cfbd ? await refreshQuietly(db, options.cfbd, published, now) : published;
-  const [sheet, reveal] = await Promise.all([
+  const [sheet, result] = await Promise.all([
     pickSheet(db, actor, slate, now),
-    locked && options.reveal ? revealFor(db, actor, slate, now) : null,
+    locked && options.graded ? weekResult(db, actor, slate, now) : null,
   ]);
-  return { slate, sheet, locked, reveal };
+  return { slate, sheet, locked, result };
 }
