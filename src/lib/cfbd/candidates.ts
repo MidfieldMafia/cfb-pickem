@@ -1,6 +1,6 @@
 import type { GameDetail } from "@/lib/scoring/types";
-import { noRainChance, type RainChanceSource } from "@/lib/weather/open-meteo";
-import { bookLines, weekDetails } from "./details";
+import type { RainChanceSource } from "@/lib/weather/open-meteo";
+import { weekDetails } from "./details";
 import type { CfbdClient, CfbdGame, WeekQuery } from "./types";
 
 /** A game a commissioner can put on a Slate: the feed's game plus rank and spread. */
@@ -23,22 +23,20 @@ export interface CandidateGame {
 }
 
 /**
- * Every game in the week with the detail the slate stores. The rain source
- * defaults to "unknown" so callers without a forecast wired still work.
+ * Every game in the week with the detail the slate stores, off one fan-out.
+ * The rain source is required: it used to default to "unknown", which meant a
+ * caller that simply forgot the argument would overwrite real forecasts with
+ * nulls on the next refresh. `noRainChance` is still there for callers that
+ * mean it.
  */
 export async function weekCandidates(
   cfbd: CfbdClient,
   query: WeekQuery,
-  rain: RainChanceSource = noRainChance,
+  rain: RainChanceSource,
 ): Promise<CandidateGame[]> {
-  const [games, betting, details] = await Promise.all([
-    cfbd.games(query),
-    cfbd.lines(query),
-    weekDetails(cfbd, rain, query),
-  ]);
-  const spreads = bookLines(betting);
+  const { details, games, lines } = await weekDetails(cfbd, rain, query);
   return games
-    .map((game) => toCandidate(game, spreads, details.get(game.id)!))
+    .map((game) => toCandidate(game, lines, details.get(game.id)!))
     .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime() || a.cfbdGameId - b.cfbdGameId);
 }
 

@@ -57,22 +57,41 @@ export const recordings = {
 
 export type RecordingName = keyof typeof recordings;
 
+export interface RecordedCfbd extends CfbdClient {
+  /**
+   * How many feed reads this client has answered. Recorded responses are free,
+   * so nothing else in a test would notice a caller asking for the same
+   * endpoint twice — against the live client that is quota, monthly and small.
+   */
+  readonly calls: number;
+}
+
 /**
  * A client that replays a recording. `overrides` lets a test change what the
  * feed says next (a moved kickoff, say) without touching the fixture files.
  */
-export function recordedCfbd(name: RecordingName, overrides: Partial<Recording> = {}): CfbdClient {
+export function recordedCfbd(name: RecordingName, overrides: Partial<Recording> = {}): RecordedCfbd {
   const recording = { ...recordings[name], ...overrides };
+  let calls = 0;
+  const replay =
+    <K extends keyof Recording>(key: K) =>
+    async () => {
+      calls += 1;
+      return recording[key];
+    };
   return {
-    games: async () => recording.games,
-    rankings: async () => recording.rankings,
-    lines: async () => recording.lines,
-    seasonGames: async () => recording.seasonGames,
-    records: async () => recording.records,
-    teamStats: async () => recording.teamStats,
-    media: async () => recording.media,
-    pregameWinProbability: async () => recording.pregameWinProbability,
-    venues: async () => recording.venues,
-    weather: async () => recording.weather,
+    games: replay("games"),
+    rankings: replay("rankings"),
+    lines: replay("lines"),
+    seasonGames: replay("seasonGames"),
+    records: replay("records"),
+    teamStats: replay("teamStats"),
+    media: replay("media"),
+    pregameWinProbability: replay("pregameWinProbability"),
+    venues: replay("venues"),
+    weather: replay("weather"),
+    get calls() {
+      return calls;
+    },
   };
 }

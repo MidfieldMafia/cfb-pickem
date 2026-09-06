@@ -12,7 +12,7 @@ import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
 import { logResultChange } from "@/lib/results/audit";
-import { noRainChance, type RainChanceSource } from "@/lib/weather/open-meteo";
+import type { RainChanceSource } from "@/lib/weather/open-meteo";
 
 export class InvalidSlate extends Error {}
 
@@ -276,7 +276,7 @@ export async function refreshFromFeed(
   db: Db,
   cfbd: CfbdClient,
   weekId: number,
-  rain: RainChanceSource = noRainChance,
+  rain: RainChanceSource,
 ): Promise<number> {
   const slate = await slateFor(db, weekId);
   if (slate.games.length === 0) return 0;
@@ -313,7 +313,7 @@ export async function addGameFromFeed(
   cfbd: CfbdClient,
   weekId: number,
   cfbdGameId: number,
-  rain: RainChanceSource = noRainChance,
+  rain: RainChanceSource,
 ): Promise<Game> {
   requireCommissioner(actor);
   const slate = await slateFor(db, weekId);

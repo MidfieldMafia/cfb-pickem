@@ -7,6 +7,7 @@ import { members, seasons } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { recordedCfbd } from "@/lib/cfbd/recorded";
+import { recordedOpenMeteo, type RainChanceSource } from "@/lib/weather/open-meteo";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { addMember, bootstrapCommissioner } from "@/lib/members/members";
 import { addGame, openWeek, publishSlate, setTiebreaker, type Slate } from "@/lib/slate/slate";
@@ -36,6 +37,11 @@ export interface Week2Fixture {
   jonah: Member;
   grandma: Member;
   cfbd: CfbdClient;
+  /**
+   * The recorded forecast, so the fixture's games carry a real chance of rain
+   * and anything that refreshes them compares like with like.
+   */
+  rain: RainChanceSource;
   candidates: CandidateGame[];
   /** The candidate for a recorded game id; throws nothing, the ids are known. */
   candidate: (cfbdGameId: number) => CandidateGame;
@@ -48,9 +54,10 @@ export async function seedWeek2(): Promise<Week2Fixture> {
   const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
   const grandma = await addMember(db, jonah, { displayName: "Grandma" });
   const cfbd = recordedCfbd("2026-week-2");
-  const candidates = await weekCandidates(cfbd, WEEK_2);
+  const rain = recordedOpenMeteo("2026-week-2");
+  const candidates = await weekCandidates(cfbd, WEEK_2, rain);
   const candidate = (cfbdGameId: number) => candidates.find((c) => c.cfbdGameId === cfbdGameId)!;
-  return { db, jonah, grandma, cfbd, candidates, candidate };
+  return { db, jonah, grandma, cfbd, rain, candidates, candidate };
 }
 
 export interface PublishedWeek2 extends Week2Fixture {

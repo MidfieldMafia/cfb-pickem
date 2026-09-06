@@ -150,7 +150,7 @@ describe("slate builder", () => {
   });
 
   test("a kickoff change in the feed updates the game but keeps it on the slate and leaves the deadline", async () => {
-    const { db, jonah, candidate } = await setup();
+    const { db, jonah, candidate, rain } = await setup();
     const week = await openWeek(db, jonah, 2);
     const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
     await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
@@ -160,7 +160,7 @@ describe("slate builder", () => {
     const moved = recordings["2026-week-2"].games.map((g) =>
       g.id === OKLAHOMA_AT_MICHIGAN ? { ...g, startDate: "2026-09-13T00:00:00.000Z" } : g,
     );
-    const changed = await refreshFromFeed(db, recordedCfbd("2026-week-2", { games: moved }), week.id);
+    const changed = await refreshFromFeed(db, recordedCfbd("2026-week-2", { games: moved }), week.id, rain);
 
     expect(changed).toBe(1);
     const slate = await slateFor(db, week.id);
@@ -172,7 +172,7 @@ describe("slate builder", () => {
   });
 
   test("a game carries its pick-screen detail from the feed, and the refresh updates it even after publish", async () => {
-    const { db, jonah, candidate } = await setup();
+    const { db, jonah, candidate, rain } = await setup();
     const week = await openWeek(db, jonah, 2);
     const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
     expect(michigan.detail).toMatchObject({
@@ -181,6 +181,9 @@ describe("slate builder", () => {
       tv: "FOX",
       homeWp: 0.568,
       spread: "Oklahoma -1.5",
+      // Open-Meteo's 8% at kickoff: the seeded week runs with the forecast on,
+      // so a game stored here carries the same detail production would store.
+      weather: { temperature: 83, precipitation: 8 },
       home: { rank: 16, record: "1–0", pointsFor: 13 },
       away: { rank: 10, record: "1–0", pointsFor: 51 },
     });
@@ -192,10 +195,10 @@ describe("slate builder", () => {
     const rainy = recordings["2026-week-2"].weather.map((w) =>
       w.id === OKLAHOMA_AT_MICHIGAN ? { ...w, temperature: 61.2, weatherConditionCode: 8, weatherCondition: "Rain" } : w,
     );
-    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id)).toBe(1);
+    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(1);
     const slate = await slateFor(db, week.id);
     expect(slate.games[0].detail?.weather).toMatchObject({ temperature: 61, icon: "cloud-rain" });
     // A second refresh with the same feed changes nothing.
-    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id)).toBe(0);
+    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(0);
   });
 });

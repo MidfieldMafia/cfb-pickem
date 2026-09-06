@@ -9,7 +9,7 @@ const WEEK_2 = { year: 2026, week: 2 };
 
 describe("game detail for the pick screen", () => {
   test("joins records, season stats, points from played games, media, win probability, venue, weather, and rain chance by id", async () => {
-    const details = await weekDetails(recordedCfbd("2026-week-2"), recordedOpenMeteo("2026-week-2"), WEEK_2);
+    const { details } = await weekDetails(recordedCfbd("2026-week-2"), recordedOpenMeteo("2026-week-2"), WEEK_2);
 
     // Values read straight from the recorded responses: Michigan beat Western Michigan 13-12
     // on 276 yards to 221; Oklahoma beat UTEP 51-0 on 401 yards to 198. The Week 2 AP poll has
@@ -29,7 +29,7 @@ describe("game detail for the pick screen", () => {
   });
 
   test("an FCS opponent with no FBS stats or games still gets its record; the averages are null", async () => {
-    const details = await weekDetails(recordedCfbd("2026-week-2"), recordedOpenMeteo("2026-week-2"), WEEK_2);
+    const { details } = await weekDetails(recordedCfbd("2026-week-2"), recordedOpenMeteo("2026-week-2"), WEEK_2);
     const famu = details.get(FAMU_AT_MIAMI)!;
 
     expect(famu.tv).toBe("ACC Network");
@@ -46,7 +46,7 @@ describe("game detail for the pick screen", () => {
 
   test("a team that has not played shows 0–0 with no averages, an unforecast game has no rain figure, and no line means Pick", async () => {
     const cfbd = recordedCfbd("2026-week-2", { records: [], teamStats: [], seasonGames: [], lines: [], pregameWinProbability: [] });
-    const details = await weekDetails(cfbd, noRainChance, WEEK_2);
+    const { details } = await weekDetails(cfbd, noRainChance, WEEK_2);
     const game = details.get(OKLAHOMA_AT_MICHIGAN)!;
     expect(game.home).toEqual({ rank: 16, record: "0–0", pointsFor: null, pointsAgainst: null, yardsFor: null, yardsAgainst: null });
     expect(game.spread).toBe("Pick");
@@ -61,7 +61,7 @@ describe("game detail for the pick screen", () => {
       if (w.id === FAMU_AT_MIAMI) return { ...w, gameIndoors: true };
       return w;
     });
-    const details = await weekDetails(recordedCfbd("2026-week-2", { weather }), noRainChance, WEEK_2);
+    const { details } = await weekDetails(recordedCfbd("2026-week-2", { weather }), noRainChance, WEEK_2);
     expect(details.get(OKLAHOMA_AT_MICHIGAN)?.weather?.icon).toBe("cloud-rain");
     expect(details.get(FAMU_AT_MIAMI)?.weather).toBeNull();
   });
