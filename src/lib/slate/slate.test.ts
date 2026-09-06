@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { seasons } from "@/db/schema";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
-import { weekCandidates } from "@/lib/cfbd/candidates";
-import { addMember, bootstrapCommissioner } from "@/lib/members/members";
-import { createTestDb } from "@/test/db";
+import {
+  FAMU_AT_MIAMI,
+  OHIO_STATE_AT_TEXAS,
+  OKLAHOMA_AT_MICHIGAN,
+  seedWeek2,
+} from "@/test/week-2";
 import {
   addGame,
   InvalidSlate,
@@ -19,20 +21,9 @@ import {
   voidGame,
 } from "./slate";
 
-const OHIO_STATE_AT_TEXAS = 401856682; // Sat 2026-09-12 23:30Z
-const OKLAHOMA_AT_MICHIGAN = 401856679; // Sat 2026-09-12 16:00Z
 const TUESDAY_BEFORE = new Date("2026-09-08T18:00:00Z");
 
-async function setup() {
-  const db = await createTestDb();
-  await db.insert(seasons).values({ year: 2026, rules: { pointsPerCorrectPick: 10, lockMultiplier: 2 }, active: true });
-  const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
-  const grandma = await addMember(db, jonah, { displayName: "Grandma" });
-  const cfbd = recordedCfbd("2026-week-2");
-  const candidates = await weekCandidates(cfbd, { year: 2026, week: 2 });
-  const candidate = (id: number) => candidates.find((c) => c.cfbdGameId === id)!;
-  return { db, jonah, grandma, cfbd, candidates, candidate };
-}
+const setup = seedWeek2;
 
 describe("slate builder", () => {
   test("a commissioner builds a week's slate from candidates and publishes it as a whole", async () => {
@@ -107,7 +98,7 @@ describe("slate builder", () => {
     const week = await openWeek(db, jonah, 2);
     const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
     const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
-    const famu = await addGame(db, jonah, week.id, candidate(401858213));
+    const famu = await addGame(db, jonah, week.id, candidate(FAMU_AT_MIAMI));
 
     await removeGame(db, jonah, famu.id);
     expect((await slateFor(db, week.id)).games).toHaveLength(2);

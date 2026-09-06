@@ -72,23 +72,29 @@ function ProgressStrip({
   );
 }
 
+/** How each save state reads: its border, its icon, and its word. */
+const CHIP = {
+  pending: { look: "border-border text-foreground", Icon: CircleDashed, iconProps: {}, label: "Pending" },
+  saving: {
+    look: "border-border text-muted-foreground",
+    Icon: LoaderCircle,
+    iconProps: { className: "animate-spin" },
+    label: "Saving",
+  },
+  failed: { look: "border-destructive text-destructive", Icon: TriangleAlert, iconProps: {}, label: "Not saved" },
+  saved: { look: "border-win bg-win text-win-foreground", Icon: Check, iconProps: { strokeWidth: 3 }, label: "Saved" },
+} as const;
+
 /** One live region whose text changes, so screen readers announce the transition. */
 function StatusChip({ pick }: { pick: LocalPick | undefined }) {
-  const base = "inline-flex min-h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold";
-  const state = pick?.status ?? "pending";
-  const look = {
-    pending: `${base} border-border text-foreground`,
-    saving: `${base} border-border text-muted-foreground`,
-    failed: `${base} border-destructive text-destructive`,
-    saved: `${base} border-win bg-win text-win-foreground`,
-  }[state];
+  const { look, Icon, iconProps, label } = CHIP[pick?.status ?? "pending"];
   return (
-    <span aria-live="polite" className={look}>
-      {state === "pending" ? <CircleDashed size={12} /> : null}
-      {state === "saving" ? <LoaderCircle size={12} className="animate-spin" /> : null}
-      {state === "failed" ? <TriangleAlert size={12} /> : null}
-      {state === "saved" ? <Check size={12} strokeWidth={3} /> : null}
-      {{ pending: "Pending", saving: "Saving", failed: "Not saved", saved: "Saved" }[state]}
+    <span
+      aria-live="polite"
+      className={`inline-flex min-h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold ${look}`}
+    >
+      <Icon size={12} {...iconProps} />
+      {label}
     </span>
   );
 }
@@ -225,7 +231,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
           awayTeam={game.awayTeam}
           homeTeam={game.homeTeam}
           spread={detail?.spread ?? game.spread}
-          detail={detail ? { homeWp: detail.homeWp, weather: detail.weather, home: detail.home, away: detail.away } : null}
+          detail={detail}
         />
 
         <div className="flex flex-1 items-stretch gap-1.5">

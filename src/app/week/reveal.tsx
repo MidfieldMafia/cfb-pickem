@@ -2,10 +2,9 @@ import { Check, Lock, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
+import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { TeamLogo } from "@/components/team-logo";
 import type { Reveal, RevealGame, RevealMember, RevealPick } from "@/lib/results/results";
-
-const LABEL = "text-xs font-bold uppercase tracking-[0.08em] text-secondary";
 
 function statusLine(row: RevealGame): string {
   if (row.result.status === "void") return `Void${row.game.voidNote ? ` · ${row.game.voidNote}` : ""}`;

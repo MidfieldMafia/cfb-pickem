@@ -19,12 +19,9 @@ import {
 } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { slateFor } from "@/lib/slate/slate";
-import { MAX_TIEBREAKER_GUESS } from "./limits";
+import { tiebreakerGuessError } from "./limits";
 
 export class InvalidPick extends Error {}
-
-/** The highest combined score the guess field accepts. The record is 145; nobody needs more. */
-export { MAX_TIEBREAKER_GUESS };
 
 /** Thrown for any pick, lock, or guess change at or after the Deadline. */
 export class DeadlinePassed extends InvalidPick {
@@ -218,9 +215,8 @@ export async function setTiebreakerGuess(
   now: Date = new Date(),
 ): Promise<void> {
   await openForPicks(db, weekId, now);
-  if (!Number.isInteger(guess) || guess < 0 || guess > MAX_TIEBREAKER_GUESS) {
-    throw new InvalidPick(`The guess is a whole number of points, 0 to ${MAX_TIEBREAKER_GUESS}.`);
-  }
+  const invalid = tiebreakerGuessError(guess);
+  if (invalid) throw new InvalidPick(invalid);
   await db
     .insert(tiebreakerGuesses)
     .values({ memberId: actor.id, weekId, guess, updatedAt: now, updatedBy: actor.id })

@@ -6,10 +6,17 @@ import { db } from "@/db";
 import { SESSION_COOKIE } from "@/lib/members/cookie";
 import { requireConsole } from "@/lib/members/current";
 import { addMember, InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
+import { safeInteger } from "@/lib/parse";
 
 export interface AddMemberState {
   error?: string;
   added?: string;
+}
+
+function memberId(formData: FormData): number {
+  const id = safeInteger(formData.get("memberId"));
+  if (id === null) throw new InvalidMember("Missing memberId.");
+  return id;
 }
 
 export async function addMemberAction(_prev: AddMemberState, formData: FormData): Promise<AddMemberState> {
@@ -30,12 +37,12 @@ export async function addMemberAction(_prev: AddMemberState, formData: FormData)
 export async function regenerateAction(formData: FormData) {
   const actor = await requireConsole();
   const keepSessionId = (await cookies()).get(SESSION_COOKIE)?.value;
-  await regenerateMagicLink(db(), actor, Number(formData.get("memberId")), { keepSessionId });
+  await regenerateMagicLink(db(), actor, memberId(formData), { keepSessionId });
   revalidatePath("/console/members");
 }
 
 export async function setActiveAction(formData: FormData) {
   const actor = await requireConsole();
-  await setMemberActive(db(), actor, Number(formData.get("memberId")), formData.get("active") === "true");
+  await setMemberActive(db(), actor, memberId(formData), formData.get("active") === "true");
   revalidatePath("/console/members");
 }

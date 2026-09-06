@@ -1,10 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { seasons } from "@/db/schema";
-import { recordedCfbd } from "@/lib/cfbd/recorded";
-import { weekCandidates } from "@/lib/cfbd/candidates";
-import { addMember, bootstrapCommissioner, setMemberActive } from "@/lib/members/members";
+import { addMember, setMemberActive } from "@/lib/members/members";
 import { addGame, openWeek, publishSlate, setTiebreaker, voidGame } from "@/lib/slate/slate";
-import { createTestDb } from "@/test/db";
+import { FAMU_AT_MIAMI, OHIO_STATE_AT_TEXAS, OKLAHOMA_AT_MICHIGAN, seedWeek2 } from "@/test/week-2";
 import {
   DeadlinePassed,
   pickSheet,
@@ -15,24 +12,16 @@ import {
   weekPicks,
 } from "./picks";
 
-const OHIO_STATE_AT_TEXAS = 401856682; // Sat 2026-09-12 23:30Z
-const OKLAHOMA_AT_MICHIGAN = 401856679; // Sat 2026-09-12 16:00Z
-const FAMU_AT_FLORIDA = 401858213;
 const TUESDAY = new Date("2026-09-08T18:00:00Z");
 const THURSDAY = new Date("2026-09-10T20:00:00Z");
 
 /** A published Week 2 slate of three games with the Texas game as the Tiebreaker Game. */
 async function setup() {
-  const db = await createTestDb();
-  await db.insert(seasons).values({ year: 2026, rules: { pointsPerCorrectPick: 10, lockMultiplier: 2 }, active: true });
-  const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
-  const grandma = await addMember(db, jonah, { displayName: "Grandma" });
-  const candidates = await weekCandidates(recordedCfbd("2026-week-2"), { year: 2026, week: 2 });
-  const candidate = (id: number) => candidates.find((c) => c.cfbdGameId === id)!;
+  const { db, jonah, grandma, candidate } = await seedWeek2();
   const week = await openWeek(db, jonah, 2);
   const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
   const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
-  const florida = await addGame(db, jonah, week.id, candidate(FAMU_AT_FLORIDA));
+  const florida = await addGame(db, jonah, week.id, candidate(FAMU_AT_MIAMI));
   await setTiebreaker(db, jonah, week.id, texas.id);
   const slate = await publishSlate(db, jonah, week.id, TUESDAY);
   return { db, jonah, grandma, week, michigan, texas, florida, deadline: slate.deadline! };

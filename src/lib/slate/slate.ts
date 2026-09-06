@@ -32,19 +32,32 @@ export interface Slate {
   earliestKickoff: Date | null;
 }
 
+/** The last week a season can reach, counting the conference championships. */
+export const MAX_WEEK_NUMBER = 20;
+
+/** Every week number a commissioner can open, for the console's chooser. */
+export const WEEK_NUMBERS = Array.from({ length: MAX_WEEK_NUMBER }, (_, i) => i + 1);
+
+export function isWeekNumber(weekNumber: number): boolean {
+  return Number.isInteger(weekNumber) && weekNumber >= 1 && weekNumber <= MAX_WEEK_NUMBER;
+}
+
 export async function activeSeason(db: Db): Promise<Season> {
   const season = await db.query.seasons.findFirst({ where: eq(seasons.active, true) });
   if (!season) throw new InvalidSlate("There is no active season. Run the seed.");
   return season;
 }
 
-/** The Week row for this number in the active season, created on first visit. */
-export async function openWeek(db: Db, actor: Member, weekNumber: number): Promise<Week> {
+/**
+ * The Week row for this number in the active season, created on first visit.
+ * Callers that already hold the season pass it rather than paying for it again.
+ */
+export async function openWeek(db: Db, actor: Member, weekNumber: number, inSeason?: Season): Promise<Week> {
   requireCommissioner(actor);
-  if (!Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 20) {
-    throw new InvalidSlate("Week must be between 1 and 20.");
+  if (!isWeekNumber(weekNumber)) {
+    throw new InvalidSlate(`Week must be between 1 and ${MAX_WEEK_NUMBER}.`);
   }
-  const season = await activeSeason(db);
+  const season = inSeason ?? (await activeSeason(db));
   const existing = await db.query.weeks.findFirst({
     where: and(eq(weeks.seasonId, season.id), eq(weeks.weekNumber, weekNumber)),
   });
@@ -243,7 +256,8 @@ export async function refreshFromFeed(
   if (slate.games.length === 0) return 0;
   const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const byId = new Map(feed.map((c) => [c.cfbdGameId, c]));
-  let changed = 0;
+  const updates: Promise<unknown>[] = [];
+  const updatedAt = new Date();
   for (const game of slate.games) {
     const fresh = byId.get(game.cfbdGameId);
     if (!fresh) continue;
@@ -256,8 +270,29 @@ export async function refreshFromFeed(
       if (fresh.awayRank !== game.awayRank) patch.awayRank = fresh.awayRank;
     }
     if (Object.keys(patch).length === 0) continue;
-    await db.update(games).set({ ...patch, updatedAt: new Date() }).where(eq(games.id, game.id));
-    changed += 1;
+    // The rows are independent, so the whole refresh costs one round trip, not one per game.
+    updates.push(db.update(games).set({ ...patch, updatedAt }).where(eq(games.id, game.id)));
   }
-  return changed;
+  await Promise.all(updates);
+  return updates.length;
+}
+
+/**
+ * Adding a game from the console: the candidate must still be in the feed for
+ * the week, so the rule lives here with `addGame` rather than in the action.
+ */
+export async function addGameFromFeed(
+  db: Db,
+  actor: Member,
+  cfbd: CfbdClient,
+  weekId: number,
+  cfbdGameId: number,
+  rain: RainChanceSource = noRainChance,
+): Promise<Game> {
+  requireCommissioner(actor);
+  const slate = await slateFor(db, weekId);
+  const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
+  const candidate = feed.find((c) => c.cfbdGameId === cfbdGameId);
+  if (!candidate) throw new InvalidSlate("That game is no longer in the feed.");
+  return addGame(db, actor, weekId, candidate);
 }

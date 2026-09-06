@@ -5,6 +5,7 @@ import { Pennant } from "@/components/pennant";
 import { appUrl } from "@/lib/app-url";
 import { requireConsole } from "@/lib/members/current";
 import { listMembers, magicLinkFor } from "@/lib/members/members";
+import { plural } from "@/lib/plural";
 import { relativeTime } from "@/lib/relative-time";
 import { regenerateAction, setActiveAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
@@ -26,8 +27,7 @@ export default async function Members() {
       <div>
         <h1>Members</h1>
         <p className="text-sm text-muted-foreground">
-          {roster.length} member{roster.length === 1 ? "" : "s"} · {commissioners} commissioner
-          {commissioners === 1 ? "" : "s"}
+          {plural(roster.length, "member")} · {plural(commissioners, "commissioner")}
         </p>
       </div>
 

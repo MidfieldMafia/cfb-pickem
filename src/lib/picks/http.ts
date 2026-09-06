@@ -6,6 +6,7 @@
  */
 import { db } from "@/db";
 import { currentMember } from "@/lib/members/current";
+import { safeInteger } from "@/lib/parse";
 import { publishedSlate } from "@/lib/slate/slate";
 import { DeadlinePassed, InvalidPick, PicksHidden } from "./picks";
 
@@ -26,9 +27,9 @@ export function errorResponse(error: unknown): Response {
 export async function withPickContext(
   work: (ctx: { actor: NonNullable<Awaited<ReturnType<typeof currentMember>>>; weekId: number; now: Date }) => Promise<Response>,
 ): Promise<Response> {
-  const actor = await currentMember();
+  // Independent lookups: the phone waits for one round trip, not two.
+  const [actor, slate] = await Promise.all([currentMember(), publishedSlate(db())]);
   if (!actor) return Response.json({ error: "Open your Magic Link to sign in." } satisfies ApiError, { status: 401 });
-  const slate = await publishedSlate(db());
   if (!slate) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
   try {
     return await work({ actor, weekId: slate.week.id, now: new Date() });
@@ -47,13 +48,9 @@ export async function readBody(request: Request): Promise<Record<string, unknown
   }
 }
 
-/** Postgres `integer` range; anything outside is a bad request, not a database error. */
-const MAX_INT = 2_147_483_647;
-
 export function integer(body: Record<string, unknown>, key: string): number {
-  const value = body[key];
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > MAX_INT) {
-    throw new InvalidPick(`${key} must be a whole number.`);
-  }
+  // A JSON body must carry a real number; a numeric string is a malformed client.
+  const value = typeof body[key] === "number" ? safeInteger(body[key]) : null;
+  if (value === null) throw new InvalidPick(`${key} must be a whole number.`);
   return value;
 }

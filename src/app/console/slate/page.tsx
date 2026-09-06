@@ -5,10 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
+import { SECTION_LABEL } from "@/components/section-label";
+import { TeamName } from "@/components/team-name";
 import { cfbd } from "@/lib/cfbd";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { requireConsole } from "@/lib/members/current";
-import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
+import { plural } from "@/lib/plural";
+import { activeSeason, isWeekNumber, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { pillClass } from "../pill";
 import {
   addGameAction,
   chooseWeekAction,
@@ -27,22 +31,12 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "ranked", label: "Ranked" },
   { key: "sec", label: "SEC" },
 ];
-const WEEK_NUMBERS = Array.from({ length: 15 }, (_, i) => i + 1);
 
 function matches(c: CandidateGame, filter: Filter, q: string): boolean {
   if (filter === "ranked" && c.homeRank === null && c.awayRank === null) return false;
   if (filter === "sec" && c.homeConference !== "SEC" && c.awayConference !== "SEC") return false;
   if (q && !`${c.awayTeam} ${c.homeTeam}`.toLowerCase().includes(q.toLowerCase())) return false;
   return true;
-}
-
-function Team({ name, rank }: { name: string; rank: number | null }) {
-  return (
-    <span className="font-display font-black">
-      {rank ? <span className="mr-1 text-xs font-bold text-muted-foreground">#{rank}</span> : null}
-      {name}
-    </span>
-  );
 }
 
 export default async function SlateBuilder({
@@ -56,29 +50,33 @@ export default async function SlateBuilder({
   const season = await activeSeason(database);
   const existing = await seasonWeeks(database, season);
   const requested = Number(params.week);
-  const weekNumber = Number.isInteger(requested) && requested > 0 ? requested : existing.at(-1)?.weekNumber ?? 1;
-  const week = await openWeek(database, commissioner, weekNumber);
-  const slate = await slateFor(database, week.id);
+  const weekNumber = isWeekNumber(requested) ? requested : existing.at(-1)?.weekNumber ?? 1;
   const filter: Filter = FILTERS.some((f) => f.key === params.filter) ? (params.filter as Filter) : "all";
   const q = params.q?.trim() ?? "";
 
-  let candidates: CandidateGame[] = [];
-  let feedError: string | null = null;
-  try {
-    candidates = await weekCandidates(cfbd(), { year: season.year, week: weekNumber }, openMeteo());
-  } catch (error) {
-    feedError = error instanceof Error ? error.message : "CollegeFootballData did not answer.";
-  }
+  // The feed is ten HTTP calls and does not depend on the week row, so it runs alongside it.
+  const [{ week, slate }, feed] = await Promise.all([
+    openWeek(database, commissioner, weekNumber, season).then(async (w) => ({
+      week: w,
+      slate: await slateFor(database, w.id),
+    })),
+    weekCandidates(cfbd(), { year: season.year, week: weekNumber }, openMeteo()).then(
+      (games) => ({ games, error: null as string | null }),
+      (error: unknown) => ({
+        games: [] as CandidateGame[],
+        error: error instanceof Error ? error.message : "CollegeFootballData did not answer.",
+      }),
+    ),
+  ]);
+  const candidates = feed.games;
+  const feedError = feed.error;
   const onSlate = new Map(slate.games.map((g) => [g.cfbdGameId, g]));
   const shown = candidates.filter((c) => matches(c, filter, q));
   const tiebreaker = slate.games.find((g) => g.id === slate.week.tiebreakerGameId) ?? null;
-  const href = (overrides: Partial<{ week: number; filter: Filter; q: string }>) => {
-    const p = new URLSearchParams();
-    p.set("week", String(overrides.week ?? weekNumber));
-    const f = overrides.filter ?? filter;
+  const filterHref = (f: Filter) => {
+    const p = new URLSearchParams({ week: String(weekNumber) });
     if (f !== "all") p.set("filter", f);
-    const query = overrides.q ?? q;
-    if (query) p.set("q", query);
+    if (q) p.set("q", q);
     return `/console/slate?${p}`;
   };
 
@@ -132,13 +130,7 @@ export default async function SlateBuilder({
           </div>
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
             {FILTERS.map((f) => (
-              <Link
-                key={f.key}
-                href={href({ filter: f.key })}
-                className={`rounded-md px-3 py-2 text-sm font-semibold no-underline ${
-                  f.key === filter ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-                }`}
-              >
+              <Link key={f.key} href={filterHref(f.key)} className={pillClass(f.key === filter)}>
                 {f.label}
               </Link>
             ))}
@@ -182,8 +174,8 @@ export default async function SlateBuilder({
                     </Button>
                   </form>
                   <div>
-                    <Team name={c.awayTeam} rank={c.awayRank} /> <span className="text-muted-foreground">at</span>{" "}
-                    <Team name={c.homeTeam} rank={c.homeRank} />
+                    <TeamName name={c.awayTeam} rank={c.awayRank} /> <span className="text-muted-foreground">at</span>{" "}
+                    <TeamName name={c.homeTeam} rank={c.homeRank} />
                     <p className="text-xs text-muted-foreground">
                       {[c.awayConference, c.homeConference].filter(Boolean).join(" · ") || "Non-conference"}
                     </p>
@@ -208,7 +200,7 @@ export default async function SlateBuilder({
               <div>
                 <h2>Week {weekNumber} slate</h2>
                 <p className="text-sm text-muted-foreground">
-                  {slate.games.length} game{slate.games.length === 1 ? "" : "s"} ·{" "}
+                  {plural(slate.games.length, "game")} ·{" "}
                   {tiebreaker ? `Tiebreaker: ${tiebreaker.awayTeam} at ${tiebreaker.homeTeam}` : "flag a Tiebreaker Game"}
                 </p>
               </div>
@@ -229,7 +221,7 @@ export default async function SlateBuilder({
           </section>
 
           <section className="space-y-3 rounded-md border border-border bg-card p-3">
-            <p className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">Deadline</p>
+            <p className={SECTION_LABEL}>Deadline</p>
             {slate.deadline ? (
               <>
                 <p className="text-sm text-muted-foreground">

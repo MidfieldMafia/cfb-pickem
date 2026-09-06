@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { findAvatar } from "@/lib/avatars";
+import { cleanDisplayName, MAX_DISPLAY_NAME } from "./limits";
 import { newSecret } from "./token";
 
 /** Where a fresh sign-in goes: the welcome page until it has been completed once. */
@@ -23,8 +24,10 @@ export async function exchangeToken(db: Db, token: string): Promise<SignIn | nul
   if (!member || !member.active) return null;
   const sessionId = newSecret();
   const now = new Date();
-  await db.insert(sessions).values({ id: sessionId, memberId: member.id, lastSeenAt: now });
-  await db.update(members).set({ lastSeenAt: now }).where(eq(members.id, member.id));
+  await Promise.all([
+    db.insert(sessions).values({ id: sessionId, memberId: member.id, lastSeenAt: now }),
+    db.update(members).set({ lastSeenAt: now }).where(eq(members.id, member.id)),
+  ]);
   return { sessionId, member: { ...member, lastSeenAt: now }, landing: landingFor(member) };
 }
 
@@ -46,9 +49,9 @@ export async function completeWelcome(
   member: Member,
   input: { displayName: string; avatarId: string },
 ): Promise<Member> {
-  const displayName = input.displayName.trim();
-  if (displayName.length === 0 || displayName.length > 40) {
-    throw new InvalidWelcome("Pick a name between 1 and 40 characters.");
+  const displayName = cleanDisplayName(input.displayName);
+  if (displayName === null) {
+    throw new InvalidWelcome(`Pick a name between 1 and ${MAX_DISPLAY_NAME} characters.`);
   }
   if (!findAvatar(input.avatarId)) {
     throw new InvalidWelcome("Pick one of the pennants.");

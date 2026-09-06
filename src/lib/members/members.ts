@@ -1,6 +1,7 @@
 import { and, asc, eq, ne } from "drizzle-orm";
 import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { cleanDisplayName, MAX_DISPLAY_NAME, MAX_PHONE } from "./limits";
 import { newSecret } from "./token";
 
 export class NotCommissioner extends Error {
@@ -22,12 +23,12 @@ export interface NewMemberInput {
 }
 
 function cleanInput(input: NewMemberInput): { displayName: string; phone: string | null } {
-  const displayName = input.displayName.trim();
-  if (displayName.length === 0 || displayName.length > 40) {
-    throw new InvalidMember("Name must be between 1 and 40 characters.");
+  const displayName = cleanDisplayName(input.displayName);
+  if (displayName === null) {
+    throw new InvalidMember(`Name must be between 1 and ${MAX_DISPLAY_NAME} characters.`);
   }
   const phone = input.phone?.trim() || null;
-  if (phone && phone.length > 32) throw new InvalidMember("Phone number is too long.");
+  if (phone && phone.length > MAX_PHONE) throw new InvalidMember("Phone number is too long.");
   return { displayName, phone };
 }
 

@@ -1,18 +1,19 @@
+import type { LucideIcon } from "lucide-react";
 import { Cloud, CloudRain, CloudSun, CloudSunRain, Moon, Sun } from "lucide-react";
-import type { Weather } from "@/lib/scoring/types";
+import type { SkyIcon, Weather } from "@/lib/scoring/types";
 
-const ICONS = {
+const ICONS: Record<SkyIcon, LucideIcon> = {
   sun: Sun,
   moon: Moon,
   cloud: Cloud,
   "cloud-sun": CloudSun,
   "cloud-rain": CloudRain,
   "cloud-sun-rain": CloudSunRain,
-} as const;
+};
 
 /** Fixed 30px height so the pill never reflows the meta row between games. */
 export function WeatherPill({ weather }: { weather: Weather }) {
-  const Icon = ICONS[weather.icon as keyof typeof ICONS] ?? Cloud;
+  const Icon = ICONS[weather.icon];
   return (
     <span
       title={`Forecast: ${weather.temperature}°${

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { cfbdFromEnv } from "@/lib/cfbd/http";
 import { requireConsole } from "@/lib/members/current";
+import { plural } from "@/lib/plural";
 import {
   clearOverride,
   ingestResults,
@@ -51,7 +52,9 @@ export async function refreshResultsAction(_prev: ResultActionState, formData: F
   await requireConsole();
   return attempt(async () => {
     const { changed } = await ingestResults(db(), cfbdFromEnv(), num(formData, "weekId"));
-    return changed === 0 ? "Checked the feed; nothing changed." : `Checked the feed; ${changed} game${changed === 1 ? "" : "s"} updated.`;
+    return changed === 0
+      ? "Checked the feed; nothing changed."
+      : `Checked the feed; ${plural(changed, "game")} updated.`;
   });
 }
 

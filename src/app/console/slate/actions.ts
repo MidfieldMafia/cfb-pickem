@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { cfbd } from "@/lib/cfbd";
-import { weekCandidates } from "@/lib/cfbd/candidates";
 import { requireConsole } from "@/lib/members/current";
+import { safeInteger } from "@/lib/parse";
 import { openMeteo } from "@/lib/weather/open-meteo";
 import {
-  addGame,
+  addGameFromFeed,
   InvalidSlate,
   openWeek,
   publishSlate,
@@ -16,7 +16,6 @@ import {
   removeGame,
   setDeadline,
   setTiebreaker,
-  slateFor,
   voidGame,
 } from "@/lib/slate/slate";
 
@@ -28,8 +27,8 @@ export interface SlateActionState {
 const SLATE_PATH = "/console/slate";
 
 function num(formData: FormData, name: string): number {
-  const value = Number(formData.get(name));
-  if (!Number.isFinite(value)) throw new InvalidSlate(`Missing ${name}.`);
+  const value = safeInteger(formData.get(name));
+  if (value === null) throw new InvalidSlate(`Missing ${name}.`);
   return value;
 }
 
@@ -55,11 +54,7 @@ export async function addGameAction(formData: FormData) {
   const actor = await requireConsole();
   const weekId = num(formData, "weekId");
   const cfbdGameId = num(formData, "cfbdGameId");
-  const slate = await slateFor(db(), weekId);
-  const candidates = await weekCandidates(cfbd(), { year: slate.season.year, week: slate.week.weekNumber }, openMeteo());
-  const candidate = candidates.find((c) => c.cfbdGameId === cfbdGameId);
-  if (!candidate) throw new InvalidSlate("That game is no longer in the feed.");
-  await addGame(db(), actor, weekId, candidate);
+  await addGameFromFeed(db(), actor, cfbd(), weekId, cfbdGameId, openMeteo());
   revalidatePath(SLATE_PATH);
 }
 

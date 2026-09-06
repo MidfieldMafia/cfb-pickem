@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { pillClass } from "./pill";
 
 const LINKS = [
   { href: "/console/slate", label: "Slate builder" },
@@ -16,13 +17,7 @@ export function ConsoleNav() {
       {LINKS.map((link) => {
         const active = pathname.startsWith(link.href);
         return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`rounded-md px-3 py-2 text-sm font-semibold no-underline ${
-              active ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-            }`}
-          >
+          <Link key={link.href} href={link.href} className={pillClass(active)}>
             {link.label}
           </Link>
         );

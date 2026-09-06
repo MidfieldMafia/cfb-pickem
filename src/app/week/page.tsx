@@ -3,11 +3,14 @@ import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
-import { Pennant } from "@/components/pennant";
+import { MemberChip } from "@/components/member-chip";
+import { SECTION_LABEL } from "@/components/section-label";
+import { TeamName } from "@/components/team-name";
 import { Wordmark } from "@/components/wordmark";
 import { cfbdFromEnv } from "@/lib/cfbd/http";
 import { requireMember } from "@/lib/members/current";
 import { pickSheet } from "@/lib/picks/picks";
+import { plural } from "@/lib/plural";
 import {
   refreshResultsIfStale,
   revealFor,
@@ -15,19 +18,6 @@ import {
 } from "@/lib/results/results";
 import { publishedSlate } from "@/lib/slate/slate";
 import { RevealList } from "./reveal";
-
-function Team({ name, rank }: { name: string; rank: number | null }) {
-  return (
-    <span className="font-display text-lg font-black">
-      {rank ? (
-        <span className="mr-1 text-xs font-bold text-muted-foreground">
-          #{rank}
-        </span>
-      ) : null}
-      {name}
-    </span>
-  );
-}
 
 /**
  * Member traffic schedules the score feed: a visit after the Deadline pulls
@@ -66,25 +56,16 @@ export default async function Week() {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
       <header className="flex items-center justify-between">
         <Wordmark />
-        <Link
-          href="/welcome"
-          className="flex items-center gap-2 text-sm font-semibold no-underline"
-        >
-          <Pennant avatarId={member.avatarId} size={28} />
-          {member.displayName}
-        </Link>
+        <MemberChip member={member} />
       </header>
 
       {slate ? (
         <section className="space-y-3">
           <div className="rounded-md border border-border bg-card p-3 space-y-1">
-            <p className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">
+            <p className={SECTION_LABEL}>
               {slate.season.year} · Week {slate.week.weekNumber}
             </p>
-            <h1>
-              {slate.games.length} game{slate.games.length === 1 ? "" : "s"}{" "}
-              this week
-            </h1>
+            <h1>{plural(slate.games.length, "game")} this week</h1>
             {slate.deadline ? (
               <p className="text-sm text-muted-foreground">
                 Picks {sheet?.locked ? "locked" : "lock"}{" "}
@@ -130,9 +111,17 @@ export default async function Week() {
                   className={`space-y-1 p-3 ${game.void ? "opacity-60" : ""}`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <Team name={game.awayTeam} rank={game.awayRank} />
+                    <TeamName
+                      name={game.awayTeam}
+                      rank={game.awayRank}
+                      className="text-lg"
+                    />
                     <span className="text-xs text-muted-foreground">at</span>
-                    <Team name={game.homeTeam} rank={game.homeRank} />
+                    <TeamName
+                      name={game.homeTeam}
+                      rank={game.homeRank}
+                      className="text-lg"
+                    />
                   </div>
                   <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                     <LocalTime at={game.kickoff} />
@@ -153,9 +142,7 @@ export default async function Week() {
         </section>
       ) : (
         <section className="rounded-md border border-border bg-card p-3 space-y-2">
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">
-            This week
-          </p>
+          <p className={SECTION_LABEL}>This week</p>
           <h1>The slate isn&rsquo;t posted yet</h1>
           <p className="text-muted-foreground">
             Check back once a commissioner publishes this week&rsquo;s games.

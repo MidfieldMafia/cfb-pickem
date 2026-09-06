@@ -18,7 +18,7 @@ import {
   uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import type { GameDetail, Rules } from "@/lib/scoring/types";
+import type { GameDetail, GameStatus, Rules } from "@/lib/scoring/types";
 
 const utc = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -55,8 +55,12 @@ export const weeks = pgTable(
   (t) => [uniqueIndex("weeks_season_week_idx").on(t.seasonId, t.weekNumber)],
 );
 
-export const gameStatuses = ["scheduled", "in_progress", "final"] as const;
-export type GameStatus = (typeof gameStatuses)[number];
+/**
+ * The stored statuses, checked against the scoring engine's union so adding one
+ * in only one of the two places is a compile error rather than a silent drift.
+ */
+export const gameStatuses = ["scheduled", "in_progress", "final"] as const satisfies readonly GameStatus[];
+export type { GameStatus };
 
 export const games = pgTable(
   "games",

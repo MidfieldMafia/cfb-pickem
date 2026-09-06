@@ -1,11 +1,15 @@
 import { playedWeek, scoreWeek } from "./score-week";
 import type { LeaderboardRow, Member, Rules, SeasonResult, Week, WeekResult } from "./types";
 
-function leaderboardRow(member: Member, weeks: Week[], results: WeekResult[]): LeaderboardRow {
+function leaderboardRow(
+  member: Member,
+  weeks: Week[],
+  results: WeekResult[],
+  completed: WeekResult[],
+): LeaderboardRow {
   const played = weeks.filter((w) => playedWeek(member, w));
   const scores = results.flatMap((r) => r.scores.filter((s) => s.memberId === member.id));
   const totalPoints = scores.reduce((sum, s) => sum + s.points, 0);
-  const completed = results.filter((r) => r.complete);
   const weeklyWins = completed.filter((r) => r.weeklyWin?.winners.includes(member.id)).length;
   const cumulativeTiebreakerError = completed
     .flatMap((r) => r.scores.filter((s) => s.memberId === member.id))
@@ -45,6 +49,9 @@ function rank(rows: LeaderboardRow[]): LeaderboardRow[] {
 export function scoreSeason(rules: Rules, weeks: Week[], members: Member[]): SeasonResult {
   const publishedWeeks = weeks.filter((w) => w.published);
   const results = publishedWeeks.map((week) => scoreWeek(rules, week, members));
-  const leaderboard = rank(members.map((member) => leaderboardRow(member, publishedWeeks, results)));
+  const completed = results.filter((r) => r.complete);
+  const leaderboard = rank(
+    members.map((member) => leaderboardRow(member, publishedWeeks, results, completed)),
+  );
   return { weeks: results, leaderboard };
 }
