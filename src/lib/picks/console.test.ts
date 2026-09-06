@@ -145,15 +145,21 @@ describe("who hasn't picked", () => {
       ["Cousin Em", 1, null, null, false],
     ]);
 
-    // A void game is not a missing pick.
+    // A void game is not a missing pick, and a Lock sitting on it is a Dropped Lock: something to move, so not done.
+    await setLock(db, jonah, week.id, florida.id, THURSDAY);
     await voidGame(db, jonah, florida.id, "Hurricane");
     const afterVoid = await whoHasntPicked(db, jonah, week.id, THURSDAY);
     expect(afterVoid.needed).toBe(2);
-    expect(afterVoid.members.map((m) => m.picked)).toEqual([2, 2, 1]);
+    expect(afterVoid.ready).toBe(0);
+    expect(afterVoid.members.map((m) => [m.picked, m.lockTeam, m.lockDropped, m.complete])).toEqual([
+      [2, null, true, false],
+      [2, null, false, false],
+      [1, null, false, false],
+    ]);
 
     // Thu 2026-09-11 00:00Z is 7:00 PM Central on Thursday the 10th.
     expect(reminderText(afterVoid)).toBe(
-      "Saturday Slate Week 2 picks lock Thu, Sep 10 at 7:00 PM Central. Still need: Grandma (Lock of the Week), Cousin Em (1 pick, Lock of the Week, Tiebreaker Guess).",
+      "Saturday Slate Week 2 picks lock Thu, Sep 10 at 7:00 PM Central. Still need: Jonah (Lock of the Week), Grandma (Lock of the Week), Cousin Em (1 pick, Lock of the Week, Tiebreaker Guess).",
     );
 
     await expect(whoHasntPicked(db, grandma, week.id, THURSDAY)).rejects.toBeInstanceOf(NotCommissioner);

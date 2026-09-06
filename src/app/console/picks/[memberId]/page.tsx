@@ -84,7 +84,7 @@ export default async function MemberPicks({
               <span>
                 <LocalTime at={game.kickoff} style="slot" />
                 {game.id === sheet.week.tiebreakerGameId ? " · Tiebreaker Game" : ""}
-                {sheet.lockGameId === game.id ? " · Lock of the Week" : ""}
+                {sheet.lockGameId === game.id ? (sheet.lockDropped ? " · Dropped Lock" : " · Lock of the Week") : ""}
               </span>
               {game.void ? <Badge variant="outline">Void{game.voidNote ? `: ${game.voidNote}` : ""}</Badge> : null}
             </div>
@@ -122,7 +122,12 @@ export default async function MemberPicks({
             ))}
           </select>
         </ActionForm>
-        <p className="text-xs text-muted-foreground">Only picked games can carry the Lock. Save with “No Lock” to clear it.</p>
+        <p className="text-xs text-muted-foreground">
+          {sheet.lockDropped
+            ? "The Lock sits on a void game, so it counts for nothing until it is moved to a live pick. "
+            : ""}
+          Only picked games can carry the Lock. Save with “No Lock” to clear it.
+        </p>
       </section>
 
       <section className="space-y-3 rounded-md border border-border bg-card p-4">

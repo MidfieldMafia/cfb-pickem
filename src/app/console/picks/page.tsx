@@ -51,7 +51,7 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
         {row.lockTeam ? (
           <Badge className="bg-secondary text-secondary-foreground">{row.lockTeam}</Badge>
         ) : (
-          <Badge variant="outline">Not set</Badge>
+          <Badge variant="outline">{row.lockDropped ? "Dropped (game void)" : "Not set"}</Badge>
         )}
       </td>
       <td className="p-3 tabular-nums">

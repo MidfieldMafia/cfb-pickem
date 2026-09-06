@@ -6,6 +6,7 @@
  * takes the database first and the acting commissioner second; `now` is the
  * server clock, injected so tests can sit on either side of the Deadline.
  */
+import "server-only";
 import { and, asc, eq, inArray, lt } from "drizzle-orm";
 import {
   games,
@@ -27,6 +28,7 @@ import { plural } from "@/lib/plural";
 import { slateFor } from "@/lib/slate/slate";
 import { tiebreakerGuessError } from "./limits";
 import { InvalidPick, pickSheet, type PickSheet } from "./picks";
+import { sheetProgress, type SheetProgress } from "./progress";
 
 async function loadMember(db: Db, memberId: number): Promise<Member> {
   const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
@@ -54,12 +56,16 @@ export async function memberSheet(
 
 export interface MemberProgress {
   member: Member;
-  /** Picks on live (non-void) games. */
+  /** The same count the member's own screens show, from `sheetProgress`. */
+  progress: SheetProgress;
+  /** Picks on live (non-void) games; `progress.picksMade`, named for the table. */
   picked: number;
-  /** The team the Lock of the Week sits on, or null when not set. */
+  /** The team a counting Lock of the Week sits on; null when not set or when it is a Dropped Lock. */
   lockTeam: string | null;
+  /** True when the Lock sits on a Void game, so the member has a Lock to move rather than one to set. */
+  lockDropped: boolean;
   tiebreakerGuess: number | null;
-  /** Every live game picked, a Lock, and a Tiebreaker Guess. */
+  /** Nothing left: every live game picked, a Lock that counts, and a Tiebreaker Guess. */
   complete: boolean;
 }
 
@@ -88,7 +94,7 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
   const deadline = slate.week.deadline;
   const live = slate.games.filter((g) => !g.void);
   const liveIds = live.map((g) => g.id);
-  const byGame = new Map(live.map((g) => [g.id, g]));
+  const byGame = new Map(slate.games.map((g) => [g.id, g]));
   const [roster, pickRows, lockRows, guessRows] = await Promise.all([
     db.query.members.findMany({
       where: and(eq(members.active, true), lt(members.joinedAt, deadline)),
@@ -108,16 +114,26 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
   const guessOf = new Map(guessRows.map((g) => [g.memberId, g.guess]));
   const progress = roster.map((member): MemberProgress => {
     const own = pickedBy.get(member.id) ?? new Map<number, number>();
-    const lockGame = lockOf.has(member.id) ? byGame.get(lockOf.get(member.id)!) : undefined;
-    const lockedTeam = lockGame ? own.get(lockGame.id) : undefined;
-    const lockTeam = lockGame && lockedTeam !== undefined ? teamNameIn(lockGame, lockedTeam) : null;
+    const lockGameId = lockOf.get(member.id) ?? null;
+    const lockGame = lockGameId === null ? undefined : byGame.get(lockGameId);
+    const lockDropped = lockGame?.void ?? false;
+    const lockedTeam = lockGame && !lockDropped ? own.get(lockGame.id) : undefined;
     const tiebreakerGuess = guessOf.get(member.id) ?? null;
+    const progress = sheetProgress({
+      games: slate.games,
+      picked: (gameId) => own.has(gameId),
+      lockGameId,
+      lockDropped,
+      tiebreakerGuess,
+    });
     return {
       member,
-      picked: own.size,
-      lockTeam,
+      progress,
+      picked: progress.picksMade,
+      lockTeam: lockGame && lockedTeam !== undefined ? teamNameIn(lockGame, lockedTeam) : null,
+      lockDropped,
       tiebreakerGuess,
-      complete: own.size === live.length && lockTeam !== null && tiebreakerGuess !== null,
+      complete: progress.remaining === 0,
     };
   });
   return {
@@ -139,12 +155,12 @@ export function deadlineInCentral(deadline: Date): string {
 }
 
 /** What one member still owes, for the reminder: "2 picks, Lock of the Week, Tiebreaker Guess". */
-export function owed(progress: MemberProgress, needed: number): string[] {
+export function owed(row: MemberProgress, needed: number): string[] {
   const missing: string[] = [];
-  const picksLeft = needed - progress.picked;
+  const picksLeft = needed - row.progress.picksMade;
   if (picksLeft > 0) missing.push(plural(picksLeft, "pick"));
-  if (progress.lockTeam === null) missing.push("Lock of the Week");
-  if (progress.tiebreakerGuess === null) missing.push("Tiebreaker Guess");
+  if (needed > 0 && !row.progress.lockSet) missing.push("Lock of the Week");
+  if (!row.progress.guessSet) missing.push("Tiebreaker Guess");
   return missing;
 }
 
