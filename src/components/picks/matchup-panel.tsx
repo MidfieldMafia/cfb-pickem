@@ -1,5 +1,6 @@
 import { CAPS_LABEL as LABEL } from "@/components/section-label";
 import { matchupColors } from "@/lib/matchup-colors";
+import { spreadSides } from "./spread";
 import type { MatchupDetail } from "./types";
 
 const ROW = "grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 text-[13px] tabular-nums";
@@ -11,15 +12,6 @@ const STATS = [
   { key: "yardsFor", label: "Yards / game", lowerBetter: false },
   { key: "yardsAgainst", label: "Yards allowed", lowerBetter: true },
 ] as const;
-
-/** Splits "Georgia −6.5" into what each side of the spread row shows. */
-function spreadSides(spread: string, away: string): [string, string] {
-  if (spread === "Pick" || spread === "PK") return ["PK", "PK"];
-  const favorite = spread.replace(/\s[−+-].*$/, "");
-  const line = spread.slice(favorite.length).trim();
-  const underdog = `+${line.replace(/^[−-]/, "")}`;
-  return favorite === away ? [line, underdog] : [underdog, line];
-}
 
 function SplitBar({
   awayShare,

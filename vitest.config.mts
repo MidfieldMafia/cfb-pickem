@@ -18,5 +18,12 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    /**
+     * A server-seam file's first test pays for the migrations — `createTestDb`
+     * runs them once and copies the result for every test after it — and with
+     * several such files running at once that one test can take seconds. The
+     * default 5s turned a loaded machine into a wall of unrelated timeouts.
+     */
+    testTimeout: 20_000,
   },
 });
