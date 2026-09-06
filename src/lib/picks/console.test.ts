@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { addMember, NotCommissioner, setMemberActive } from "@/lib/members/members";
-import { addGame, openWeek, publishSlate, setTiebreaker, voidGame } from "@/lib/slate/slate";
+import { addGame, openWeek, publishSlate, setTiebreaker, slateFor, voidGame } from "@/lib/slate/slate";
 import { FAMU_AT_MIAMI, OHIO_STATE_AT_TEXAS, OKLAHOMA_AT_MICHIGAN, seedWeek2 } from "@/test/week-2";
 import {
   memberSheet,
@@ -40,7 +40,7 @@ describe("commissioner pick override", () => {
 
     await overridePick(db, jonah, grandma.id, week.id, michigan.id, michigan.awayTeamId, afterDeadline);
 
-    const sheet = await pickSheet(db, grandma, week.id, afterDeadline);
+    const sheet = await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline);
     expect(sheet.picks).toEqual([{ gameId: michigan.id, teamId: michigan.awayTeamId, updatedAt: afterDeadline }]);
 
     const log = await pickAuditsFor(db, jonah, week.id);
@@ -71,17 +71,17 @@ describe("commissioner pick override", () => {
 
     await overrideLock(db, jonah, grandma.id, week.id, michigan.id, afterDeadline);
     await overrideLock(db, jonah, grandma.id, week.id, texas.id, afterDeadline);
-    expect((await pickSheet(db, grandma, week.id, afterDeadline)).lockGameId).toBe(texas.id);
+    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).lockGameId).toBe(texas.id);
     await overrideLock(db, jonah, grandma.id, week.id, null, afterDeadline);
-    expect((await pickSheet(db, grandma, week.id, afterDeadline)).lockGameId).toBeNull();
+    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).lockGameId).toBeNull();
 
     await expect(overrideTiebreakerGuess(db, jonah, grandma.id, week.id, 300, afterDeadline)).rejects.toThrow(
       /whole number/i,
     );
     await overrideTiebreakerGuess(db, jonah, grandma.id, week.id, 55, afterDeadline);
-    expect((await pickSheet(db, grandma, week.id, afterDeadline)).tiebreakerGuess).toBe(55);
+    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).tiebreakerGuess).toBe(55);
     await overrideTiebreakerGuess(db, jonah, grandma.id, week.id, null, afterDeadline);
-    expect((await pickSheet(db, grandma, week.id, afterDeadline)).tiebreakerGuess).toBeNull();
+    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).tiebreakerGuess).toBeNull();
 
     await expect(overrideLock(db, grandma, grandma.id, week.id, null, afterDeadline)).rejects.toBeInstanceOf(
       NotCommissioner,

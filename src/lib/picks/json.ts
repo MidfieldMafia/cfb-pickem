@@ -5,21 +5,14 @@
  * route handler.
  */
 import type { GameDetail } from "@/lib/scoring/types";
+import { toGameJson, type GameJson } from "@/lib/slate/json";
 import type { PickSheet } from "./picks";
 import type { SheetProgress } from "./progress";
 
-export interface GameJson {
-  id: number;
-  awayTeamId: number;
-  awayTeam: string;
-  awayRank: number | null;
-  homeTeamId: number;
-  homeTeam: string;
-  homeRank: number | null;
-  kickoff: string;
-  spread: string | null;
-  void: boolean;
-  voidNote: string | null;
+export { teamName } from "@/lib/slate/json";
+
+/** The Game convention every screen shares, plus the detail only the pick screen shows. */
+export interface SheetGameJson extends GameJson {
   /** Venue, TV, line, win probability, forecast, and each team's form. Null for games added before the snapshot existed. */
   detail: GameDetail | null;
 }
@@ -39,7 +32,7 @@ export interface SheetJson {
   serverNow: string;
   locked: boolean;
   tiebreakerGameId: number | null;
-  games: GameJson[];
+  games: SheetGameJson[];
   picks: PickJson[];
   lockGameId: number | null;
   /** True when the Lock sits on a Void game: a Dropped Lock. Scores nothing; movable until the Deadline. */
@@ -62,29 +55,11 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     serverNow: sheet.serverNow.toISOString(),
     locked: sheet.locked,
     tiebreakerGameId: sheet.week.tiebreakerGameId,
-    games: sheet.games.map((g) => ({
-      id: g.id,
-      awayTeamId: g.awayTeamId,
-      awayTeam: g.awayTeam,
-      awayRank: g.awayRank,
-      homeTeamId: g.homeTeamId,
-      homeTeam: g.homeTeam,
-      homeRank: g.homeRank,
-      kickoff: g.kickoff.toISOString(),
-      spread: g.spread,
-      void: g.void,
-      voidNote: g.voidNote,
-      detail: g.detail,
-    })),
+    games: sheet.games.map((g) => ({ ...toGameJson(g), detail: g.detail })),
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
     lockGameId: sheet.lockGameId,
     lockDropped: sheet.lockDropped,
     tiebreakerGuess: sheet.tiebreakerGuess,
     progress: sheet.progress,
   };
-}
-
-/** The display name of a team in a game, by CollegeFootballData team id. */
-export function teamName(game: GameJson, teamId: number): string {
-  return teamId === game.homeTeamId ? game.homeTeam : game.awayTeam;
 }

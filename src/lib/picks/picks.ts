@@ -19,7 +19,7 @@ import {
   type Week,
 } from "@/db/schema";
 import type { Db } from "@/db/types";
-import { slateFor } from "@/lib/slate/slate";
+import { deadlinePassed, type Slate } from "@/lib/slate/slate";
 import { tiebreakerGuessError } from "./limits";
 import { sheetProgress, type SheetProgress } from "./progress";
 
@@ -93,9 +93,14 @@ async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> 
   return game;
 }
 
-export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<PickSheet> {
-  const slate = await slateFor(db, weekId);
+/**
+ * One member's sheet for a Slate the caller already loaded. Taking the Slate
+ * rather than a week id is what lets a screen read the Week once and hand the
+ * same rows to the sheet, the Reveal, and the score refresh.
+ */
+export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date = new Date()): Promise<PickSheet> {
   if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
+  const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
   const [rows, lock, guess] = await Promise.all([
     gameIds.length
@@ -132,7 +137,7 @@ export async function pickSheet(db: Db, actor: Member, weekId: number, now: Date
       tiebreakerGuess,
     }),
     serverNow: now,
-    locked: isLocked(slate.week.deadline, now),
+    locked: deadlinePassed(slate, now),
   };
 }
 
@@ -144,22 +149,22 @@ export interface MemberPicks {
   tiebreakerGuess: number | null;
 }
 
+type PickTable = typeof picks.$inferSelect;
+type LockTable = typeof locks.$inferSelect;
+type GuessTable = typeof tiebreakerGuesses.$inferSelect;
+
 /**
- * The Reveal: every member's picks for a Week. Refused before the Deadline
- * for everyone, commissioners included; a member's own picks come from
- * `pickSheet`, which is never hidden from them.
+ * One Week's rows folded into a `MemberPicks` per member, picks in slate
+ * order. Shared by `weekPicks` and `seasonPicks` so one Week and a whole
+ * season cannot disagree about what a blank week looks like.
  */
-export async function weekPicks(db: Db, _actor: Member, weekId: number, now: Date = new Date()): Promise<MemberPicks[]> {
-  const slate = await slateFor(db, weekId);
-  if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
-  if (!isLocked(slate.week.deadline, now)) throw new PicksHidden();
-  const gameIds = slate.games.map((g) => g.id);
-  const [activeMembers, rows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany({ where: eq(members.active, true) }),
-    gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
-    db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
-    db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
-  ]);
+function groupPicks(
+  activeMembers: Pick<Member, "id">[],
+  gameIds: number[],
+  rows: PickTable[],
+  lockRows: LockTable[],
+  guessRows: GuessTable[],
+): MemberPicks[] {
   const order = new Map(gameIds.map((id, i) => [id, i]));
   // Every active member is on the board, picks or none: a blank week is a row, not an absence.
   const byMember = new Map<number, MemberPicks>(
@@ -178,6 +183,77 @@ export async function weekPicks(db: Db, _actor: Member, weekId: number, now: Dat
   for (const g of guessRows) entry(g.memberId).tiebreakerGuess = g.guess;
   for (const m of byMember.values()) m.picks.sort((a, b) => order.get(a.gameId)! - order.get(b.gameId)!);
   return [...byMember.values()].sort((a, b) => a.memberId - b.memberId);
+}
+
+/**
+ * The Reveal: every member's picks for a Week. Refused before the Deadline
+ * for everyone, commissioners included; a member's own picks come from
+ * `pickSheet`, which is never hidden from them.
+ */
+export async function weekPicks(db: Db, _actor: Member, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
+  if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
+  if (!deadlinePassed(slate, now)) throw new PicksHidden();
+  const weekId = slate.week.id;
+  const gameIds = slate.games.map((g) => g.id);
+  const [activeMembers, rows, lockRows, guessRows] = await Promise.all([
+    db.query.members.findMany({ where: eq(members.active, true) }),
+    gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
+    db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
+    db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
+  ]);
+  return groupPicks(activeMembers, gameIds, rows, lockRows, guessRows);
+}
+
+/** A Week with its Games in slate order: what `seasonPicks` needs to fold one Week's rows. */
+export interface WeekGames {
+  week: Week;
+  games: Game[];
+}
+
+/**
+ * Every member's picks for several Weeks at once, keyed by week id. Four
+ * reads for the whole season rather than four per Week: the Leaderboard
+ * grades every played Week on read, and the round trips, not the arithmetic,
+ * are what that costs. Refused for a Week still open, exactly as `weekPicks`
+ * is — reading a season is not a way around the Deadline.
+ */
+export async function seasonPicks(
+  db: Db,
+  weekGames: WeekGames[],
+  now: Date = new Date(),
+): Promise<Map<number, MemberPicks[]>> {
+  for (const { week } of weekGames) {
+    if (!week.published || !week.deadline) throw new InvalidPick("That week is not published.");
+    if (!isLocked(week.deadline, now)) throw new PicksHidden();
+  }
+  const weekIds = weekGames.map((w) => w.week.id);
+  const gameIds = weekGames.flatMap((w) => w.games.map((g) => g.id));
+  const [activeMembers, rows, lockRows, guessRows] = await Promise.all([
+    db.query.members.findMany({ where: eq(members.active, true) }),
+    gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
+    weekIds.length ? db.query.locks.findMany({ where: inArray(locks.weekId, weekIds) }) : [],
+    weekIds.length ? db.query.tiebreakerGuesses.findMany({ where: inArray(tiebreakerGuesses.weekId, weekIds) }) : [],
+  ]);
+  const weekOfGame = new Map<number, number>();
+  for (const { week, games: slateGames } of weekGames) for (const g of slateGames) weekOfGame.set(g.id, week.id);
+  const pickRows = new Map<number, PickTable[]>(weekIds.map((id) => [id, []]));
+  const locksOf = new Map<number, LockTable[]>(weekIds.map((id) => [id, []]));
+  const guessesOf = new Map<number, GuessTable[]>(weekIds.map((id) => [id, []]));
+  for (const r of rows) pickRows.get(weekOfGame.get(r.gameId)!)?.push(r);
+  for (const l of lockRows) locksOf.get(l.weekId)?.push(l);
+  for (const g of guessRows) guessesOf.get(g.weekId)?.push(g);
+  return new Map(
+    weekGames.map(({ week, games: slateGames }) => [
+      week.id,
+      groupPicks(
+        activeMembers,
+        slateGames.map((g) => g.id),
+        pickRows.get(week.id)!,
+        locksOf.get(week.id)!,
+        guessesOf.get(week.id)!,
+      ),
+    ]),
+  );
 }
 
 /** Saves or replaces the member's Pick for one Game. Saved the moment it is tapped; there is no submit step. */

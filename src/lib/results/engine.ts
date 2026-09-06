@@ -18,7 +18,7 @@ export function toEngineGame(game: Game): engine.Game {
     awayTeam: String(game.awayTeamId),
     homeScore: result.homeScore,
     awayScore: result.awayScore,
-    status: result.status === "final" ? "final" : game.status === "final" ? "scheduled" : game.status,
+    status: result.status === "final" ? "final" : result.live ? "in_progress" : "scheduled",
     void: result.status === "void",
   };
 }

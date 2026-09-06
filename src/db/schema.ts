@@ -4,9 +4,10 @@
  * Result Override. All timestamps are UTC. No point totals are stored;
  * scoring recomputes from picks and results on every read.
  */
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -101,7 +102,14 @@ export const games = pgTable(
     createdAt: utc("created_at").notNull().defaultNow(),
     updatedAt: utc("updated_at").notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("games_week_cfbd_idx").on(t.weekId, t.cfbdGameId)],
+  (t) => [
+    uniqueIndex("games_week_cfbd_idx").on(t.weekId, t.cfbdGameId),
+    /** A row that says final has both scores. Without this, "final" is not the whole answer. */
+    check(
+      "games_final_has_scores",
+      sql`${t.status} <> 'final' or (${t.homeScore} is not null and ${t.awayScore} is not null)`,
+    ),
+  ],
 );
 
 export const members = pgTable("members", {

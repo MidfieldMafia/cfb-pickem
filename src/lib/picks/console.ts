@@ -51,7 +51,7 @@ export async function memberSheet(
 ): Promise<{ member: Member; sheet: PickSheet }> {
   requireCommissioner(actor);
   const member = await loadMember(db, memberId);
-  return { member, sheet: await pickSheet(db, member, weekId, now) };
+  return { member, sheet: await pickSheet(db, member, await slateFor(db, weekId), now) };
 }
 
 export interface MemberProgress {

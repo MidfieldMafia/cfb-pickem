@@ -14,7 +14,7 @@ import {
   overrideResult,
   restoreGame,
 } from "@/lib/results/results";
-import { InvalidSlate, openWeek, voidGame } from "@/lib/slate/slate";
+import { InvalidSlate, openWeek, slateFor, voidGame } from "@/lib/slate/slate";
 import type { ActionState } from "../action-form";
 
 type ResultActionState = ActionState;
@@ -50,7 +50,8 @@ export async function chooseResultsWeekAction(formData: FormData) {
 export async function refreshResultsAction(_prev: ResultActionState, formData: FormData): Promise<ResultActionState> {
   await requireConsole();
   return attempt(async () => {
-    const { changed } = await ingestResults(db(), cfbdFromEnv(), num(formData, "weekId"));
+    const slate = await slateFor(db(), num(formData, "weekId"));
+    const { changed } = await ingestResults(db(), cfbdFromEnv(), slate);
     return changed === 0
       ? "Checked the feed; nothing changed."
       : `Checked the feed; ${plural(changed, "game")} updated.`;
