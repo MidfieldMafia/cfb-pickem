@@ -89,6 +89,8 @@ describe("the current week", () => {
       source: "feed",
       live: null,
       label: "Final",
+      note: null,
+      feedFinal: null,
     });
     expect(michiganRow.picks.map((p) => p.outcome)).toEqual(["correct"]);
     // The board and the Weekly Score come out of the same pass, over the same refreshed rows.

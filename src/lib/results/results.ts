@@ -14,21 +14,22 @@ import { requireCommissioner } from "@/lib/members/members";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
 import type * as engine from "@/lib/scoring/types";
+import { toGameJson, type GameJson } from "@/lib/slate/json";
 import { activeSeason, slateFor, slateOrder, type Slate } from "@/lib/slate/slate";
 import {
   describeResult,
   effectiveResult,
   logResultChange,
   type GameResult,
-  type LiveScore,
   type ResultLabel,
   type ResultSource,
   type ResultStatus,
+  type Score,
 } from "./audit";
 import { toEngineMember, toEngineWeek } from "./engine";
 
 export { describeResult, effectiveResult };
-export type { GameResult, LiveScore, ResultLabel, ResultSource, ResultStatus };
+export type { GameResult, ResultLabel, ResultSource, ResultStatus, Score };
 
 export class InvalidResult extends Error {}
 
@@ -274,7 +275,7 @@ export interface RevealPick {
 }
 
 export interface RevealGame {
-  game: Game;
+  game: GameJson;
   result: GameResult;
   /** One entry per member who picked this game, in member order. */
   picks: RevealPick[];
@@ -424,7 +425,7 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now
           lockDropped: lock !== null && lock.gameId === gameId && lock.dropped,
         });
       }
-      return { game, result: effectiveResult(game), picks };
+      return { game: toGameJson(game), result: effectiveResult(game), picks };
     }),
     serverNow: now,
   };

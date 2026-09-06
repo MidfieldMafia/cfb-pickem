@@ -104,7 +104,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
               <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                 <span>
                   {result.label}
-                  {result.status === "void" && game.voidNote ? ` · ${game.voidNote}` : ""}
+                  {result.status === "void" && result.note ? ` · ${result.note}` : ""}
                 </span>
                 <span>·</span>
                 <LocalTime at={game.kickoff} style="slot" />

@@ -109,6 +109,8 @@ describe("results ingest", () => {
       source: null,
       live: { awayScore: 3, homeScore: 0 },
       label: "In progress",
+      note: null,
+      feedFinal: null,
     });
     expect((await db.query.weeks.findFirst({ where: eq(weeks.id, week.id) }))!.scoreboardFetchedAt).toEqual(
       SATURDAY_EVENING,
@@ -152,6 +154,8 @@ describe("results ingest", () => {
       source: null,
       live: null,
       label: "Scheduled",
+      note: null,
+      feedFinal: null,
     });
     expect(needsReview(pending, SATURDAY_EVENING)).toBe(false); // it has not kicked off yet
     expect(needsReview(pending, new Date("2026-09-13T03:00:00Z"))).toBe(false); // 3.5 hours in: could still be playing
@@ -220,6 +224,9 @@ describe("result overrides", () => {
       source: "override",
       live: null,
       label: "Final · override",
+      note: "Feed missed the late FG",
+      // The override stands over a feed final, and the console shows what it overrode.
+      feedFinal: { awayScore: 24, homeScore: 27 },
     });
     // The feed columns stay what the feed said, and a re-ingest does not disturb the override.
     expect(game).toMatchObject({ awayScore: 24, homeScore: 27, overrideAwayScore: 30, overrideHomeScore: 27 });
@@ -235,6 +242,9 @@ describe("result overrides", () => {
       source: "override",
       live: null,
       label: "Final · override",
+      note: "Feed stuck on Sunday",
+      // Nothing to have overridden: the feed never finished this one.
+      feedFinal: null,
     });
 
     await clearOverride(db, jonah, michigan.id);
@@ -246,6 +256,8 @@ describe("result overrides", () => {
       source: "feed",
       live: null,
       label: "Final",
+      note: null,
+      feedFinal: null,
     });
     expect(game.overrideNote).toBeNull();
 
@@ -271,6 +283,8 @@ describe("result overrides", () => {
       source: null,
       live: null,
       label: "Void",
+      note: "Lightning; never resumed",
+      feedFinal: null,
     });
     await expect(overrideResult(db, jonah, michigan.id, { awayScore: 24, homeScore: 27, note: "n" })).rejects.toThrow(
       /void/i,
@@ -286,6 +300,8 @@ describe("result overrides", () => {
       source: "feed",
       live: null,
       label: "Final",
+      note: null,
+      feedFinal: null,
     });
     await expect(restoreGame(db, jonah, michigan.id)).rejects.toThrow(/not void/i);
 
@@ -318,6 +334,8 @@ describe("the reveal", () => {
       source: "feed",
       live: null,
       label: "Final",
+      note: null,
+      feedFinal: null,
     });
     expect(michiganRow.picks).toEqual([
       { memberId: jonah.id, teamId: michigan.awayTeamId, outcome: "incorrect", locked: false, lockDropped: false },

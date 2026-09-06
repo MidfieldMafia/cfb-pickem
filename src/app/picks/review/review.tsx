@@ -23,7 +23,7 @@ import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { Wordmark } from "@/components/wordmark";
 import { put } from "@/lib/picks/client";
 import { formatCountdown, useDeadlineClock } from "@/lib/picks/clock";
-import { teamName, type GameJson, type SheetJson } from "@/lib/picks/json";
+import { teamName, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
 import { firstOpenGame, liveGames, remainingLabel, sheetProgress } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
@@ -183,7 +183,7 @@ export function Review({ initial }: { initial: SheetJson }) {
     if (result.locked) setSheet((s) => ({ ...s, locked: true }));
   };
 
-  const pickRow = (game: GameJson) => {
+  const pickRow = (game: SheetGameJson) => {
     const pick = pickFor(game.id);
     const body = (
       <>
