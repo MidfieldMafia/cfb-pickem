@@ -17,7 +17,20 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Saturday Slate",
   description: "Family college football pick'em.",
-  icons: { icon: "/icon.svg" },
+  // Icons come from the app/icon.svg and app/apple-icon.png file conventions,
+  // which emit both the favicon and the apple-touch-icon link iOS needs for
+  // the home screen. Declaring them here as well would shadow those files.
+  appleWebApp: {
+    // Turns an iOS home screen launch into a real standalone window, which is
+    // also what makes navigator.standalone answer truthfully.
+    capable: true,
+    title: "Sat Slate",
+    statusBarStyle: "default",
+  },
+  // Next emits only the modern `mobile-web-app-capable`. iOS before 16.4 reads
+  // nothing but the Apple-prefixed one, and without it a home screen launch
+  // opens in browser chrome and navigator.standalone stays false.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
