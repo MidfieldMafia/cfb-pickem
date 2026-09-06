@@ -21,7 +21,9 @@ const STEPS: Record<Guided, Step[]> = {
     { Icon: Check, text: "Tap Add. Saturday Slate opens like an app, no browser bar." },
   ],
   android: [
-    { Icon: EllipsisVertical, text: "Tap the ⋮ menu at the top right of Chrome." },
+    // Spelled out rather than drawn with ⋮ — Manrope has no glyph for it and
+    // the fallback renders as a cramped colon. The icon beside it carries the shape.
+    { Icon: EllipsisVertical, text: "Tap the three-dot menu at the top right of Chrome." },
     { Icon: Download, text: "Tap “Add to Home screen”, then “Install”." },
     { Icon: Check, text: "Saturday Slate opens like an app, no browser bar." },
   ],
@@ -61,10 +63,10 @@ function browserHere(): Browser {
 function reopenAdvice(phone: Guided, embedded: boolean): string | null {
   const browser = phone === "ios" ? "Safari" : "Chrome";
   if (embedded) {
-    return `You’re inside another app’s browser, which has no Add to Home Screen. Tap its ⋯ menu and choose Open in ${browser} first.`;
+    return `You’re inside another app’s browser, which has no Add to Home Screen. Tap its ••• menu and choose Open in ${browser} first.`;
   }
   if (phone === "ios") {
-    return "Opened this straight from Messages? Tap ⋯ and choose Open in Safari first — the built-in browser may not offer Add to Home Screen.";
+    return "Opened this straight from Messages? Tap ••• and choose Open in Safari first — the built-in browser may not offer Add to Home Screen.";
   }
   return null;
 }
