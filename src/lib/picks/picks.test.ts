@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { addMember, setMemberActive } from "@/lib/members/members";
+import { restoreGame } from "@/lib/results/results";
 import { addGame, openWeek, publishSlate, setTiebreaker, voidGame } from "@/lib/slate/slate";
 import { FAMU_AT_MIAMI, OHIO_STATE_AT_TEXAS, OKLAHOMA_AT_MICHIGAN, seedWeek2 } from "@/test/week-2";
 import {
@@ -99,14 +100,48 @@ describe("pick entry", () => {
     await setLock(db, jonah, week.id, michigan.id, THURSDAY);
     expect((await pickSheet(db, grandma, week.id, THURSDAY)).lockGameId).toBe(texas.id);
 
-    // Voiding a game drops any Lock sitting on it, so the member can lock another; and a void game cannot take one.
+    // Voiding a game drops the Lock sitting on it without destroying it: the row stays, the sheet says
+    // it is dropped, and the member is free to move it. A void game still cannot take a new one.
     await setLock(db, grandma, week.id, florida.id, THURSDAY);
     await voidGame(db, jonah, florida.id, "Hurricane");
-    expect((await pickSheet(db, grandma, week.id, THURSDAY)).lockGameId).toBeNull();
+    const dropped = await pickSheet(db, grandma, week.id, THURSDAY);
+    expect(dropped.lockGameId).toBe(florida.id);
+    expect(dropped.lockDropped).toBe(true);
     await expect(setLock(db, grandma, week.id, florida.id, THURSDAY)).rejects.toThrow(/void/i);
     await setLock(db, grandma, week.id, texas.id, THURSDAY);
     await setLock(db, grandma, week.id, null, THURSDAY);
     expect((await pickSheet(db, grandma, week.id, THURSDAY)).lockGameId).toBeNull();
+  });
+
+  test("a Dropped Lock counts again when the commissioner restores the game", async () => {
+    const { db, jonah, grandma, week, florida } = await setup();
+    await savePick(db, grandma, week.id, florida.id, florida.homeTeamId, THURSDAY);
+    await setLock(db, grandma, week.id, florida.id, THURSDAY);
+
+    await voidGame(db, jonah, florida.id, "Hurricane");
+    expect((await pickSheet(db, grandma, week.id, THURSDAY)).lockDropped).toBe(true);
+
+    // The Void never deleted the row, so the restore needs no help from the member.
+    await restoreGame(db, jonah, florida.id);
+    const restored = await pickSheet(db, grandma, week.id, THURSDAY);
+    expect(restored.lockGameId).toBe(florida.id);
+    expect(restored.lockDropped).toBe(false);
+  });
+
+  test("a member who moves a Dropped Lock keeps the new one when the game is restored", async () => {
+    const { db, jonah, grandma, week, michigan, florida } = await setup();
+    await savePick(db, grandma, week.id, florida.id, florida.homeTeamId, THURSDAY);
+    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    await setLock(db, grandma, week.id, florida.id, THURSDAY);
+    await voidGame(db, jonah, florida.id, "Hurricane");
+
+    // One Lock per member per week, so moving it overwrites the dropped one and the restore finds nothing to revive.
+    await setLock(db, grandma, week.id, michigan.id, THURSDAY);
+    await restoreGame(db, jonah, florida.id);
+    const sheet = await pickSheet(db, grandma, week.id, THURSDAY);
+    expect(sheet.lockGameId).toBe(michigan.id);
+    expect(sheet.lockDropped).toBe(false);
+    expect(await db.query.locks.findMany()).toHaveLength(1);
   });
 
   test("nobody reads another member's picks before the deadline, commissioners included", async () => {

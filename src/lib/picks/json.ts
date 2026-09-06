@@ -41,6 +41,8 @@ export interface SheetJson {
   games: GameJson[];
   picks: PickJson[];
   lockGameId: number | null;
+  /** True when the Lock sits on a Void game: a Dropped Lock. Scores nothing; movable until the Deadline. */
+  lockDropped: boolean;
   tiebreakerGuess: number | null;
 }
 
@@ -69,6 +71,7 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     })),
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
     lockGameId: sheet.lockGameId,
+    lockDropped: sheet.lockDropped,
     tiebreakerGuess: sheet.tiebreakerGuess,
   };
 }

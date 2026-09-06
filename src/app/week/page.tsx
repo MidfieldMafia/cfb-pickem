@@ -78,7 +78,11 @@ export default async function Week() {
                   {sheet.locked
                     ? `You picked ${picked} of ${liveGames.length}.`
                     : `${picked} of ${liveGames.length} picked`}
-                  {sheet.lockGameId !== null ? " · Lock set" : " · No Lock yet"}
+                  {sheet.lockDropped
+                    ? " · Lock voided"
+                    : sheet.lockGameId !== null
+                      ? " · Lock set"
+                      : " · No Lock yet"}
                   {sheet.tiebreakerGuess !== null
                     ? ` · Tiebreaker ${sheet.tiebreakerGuess}`
                     : " · No Tiebreaker Guess yet"}

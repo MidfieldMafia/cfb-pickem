@@ -172,8 +172,9 @@ export async function clearOverride(db: Db, actor: Member, gameId: number, now: 
 
 /**
  * Undoes a Void: the game counts again with whatever the feed or an override
- * says. Locks the Void dropped do not come back; members would have to set
- * them again, and after the Deadline they cannot, so restore with care.
+ * says. A Dropped Lock on it counts again too — the Void never deleted the
+ * row — except for a member who already moved their Lock elsewhere, since
+ * there is one Lock per member per week and moving it overwrote this one.
  */
 export async function restoreGame(db: Db, actor: Member, gameId: number, now: Date = new Date()): Promise<Game> {
   requireCommissioner(actor);
@@ -236,8 +237,14 @@ export interface RevealPick {
   memberId: number;
   teamId: number;
   outcome: PickOutcome;
-  /** The member's Lock of the Week sits on this pick. */
+  /** The member's Lock of the Week sits on this pick and still counts. */
   locked: boolean;
+  /**
+   * The member's Lock sits on this pick but the Game is Void: a Dropped Lock.
+   * Never true at the same time as `locked`. The board shows it so a member
+   * who spent their Lock here is not mistaken for one who set none.
+   */
+  lockDropped: boolean;
 }
 
 export interface RevealGame {
@@ -273,9 +280,18 @@ export async function revealFor(db: Db, actor: Member, weekId: number, now: Date
     games: slate.games.map((game) => {
       const picks: RevealPick[] = [];
       for (const member of rows) {
-        const pick = scoreOf.get(String(member.id))?.picks.find((p) => p.gameId === String(game.id));
-        if (!pick || pick.team === null) continue;
-        picks.push({ memberId: member.id, teamId: Number(pick.team), outcome: pick.outcome, locked: pick.locked });
+        const score = scoreOf.get(String(member.id));
+        const pick = score?.picks.find((p) => p.gameId === String(game.id));
+        if (!score || !pick || pick.team === null) continue;
+        // The engine already decided the Lock was dropped; the board reads that rather than re-deriving it.
+        const lock = score.lock;
+        picks.push({
+          memberId: member.id,
+          teamId: Number(pick.team),
+          outcome: pick.outcome,
+          locked: pick.locked,
+          lockDropped: lock !== null && lock.gameId === String(game.id) && lock.dropped,
+        });
       }
       return { game, result: effectiveResult(game), picks };
     }),
