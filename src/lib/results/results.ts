@@ -5,6 +5,7 @@
  * function takes the database first; `now` is the server clock, injected so
  * tests can sit anywhere in the week.
  */
+import "server-only";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { games, members, resultAudits, weeks, type Game, type GameStatus, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";

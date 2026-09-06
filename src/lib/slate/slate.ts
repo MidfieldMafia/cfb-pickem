@@ -4,6 +4,7 @@
  * Deadline, Void. Every function takes the database first and checks the
  * acting member; the production caller passes Neon, tests pass PGlite.
  */
+import "server-only";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { games, locks, seasons, weeks, type Game, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";

@@ -4,6 +4,7 @@
  * first and the acting member second; `now` is the server clock, injected so
  * tests can sit on either side of the Deadline.
  */
+import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   games,

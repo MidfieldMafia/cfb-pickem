@@ -3,6 +3,7 @@
  * Kept apart from the results module so the slate module's `voidGame` can
  * log without importing the results module (which imports the slate).
  */
+import "server-only";
 import { resultAudits, type Game, type ResultAuditKind } from "@/db/schema";
 import type { Db } from "@/db/types";
 

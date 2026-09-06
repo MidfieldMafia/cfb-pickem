@@ -1,3 +1,4 @@
+import "server-only";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";

@@ -1,3 +1,4 @@
+import "server-only";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
