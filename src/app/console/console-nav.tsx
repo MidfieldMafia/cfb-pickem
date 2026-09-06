@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/console/slate", label: "Slate builder" },
   { href: "/console/members", label: "Members" },
+  { href: "/console/results", label: "Result overrides" },
 ];
 
 export function ConsoleNav() {
