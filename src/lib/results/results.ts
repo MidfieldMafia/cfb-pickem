@@ -14,11 +14,20 @@ import { requireCommissioner } from "@/lib/members/members";
 import { weekPicks } from "@/lib/picks/picks";
 import { scoreWeek, type PickOutcome } from "@/lib/scoring";
 import { slateFor, type Slate } from "@/lib/slate/slate";
-import { describeResult, effectiveResult, logResultChange, type GameResult, type ResultSource, type ResultStatus } from "./audit";
+import {
+  describeResult,
+  effectiveResult,
+  logResultChange,
+  type GameResult,
+  type LiveScore,
+  type ResultLabel,
+  type ResultSource,
+  type ResultStatus,
+} from "./audit";
 import { toEngineMember, toEngineWeek } from "./engine";
 
 export { describeResult, effectiveResult };
-export type { GameResult, ResultSource, ResultStatus };
+export type { GameResult, LiveScore, ResultLabel, ResultSource, ResultStatus };
 
 export class InvalidResult extends Error {}
 

@@ -4,14 +4,7 @@ import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { TeamLogo } from "@/components/team-logo";
-import type { Reveal, RevealGame, RevealMember, RevealPick } from "@/lib/results/results";
-
-function statusLine(row: RevealGame): string {
-  if (row.result.status === "void") return `Void${row.game.voidNote ? ` · ${row.game.voidNote}` : ""}`;
-  if (row.result.status === "final") return row.result.source === "override" ? "Final · corrected" : "Final";
-  if (row.game.status === "in_progress") return "In progress";
-  return "Scheduled";
-}
+import type { Reveal, RevealMember, RevealPick } from "@/lib/results/results";
 
 /** The chip that sums up one side: "✓ 4 picks" once the game is final, "4 picks" before. */
 function SideChip({ picks, outcome }: { picks: RevealPick[]; outcome: RevealPick["outcome"] | null }) {
@@ -109,7 +102,10 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
           return (
             <li key={game.id} className={`space-y-2 ${result.status === "void" ? "opacity-70" : ""}`}>
               <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-                <span>{statusLine(row)}</span>
+                <span>
+                  {result.label}
+                  {result.status === "void" && game.voidNote ? ` · ${game.voidNote}` : ""}
+                </span>
                 <span>·</span>
                 <LocalTime at={game.kickoff} style="slot" />
                 {game.id === reveal.week.tiebreakerGameId ? <Badge variant="outline">Tiebreaker</Badge> : null}
@@ -118,7 +114,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
                 <Side
                   team={game.awayTeam}
                   rank={game.awayRank}
-                  score={result.awayScore ?? (game.status === "in_progress" ? game.awayScore : null)}
+                  score={result.awayScore ?? result.live?.awayScore ?? null}
                   picks={away}
                   members={members}
                   final={final}
@@ -127,7 +123,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
                 <Side
                   team={game.homeTeam}
                   rank={game.homeRank}
-                  score={result.homeScore ?? (game.status === "in_progress" ? game.homeScore : null)}
+                  score={result.homeScore ?? result.live?.homeScore ?? null}
                   picks={home}
                   members={members}
                   final={final}
