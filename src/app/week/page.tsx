@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
 import { Wordmark } from "@/components/wordmark";
 import { requireMember } from "@/lib/members/current";
+import { pickSheet } from "@/lib/picks/picks";
 import { publishedSlate } from "@/lib/slate/slate";
 
 function Team({ name, rank }: { name: string; rank: number | null }) {
@@ -16,10 +18,14 @@ function Team({ name, rank }: { name: string; rank: number | null }) {
   );
 }
 
-/** The published Slate as a list. Pick entry lands here in the next ticket. */
+/** The published Slate as a list, with the door into pick entry. */
 export default async function Week() {
   const member = await requireMember();
   const slate = await publishedSlate(db());
+  const sheet = slate ? await pickSheet(db(), member, slate.week.id) : null;
+  const liveGames = sheet ? sheet.games.filter((g) => !g.void) : [];
+  const picked = sheet ? liveGames.filter((g) => sheet.picks.some((p) => p.gameId === g.id)).length : 0;
+  const allPicked = sheet !== null && picked === liveGames.length;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
@@ -42,8 +48,24 @@ export default async function Week() {
             </h1>
             {slate.deadline ? (
               <p className="text-sm text-muted-foreground">
-                Picks lock <LocalTime at={slate.deadline} style="deadline" />
+                Picks {sheet?.locked ? "locked" : "lock"} <LocalTime at={slate.deadline} style="deadline" />
               </p>
+            ) : null}
+            {sheet ? (
+              <div className="space-y-2 pt-2">
+                <p className="text-sm">
+                  {sheet.locked
+                    ? `You picked ${picked} of ${liveGames.length}.`
+                    : `${picked} of ${liveGames.length} picked`}
+                  {sheet.lockGameId !== null ? " · Lock set" : " · No Lock yet"}
+                  {sheet.tiebreakerGuess !== null ? ` · Tiebreaker ${sheet.tiebreakerGuess}` : " · No Tiebreaker Guess yet"}
+                </p>
+                <Button asChild className="w-full">
+                  <Link href={sheet.locked || allPicked ? "/picks/review" : "/picks"}>
+                    {sheet.locked ? "See your picks" : allPicked ? "Review your picks" : picked ? "Continue picking" : "Make your picks"}
+                  </Link>
+                </Button>
+              </div>
             ) : null}
           </div>
           <ul className="divide-y divide-border rounded-md border border-border bg-card">

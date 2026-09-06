@@ -98,6 +98,20 @@ The CollegeFootballData client lives in `src/lib/cfbd/` and the Open-Meteo clien
 responses in each module's `fixtures/` folder (the season-wide responses are trimmed to the
 teams and venues in that week's games).
 
+## Making picks
+
+Members pick at `/picks`, one game per screen: tapping a team saves the Pick at once (there is
+no submit step) and moves to the next game; the strip on top jumps anywhere, and the flow opens
+at the first unpicked game. `/picks/review` lists every pick, opens the Lock of the Week drawer,
+takes the Tiebreaker Guess, and counts down to the Deadline from the server clock. `/week` shows
+the slate with a running count and the door into both.
+
+The server seam is `src/lib/picks/`: `savePick`, `setLock`, `setTiebreakerGuess`, `pickSheet`
+(the member's own sheet), and `weekPicks` (everyone's picks, refused for everyone until the
+Deadline). Every change is checked against the server clock, so at or after the Deadline the
+route handlers under `/api/week/` answer `423 Locked` and the screens flip to their locked state.
+Picks are stored per member per game; unpicked games have no row.
+
 ## Seeding and signing in
 
 There are no passwords. Each member has a permanent Magic Link (`/m/<token>`); opening it sets

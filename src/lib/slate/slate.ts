@@ -5,7 +5,7 @@
  * acting member; the production caller passes Neon, tests pass PGlite.
  */
 import { and, asc, desc, eq } from "drizzle-orm";
-import { games, seasons, weeks, type Game, type Member, type Season, type Week } from "@/db/schema";
+import { games, locks, seasons, weeks, type Game, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
@@ -219,6 +219,8 @@ export async function voidGame(db: Db, actor: Member, gameId: number, note: stri
     .set({ void: true, voidNote, updatedAt: new Date() })
     .where(eq(games.id, gameId))
     .returning();
+  // A void game scores zero for everyone, so a Lock on it is worthless: drop it so the member can lock another.
+  await db.delete(locks).where(eq(locks.gameId, gameId));
   return updated;
 }
 
