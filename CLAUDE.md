@@ -4,6 +4,8 @@
 
 Verify with `npm run typecheck`, `npm run test`, and `npx eslint src`.
 
+A fresh worktree needs `npm ci` before any of them: `node_modules` is not shared, and `vitest.config.ts` resolves its `server-only` alias relative to itself, so without a local install every server-seam suite fails to import. `typecheck` also reports `Cannot find name 'LayoutProps'` in `src/app/layout.tsx` until `next dev` has run there once and written `.next/types`.
+
 Do not run `npm run build` to check your work. It is `drizzle-kit migrate && next build`, and `DATABASE_URL` in `.env.local` points at a shared Neon database, so the build applies migrations to a database other people are using. A real build belongs on Vercel's preview deploy.
 
 ## Agent skills
