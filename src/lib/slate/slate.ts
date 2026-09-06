@@ -10,6 +10,7 @@ import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
+import { logResultChange } from "@/lib/results/audit";
 import { noRainChance, type RainChanceSource } from "@/lib/weather/open-meteo";
 
 export class InvalidSlate extends Error {}
@@ -207,20 +208,22 @@ export async function removeGame(db: Db, actor: Member, gameId: number): Promise
   await db.delete(games).where(eq(games.id, gameId));
 }
 
-/** Void: canceled or postponed after publish. Scores zero for everyone; stays on the slate with the note. */
-export async function voidGame(db: Db, actor: Member, gameId: number, note: string): Promise<Game> {
+/** Void: canceled or postponed after publish. Scores zero for everyone; stays on the slate with the note. Logged. */
+export async function voidGame(db: Db, actor: Member, gameId: number, note: string, now: Date = new Date()): Promise<Game> {
   requireCommissioner(actor);
   const game = await loadGame(db, gameId);
   if (!game.week.published) throw new InvalidSlate("The slate is not published; remove the game instead.");
+  if (game.void) return game;
   const voidNote = note.trim();
   if (voidNote.length === 0) throw new InvalidSlate("Say why in the note.");
   const [updated] = await db
     .update(games)
-    .set({ void: true, voidNote, updatedAt: new Date() })
+    .set({ void: true, voidNote, updatedAt: now })
     .where(eq(games.id, gameId))
     .returning();
   // A void game scores zero for everyone, so a Lock on it is worthless: drop it so the member can lock another.
   await db.delete(locks).where(eq(locks.gameId, gameId));
+  await logResultChange(db, actor.id, "void", game, updated, voidNote, now);
   return updated;
 }
 
