@@ -265,7 +265,7 @@ export async function seasonPicks(
       const weekLocks = locksOf.get(week.id)!;
       const weekGuesses = guessesOf.get(week.id)!;
       // The board is decided a Week at a time: joining in Week 4 keeps a member
-      // off Weeks 1 to 3, exactly as the engine's `playedWeek` already had it.
+      // off Weeks 1 to 3, exactly as `score-week.ts` already had it.
       const board = roster(everyone, week, pickers(weekPickRows, weekLocks, weekGuesses));
       return [
         week.id,

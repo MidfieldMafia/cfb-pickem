@@ -28,8 +28,14 @@ export interface RosterWeek {
  * Two rules, and the second is the one that is easy to lose:
  *
  * 1. **Joined before the Deadline.** A member added mid-week never had a
- *    chance to pick, so the week is not theirs to have missed. This is the
- *    read path's spelling of the engine's `playedWeek`.
+ *    chance to pick, so the week is not theirs to have missed. `score-week.ts`
+ *    states this rule a second time, as `playedWeek`, and deliberately: the
+ *    scoring engine imports nothing outside `@/lib/scoring` and speaks in ISO
+ *    strings and string ids, so sharing this function would either drag the
+ *    engine onto the read path's types or loosen these ones into `Date | string`.
+ *    Two statements of one rule is the price of that boundary; the engine's
+ *    tests hold its copy, and this one holds the read path's. What is *not*
+ *    acceptable is a third — which is what this function exists to have ended.
  * 2. **Active, or since deactivated with Picks on this Week.** Deactivating
  *    someone stops them signing in; it does not un-happen the points they
  *    already scored, so a board or a grading that dropped them would stop
