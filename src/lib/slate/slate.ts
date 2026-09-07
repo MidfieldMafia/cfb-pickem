@@ -73,8 +73,17 @@ async function loadWeek(db: Db, weekId: number): Promise<Week> {
   return week;
 }
 
+/**
+ * One Game with its Week, or undefined. The Game and its Week are slate
+ * vocabulary, so the read lives here; each caller throws its own error class
+ * rather than the query being written out again per module.
+ */
+export async function gameWithWeek(db: Db, gameId: number): Promise<(Game & { week: Week }) | undefined> {
+  return db.query.games.findFirst({ where: eq(games.id, gameId), with: { week: true } });
+}
+
 async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> {
-  const game = await db.query.games.findFirst({ where: eq(games.id, gameId), with: { week: true } });
+  const game = await gameWithWeek(db, gameId);
   if (!game) throw new InvalidSlate("That game is not on the slate.");
   return game;
 }
@@ -292,11 +301,9 @@ export async function refreshFromFeed(
   if (slate.games.length === 0) return 0;
   const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const byId = new Map(feed.map((c) => [c.cfbdGameId, c]));
-  const updates: Promise<unknown>[] = [];
-  const updatedAt = new Date();
-  for (const game of slate.games) {
+  return applyGamePatches(db, slate.games, (game) => {
     const fresh = byId.get(game.cfbdGameId);
-    if (!fresh) continue;
+    if (!fresh) return null;
     const patch: Partial<typeof games.$inferInsert> = {};
     if (fresh.kickoff.getTime() !== game.kickoff.getTime()) patch.kickoff = fresh.kickoff;
     if (canonical(fresh.detail) !== canonical(game.detail)) patch.detail = fresh.detail;
@@ -305,8 +312,28 @@ export async function refreshFromFeed(
       if (fresh.homeRank !== game.homeRank) patch.homeRank = fresh.homeRank;
       if (fresh.awayRank !== game.awayRank) patch.awayRank = fresh.awayRank;
     }
-    if (Object.keys(patch).length === 0) continue;
-    // The rows are independent, so the whole refresh costs one round trip, not one per game.
+    return patch;
+  }, new Date());
+}
+
+/**
+ * Writes one patch per slate game, skipping the games `patchOf` returns null
+ * or nothing for. The rows are independent, so the whole pass costs one round
+ * trip rather than one per game — which is the reason this is shared: every
+ * feed reconciliation in the app walks a slate and patches what moved, and a
+ * copy of the loop that awaits inside it pays a round trip per game instead.
+ * Returns how many games changed.
+ */
+export async function applyGamePatches(
+  db: Db,
+  slateGames: Game[],
+  patchOf: (game: Game) => Partial<typeof games.$inferInsert> | null,
+  updatedAt: Date,
+): Promise<number> {
+  const updates: Promise<unknown>[] = [];
+  for (const game of slateGames) {
+    const patch = patchOf(game);
+    if (patch === null || Object.keys(patch).length === 0) continue;
     updates.push(db.update(games).set({ ...patch, updatedAt }).where(eq(games.id, game.id)));
   }
   await Promise.all(updates);
