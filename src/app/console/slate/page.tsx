@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Check, X } from "lucide-react";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
 import { SECTION_LABEL } from "@/components/section-label";
+import { TeamLogo } from "@/components/team-logo";
 import { TeamName } from "@/components/team-name";
 import { cfbd } from "@/lib/cfbd";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
@@ -25,6 +27,7 @@ import {
   voidGameAction,
 } from "./actions";
 import { openMeteo } from "@/lib/weather/open-meteo";
+import { CandidateCheckbox } from "./candidate-checkbox";
 import { DeadlineForm } from "./deadline-form";
 import { PublishButton } from "./publish-button";
 
@@ -81,7 +84,10 @@ export default async function SlateBuilder({
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">
+      {/* The slate rail takes the width it needs and no more; the candidates
+          table gets the rest, because Spread is what a choice turns on and it
+          was scrolling out of sight. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="rounded-md border border-border bg-card">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-3">
             <div>
@@ -117,49 +123,71 @@ export default async function SlateBuilder({
               {feedError}
             </p>
           ) : null}
-          <ul className="divide-y divide-border">
-            {shown.map(({ candidate: c, onSlate: picked }) => (
-              <li
-                key={c.cfbdGameId}
-                className={`grid gap-2 p-3 md:grid-cols-[auto_minmax(0,1fr)_11rem_9rem] md:items-center ${
-                  picked ? "bg-muted" : ""
-                }`}
-              >
-                <form action={picked ? removeGameAction : addGameAction}>
-                  <input type="hidden" name="weekId" value={week.id} />
-                  {picked ? (
-                    <input type="hidden" name="gameId" value={picked.id} />
-                  ) : (
-                    <input type="hidden" name="cfbdGameId" value={c.cfbdGameId} />
-                  )}
-                  <Button
-                    type="submit"
-                    size="sm"
-                    variant={picked ? "secondary" : "outline"}
-                    disabled={Boolean(picked) && slate.week.published}
-                    aria-label={picked ? `Remove ${c.awayTeam} at ${c.homeTeam}` : `Add ${c.awayTeam} at ${c.homeTeam}`}
-                  >
-                    {picked ? "On slate" : "Add"}
-                  </Button>
-                </form>
-                <div>
-                  <TeamName name={c.awayTeam} rank={c.awayRank} /> <span className="text-muted-foreground">at</span>{" "}
-                  <TeamName name={c.homeTeam} rank={c.homeRank} />
-                  <p className="text-xs text-muted-foreground">
-                    {[c.awayConference, c.homeConference].filter(Boolean).join(" · ") || "Non-conference"}
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {c.kickoffTbd ? "Time TBD · " : null}
-                  <LocalTime at={c.kickoff} />
-                </p>
-                <p className="text-sm text-muted-foreground">{c.spread ?? "No line yet"}</p>
-              </li>
-            ))}
-            {shown.length === 0 && !feedError ? (
-              <li className="p-3 text-sm text-muted-foreground">No games match.</li>
-            ) : null}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-3">
+                    <span className="sr-only">On the slate</span>
+                  </th>
+                  <th className="p-3">Game</th>
+                  <th className="px-2 py-3">Kickoff</th>
+                  <th className="px-2 py-3">TV</th>
+                  <th className="px-2 py-3">Spread</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {shown.map(({ candidate: c, onSlate: picked }) => (
+                  <tr key={c.cfbdGameId} className={picked ? "bg-muted" : ""}>
+                    <td className="px-2 align-middle">
+                      <form action={picked ? removeGameAction : addGameAction}>
+                        <input type="hidden" name="weekId" value={week.id} />
+                        {picked ? (
+                          <input type="hidden" name="gameId" value={picked.id} />
+                        ) : (
+                          <input type="hidden" name="cfbdGameId" value={c.cfbdGameId} />
+                        )}
+                        <CandidateCheckbox
+                          checked={Boolean(picked)}
+                          // A published Slate takes neither an add nor a
+                          // remove — `addGame` and `removeGame` both refuse —
+                          // so the boxes say so rather than throwing when
+                          // clicked.
+                          disabled={slate.week.published}
+                          label={`${c.awayTeam} at ${c.homeTeam} on the slate`}
+                        />
+                      </form>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        <TeamLogo team={c.awayTeam} size={20} />
+                        <TeamName name={c.awayTeam} rank={c.awayRank} />
+                        <span className="font-sans font-normal text-muted-foreground">at</span>
+                        <TeamLogo team={c.homeTeam} size={20} />
+                        <TeamName name={c.homeTeam} rank={c.homeRank} />
+                      </div>
+                    </td>
+                    {/* The date, not just the weekday: a week runs Tuesday to
+                        Saturday and can cross a month, so "Sat 9:00 PM" above
+                        "Thu 5:00 PM" reads as a sorting bug. */}
+                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">
+                      {c.kickoffTbd ? "TBD · " : null}
+                      <LocalTime at={c.kickoff} />
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{c.detail.tv ?? "TBD"}</td>
+                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{c.spread ?? "No line yet"}</td>
+                  </tr>
+                ))}
+                {shown.length === 0 && !feedError ? (
+                  <tr>
+                    <td colSpan={5} className="p-3 text-muted-foreground">
+                      No games match.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <aside className="space-y-6">
@@ -233,63 +261,89 @@ function SlateRow({
   const { game } = view;
   const voided = isVoid(view);
   const why = voidNote(view);
+  const matchup = `${game.awayTeam} at ${game.homeTeam}`;
   return (
     <li className={`space-y-2 p-3 ${voided ? "opacity-60" : ""}`}>
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="font-semibold">
-            {game.awayTeam} at {game.homeTeam}
-            {voided ? <Badge variant="outline" className="ml-2">Void</Badge> : null}
-          </p>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <TeamLogo team={game.awayTeam} size={18} />
+            <TeamName name={game.awayTeam} rank={game.awayRank} className="text-sm" />
+            <span className="text-sm text-muted-foreground">at</span>
+            <TeamLogo team={game.homeTeam} size={18} />
+            <TeamName name={game.homeTeam} rank={game.homeRank} className="text-sm" />
+            {voided ? <Badge variant="outline">Void</Badge> : null}
+          </div>
           <p className="text-xs text-muted-foreground">
             <LocalTime at={game.kickoff} />
             {game.spread ? ` · ${game.spread}` : ""}
             {why ? ` · ${why}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-1">
-          {voided ? null : (
-            <form action={setTiebreakerAction}>
-              <input type="hidden" name="weekId" value={weekId} />
-              <input type="hidden" name="gameId" value={game.id} />
-              <Button
-                type="submit"
-                size="sm"
-                variant={tiebreaker ? "secondary" : "ghost"}
-                aria-pressed={tiebreaker}
-                aria-label={`Tiebreaker: ${game.awayTeam} at ${game.homeTeam}`}
+        {voided ? null : (
+          <form action={setTiebreakerAction}>
+            <input type="hidden" name="weekId" value={weekId} />
+            <input type="hidden" name="gameId" value={game.id} />
+            {/* The one Tiebreaker Game reads as a chosen-one-of-many mark, so
+                it wears the rust ring the mockups draw rather than a word. */}
+            <button
+              type="submit"
+              aria-pressed={tiebreaker}
+              aria-label={`Tiebreaker Game: ${matchup}`}
+              title={tiebreaker ? `Tiebreaker Game: ${matchup}` : `Make this the Tiebreaker Game`}
+              className="flex size-tap items-center justify-center"
+            >
+              <span
+                className={`grid size-5 place-items-center rounded-full border-2 ${
+                  tiebreaker ? "border-secondary bg-secondary text-secondary-foreground" : "border-border"
+                }`}
               >
-                {tiebreaker ? "Tiebreaker" : "Set tiebreaker"}
-              </Button>
-            </form>
-          )}
-          {published ? null : (
-            <form action={removeGameAction}>
-              <input type="hidden" name="gameId" value={game.id} />
-              <Button type="submit" size="sm" variant="ghost" aria-label={`Remove ${game.awayTeam} at ${game.homeTeam}`}>
-                ✕
-              </Button>
-            </form>
-          )}
-        </div>
+                {tiebreaker ? <Check size={12} strokeWidth={4} aria-hidden /> : null}
+              </span>
+            </button>
+          </form>
+        )}
+        {published ? null : (
+          <form action={removeGameAction}>
+            <input type="hidden" name="gameId" value={game.id} />
+            <button
+              type="submit"
+              aria-label={`Remove ${matchup}`}
+              title={`Remove ${matchup}`}
+              className="flex size-tap items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+            >
+              <X size={16} aria-hidden />
+            </button>
+          </form>
+        )}
       </div>
+      {/* Voiding is rare and needs a reason, so it stays folded away rather
+          than standing a note box open on all ten rows all season. */}
       {published && !voided ? (
-        <ActionForm
-          action={voidGameAction}
-          hidden={{ gameId: game.id }}
-          submit="Void"
-          pendingLabel="Voiding…"
-          variant="destructive"
-        >
-          <Input
-            name="note"
-            required
-            maxLength={MAX_NOTE}
-            placeholder="Void note (why)"
-            aria-label="Void note"
-            className="h-9"
-          />
-        </ActionForm>
+        <details>
+          {/* Short on screen, whole matchup for a screen reader working down
+              ten rows that would otherwise all say the same word. */}
+          <summary aria-label={`Void ${matchup}`} className="w-fit cursor-pointer py-1 text-xs font-bold text-destructive">
+            Void
+          </summary>
+          <ActionForm
+            action={voidGameAction}
+            hidden={{ gameId: game.id }}
+            submit="Void"
+            pendingLabel="Voiding…"
+            variant="destructive"
+            className="mt-1 space-y-2"
+          >
+            <Input
+              name="note"
+              required
+              maxLength={MAX_NOTE}
+              placeholder="Void note (why)"
+              aria-label={`Void note for ${matchup}`}
+              className="h-9"
+            />
+          </ActionForm>
+        </details>
       ) : null}
     </li>
   );
