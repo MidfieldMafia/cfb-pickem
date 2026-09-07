@@ -99,9 +99,10 @@ describe("results ingest", () => {
       note: null,
       feedFinal: null,
     });
-    expect((await db.query.weeks.findFirst({ where: eq(weeks.id, week.id) }))!.scoreboardFetchedAt).toEqual(
-      SATURDAY_EVENING,
-    );
+    // The ingest does not claim the stale gate. It used to stamp this column
+    // unconditionally, so "Check the feed now" — which calls the ingest
+    // directly — suppressed the member-scheduled pull for five minutes.
+    expect((await db.query.weeks.findFirst({ where: eq(weeks.id, week.id) }))!.scoreboardFetchedAt).toBeNull();
 
     // The same feed again changes nothing; a later feed changes only what moved.
     expect(await ingest(feed, SUNDAY)).toEqual({ changed: 0 });
@@ -152,7 +153,7 @@ describe("results ingest", () => {
   });
 
   test("the stale gate calls the feed only when a pending game has kicked off, at most every five minutes", async () => {
-    const { db, jonah, michigan, texas, reload, refresh } = await setup();
+    const { db, jonah, michigan, texas, week, reload, refresh } = await setup();
     const quiet = feedWith({});
 
     // Nothing has kicked off: no call.
@@ -162,6 +163,8 @@ describe("results ingest", () => {
     // Miami is past kickoff and not final: one call, then none for five minutes.
     const friday = new Date("2026-09-11T01:00:00Z");
     expect(await refresh(quiet, friday)).toBe("refreshed");
+    // The gate is the one writer of the claim, and it writes it when it claims.
+    expect((await db.query.weeks.findFirst({ where: eq(weeks.id, week.id) }))!.scoreboardFetchedAt).toEqual(friday);
     expect(await refresh(quiet, new Date(friday.getTime() + 4 * 60_000))).toBe("fresh");
     expect(quiet.calls).toBe(1);
     expect(await refresh(quiet, new Date(friday.getTime() + 5 * 60_000))).toBe("refreshed");
@@ -218,6 +221,27 @@ describe("results ingest", () => {
     expect(await refresh(feed.cfbd(), at(7))).toBe("refreshed");
     expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
   });
+
+  test("a commissioner's feed check does not claim the member gate", async () => {
+    const { db, week, ingest, refresh } = await setup();
+    const feed = feedWith({});
+    const claim = async () => (await db.query.weeks.findFirst({ where: eq(weeks.id, week.id) }))!.scoreboardFetchedAt;
+    // Miami is past kickoff with nothing final, so the gate has work to do.
+    const friday = new Date("2026-09-11T01:00:00Z");
+
+    expect(await refresh(feed, friday)).toBe("refreshed");
+    expect(await claim()).toEqual(friday);
+
+    // "Check the feed now" a minute later. It pulls the feed and leaves the
+    // claim where the member pull put it.
+    await ingest(feed, new Date(friday.getTime() + 60_000));
+    expect(await claim()).toEqual(friday);
+
+    // So the gate reopens five minutes after the member pull, not five after
+    // the commissioner's. The stamp inside the ingest used to push it out,
+    // which is exactly the five minutes of member traffic it cost.
+    expect(await refresh(feed, new Date(friday.getTime() + 5 * 60_000))).toBe("refreshed");
+  });
 });
 
 describe("result overrides", () => {
@@ -232,12 +256,11 @@ describe("result overrides", () => {
     await expect(overrideResult(db, jonah, michigan.id, { awayScore: 30, homeScore: 27, note: "  " })).rejects.toThrow(
       InvalidResult,
     );
-    await expect(overrideResult(db, jonah, michigan.id, { awayScore: -1, homeScore: 27, note: "typo" })).rejects.toThrow(
-      InvalidResult,
-    );
-    await expect(overrideResult(db, jonah, michigan.id, { awayScore: 2.5, homeScore: 27, note: "typo" })).rejects.toThrow(
-      InvalidResult,
-    );
+    // The score range is not asserted here. It belongs to the form parse in
+    // `console-edits.ts`, and calling this function directly walks past it, so
+    // a `-1` case here passed while the sentence a commissioner actually read
+    // for `-1` said "Missing awayScore." It is pinned on `editResult`, by
+    // message, in `console-edits.test.ts`.
 
     await overrideResult(db, jonah, michigan.id, { awayScore: 30, homeScore: 27, note: "Feed missed the late FG" });
     let game = await reload(michigan.id);
@@ -614,9 +637,12 @@ describe("the season leaderboard", () => {
 
 describe("the results console", () => {
   test("composes the week the screen renders: the chooser, the rows, the log, and when the feed was last read", async () => {
-    const { db, jonah, grandma, week, miami, michigan, texas, ingest } = await setup();
+    const { db, jonah, grandma, week, miami, michigan, texas, refresh } = await setup();
     const feed = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }, { [OHIO_STATE_AT_TEXAS]: [3, 0] });
-    await ingest(feed, SATURDAY_EVENING);
+    // Through the stale gate, the way member traffic does it: `feedCheckedAt`
+    // is that gate's claim, and a commissioner's own feed check no longer
+    // stamps it, so an `ingest` here would leave the column null.
+    expect(await refresh(feed, SATURDAY_EVENING)).toBe("refreshed");
     await voidGame(db, jonah, miami.id, "Hurricane", SATURDAY_EVENING);
 
     const view = await resultsConsole(db, jonah, 2, SATURDAY_EVENING);

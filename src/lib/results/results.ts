@@ -14,6 +14,7 @@ import { joinedOrder, requireCommissioner } from "@/lib/members/members";
 import { noteError } from "@/lib/notes";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
+import { Refusal } from "@/lib/refusal";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
 import type * as engine from "@/lib/scoring/types";
 import {
@@ -46,7 +47,7 @@ import { toEngineMember, toEngineWeek } from "./engine";
 export { effectiveResult };
 export type { GameResult, ResultLabel };
 
-export class InvalidResult extends Error {}
+export class InvalidResult extends Refusal {}
 
 /** How long a refresh claim holds before member traffic may pull the feed again. */
 const REFRESH_INTERVAL_MS = 5 * 60_000;
@@ -106,6 +107,14 @@ function feedResult(feed: CfbdGame): Pick<Game, "status" | "homeScore" | "awaySc
  * see docs/research/collegefootballdata-api.md), for `needsReview` to flag.
  * Overrides and voids live in other columns, so a re-run never disturbs
  * them. Returns how many games changed.
+ *
+ * Deliberately does not touch `weeks.scoreboard_fetched_at`: that column is
+ * the stale gate's claim, and `refreshResultsIfStale` is its only writer.
+ * Stamping it here meant a commissioner pressing "Check the feed now" — which
+ * calls this directly, past the gate — claimed the gate and suppressed the
+ * member-scheduled pull for the next five minutes. It also wrote the column
+ * twice in one request on the gated path, once for the claim and once here
+ * inside the ingest that claim had just authorised.
  */
 export async function ingestResults(
   db: Db,
@@ -113,18 +122,17 @@ export async function ingestResults(
   slate: Slate,
   now: Date = new Date(),
 ): Promise<{ changed: number }> {
-  const weekId = slate.week.id;
   const feed = await cfbd.games({ year: slate.season.year, week: slate.week.weekNumber });
   const byId = new Map(feed.map((g) => [g.id, g]));
-  const changed = await applyGamePatches(db, slate.games, (game) => {
-    const fresh = byId.get(game.cfbdGameId);
-    if (!fresh) return null;
-    const next = feedResult(fresh);
-    const same = next.status === game.status && next.homeScore === game.homeScore && next.awayScore === game.awayScore;
-    return same ? null : next;
-  }, now);
-  await db.update(weeks).set({ scoreboardFetchedAt: now }).where(eq(weeks.id, weekId));
-  return { changed };
+  return {
+    changed: await applyGamePatches(db, slate.games, (game) => {
+      const fresh = byId.get(game.cfbdGameId);
+      if (!fresh) return null;
+      const next = feedResult(fresh);
+      const same = next.status === game.status && next.homeScore === game.homeScore && next.awayScore === game.awayScore;
+      return same ? null : next;
+    }, now),
+  };
 }
 
 export type RefreshOutcome =
@@ -186,7 +194,17 @@ function cleanNote(note: string): string {
   return note.trim();
 }
 
-/** Result Override: a commissioner sets the final score by hand. Beats the feed until cleared; logged. */
+/**
+ * Result Override: a commissioner sets the final score by hand. Beats the feed
+ * until cleared; logged.
+ *
+ * The `0 to MAX_SCORE` range is the caller's, not this function's — `score`
+ * in `console-edits.ts` parses the two form fields against `MAX_SCORE` and
+ * words the one refusal that covers every way a score can be wrong. This used
+ * to re-check it here, and two of that check's three arms were unreachable:
+ * the parse rejects a negative and a fraction before the range ever runs, so
+ * `-1` reached a commissioner as "Missing awayScore."
+ */
 export async function overrideResult(
   db: Db,
   actor: Member,
@@ -199,11 +217,6 @@ export async function overrideResult(
   if (!game.week.published) throw new InvalidResult("The slate is not published; there is nothing to correct yet.");
   if (game.void) throw new InvalidResult("That game is void; restore it before setting a score.");
   const note = cleanNote(input.note);
-  for (const score of [input.homeScore, input.awayScore]) {
-    if (!Number.isInteger(score) || score < 0 || score > MAX_SCORE) {
-      throw new InvalidResult(`Scores are whole numbers, 0 to ${MAX_SCORE}.`);
-    }
-  }
   const [updated] = await db
     .update(games)
     .set({ overrideHomeScore: input.homeScore, overrideAwayScore: input.awayScore, overrideNote: note, updatedAt: now })
@@ -303,7 +316,13 @@ export interface ResultsConsole {
   rows: ResultRow[];
   /** Null when nothing is overdue. */
   review: ReviewNotice | null;
-  /** When member traffic last pulled the feed for this Week. Null before the first pull. */
+  /**
+   * When member traffic last claimed the stale gate for this Week, which is
+   * the only thing that writes `weeks.scoreboard_fetched_at`. Null before the
+   * first claim. A commissioner's "Check the feed now" pulls the feed without
+   * claiming the gate, so it deliberately does not move this — the screen says
+   * whose pull it reports.
+   */
   feedCheckedAt: Date | null;
   log: ResultAudit[];
 }

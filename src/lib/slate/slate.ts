@@ -12,10 +12,11 @@ import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
 import { noteError } from "@/lib/notes";
+import { Refusal } from "@/lib/refusal";
 import { logResultChange } from "@/lib/results/audit";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 
-export class InvalidSlate extends Error {}
+export class InvalidSlate extends Refusal {}
 
 /** Thrown when an edit that only an unpublished Slate allows hits a published one. */
 export class SlatePublished extends InvalidSlate {

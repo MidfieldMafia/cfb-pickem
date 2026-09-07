@@ -96,13 +96,19 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
+            {/*
+              This is the stale gate's claim, and member traffic is its only
+              writer, so the label says so. "Feed last checked" read as though
+              the button beside it moved this — and it did, until the claim
+              stopped being taken on a commissioner's behalf.
+            */}
             <p className="text-sm text-muted-foreground">
               {feedCheckedAt ? (
                 <>
-                  Feed last checked <LocalTime at={feedCheckedAt} />
+                  Members last pulled the feed <LocalTime at={feedCheckedAt} />
                 </>
               ) : (
-                "The feed has not been checked for this week yet."
+                "No member has pulled the feed for this week yet."
               )}
             </p>
             <ActionForm

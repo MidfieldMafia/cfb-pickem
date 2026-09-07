@@ -9,14 +9,15 @@
  * own, and they had already drifted: one caught only `InvalidSlate`, and two
  * actions caught nothing at all, so a blank Void note threw past the screen
  * instead of showing the message the slate seam wrote for it.
+ *
+ * This file used to enumerate the four error classes it knew about, which was
+ * that same drift one level up — a `CfbdError` matched none of them. It asks
+ * `Refusal` now, and so imports no domain module at all.
  */
 import "server-only";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
-import { InvalidMember } from "@/lib/members/members";
-import { InvalidPick } from "@/lib/picks/picks";
-import { InvalidResult } from "@/lib/results/results";
-import { InvalidSlate } from "@/lib/slate/slate";
+import { Refusal } from "@/lib/refusal";
 import type { ActionState, EditOutcome } from "./state";
 
 export interface ConsoleRoute {
@@ -28,23 +29,13 @@ export interface ConsoleRoute {
 }
 
 /**
- * Every refusal a console screen is meant to show as a sentence. Anything
- * else is a fault, and still throws: a missing table is not a message for a
- * commissioner to read.
- */
-function refusal(error: unknown): string | null {
-  const shown =
-    error instanceof InvalidPick ||
-    error instanceof InvalidMember ||
-    error instanceof InvalidResult ||
-    error instanceof InvalidSlate;
-  return shown ? (error as Error).message : null;
-}
-
-/**
  * Runs one console edit: the commissioner check first, then the work, then the
  * cache invalidations the work asked for. A refusal comes back as a message,
  * so a form shows it under the button rather than throwing to the error page.
+ *
+ * Anything that is not a `Refusal` still throws: a missing table is not a
+ * message for a commissioner to read, and neither is `NotCommissioner`, which
+ * `requireConsole` has already answered with a 404 by the time we get here.
  */
 export async function consoleEdit(
   route: ConsoleRoute,
@@ -53,9 +44,8 @@ export async function consoleEdit(
   try {
     return await consoleAction(route, work).then(({ done }) => (done ? { done } : {}));
   } catch (error) {
-    const message = refusal(error);
-    if (message === null) throw error;
-    return { error: message };
+    if (!(error instanceof Refusal)) throw error;
+    return { error: error.message };
   }
 }
 

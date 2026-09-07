@@ -13,11 +13,12 @@ import { and, eq, inArray } from "drizzle-orm";
 import { locks, picks, tiebreakerGuesses, type Game, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { roster } from "@/lib/members/roster";
+import { Refusal } from "@/lib/refusal";
 import { toGameView } from "@/lib/slate/json";
 import { deadlinePassed, type Slate } from "@/lib/slate/slate";
 import { sheetProgress, type SheetProgress } from "./progress";
 
-export class InvalidPick extends Error {}
+export class InvalidPick extends Refusal {}
 
 /** Thrown for any pick, lock, or guess change at or after the Deadline. */
 export class DeadlinePassed extends InvalidPick {
@@ -26,7 +27,13 @@ export class DeadlinePassed extends InvalidPick {
   }
 }
 
-/** Thrown when anyone asks for other members' picks before the Deadline. */
+/**
+ * Thrown when anyone asks for other members' picks before the Deadline.
+ *
+ * Deliberately not a `Refusal`: `http.ts` answers it 403, and no form asks
+ * for another member's picks early, so a console edit that reached this would
+ * be this code malfunctioning rather than a person mistyping.
+ */
 export class PicksHidden extends Error {
   constructor() {
     super("Picks stay hidden until the deadline.");

@@ -12,6 +12,8 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { games } from "@/db/schema";
+import { CfbdError } from "@/lib/cfbd/http";
+import type { CfbdClient } from "@/lib/cfbd/types";
 import { form, routeFor } from "@/test/console";
 import {
   FAMU_AT_MIAMI,
@@ -63,6 +65,51 @@ describe("a commissioner's result edit from the console", () => {
 
     expect(state.error).toBe("Scores are whole numbers, 0 to 250.");
     expect(state.done).toBeUndefined();
+    expect(revalidated).toEqual([]);
+  });
+
+  /**
+   * Every way a score can be wrong reads as the same sentence, because the
+   * range is one parse now. `results.test.ts` asserted `-1` and `2.5` by
+   * calling `overrideResult` directly, which walks past this parse: both cases
+   * passed on the error *class* while the message a commissioner actually read
+   * said "Missing awayScore." — `safeInteger` rejects a negative and a
+   * fraction before a range check further in can word anything.
+   */
+  test("a negative, a fraction, and an absent score all read as the range", async () => {
+    const { route, revalidated, michigan } = await setup();
+    const set = (fields: Record<string, string | number>) =>
+      editResult(route, form({ gameId: michigan.id, note: "typo", ...fields }));
+    const RANGE = { error: "Scores are whole numbers, 0 to 250." };
+
+    expect(await set({ awayScore: -1, homeScore: 27 })).toEqual(RANGE);
+    expect(await set({ awayScore: 2.5, homeScore: 27 })).toEqual(RANGE);
+    expect(await set({ awayScore: 24, homeScore: 251 })).toEqual(RANGE);
+    expect(await set({ homeScore: 27 })).toEqual(RANGE);
+
+    // The bounds themselves are good, and 0-0 is a real score.
+    expect((await set({ awayScore: 0, homeScore: 0 })).done).toMatch(/beats the feed/);
+    expect((await set({ awayScore: 250, homeScore: 27 })).done).toMatch(/beats the feed/);
+    expect(revalidated).toEqual([...BOTH, ...BOTH]);
+  });
+
+  /**
+   * The feed being down is not the commissioner's mistake, but the button is
+   * theirs, so it answers a sentence. `route.ts` used to enumerate four error
+   * classes and `CfbdError` was not one of them, so this threw past the screen
+   * to the error page — the whole reason `Refusal` is a marker.
+   */
+  test("a feed outage is a sentence under the button, not the error page", async () => {
+    const { route, revalidated, week } = await setup();
+    const down = {
+      games: async () => {
+        throw new CfbdError(503, "/games");
+      },
+    } as unknown as CfbdClient;
+
+    expect(await refreshResults(route, form({ weekId: week.id }), down)).toEqual({
+      error: "CollegeFootballData returned 503 for /games.",
+    });
     expect(revalidated).toEqual([]);
   });
 

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { findAvatar } from "@/lib/avatars";
+import { Refusal } from "@/lib/refusal";
 import { cleanDisplayName, MAX_DISPLAY_NAME } from "./limits";
 import { newSecret } from "./members";
 
@@ -34,7 +35,7 @@ export async function getSession(db: Db, sessionId: string): Promise<Member | nu
   return session.member;
 }
 
-export class InvalidWelcome extends Error {}
+export class InvalidWelcome extends Refusal {}
 
 /** The welcome page: a display name and one of the fixed pennants. */
 export async function completeWelcome(
