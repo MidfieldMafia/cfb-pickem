@@ -1,6 +1,6 @@
 ---
 name: remove-worktree
-description: Retire a finished worktree, releasing any file handles that block its deletion. Use after a PR merges, or when `git worktree remove` fails with "Directory not empty".
+description: Retire a finished worktree on Windows or macOS, releasing whatever blocks its deletion. Use after a PR merges, or when `git worktree remove` fails.
 ---
 
 # Retire a worktree
@@ -9,15 +9,23 @@ Removal is four commands on macOS and Linux. On Windows a directory cannot be
 deleted while any process holds an open **handle** inside it, so a running dev
 server turns those four commands into a stranded half-removed tree.
 
-Read that failure mode before step 1, because it decides the order:
+Two failures wear similar words and behave nothing alike. Both measured here:
 
-> `git worktree remove` deregisters the worktree **first**, then deletes the
-> files. When the delete fails, git has already forgotten the worktree — so
-> `git worktree list` goes quiet while the directory sits there full of files.
-> A failed remove is not a no-op.
+> **From outside, on a dirty tree** — `fatal: '<path>' contains modified or
+> untracked files, use --force to delete it`. Nothing happened, and the worktree
+> is still registered. This refusal is safe.
+>
+> **From inside the tree, on Windows** — `error: failed to delete '<path>':
+> Permission denied`. `git worktree remove` deregisters **first** and deletes
+> second, so git has already forgotten the tree while every file remains.
+> `git worktree list` goes quiet, `remove` now answers `is not a working tree`,
+> and `prune` has nothing left to prune. A failed remove is not a no-op.
 
-So release the handles *before* calling remove, rather than calling remove and
-reacting. Step 3 is how; step 6 recovers a tree already in that state.
+So stand outside and release the handles *before* calling remove. Step 3 is how;
+step 6 recovers a tree already stranded.
+
+Steps 3, 4 and 7 differ by platform and each says which. Steps 1, 2, 5 and 6 are
+the same everywhere.
 
 Creation is the other half and has its own skill — `new-worktree`.
 
@@ -39,22 +47,37 @@ listed is unmerged or uncommitted work — stop and say what it is.
 
 ## 2. Stand outside it
 
-On Windows a shell parked in the worktree is itself a handle, and the removal
-fails. Leave first:
+Run the removal from the repo root on every platform:
 
 ```bash
 cd "$(git rev-parse --git-common-dir)/.."
 ```
 
-## 3. Release the handles — Windows only
+On Windows this is not hygiene, it is the difference between a clean removal and
+a stranded tree: your shell's own working directory is a handle, and removing
+from inside produces exactly the `Permission denied` half-removal above.
 
-**On macOS or Linux, skip to step 5.** Unlinking a file that a process still
-has open is allowed there, so a running dev server never blocks the delete. Stop
-your server anyway if it is running in this tree — it holds the port and keeps
-writing into a directory you are deleting — then go to step 5.
+## 3. Release what is holding the tree
 
-On Windows, one `next dev` is **four** node processes, and the one listening on
-the port is only one of them. Measured on this machine:
+### macOS and Linux
+
+Unlinking a file that a process still has open is allowed here, so an open
+handle never blocks the delete and there is nothing to release. Stop a dev
+server running in this tree anyway — it holds the port and keeps writing into a
+directory you are deleting, which can recreate `.next` underneath the delete:
+
+```bash
+kill $(lsof -ti tcp:<port>) 2>/dev/null         # the server on this tree's port
+pkill -f '<absolute path to the worktree>'      # anything else naming the tree
+```
+
+Then go straight to **step 5**. The lock probe in step 4 answers nothing on
+these platforms, and step 4 says why.
+
+### Windows
+
+One `next dev` is **four** node processes, and the one listening on the port is
+only one of them. Measured on this machine:
 
 ```
 next cli          node .../worktree/node_modules/.bin/../next/dist/bin/next dev -p 3101
@@ -95,7 +118,9 @@ foreach ($id in $ids) { try { Stop-Process -Id $id -Force -ErrorAction Stop } ca
 
 The npx wrapper holds nothing inside the tree and exits once its children go.
 
-## 4. Probe for the lock — Windows only
+## 4. Probe for the lock
+
+### Windows
 
 Renaming a directory fails while anything holds a handle inside it, which makes
 a rename the cheapest yes-or-no answer. Ask it about the worktree root, which
@@ -110,6 +135,21 @@ catch { "STILL LOCKED: $($_.Exception.Message)" }
 `UNLOCKED` is the gate for step 5. On `STILL LOCKED`, the message names the
 holder and step 7 covers what else it can be.
 
+### macOS and Linux
+
+There is no lock to probe. A rename succeeds on a directory whose files are
+open, so the probe would print `UNLOCKED` while a dev server writes into the
+tree — a confident answer to a question that does not apply. Ask what is still
+*writing* instead:
+
+```bash
+lsof +D <worktree> | head
+```
+
+Empty means nothing has the tree open. Output is a warning rather than a
+blocker: the delete will succeed regardless, so this only tells you whether you
+are about to pull the floor out from under a running process.
+
 ## 5. Remove
 
 ```bash
@@ -118,8 +158,13 @@ git worktree prune
 git branch -d <branch>
 ```
 
-`git branch -d` refuses a branch that is not merged, a useful second opinion on
-step 1. Reaching for `-D` overrides that — say so out loud first.
+Two refusals are worth expecting, and neither should be forced reflexively:
+
+- `contains modified or untracked files` means step 1 missed something, or a
+  build wrote into the tree after you checked. Look at what it is before
+  reaching for `--force` — `--force` on a dirty tree discards real work.
+- `git branch -d` refuses a branch that is not merged, a useful second opinion
+  on step 1. Reaching for `-D` overrides that — say so out loud first.
 
 Confirm with `git worktree list` and `ls .claude/worktrees/`. Both should show
 the worktree gone.
@@ -131,8 +176,9 @@ does not mention: a failed remove already dropped the registration. Git will not
 help you here — `git worktree remove` reports the path is not a worktree, and
 `prune` has nothing left to prune.
 
-Release the handles (step 3), confirm `UNLOCKED` (step 4), then delete the
-directory yourself and reconcile git:
+On Windows, release the handles (step 3) and confirm `UNLOCKED` (step 4) first;
+on macOS and Linux, go straight ahead. Then delete the directory yourself and
+reconcile git:
 
 ```bash
 rm -rf .claude/worktrees/<name>
@@ -142,18 +188,39 @@ git branch -d <branch>          # the branch outlives the worktree
 
 Order matters: prune once the files are actually gone.
 
-## 7. When the probe stays locked
+## 7. When something still holds the tree
 
-Something the path scan cannot see holds it. **A working directory is not part
-of a command line**, so a process merely *sitting* in the worktree is invisible
-to step 3 — and the only thing matching the path is often your own scanning
-shell, which reads as a reassuring "nothing holds it" while the delete keeps
-failing.
+Reached from a `STILL LOCKED` probe on Windows, or from a delete that fails
+anywhere with `Device or resource busy`.
 
-That is a real case, not a hypothetical: a `until gh pr checks 62 ...; do sleep
+**A working directory is not part of a command line**, so a process merely
+*sitting* in the worktree is invisible to a command-line scan — and the only
+thing matching the path is often your own scanning shell, which reads as a
+reassuring "nothing holds it" while the delete keeps failing.
+
+That is a real case, not a hypothetical: an `until gh pr checks 62 ...; do sleep
 20; done` loop, launched with its cwd inside a worktree, outlived that worktree
-and blocked the delete with `Device or resource busy`. Nothing in its command
-line named the tree.
+and blocked the delete. Nothing in its command line named the tree.
+
+Kill the **parent** and rescan. A `sleep` child rotates its pid on every loop,
+so chasing the child never converges.
+
+### macOS and Linux
+
+`lsof` reports open files and working directories together, which is why one
+tool covers what takes two on Windows:
+
+```bash
+wt='<absolute path to the worktree>'
+lsof -a -d cwd +D "$wt"      # processes sitting in the tree
+lsof +D "$wt"                # everything with a file open under it
+pgrep -af "$wt"              # anything naming it on its command line
+```
+
+`+D` walks the whole tree, so it is slow across a warm `node_modules` — the
+`-d cwd` form is the fast question and usually the one that answers it.
+
+### Windows
 
 Run **both** scans. They cover different populations, and neither is a superset
 of the other.
@@ -167,9 +234,6 @@ for p in /proc/[0-9]*; do
   case "$c" in *$wt*) echo "$p winpid=$(cat $p/winpid 2>/dev/null) $(tr '\0' ' ' < $p/cmdline | cut -c1-80)";; esac
 done
 ```
-
-Kill the **parent** and rescan. A `sleep` child rotates its pid on every loop,
-so chasing the child never converges.
 
 Command lines, from PowerShell — catches anything launched outside a shell:
 
@@ -186,13 +250,10 @@ file manager with it open, or a virus scanner mid-pass. An editor or a file
 manager belongs to the user — report what holds it and ask, rather than ending
 their process.
 
-Where each scan is blind, measured on this machine: `/proc` lists only
-Git Bash descendants, so a `node.exe` started from PowerShell with its cwd in
-the tree is absent from it, while `Win32_Process` shows that same process
-without ever revealing its cwd. A holder that is both started outside a shell
-and unnamed in its own command line escapes both — the rename probe still proves
-the lock is real, so say that plainly and hand it to the user rather than
-reporting the tree as clean.
-
-The macOS equivalent of the whole step: `lsof +D <worktree>`, which reports cwd
-and open files together.
+Where each scan is blind, measured on this machine: `/proc` lists only Git Bash
+descendants, so a `node.exe` started from PowerShell with its cwd in the tree is
+absent from it, while `Win32_Process` shows that same process without ever
+revealing its cwd. A holder that is both started outside a shell and unnamed in
+its own command line escapes both — the rename probe still proves the lock is
+real, so say that plainly and hand it to the user rather than reporting the tree
+as clean.
