@@ -8,9 +8,8 @@ import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL } from "@/components/section-label";
 import { requireConsole } from "@/lib/members/current";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
-import { activeSeason, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
 import { requestedWeekNumber } from "../week-param";
-import { choosePicksWeekAction } from "./actions";
 import { DeadlineCountdown } from "./deadline-countdown";
 
 const KINDS: Record<PickAudit["kind"], string> = {
@@ -57,16 +56,23 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
       <td className="p-3 tabular-nums">
         {row.tiebreakerGuess === null ? <Badge variant="outline">Not set</Badge> : row.tiebreakerGuess}
       </td>
+      {/* `live` is the one hot orange and belongs to a game in progress; a
+          member who is finished is a win, with the glyph the design notes
+          require so the state does not rest on hue alone. */}
       <td className="p-3">
         {row.complete ? (
-          <Badge className="bg-live text-live-foreground">Done</Badge>
+          <Badge className="bg-win text-win-foreground">✓ Done</Badge>
         ) : (
           <span className="text-sm text-muted-foreground">Missing {missing.join(", ")}</span>
         )}
       </td>
       <td className="p-3 text-right">
+        {/* `asChild` renders a link, which the base layer's 44px rule does not
+            reach; `tap` is how a link asks for it. */}
         <Button asChild variant="outline" size="sm">
-          <Link href={`/console/picks/${row.member.id}?week=${weekNumber}`}>Edit picks</Link>
+          <Link href={`/console/picks/${row.member.id}?week=${weekNumber}`} className="tap">
+            Edit picks
+          </Link>
         </Button>
       </td>
     </tr>
@@ -90,36 +96,16 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1>Who hasn&apos;t picked</h1>
-          <p className="text-sm text-muted-foreground">
-            {season.year} · Week {weekNumber}
-            {report ? (
-              <>
-                {" · "}Deadline <LocalTime at={report.deadline} style="deadline" />
-              </>
-            ) : null}
-          </p>
-        </div>
-        <form action={choosePicksWeekAction} className="flex items-center gap-2 text-sm font-semibold">
-          Week
-          <select
-            name="weekNumber"
-            defaultValue={weekNumber}
-            className="h-11 rounded-md border border-input bg-card px-3 text-sm"
-          >
-            {WEEK_NUMBERS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-                {existing.find((w) => w.weekNumber === n)?.published ? " · published" : ""}
-              </option>
-            ))}
-          </select>
-          <Button type="submit" variant="outline">
-            Go
-          </Button>
-        </form>
+      <div>
+        <h1>Who hasn&apos;t picked</h1>
+        <p className="text-sm text-muted-foreground">
+          Week {weekNumber}
+          {report ? (
+            <>
+              {" · "}Deadline <LocalTime at={report.deadline} style="deadline" />
+            </>
+          ) : null}
+        </p>
       </div>
 
       {!report ? (

@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { freshCfbd } from "@/lib/cfbd";
 import type { ActionState } from "@/lib/console/state";
 import {
@@ -8,16 +7,11 @@ import {
   editResult,
   refreshResults,
   restoreResult,
-  resultsWeekHref,
   voidResult,
 } from "@/lib/results/console-edits";
 import { consoleRoute } from "../context";
 
 type ResultActionState = ActionState;
-
-export async function chooseResultsWeekAction(formData: FormData) {
-  redirect(await resultsWeekHref(consoleRoute(), formData));
-}
 
 /** Pulls the week's scores from CollegeFootballData now, through the cache, whatever the stale gate thinks. */
 export async function refreshResultsAction(_prev: ResultActionState, formData: FormData): Promise<ResultActionState> {

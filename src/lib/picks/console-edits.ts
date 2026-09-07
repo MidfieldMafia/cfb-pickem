@@ -10,7 +10,7 @@ import { consoleEdit, type ConsoleRoute } from "@/lib/console/route";
 import type { ActionState } from "@/lib/console/state";
 import { asCommissioner } from "@/lib/members/authority";
 import { integerField, optionalIntegerField, type Fields } from "@/lib/parse";
-import { openWeek, slateFor } from "@/lib/slate/slate";
+import { slateFor } from "@/lib/slate/slate";
 import { applyEdit } from "./edits";
 import { InvalidPick } from "./picks";
 
@@ -71,9 +71,3 @@ export function editGuess(route: ConsoleRoute, form: FormData): Promise<ActionSt
   });
 }
 
-/** Where "go to week N" lands, so the action above is one `redirect` over this. */
-export async function picksWeekHref(route: ConsoleRoute, form: FormData): Promise<string> {
-  const actor = await route.requireConsole();
-  const week = await openWeek(route.db, actor, id(form, "weekNumber"));
-  return `${PICKS_PATH}?week=${week.weekNumber}`;
-}

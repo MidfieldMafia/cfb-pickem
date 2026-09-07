@@ -9,7 +9,7 @@ import { consoleEdit, type ConsoleRoute } from "@/lib/console/route";
 import type { ActionState } from "@/lib/console/state";
 import { integerField, type Fields } from "@/lib/parse";
 import { plural } from "@/lib/plural";
-import { openWeek, slateFor, voidGame } from "@/lib/slate/slate";
+import { slateFor, voidGame } from "@/lib/slate/slate";
 import { clearOverride, ingestResults, InvalidResult, overrideResult, restoreGame } from "./results";
 
 export const RESULTS_PATH = "/console/results";
@@ -76,9 +76,3 @@ export function restoreResult(route: ConsoleRoute, form: FormData): Promise<Acti
   });
 }
 
-/** Where "go to week N" lands, so the action above is one `redirect` over this. */
-export async function resultsWeekHref(route: ConsoleRoute, form: FormData): Promise<string> {
-  const actor = await route.requireConsole();
-  const week = await openWeek(route.db, actor, num(form, "weekNumber"));
-  return `${RESULTS_PATH}?week=${week.weekNumber}`;
-}
