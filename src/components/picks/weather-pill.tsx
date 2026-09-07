@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Cloud, CloudRain, CloudSun, CloudSunRain, Moon, Sun } from "lucide-react";
-import type { SkyIcon, Weather } from "@/lib/scoring/types";
+import type { SkyIcon, Weather } from "@/lib/detail";
 
 const ICONS: Record<SkyIcon, LucideIcon> = {
   sun: Sun,

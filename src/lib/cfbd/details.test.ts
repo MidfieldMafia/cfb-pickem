@@ -16,7 +16,6 @@ describe("game detail for the pick screen", () => {
     // on 276 yards to 221; Oklahoma beat UTEP 51-0 on 401 yards to 198. The Week 2 AP poll has
     // Oklahoma 10th and Michigan 16th; the line is Oklahoma -1.5; Open-Meteo says 8% at kickoff.
     expect(details.get(OKLAHOMA_AT_MICHIGAN)).toEqual({
-      gameId: "401856679",
       kickoff: "2026-09-12T16:00:00.000Z",
       venue: "Michigan Stadium",
       city: "Ann Arbor, MI",
