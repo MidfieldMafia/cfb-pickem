@@ -128,29 +128,6 @@ export default async function Week() {
         </section>
       )}
 
-      {/* The season screens, until the bottom nav lands with the Live Board. */}
-      <nav className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold">
-        {sheet?.locked && slate ? (
-          <Link
-            href={`/results?week=${slate.week.weekNumber}`}
-            className="tap inline-flex items-center underline underline-offset-4"
-          >
-            Week {slate.week.weekNumber} results
-          </Link>
-        ) : null}
-        <Link href="/leaderboard" className="tap inline-flex items-center underline underline-offset-4">
-          Leaderboard
-        </Link>
-      </nav>
-
-      {member.isCommissioner ? (
-        <Link
-          href="/console/slate"
-          className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
-        >
-          Open the commissioner console
-        </Link>
-      ) : null}
     </main>
   );
 }

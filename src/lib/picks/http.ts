@@ -6,6 +6,7 @@
  */
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
+import type { CfbdClient } from "@/lib/cfbd/types";
 import { integerField } from "@/lib/parse";
 import { publishedSlate, type Slate } from "@/lib/slate/slate";
 import { DeadlinePassed, InvalidPick, PicksHidden } from "./picks";
@@ -26,6 +27,14 @@ export interface PickRoute {
   currentMember: () => Promise<Member | null>;
   /** The wall clock unless given; a test pins it to a moment inside the fixture's Week. */
   now?: () => Date;
+  /**
+   * The feed, for the one route that keeps scores fresh on the way through
+   * (`getWeekState`). A factory rather than a client, for the reason
+   * `WeekOptions.cfbd` is: building the production one reads the environment.
+   * Absent, the route reads the rows as they stand — which is every test that
+   * is not about the feed.
+   */
+  cfbd?: () => CfbdClient;
 }
 
 export function errorResponse(error: unknown): Response {

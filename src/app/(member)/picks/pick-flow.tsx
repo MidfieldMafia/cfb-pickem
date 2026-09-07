@@ -195,7 +195,8 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
+    // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
       <header className="flex items-center gap-1 px-2 pb-1 pt-3">
         <Button asChild variant="ghost" size="icon" aria-label="Review picks">
           <Link href="/picks/review">
