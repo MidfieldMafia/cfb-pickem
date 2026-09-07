@@ -5,14 +5,14 @@
  * route handler.
  */
 import type { GameDetail } from "@/lib/scoring/types";
-import { toGameJson, type GameJson } from "@/lib/slate/json";
+import { toGameView, type GameView } from "@/lib/slate/json";
 import type { PickSheet } from "./picks";
 import type { SheetProgress } from "./progress";
 
-export { teamName } from "@/lib/slate/json";
+export { isVoid, teamName, voidNote } from "@/lib/slate/json";
 
-/** The Game convention every screen shares, plus the detail only the pick screen shows. */
-export interface SheetGameJson extends GameJson {
+/** The Game-and-result pair every screen shares, plus the detail only the pick screen shows. */
+export interface SheetGameJson extends GameView {
   /** Venue, TV, line, win probability, forecast, and each team's form. Null for games added before the snapshot existed. */
   detail: GameDetail | null;
 }
@@ -55,7 +55,7 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     serverNow: sheet.serverNow.toISOString(),
     locked: sheet.locked,
     tiebreakerGameId: sheet.week.tiebreakerGameId,
-    games: sheet.games.map((g) => ({ ...toGameJson(g), detail: g.detail })),
+    games: sheet.games.map((g) => ({ ...toGameView(g), detail: g.detail })),
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
     lockGameId: sheet.lockGameId,
     lockDropped: sheet.lockDropped,

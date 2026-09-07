@@ -8,8 +8,10 @@ import { Pennant } from "@/components/pennant";
 import { requireConsole } from "@/lib/members/current";
 import { InvalidMember } from "@/lib/members/members";
 import { memberSheet } from "@/lib/picks/console";
+import { isVoid, teamName, toSheetJson, voidNote } from "@/lib/picks/json";
 import { MAX_TIEBREAKER_GUESS } from "@/lib/picks/limits";
 import { InvalidPick } from "@/lib/picks/picks";
+import { liveGames } from "@/lib/picks/progress";
 import { safeInteger } from "@/lib/parse";
 import { activeSeason, openWeek, seasonWeeks } from "@/lib/slate/slate";
 import { ActionForm } from "../../action-form";
@@ -51,9 +53,12 @@ export default async function MemberPicks({
     }
     throw error;
   }
-  const { member, sheet } = loaded;
+  const { member } = loaded;
+  // The same wire shape the member's own screens take, so the console cannot
+  // show a Game any differently from the way they see it.
+  const sheet = toSheetJson(loaded.sheet);
   const pickFor = new Map(sheet.picks.map((p) => [p.gameId, p.teamId]));
-  const pickedGames = sheet.games.filter((g) => !g.void && pickFor.has(g.id));
+  const pickedGames = liveGames(sheet.games).filter((view) => pickFor.has(view.game.id));
   const hidden = { memberId: member.id, weekId: week.id };
 
   return (
@@ -78,30 +83,35 @@ export default async function MemberPicks({
       </p>
 
       <ul className="divide-y divide-border rounded-md border border-border bg-card">
-        {sheet.games.map((game) => (
-          <li key={game.id} className={`p-3 ${game.void ? "opacity-60" : ""}`}>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>
-                <LocalTime at={game.kickoff} style="slot" />
-                {game.id === sheet.week.tiebreakerGameId ? " · Tiebreaker Game" : ""}
-                {sheet.lockGameId === game.id ? (sheet.lockDropped ? " · Dropped Lock" : " · Lock of the Week") : ""}
-              </span>
-              {game.void ? <Badge variant="outline">Void{game.voidNote ? `: ${game.voidNote}` : ""}</Badge> : null}
-            </div>
-            {game.void ? (
-              <p className="text-sm">
-                {game.awayTeam} at {game.homeTeam}
-              </p>
-            ) : (
-              <GamePickForm
-                hidden={{ ...hidden, gameId: game.id }}
-                away={{ id: game.awayTeamId, name: game.awayTeam, rank: game.awayRank }}
-                home={{ id: game.homeTeamId, name: game.homeTeam, rank: game.homeRank }}
-                picked={pickFor.get(game.id) ?? null}
-              />
-            )}
-          </li>
-        ))}
+        {sheet.games.map((view) => {
+          const { game } = view;
+          const voided = isVoid(view);
+          const why = voidNote(view);
+          return (
+            <li key={game.id} className={`p-3 ${voided ? "opacity-60" : ""}`}>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  <LocalTime at={game.kickoff} style="slot" />
+                  {game.id === sheet.tiebreakerGameId ? " · Tiebreaker Game" : ""}
+                  {sheet.lockGameId === game.id ? (sheet.lockDropped ? " · Dropped Lock" : " · Lock of the Week") : ""}
+                </span>
+                {voided ? <Badge variant="outline">Void{why ? `: ${why}` : ""}</Badge> : null}
+              </div>
+              {voided ? (
+                <p className="text-sm">
+                  {game.awayTeam} at {game.homeTeam}
+                </p>
+              ) : (
+                <GamePickForm
+                  hidden={{ ...hidden, gameId: game.id }}
+                  away={{ id: game.awayTeamId, name: game.awayTeam, rank: game.awayRank }}
+                  home={{ id: game.homeTeamId, name: game.homeTeam, rank: game.homeRank }}
+                  picked={pickFor.get(game.id) ?? null}
+                />
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       <section className="space-y-3 rounded-md border border-border bg-card p-4">
@@ -114,10 +124,9 @@ export default async function MemberPicks({
             className="h-9 rounded-md border border-input bg-card px-3 text-sm"
           >
             <option value="">No Lock</option>
-            {pickedGames.map((game) => (
+            {pickedGames.map(({ game }) => (
               <option key={game.id} value={game.id}>
-                {pickFor.get(game.id) === game.homeTeamId ? game.homeTeam : game.awayTeam} ({game.awayTeam} at{" "}
-                {game.homeTeam})
+                {teamName(game, pickFor.get(game.id)!)} ({game.awayTeam} at {game.homeTeam})
               </option>
             ))}
           </select>

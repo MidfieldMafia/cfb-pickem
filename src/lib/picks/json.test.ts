@@ -39,21 +39,25 @@ describe("toSheetJson", () => {
   test("games keep slate order and carry the shared Game shape, plus the pick screen's detail", async () => {
     const { json, miami, michigan, texas } = await sheetAt();
 
-    expect(json.games.map((g) => g.id)).toEqual([miami.id, michigan.id, texas.id]);
+    expect(json.games.map((g) => g.game.id)).toEqual([miami.id, michigan.id, texas.id]);
     const [first] = json.games;
-    expect(first).toMatchObject({
+    expect(first.game).toEqual({
       id: miami.id,
       awayTeamId: miami.awayTeamId,
       awayTeam: miami.awayTeam,
+      awayRank: miami.awayRank,
       homeTeamId: miami.homeTeamId,
       homeTeam: miami.homeTeam,
+      homeRank: miami.homeRank,
       kickoff: miami.kickoff.toISOString(),
-      void: false,
-      voidNote: null,
+      spread: miami.spread,
     });
+    // Void is the result's word, not a field of its own on the Game.
+    expect(first.game).not.toHaveProperty("void");
+    expect(first.result).toMatchObject({ status: "pending", label: "Scheduled", shown: null });
     expect("detail" in first).toBe(true);
     // The join key stays on the server: no screen can reach the feed's id.
-    expect(first).not.toHaveProperty("cfbdGameId");
+    expect(first.game).not.toHaveProperty("cfbdGameId");
   });
 
   test("picks, the Lock, and the Guess come through as the member left them", async () => {
@@ -119,9 +123,11 @@ describe("toSheetJson", () => {
 
     expect(json.lockGameId).toBe(michigan.id);
     expect(json.lockDropped).toBe(true);
-    expect(json.games.find((g) => g.id === michigan.id)).toMatchObject({
-      void: true,
-      voidNote: "Lightning; no makeup.",
+    expect(json.games.find((g) => g.game.id === michigan.id)!.result).toMatchObject({
+      status: "void",
+      label: "Void",
+      note: "Lightning; no makeup.",
+      shown: null,
     });
   });
 
@@ -137,7 +143,7 @@ describe("toSheetJson", () => {
 describe("teamName", () => {
   test("names either side of a game by the feed's team id", async () => {
     const { json, michigan } = await sheetAt();
-    const game = json.games.find((g) => g.id === michigan.id)!;
+    const { game } = json.games.find((g) => g.game.id === michigan.id)!;
 
     expect(teamName(game, game.homeTeamId)).toBe(michigan.homeTeam);
     expect(teamName(game, game.awayTeamId)).toBe(michigan.awayTeam);

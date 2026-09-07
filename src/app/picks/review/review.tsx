@@ -23,7 +23,7 @@ import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { Wordmark } from "@/components/wordmark";
 import { put } from "@/lib/picks/client";
 import { formatCountdown, useDeadlineClock } from "@/lib/picks/clock";
-import { teamName, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
+import { isVoid, teamName, voidNote, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
 import { firstOpenGame, liveGames, remainingLabel, sheetProgress } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
@@ -131,9 +131,9 @@ export function Review({ initial }: { initial: SheetJson }) {
     tiebreakerGuess: sheet.tiebreakerGuess,
   });
   const open = progress.liveGames - progress.picksMade;
-  const lockGame = sheet.games.find((g) => g.id === sheet.lockGameId);
+  const lockGame = sheet.games.find((g) => g.game.id === sheet.lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
-  const tiebreakerGame = sheet.games.find((g) => g.id === sheet.tiebreakerGameId);
+  const tiebreakerGame = sheet.games.find((g) => g.game.id === sheet.tiebreakerGameId)?.game;
   const steps = progress.liveGames + 2;
   const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
@@ -183,7 +183,10 @@ export function Review({ initial }: { initial: SheetJson }) {
     if (result.locked) setSheet((s) => ({ ...s, locked: true }));
   };
 
-  const pickRow = (game: SheetGameJson) => {
+  const pickRow = (view: SheetGameJson) => {
+    const { game } = view;
+    const voided = isVoid(view);
+    const why = voidNote(view);
     const pick = pickFor(game.id);
     const body = (
       <>
@@ -196,13 +199,13 @@ export function Review({ initial }: { initial: SheetJson }) {
           <span className="text-xs text-muted-foreground">
             {game.awayTeam} at {game.homeTeam}
             {game.id === sheet.tiebreakerGameId ? " · Tiebreaker" : ""}
-            {game.void ? ` · Void${game.voidNote ? `: ${game.voidNote}` : ""}` : ""}
+            {voided ? ` · Void${why ? `: ${why}` : ""}` : ""}
           </span>
           {pick ? (
             <span className="font-display text-lg leading-[22px]">{teamName(game, pick.teamId)}</span>
           ) : (
             <span className="text-sm font-semibold text-secondary">
-              {game.void ? "Scores zero for everyone" : "No pick yet"}
+              {voided ? "Scores zero for everyone" : "No pick yet"}
             </span>
           )}
         </span>
@@ -211,12 +214,12 @@ export function Review({ initial }: { initial: SheetJson }) {
             <Lock /> Lock
           </Badge>
         ) : null}
-        {locked || game.void ? null : <ChevronRight size={18} className="text-muted-foreground" />}
+        {locked || voided ? null : <ChevronRight size={18} className="text-muted-foreground" />}
       </>
     );
     return (
-      <li key={game.id} className={game.void ? "opacity-60" : ""}>
-        {locked || game.void ? (
+      <li key={game.id} className={voided ? "opacity-60" : ""}>
+        {locked || voided ? (
           <div className="flex min-h-14 items-center gap-2.5 px-3 py-1.5">{body}</div>
         ) : (
           <Link href={`/picks?game=${game.id}`} className="flex min-h-14 items-center gap-2.5 px-3 py-1.5 no-underline">
@@ -281,7 +284,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           detail={open ? `${plural(open, "game")} still open` : `All ${progress.liveGames} picked`}
           action={open ? "Set" : "Change"}
           disabled={locked}
-          onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.id}` : "/picks")}
+          onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.game.id}` : "/picks")}
         />
         <StepRow
           done={progress.lockSet}
@@ -416,7 +419,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             {progress.picksMade === 0 ? (
               <p className="py-3 text-center text-sm text-muted-foreground">Make a pick first, then lock it.</p>
             ) : null}
-            {liveGames(sheet.games).map((game) => {
+            {liveGames(sheet.games).map(({ game }) => {
               const pick = pickFor(game.id);
               if (!pick) return null;
               const on = sheet.lockGameId === game.id;

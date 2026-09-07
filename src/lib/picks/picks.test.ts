@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import type { Member } from "@/db/schema";
-import { addMember, setMemberActive } from "@/lib/members/members";
+import { setMemberActive } from "@/lib/members/members";
 import { restoreGame } from "@/lib/results/results";
 import { openWeek, slateFor, voidGame } from "@/lib/slate/slate";
-import { publishWeek2, THURSDAY } from "@/test/week-2";
+import { joinAt, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import {
   DeadlinePassed,
   pickSheet,
@@ -197,8 +197,8 @@ describe("pick entry", () => {
 
     // The Reveal: at the deadline every member's picks are readable by every member,
     // including a member who entered nothing, but not a deactivated one.
-    const alex = await addMember(db, jonah, { displayName: "Alex" });
-    const gone = await addMember(db, jonah, { displayName: "Gone" });
+    const alex = await joinAt(db, jonah, "Alex", TUESDAY);
+    const gone = await joinAt(db, jonah, "Gone", TUESDAY);
     await setMemberActive(db, jonah, gone.id, false);
     const board = await revealed(grandma, deadline);
     expect(board.map((m) => m.memberId).sort()).toEqual([jonah.id, grandma.id, alex.id].sort());
@@ -220,6 +220,30 @@ describe("pick entry", () => {
       picks: [{ gameId: michigan.id, teamId: michigan.awayTeamId }],
       lockGameId: null,
       tiebreakerGuess: null,
+    });
+  });
+
+  test("the Reveal board is the roster: nobody who joined late, and the deactivated only if they picked", async () => {
+    const { db, jonah, grandma, week, michigan, deadline, revealed } = await setup();
+
+    // Late joins the Monday after the Deadline: there was never a week for
+    // them to miss, and a name with no picks on the board is the bug.
+    const late = await joinAt(db, jonah, "Late", new Date(deadline.getTime() + 3600_000));
+    // Gone picked, then left. Their points happened, so the board still owes them a row.
+    const gone = await joinAt(db, jonah, "Gone", TUESDAY);
+    await savePick(db, gone, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    await setMemberActive(db, jonah, gone.id, false);
+    // Quiet was deactivated without ever picking: nothing of theirs to show.
+    const quiet = await joinAt(db, jonah, "Quiet", TUESDAY);
+    await setMemberActive(db, jonah, quiet.id, false);
+
+    const board = await revealed(grandma, deadline);
+
+    expect(board.map((m) => m.memberId).sort()).toEqual([jonah.id, grandma.id, gone.id].sort());
+    expect(board.find((m) => m.memberId === late.id)).toBeUndefined();
+    expect(board.find((m) => m.memberId === quiet.id)).toBeUndefined();
+    expect(board.find((m) => m.memberId === gone.id)).toMatchObject({
+      picks: [{ gameId: michigan.id, teamId: michigan.homeTeamId }],
     });
   });
 

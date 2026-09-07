@@ -10,9 +10,11 @@ import { cfbd } from "@/lib/cfbd";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { requireConsole } from "@/lib/members/current";
 import { plural } from "@/lib/plural";
-import { toGameJson, toSlateCandidates, type GameJson } from "@/lib/slate/json";
-import { activeSeason, isWeekNumber, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { isVoid, toGameView, toSlateCandidates, voidNote, type GameView } from "@/lib/slate/json";
+import { activeSeason, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
 import { pillClass } from "../pill";
+import { requestedWeekNumber } from "../week-param";
+import { filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
 import {
   addGameAction,
   chooseWeekAction,
@@ -25,20 +27,6 @@ import { openMeteo } from "@/lib/weather/open-meteo";
 import { DeadlineForm } from "./deadline-form";
 import { PublishButton } from "./publish-button";
 
-type Filter = "all" | "ranked" | "sec";
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All FBS" },
-  { key: "ranked", label: "Ranked" },
-  { key: "sec", label: "SEC" },
-];
-
-function matches(c: CandidateGame, filter: Filter, q: string): boolean {
-  if (filter === "ranked" && c.homeRank === null && c.awayRank === null) return false;
-  if (filter === "sec" && c.homeConference !== "SEC" && c.awayConference !== "SEC") return false;
-  if (q && !`${c.awayTeam} ${c.homeTeam}`.toLowerCase().includes(q.toLowerCase())) return false;
-  return true;
-}
-
 export default async function SlateBuilder({
   searchParams,
 }: {
@@ -49,9 +37,8 @@ export default async function SlateBuilder({
   const database = db();
   const season = await activeSeason(database);
   const existing = await seasonWeeks(database, season);
-  const requested = Number(params.week);
-  const weekNumber = isWeekNumber(requested) ? requested : existing.at(-1)?.weekNumber ?? 1;
-  const filter: Filter = FILTERS.some((f) => f.key === params.filter) ? (params.filter as Filter) : "all";
+  const weekNumber = requestedWeekNumber(existing, params.week);
+  const filter = filterParam(params.filter);
   const q = params.q?.trim() ?? "";
 
   // The feed is ten HTTP calls and does not depend on the week row, so it runs alongside it.
@@ -70,12 +57,12 @@ export default async function SlateBuilder({
   ]);
   const candidates = feed.games;
   const feedError = feed.error;
-  const slateGames = slate.games.map(toGameJson);
+  const slateGames = slate.games.map(toGameView);
   const shown = toSlateCandidates(
     candidates.filter((c) => matches(c, filter, q)),
     slate.games,
   );
-  const tiebreaker = slateGames.find((g) => g.id === slate.week.tiebreakerGameId) ?? null;
+  const tiebreaker = slateGames.find((g) => g.game.id === slate.week.tiebreakerGameId)?.game ?? null;
   const filterHref = (f: Filter) => {
     const p = new URLSearchParams({ week: String(weekNumber) });
     if (f !== "all") p.set("filter", f);
@@ -211,8 +198,14 @@ export default async function SlateBuilder({
               )}
             </div>
             <ul className="divide-y divide-border">
-              {slateGames.map((g) => (
-                <SlateRow key={g.id} game={g} weekId={week.id} published={slate.week.published} tiebreaker={g.id === slate.week.tiebreakerGameId} />
+              {slateGames.map((view) => (
+                <SlateRow
+                  key={view.game.id}
+                  view={view}
+                  weekId={week.id}
+                  published={slate.week.published}
+                  tiebreaker={view.game.id === slate.week.tiebreakerGameId}
+                />
               ))}
               {slateGames.length === 0 ? (
                 <li className="p-3 text-sm text-muted-foreground">Add games from the candidates list.</li>
@@ -246,32 +239,35 @@ export default async function SlateBuilder({
 }
 
 function SlateRow({
-  game,
+  view,
   weekId,
   published,
   tiebreaker,
 }: {
-  game: GameJson;
+  view: GameView;
   weekId: number;
   published: boolean;
   tiebreaker: boolean;
 }) {
+  const { game } = view;
+  const voided = isVoid(view);
+  const why = voidNote(view);
   return (
-    <li className={`space-y-2 p-3 ${game.void ? "opacity-60" : ""}`}>
+    <li className={`space-y-2 p-3 ${voided ? "opacity-60" : ""}`}>
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="font-semibold">
             {game.awayTeam} at {game.homeTeam}
-            {game.void ? <Badge variant="outline" className="ml-2">Void</Badge> : null}
+            {voided ? <Badge variant="outline" className="ml-2">Void</Badge> : null}
           </p>
           <p className="text-xs text-muted-foreground">
             <LocalTime at={game.kickoff} />
             {game.spread ? ` · ${game.spread}` : ""}
-            {game.voidNote ? ` · ${game.voidNote}` : ""}
+            {why ? ` · ${why}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-1">
-          {game.void ? null : (
+          {voided ? null : (
             <form action={setTiebreakerAction}>
               <input type="hidden" name="weekId" value={weekId} />
               <input type="hidden" name="gameId" value={game.id} />
@@ -296,7 +292,7 @@ function SlateRow({
           )}
         </div>
       </div>
-      {published && !game.void ? (
+      {published && !voided ? (
         <form action={voidGameAction} className="flex gap-2">
           <input type="hidden" name="gameId" value={game.id} />
           <Input name="note" required maxLength={120} placeholder="Void note (why)" aria-label="Void note" className="h-9" />

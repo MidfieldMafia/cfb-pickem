@@ -17,12 +17,15 @@ export function windowLabel(kickoff: string | Date): string {
 }
 
 /** Groups games by exact kickoff, earliest first, preserving slate order within a window. */
-export function groupByKickoff<T extends { kickoff: string }>(games: T[]): { kickoff: string; games: T[] }[] {
+export function groupByKickoff<T extends { game: { kickoff: string } }>(
+  games: T[],
+): { kickoff: string; games: T[] }[] {
   const groups = new Map<string, T[]>();
-  for (const game of games) {
-    const existing = groups.get(game.kickoff);
-    if (existing) existing.push(game);
-    else groups.set(game.kickoff, [game]);
+  for (const view of games) {
+    const { kickoff } = view.game;
+    const existing = groups.get(kickoff);
+    if (existing) existing.push(view);
+    else groups.set(kickoff, [view]);
   }
   return [...groups.entries()]
     .sort(([a], [b]) => a.localeCompare(b))

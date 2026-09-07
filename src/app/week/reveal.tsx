@@ -5,6 +5,7 @@ import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { TeamLogo } from "@/components/team-logo";
 import type { Reveal, RevealPick, ScoredMember } from "@/lib/results/results";
+import { isVoid } from "@/lib/slate/json";
 
 /** The chip that sums up one side: "✓ 4 picks" once the game is final, "4 picks" before. */
 function SideChip({ picks, outcome }: { picks: RevealPick[]; outcome: RevealPick["outcome"] | null }) {
@@ -100,11 +101,11 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
           const away = row.picks.filter((p) => p.teamId === game.awayTeamId);
           const home = row.picks.filter((p) => p.teamId === game.homeTeamId);
           return (
-            <li key={game.id} className={`space-y-2 ${result.status === "void" ? "opacity-70" : ""}`}>
+            <li key={game.id} className={`space-y-2 ${isVoid(row) ? "opacity-70" : ""}`}>
               <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                 <span>
                   {result.label}
-                  {result.status === "void" && result.note ? ` · ${result.note}` : ""}
+                  {isVoid(row) && result.note ? ` · ${result.note}` : ""}
                 </span>
                 <span>·</span>
                 <LocalTime at={game.kickoff} style="slot" />
@@ -114,7 +115,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
                 <Side
                   team={game.awayTeam}
                   rank={game.awayRank}
-                  score={result.awayScore ?? result.live?.awayScore ?? null}
+                  score={result.shown?.awayScore ?? null}
                   picks={away}
                   members={members}
                   final={final}
@@ -123,7 +124,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
                 <Side
                   team={game.homeTeam}
                   rank={game.homeRank}
-                  score={result.homeScore ?? result.live?.homeScore ?? null}
+                  score={result.shown?.homeScore ?? null}
                   picks={home}
                   members={members}
                   final={final}

@@ -1,13 +1,20 @@
 import type { Week } from "@/db/schema";
-import { isWeekNumber } from "@/lib/slate/slate";
+import { defaultWeekNumber, isWeekNumber } from "@/lib/slate/slate";
 
 /**
- * The week a console page shows: the `?week=` the commissioner asked for
- * when it is a real week number, else the latest published week, else the
- * latest week that exists, else 1.
+ * The `?week=` a commissioner asked for, when it is a real week number, and
+ * undefined when it is missing or nonsense. A seam that opens its own default
+ * Week — `resultsConsole` — takes this and decides the rest itself.
+ */
+export function weekParam(param: string | undefined): number | undefined {
+  const requested = Number(param);
+  return isWeekNumber(requested) ? requested : undefined;
+}
+
+/**
+ * The week a console page shows: the `?week=` the commissioner asked for when
+ * it is a real week number, else the season's default Week.
  */
 export function requestedWeekNumber(existing: Week[], param: string | undefined): number {
-  const requested = Number(param);
-  if (isWeekNumber(requested)) return requested;
-  return existing.filter((w) => w.published).at(-1)?.weekNumber ?? existing.at(-1)?.weekNumber ?? 1;
+  return weekParam(param) ?? defaultWeekNumber(existing);
 }

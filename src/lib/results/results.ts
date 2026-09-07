@@ -12,20 +12,36 @@ import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
+import { plural } from "@/lib/plural";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
 import type * as engine from "@/lib/scoring/types";
-import { toGameJson, type GameJson } from "@/lib/slate/json";
-import { activeSeason, slateFor, slateOrder, type Slate } from "@/lib/slate/slate";
+import {
+  toGameView,
+  toMemberJson,
+  toWeekJson,
+  type GameView,
+  type MemberJson,
+  type WeekJson,
+} from "@/lib/slate/json";
+import {
+  activeSeason,
+  defaultWeekNumber,
+  openWeek,
+  seasonWeeks,
+  slateFor,
+  slateOrder,
+  type Slate,
+} from "@/lib/slate/slate";
+import { logResultChange } from "./audit";
 import {
   describeResult,
   effectiveResult,
-  logResultChange,
   type GameResult,
   type ResultLabel,
   type ResultSource,
   type ResultStatus,
   type Score,
-} from "./audit";
+} from "./result";
 import { toEngineMember, toEngineWeek } from "./engine";
 
 export { describeResult, effectiveResult };
@@ -43,6 +59,31 @@ export const MAX_SCORE = 250;
 /** True for a pending, non-void game whose kickoff was long enough ago that a final should exist by now. */
 export function needsReview(game: Game, now: Date): boolean {
   return effectiveResult(game).status === "pending" && game.kickoff.getTime() + REVIEW_AFTER_MS <= now.getTime();
+}
+
+/**
+ * What the results console says when games are overdue for a commissioner's
+ * attention. The count, the hours `REVIEW_AFTER_MS` works out to, and the
+ * sentence's subject with its plural already decided — a screen should not be
+ * dividing by 3,600,000 or choosing between "is" and "are" in JSX.
+ *
+ * Null when nothing is overdue, so the notice is one condition on the screen.
+ */
+export interface ReviewNotice {
+  count: number;
+  hours: number;
+  /** "One game is", "3 games are". */
+  subject: string;
+}
+
+export function reviewNotice(slateGames: Game[], now: Date): ReviewNotice | null {
+  const count = slateGames.filter((game) => needsReview(game, now)).length;
+  if (count === 0) return null;
+  return {
+    count,
+    hours: REVIEW_AFTER_MS / 3600_000,
+    subject: count === 1 ? "One game is" : `${plural(count, "game")} are`,
+  };
 }
 
 async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> {
@@ -249,16 +290,72 @@ export async function resultAuditsFor(db: Db, actor: Member, weekId: number): Pr
     .orderBy(asc(resultAudits.changedAt), asc(resultAudits.id));
 }
 
+/** A row of the override table: the shared pair, plus the one thing only this table asks. */
+export interface ResultRow extends GameView {
+  /** Pending long enough after kickoff that a commissioner should look. */
+  review: boolean;
+}
+
+/** Everything `/console/results` renders, from one composition. */
+export interface ResultsConsole {
+  year: number;
+  /** The Week on screen, created if this is the first visit to it. */
+  week: WeekJson;
+  /** Every Week the season has, in order, for the chooser. */
+  weeks: WeekJson[];
+  /** The slate in kickoff order. Empty when the Week has no games. */
+  rows: ResultRow[];
+  /** Null when nothing is overdue. */
+  review: ReviewNotice | null;
+  /** When member traffic last pulled the feed for this Week. Null before the first pull. */
+  feedCheckedAt: Date | null;
+  log: ResultAudit[];
+}
+
+/**
+ * The results console's Week, composed once. `currentWeek` did this for the
+ * member screens; the console never got it, and its page was five sequential
+ * reads with the row adapter hand-rolled underneath them — `toGameJson`
+ * applied and bypassed on adjacent lines, over a shape `revealFrom` already
+ * built. This is that shape, for the one screen that was still building it.
+ *
+ * `weekNumber` is the `?week=` a commissioner asked for; leave it undefined
+ * and the console opens on `defaultWeekNumber`, the same Week the chooser
+ * would have landed on.
+ */
+export async function resultsConsole(
+  db: Db,
+  actor: Member,
+  weekNumber: number | undefined,
+  now: Date = new Date(),
+): Promise<ResultsConsole> {
+  requireCommissioner(actor);
+  const season = await activeSeason(db);
+  const existing = await seasonWeeks(db, season);
+  const week = await openWeek(db, actor, weekNumber ?? defaultWeekNumber(existing), season);
+  // The chooser lists the Week just opened too, which `seasonWeeks` predates.
+  const weeks = existing.some((w) => w.id === week.id) ? existing : [...existing, week];
+  const [slate, log] = await Promise.all([slateFor(db, week.id), resultAuditsFor(db, actor, week.id)]);
+  return {
+    year: season.year,
+    week: toWeekJson(slate.week),
+    weeks: weeks.map(toWeekJson),
+    rows: slate.games.map((game) => ({ ...toGameView(game), review: needsReview(game, now) })),
+    review: reviewNotice(slate.games, now),
+    feedCheckedAt: slate.week.scoreboardFetchedAt,
+    log,
+  };
+}
+
 /**
  * A member as every graded screen names them. The Reveal, the Weekly Score
  * and the Leaderboard all carry the whole chip rather than an id, so a screen
  * renders a row without holding a second map to look the name up in.
+ *
+ * `MemberJson` under another name: the graded screens and the plain ones show
+ * the same chip, and two shapes for it would drift.
  */
-export interface ScoredMember {
-  id: number;
-  displayName: string;
-  avatarId: string | null;
-}
+export type ScoredMember = MemberJson;
 
 export interface RevealPick {
   memberId: number;
@@ -274,17 +371,16 @@ export interface RevealPick {
   lockDropped: boolean;
 }
 
-export interface RevealGame {
-  game: GameJson;
-  result: GameResult;
+/** The Game, its result, and who took which side: the shared pair plus the board's own column. */
+export interface RevealGame extends GameView {
   /** One entry per member who picked this game, in member order. */
   picks: RevealPick[];
 }
 
 /** Everyone's picks per game after the Deadline, graded by the scoring engine where the game is final. */
 export interface Reveal {
-  week: Week;
-  season: Season;
+  week: WeekJson;
+  year: number;
   members: ScoredMember[];
   games: RevealGame[];
   serverNow: Date;
@@ -363,13 +459,9 @@ export interface SeasonResult {
   serverNow: Date;
 }
 
-function scoredMember(member: Member): ScoredMember {
-  return { id: member.id, displayName: member.displayName, avatarId: member.avatarId };
-}
-
 /** The member rows a graded read joins against, keyed the way the engine names them. */
 function memberIndex(rows: Member[]): Map<string, ScoredMember> {
-  return new Map(rows.map((m) => [String(m.id), scoredMember(m)]));
+  return new Map(rows.map((m) => [String(m.id), toMemberJson(m)]));
 }
 
 function toWeeklyScore(score: engine.WeeklyScore, byId: Map<string, ScoredMember>): WeeklyScore {
@@ -408,9 +500,9 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now
     };
   });
   return {
-    week: slate.week,
-    season: slate.season,
-    members: rows.map(scoredMember),
+    week: toWeekJson(slate.week),
+    year: slate.season.year,
+    members: rows.map(toMemberJson),
     games: slate.games.map((game) => {
       const gameId = String(game.id);
       const picks: RevealPick[] = [];
@@ -425,7 +517,7 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now
           lockDropped: lock !== null && lock.gameId === gameId && lock.dropped,
         });
       }
-      return { game: toGameJson(game), result: effectiveResult(game), picks };
+      return { ...toGameView(game), picks };
     }),
     serverNow: now,
   };
@@ -491,10 +583,12 @@ export async function seasonResult(db: Db, _actor: Member, now: Date = new Date(
   const weekGames = played.map((week) => ({ week, games: slateOrder(gamesOf.get(week.id)!) }));
 
   const picksOf = await seasonPicks(db, weekGames, now);
-  const picked = new Set(weekGames.flatMap(({ week }) => picksOf.get(week.id)!.map((m) => m.memberId)));
-  // Active members plus anyone deactivated who still has picks on the board: their points happened.
+  // `seasonPicks` has already applied `roster` a Week at a time, so this is not
+  // a fourth answer to who is on the board — it is the season-wide superset of
+  // those boards, read in one trip so the grading has a name for every id.
+  const onABoard = new Set(weekGames.flatMap(({ week }) => picksOf.get(week.id)!.map((m) => m.memberId)));
   const rows = await db.query.members.findMany({
-    where: picked.size ? or(eq(members.active, true), inArray(members.id, [...picked])) : eq(members.active, true),
+    where: onABoard.size ? or(eq(members.active, true), inArray(members.id, [...onABoard])) : eq(members.active, true),
     orderBy: [asc(members.joinedAt), asc(members.id)],
   });
 

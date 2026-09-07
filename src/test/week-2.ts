@@ -3,6 +3,7 @@
  * game ids live here rather than in each test file, so re-recording the fixture
  * is one edit and the names cannot drift from the games they point at.
  */
+import { eq } from "drizzle-orm";
 import { members, seasons } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
@@ -47,17 +48,39 @@ export interface Week2Fixture {
   candidate: (cfbdGameId: number) => CandidateGame;
 }
 
+/**
+ * Adds a member who joined at a given instant. Who is on a Week's board turns
+ * on `joinedAt` against the Deadline, so a test that puts someone either side
+ * of it says which side here rather than leaning on the wall clock.
+ */
+export async function joinAt(db: Db, commissioner: Member, displayName: string, at: Date): Promise<Member> {
+  const member = await addMember(db, commissioner, { displayName });
+  const [pinned] = await db.update(members).set({ joinedAt: at }).where(eq(members.id, member.id)).returning();
+  return pinned;
+}
+
 /** A fresh database with the 2026 season, two members, and the Week 2 candidates. */
 export async function seedWeek2(): Promise<Week2Fixture> {
   const db = await createTestDb();
   await db.insert(seasons).values({ year: 2026, rules: { pointsPerCorrectPick: 10, lockMultiplier: 2 }, active: true });
   const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
   const grandma = await addMember(db, jonah, { displayName: "Grandma" });
+  // Pinned before any Week 2 Deadline, so no suite depends on the wall clock
+  // for whether these two are on the board.
+  await db.update(members).set({ joinedAt: TUESDAY });
   const cfbd = recordedCfbd("2026-week-2");
   const rain = recordedOpenMeteo("2026-week-2");
   const candidates = await weekCandidates(cfbd, WEEK_2, rain);
   const candidate = (cfbdGameId: number) => candidates.find((c) => c.cfbdGameId === cfbdGameId)!;
-  return { db, jonah, grandma, cfbd, rain, candidates, candidate };
+  return {
+    db,
+    jonah: { ...jonah, joinedAt: TUESDAY },
+    grandma: { ...grandma, joinedAt: TUESDAY },
+    cfbd,
+    rain,
+    candidates,
+    candidate,
+  };
 }
 
 export interface PublishedWeek2 extends Week2Fixture {
@@ -79,8 +102,6 @@ export interface PublishedWeek2 extends Week2Fixture {
 export async function publishWeek2(): Promise<PublishedWeek2> {
   const seeded = await seedWeek2();
   const { db, jonah, candidate } = seeded;
-  // Pin the join dates before the Deadline so no test depends on the wall clock.
-  await db.update(members).set({ joinedAt: TUESDAY });
   const week = await openWeek(db, jonah, WEEK_2.week);
   const miami = await addGame(db, jonah, week.id, candidate(FAMU_AT_MIAMI));
   const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));

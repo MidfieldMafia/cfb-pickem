@@ -9,7 +9,7 @@ import { describe, expect, test } from "vitest";
 import { groupByKickoff, windowLabel } from "./kickoff-groups";
 
 /** The games in a group, by the ids given here, so the assertions read as order. */
-const game = (id: number, kickoff: string) => ({ id, kickoff });
+const game = (id: number, kickoff: string) => ({ game: { id, kickoff } });
 
 describe("windowLabel", () => {
   test("names the three windows college football uses, in Eastern time", () => {
@@ -57,7 +57,7 @@ describe("groupByKickoff", () => {
 
     const [group] = groupByKickoff([game(7, at), game(2, at), game(5, at)]);
 
-    expect(group.games.map((g) => g.id)).toEqual([7, 2, 5]);
+    expect(group.games.map((g) => g.game.id)).toEqual([7, 2, 5]);
   });
 
   test("kickoffs a minute apart are separate groups, not one window", () => {
@@ -69,7 +69,7 @@ describe("groupByKickoff", () => {
   test("sorts across a day boundary, which string order gets right for ISO", () => {
     const groups = groupByKickoff([game(1, "2026-09-13T00:00:00.000Z"), game(2, "2026-09-12T23:30:00.000Z")]);
 
-    expect(groups.map((g) => g.games[0].id)).toEqual([2, 1]);
+    expect(groups.map((g) => g.games[0].game.id)).toEqual([2, 1]);
   });
 
   test("an empty slate is no groups", () => {

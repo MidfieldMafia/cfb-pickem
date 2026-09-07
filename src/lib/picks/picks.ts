@@ -9,7 +9,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
   games,
   locks,
-  members,
   picks,
   tiebreakerGuesses,
   weeks,
@@ -19,6 +18,8 @@ import {
   type Week,
 } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { roster } from "@/lib/members/roster";
+import { toGameView } from "@/lib/slate/json";
 import { deadlinePassed, type Slate } from "@/lib/slate/slate";
 import { tiebreakerGuessError } from "./limits";
 import { sheetProgress, type SheetProgress } from "./progress";
@@ -130,7 +131,7 @@ export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date =
     lockDropped,
     tiebreakerGuess,
     progress: sheetProgress({
-      games: slate.games,
+      games: slate.games.map(toGameView),
       picked: (gameId) => byGame.has(gameId),
       lockGameId,
       lockDropped,
@@ -157,51 +158,67 @@ type GuessTable = typeof tiebreakerGuesses.$inferSelect;
  * One Week's rows folded into a `MemberPicks` per member, picks in slate
  * order. Shared by `weekPicks` and `seasonPicks` so one Week and a whole
  * season cannot disagree about what a blank week looks like.
+ *
+ * The board is `roster`'s to decide and is passed in whole: a row belonging to
+ * nobody on it is dropped here rather than quietly conjuring a member, which
+ * is how a deactivated member used to reach the Reveal — as a side effect of a
+ * failed map lookup rather than as anyone's decision.
  */
 function groupPicks(
-  activeMembers: Pick<Member, "id">[],
+  board: Pick<Member, "id">[],
   gameIds: number[],
   rows: PickTable[],
   lockRows: LockTable[],
   guessRows: GuessTable[],
 ): MemberPicks[] {
   const order = new Map(gameIds.map((id, i) => [id, i]));
-  // Every active member is on the board, picks or none: a blank week is a row, not an absence.
+  // Every member on the board gets a row, picks or none: a blank week is a row, not an absence.
   const byMember = new Map<number, MemberPicks>(
-    activeMembers.map((m) => [m.id, { memberId: m.id, picks: [], lockGameId: null, tiebreakerGuess: null }]),
+    board.map((m) => [m.id, { memberId: m.id, picks: [], lockGameId: null, tiebreakerGuess: null }]),
   );
-  const entry = (memberId: number) => {
-    let m = byMember.get(memberId);
-    if (!m) {
-      m = { memberId, picks: [], lockGameId: null, tiebreakerGuess: null };
-      byMember.set(memberId, m);
-    }
-    return m;
-  };
-  for (const r of rows) entry(r.memberId).picks.push({ gameId: r.gameId, teamId: r.teamId, updatedAt: r.updatedAt });
-  for (const l of lockRows) entry(l.memberId).lockGameId = l.gameId;
-  for (const g of guessRows) entry(g.memberId).tiebreakerGuess = g.guess;
+  for (const r of rows) byMember.get(r.memberId)?.picks.push({ gameId: r.gameId, teamId: r.teamId, updatedAt: r.updatedAt });
+  for (const l of lockRows) {
+    const m = byMember.get(l.memberId);
+    if (m) m.lockGameId = l.gameId;
+  }
+  for (const g of guessRows) {
+    const m = byMember.get(g.memberId);
+    if (m) m.tiebreakerGuess = g.guess;
+  }
   for (const m of byMember.values()) m.picks.sort((a, b) => order.get(a.gameId)! - order.get(b.gameId)!);
   return [...byMember.values()].sort((a, b) => a.memberId - b.memberId);
+}
+
+/** The members with a Pick, a Lock, or a Guess on a Week: `roster`'s widening for anyone since deactivated. */
+function pickers(rows: PickTable[], lockRows: LockTable[], guessRows: GuessTable[]): Set<number> {
+  const ids = new Set<number>();
+  for (const r of rows) ids.add(r.memberId);
+  for (const l of lockRows) ids.add(l.memberId);
+  for (const g of guessRows) ids.add(g.memberId);
+  return ids;
 }
 
 /**
  * The Reveal: every member's picks for a Week. Refused before the Deadline
  * for everyone, commissioners included; a member's own picks come from
  * `pickSheet`, which is never hidden from them.
+ *
+ * Who is on the board is `roster`'s answer, the same one the console table and
+ * the scoring path read.
  */
 export async function weekPicks(db: Db, _actor: Member, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
   if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
   if (!deadlinePassed(slate, now)) throw new PicksHidden();
   const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
-  const [activeMembers, rows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany({ where: eq(members.active, true) }),
+  const [everyone, rows, lockRows, guessRows] = await Promise.all([
+    db.query.members.findMany(),
     gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
   ]);
-  return groupPicks(activeMembers, gameIds, rows, lockRows, guessRows);
+  const board = roster(everyone, slate.week, pickers(rows, lockRows, guessRows));
+  return groupPicks(board, gameIds, rows, lockRows, guessRows);
 }
 
 /** A Week with its Games in slate order: what `seasonPicks` needs to fold one Week's rows. */
@@ -228,8 +245,8 @@ export async function seasonPicks(
   }
   const weekIds = weekGames.map((w) => w.week.id);
   const gameIds = weekGames.flatMap((w) => w.games.map((g) => g.id));
-  const [activeMembers, rows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany({ where: eq(members.active, true) }),
+  const [everyone, rows, lockRows, guessRows] = await Promise.all([
+    db.query.members.findMany(),
     gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
     weekIds.length ? db.query.locks.findMany({ where: inArray(locks.weekId, weekIds) }) : [],
     weekIds.length ? db.query.tiebreakerGuesses.findMany({ where: inArray(tiebreakerGuesses.weekId, weekIds) }) : [],
@@ -243,16 +260,24 @@ export async function seasonPicks(
   for (const l of lockRows) locksOf.get(l.weekId)?.push(l);
   for (const g of guessRows) guessesOf.get(g.weekId)?.push(g);
   return new Map(
-    weekGames.map(({ week, games: slateGames }) => [
-      week.id,
-      groupPicks(
-        activeMembers,
-        slateGames.map((g) => g.id),
-        pickRows.get(week.id)!,
-        locksOf.get(week.id)!,
-        guessesOf.get(week.id)!,
-      ),
-    ]),
+    weekGames.map(({ week, games: slateGames }) => {
+      const weekPickRows = pickRows.get(week.id)!;
+      const weekLocks = locksOf.get(week.id)!;
+      const weekGuesses = guessesOf.get(week.id)!;
+      // The board is decided a Week at a time: joining in Week 4 keeps a member
+      // off Weeks 1 to 3, exactly as the engine's `playedWeek` already had it.
+      const board = roster(everyone, week, pickers(weekPickRows, weekLocks, weekGuesses));
+      return [
+        week.id,
+        groupPicks(
+          board,
+          slateGames.map((g) => g.id),
+          weekPickRows,
+          weekLocks,
+          weekGuesses,
+        ),
+      ];
+    }),
   );
 }
 

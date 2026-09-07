@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { addMember, NotCommissioner, setMemberActive } from "@/lib/members/members";
+import { NotCommissioner, setMemberActive } from "@/lib/members/members";
 import { addGame, openWeek, publishSlate, setTiebreaker, slateFor, voidGame } from "@/lib/slate/slate";
-import { FAMU_AT_MIAMI, OHIO_STATE_AT_TEXAS, OKLAHOMA_AT_MICHIGAN, seedWeek2 } from "@/test/week-2";
+import { FAMU_AT_MIAMI, joinAt, OHIO_STATE_AT_TEXAS, OKLAHOMA_AT_MICHIGAN, seedWeek2 } from "@/test/week-2";
 import {
   memberSheet,
   overrideLock,
@@ -122,8 +122,8 @@ describe("commissioner pick override", () => {
 describe("who hasn't picked", () => {
   test("lists every active member's progress, counts the ready ones, and drafts the reminder in Central time", async () => {
     const { db, jonah, grandma, week, michigan, texas, florida, deadline } = await setup();
-    const em = await addMember(db, jonah, { displayName: "Cousin Em" });
-    const gone = await addMember(db, jonah, { displayName: "Gone" });
+    const em = await joinAt(db, jonah, "Cousin Em", TUESDAY);
+    const gone = await joinAt(db, jonah, "Gone", TUESDAY);
     await setMemberActive(db, jonah, gone.id, false);
 
     // Jonah is done: every pick, a Lock, and a guess.
@@ -163,6 +163,24 @@ describe("who hasn't picked", () => {
     );
 
     await expect(whoHasntPicked(db, grandma, week.id, THURSDAY)).rejects.toBeInstanceOf(NotCommissioner);
+  });
+
+  test("a member who joins after the Deadline is not chased, and neither is one who picked and left", async () => {
+    const { db, jonah, grandma, week, michigan, deadline } = await setup();
+    const late = await joinAt(db, jonah, "Late", new Date(deadline.getTime() + 3600_000));
+    // The Reveal keeps this one, because their points happened; the reminder
+    // does not, because there is nobody left to remind.
+    const gone = await joinAt(db, jonah, "Gone", TUESDAY);
+    await savePick(db, gone, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    await setMemberActive(db, jonah, gone.id, false);
+
+    const report = await whoHasntPicked(db, jonah, week.id, THURSDAY);
+
+    expect(report.members.map((m) => m.member.displayName)).toEqual(["Jonah", "Grandma"]);
+    expect(report.members.map((m) => m.member.id)).not.toContain(late.id);
+    expect(reminderText(report)).not.toMatch(/Late|Gone/);
+    // Grandma is on both, so the two answers agree about everyone they share.
+    expect(report.members.map((m) => m.member.id)).toContain(grandma.id);
   });
 
   test("the reminder says so when everyone is in", async () => {

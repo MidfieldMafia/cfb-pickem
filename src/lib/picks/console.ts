@@ -7,7 +7,7 @@
  * server clock, injected so tests can sit on either side of the Deadline.
  */
 import "server-only";
-import { and, asc, eq, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   games,
   locks,
@@ -24,7 +24,9 @@ import {
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
 import { InvalidMember, requireCommissioner } from "@/lib/members/members";
+import { roster } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
+import { toGameView } from "@/lib/slate/json";
 import { slateFor } from "@/lib/slate/slate";
 import { tiebreakerGuessError } from "./limits";
 import { InvalidPick, pickSheet, type PickSheet } from "./picks";
@@ -83,9 +85,10 @@ export interface PickReport {
 }
 
 /**
- * Who hasn't picked. Deactivated members are not chased, and neither is
- * anyone who joined after the Deadline: the scoring engine sits them out of
- * the week, so there is nothing for them to finish.
+ * Who hasn't picked. The table is `roster`'s answer, the same one the Reveal
+ * and the scoring path read: nobody who joined after the Deadline, because the
+ * week was never theirs to finish. No picks are passed, so the deactivated
+ * stay off it — there is nothing to chase them about.
  */
 export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<PickReport> {
   requireCommissioner(actor);
@@ -95,15 +98,14 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
   const live = slate.games.filter((g) => !g.void);
   const liveIds = live.map((g) => g.id);
   const byGame = new Map(slate.games.map((g) => [g.id, g]));
-  const [roster, pickRows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany({
-      where: and(eq(members.active, true), lt(members.joinedAt, deadline)),
-      orderBy: [asc(members.joinedAt), asc(members.id)],
-    }),
+  const views = slate.games.map(toGameView);
+  const [everyone, pickRows, lockRows, guessRows] = await Promise.all([
+    db.query.members.findMany({ orderBy: [asc(members.joinedAt), asc(members.id)] }),
     liveIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, liveIds) }) : [],
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
   ]);
+  const board = roster(everyone, slate.week);
   const pickedBy = new Map<number, Map<number, number>>();
   for (const p of pickRows) {
     let own = pickedBy.get(p.memberId);
@@ -112,7 +114,7 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
   }
   const lockOf = new Map(lockRows.map((l) => [l.memberId, l.gameId]));
   const guessOf = new Map(guessRows.map((g) => [g.memberId, g.guess]));
-  const progress = roster.map((member): MemberProgress => {
+  const progress = board.map((member): MemberProgress => {
     const own = pickedBy.get(member.id) ?? new Map<number, number>();
     const lockGameId = lockOf.get(member.id) ?? null;
     const lockGame = lockGameId === null ? undefined : byGame.get(lockGameId);
@@ -120,7 +122,7 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
     const lockedTeam = lockGame && !lockDropped ? own.get(lockGame.id) : undefined;
     const tiebreakerGuess = guessOf.get(member.id) ?? null;
     const progress = sheetProgress({
-      games: slate.games,
+      games: views,
       picked: (gameId) => own.has(gameId),
       lockGameId,
       lockDropped,
@@ -334,8 +336,8 @@ export async function pickAuditsFor(db: Db, actor: Member, weekId: number): Prom
     where: eq(pickAudits.weekId, weekId),
     orderBy: [asc(pickAudits.changedAt), asc(pickAudits.id)],
   });
-  const roster = await db.query.members.findMany();
-  const nameOf = new Map(roster.map((m) => [m.id, m.displayName]));
+  const everyone = await db.query.members.findMany();
+  const nameOf = new Map(everyone.map((m) => [m.id, m.displayName]));
   return rows.map((r) => ({
     id: r.id,
     memberId: r.memberId,
