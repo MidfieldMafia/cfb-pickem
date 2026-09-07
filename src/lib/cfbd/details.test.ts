@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { noRainChance, recordedOpenMeteo } from "@/lib/weather/open-meteo";
+import { noRainChance } from "@/lib/weather/open-meteo";
+import { recordedOpenMeteo } from "@/lib/weather/recorded";
 import { weekDetails } from "./details";
 import { recordedCfbd } from "./recorded";
 

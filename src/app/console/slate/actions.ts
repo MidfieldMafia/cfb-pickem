@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { cfbd } from "@/lib/cfbd";
 import { requireConsole } from "@/lib/members/current";
-import { safeInteger } from "@/lib/parse";
+import { integerField } from "@/lib/parse";
 import { openMeteo } from "@/lib/weather/open-meteo";
 import {
   addGameFromFeed,
@@ -26,11 +26,8 @@ export interface SlateActionState {
 
 const SLATE_PATH = "/console/slate";
 
-function num(formData: FormData, name: string): number {
-  const value = safeInteger(formData.get(name));
-  if (value === null) throw new InvalidSlate(`Missing ${name}.`);
-  return value;
-}
+const num = (formData: FormData, name: string) =>
+  integerField(formData, name, (message) => new InvalidSlate(message));
 
 /** Wraps a slate edit so validation failures come back as a message, not a crash. */
 async function attempt(work: () => Promise<string | undefined>): Promise<SlateActionState> {

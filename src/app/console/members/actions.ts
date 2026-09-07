@@ -6,18 +6,15 @@ import { db } from "@/db";
 import { SESSION_COOKIE } from "@/lib/members/cookie";
 import { requireConsole } from "@/lib/members/current";
 import { addMember, InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
-import { safeInteger } from "@/lib/parse";
+import { integerField } from "@/lib/parse";
 
 export interface AddMemberState {
   error?: string;
   added?: string;
 }
 
-function memberId(formData: FormData): number {
-  const id = safeInteger(formData.get("memberId"));
-  if (id === null) throw new InvalidMember("Missing memberId.");
-  return id;
-}
+const memberId = (formData: FormData) =>
+  integerField(formData, "memberId", (message) => new InvalidMember(message));
 
 export async function addMemberAction(_prev: AddMemberState, formData: FormData): Promise<AddMemberState> {
   const actor = await requireConsole();

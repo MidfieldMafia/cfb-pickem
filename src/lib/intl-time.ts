@@ -6,7 +6,13 @@
  */
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
-export function formatterFor(options: Intl.DateTimeFormatOptions, key: string): Intl.DateTimeFormat {
+/**
+ * Keyed on the options themselves. A hand-passed key had to be edited in step
+ * with them, and a caller that added a field without changing its key would
+ * silently keep the old formatter.
+ */
+export function formatterFor(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = JSON.stringify(options);
   let formatter = formatters.get(key);
   if (!formatter) {
     formatter = new Intl.DateTimeFormat("en-US", options);
@@ -22,7 +28,7 @@ export function formatterFor(options: Intl.DateTimeFormatOptions, key: string): 
 export function hourIn(at: Date | string, timeZone: string): number {
   const date = typeof at === "string" ? new Date(at) : at;
   try {
-    return Number(formatterFor({ hour: "numeric", hourCycle: "h23", timeZone }, `hour|${timeZone}`).format(date));
+    return Number(formatterFor({ hour: "numeric", hourCycle: "h23", timeZone }).format(date));
   } catch {
     return date.getUTCHours();
   }

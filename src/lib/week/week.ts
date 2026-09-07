@@ -23,8 +23,6 @@ import { deadlinePassed, publishedSlate, type Slate } from "@/lib/slate/slate";
 export interface WeekContext {
   slate: Slate;
   sheet: PickSheet;
-  /** True once the server clock has reached the Deadline: picks are closed and the Reveal is open. */
-  locked: boolean;
   /**
    * The Week graded: the Reveal board, everyone's Weekly Score, and the
    * Weekly Win. Null before the Deadline, and null after it for the screens
@@ -80,5 +78,5 @@ export async function currentWeek(
     pickSheet(db, actor, slate, now),
     locked && options.graded ? weekResult(db, actor, slate, now) : null,
   ]);
-  return { slate, sheet, locked, result };
+  return { slate, sheet, result };
 }

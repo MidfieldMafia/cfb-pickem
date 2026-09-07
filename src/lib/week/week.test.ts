@@ -46,7 +46,6 @@ describe("the current week", () => {
     const current = (await currentWeek(db, grandma, THURSDAY))!;
     expect(current.slate.week.id).toBe(week.id);
     expect(current.slate.games).toHaveLength(3);
-    expect(current.locked).toBe(false);
     expect(current.sheet.locked).toBe(false);
     expect(current.sheet.picks.map((p) => p.gameId)).toEqual([michigan.id]);
     expect(current.sheet.lockGameId).toBe(michigan.id);
@@ -65,7 +64,7 @@ describe("the current week", () => {
 
     // Locked, but nobody asked: grading costs a read per member, so it stays undone.
     const quiet = (await currentWeek(db, grandma, SUNDAY))!;
-    expect(quiet.locked).toBe(true);
+    expect(quiet.sheet.locked).toBe(true);
     expect(quiet.result).toBeNull();
 
     const shown = (await currentWeek(db, grandma, SUNDAY, { graded: true }))!;
@@ -112,7 +111,7 @@ describe("the current week", () => {
     await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
 
     const current = (await currentWeek(db, grandma, SUNDAY, { graded: true, cfbd: angryFeed }))!;
-    expect(current.locked).toBe(true);
+    expect(current.sheet.locked).toBe(true);
     expect(current.result!.reveal.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("pending");
   });
 });

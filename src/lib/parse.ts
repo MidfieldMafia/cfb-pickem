@@ -14,3 +14,14 @@ export function safeInteger(value: unknown): number | null {
   if (typeof n !== "number" || !Number.isSafeInteger(n) || n < 0 || n > MAX_INT) return null;
   return n;
 }
+
+/**
+ * A required integer form field. Every server action wrapped `safeInteger` in
+ * this same throw, down to the sentence, so the only thing left to each is
+ * which refusal it raises.
+ */
+export function integerField(formData: FormData, name: string, fail: (message: string) => Error): number {
+  const value = safeInteger(formData.get(name));
+  if (value === null) throw fail(`Missing ${name}.`);
+  return value;
+}

@@ -149,8 +149,8 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
 
 /** "Thu, Sep 10 at 7:00 PM Central": the group chat is in one time zone, so the reminder names it. */
 export function deadlineInCentral(deadline: Date): string {
-  const date = formatterFor({ weekday: "short", month: "short", day: "numeric", timeZone: "America/Chicago" }, "central-day");
-  const time = formatterFor({ hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" }, "central-time");
+  const date = formatterFor({ weekday: "short", month: "short", day: "numeric", timeZone: "America/Chicago" });
+  const time = formatterFor({ hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" });
   return `${date.format(deadline)} at ${time.format(deadline)} Central`;
 }
 
