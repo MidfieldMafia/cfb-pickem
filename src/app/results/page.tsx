@@ -42,7 +42,13 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
           <p className="text-muted-foreground">
             Results land here once a week&rsquo;s deadline has passed and the games are under way.
           </p>
-          <Link href="/leaderboard" className="text-sm font-semibold underline underline-offset-4">
+          {/* `tap` for the 44px floor, as on the link at the foot of a week that
+              has results: this branch renders only before the first Deadline,
+              which is why a 19px target sat here unmeasured. */}
+          <Link
+            href="/leaderboard"
+            className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
+          >
             See the leaderboard
           </Link>
         </section>

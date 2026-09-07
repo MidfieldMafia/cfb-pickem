@@ -54,6 +54,7 @@ function leaderboardRow(member: Member, entries: SeasonScore[]): LeaderboardRow 
   return {
     memberId: member.id,
     rank: 0,
+    previousRank: null,
     totalPoints,
     correct: entries.reduce((sum, e) => sum + e.score.correct, 0),
     incorrect: entries.reduce((sum, e) => sum + e.score.incorrect, 0),
@@ -83,11 +84,34 @@ function rank(rows: LeaderboardRow[]): LeaderboardRow[] {
   return ranked;
 }
 
+/** The Leaderboard over a set of graded weeks: one row per member, ranked. */
+function standings(results: WeekResult[], members: Member[]): LeaderboardRow[] {
+  const byMember = seasonScores(results);
+  return rank(members.map((member) => leaderboardRow(member, byMember.get(member.id) ?? [])));
+}
+
 export function scoreSeason(rules: Rules, weeks: Week[], members: Member[]): SeasonResult {
   const results = weeks.filter((w) => w.published).map((week) => scoreWeek(rules, week, members));
-  const byMember = seasonScores(results);
-  const leaderboard = rank(
-    members.map((member) => leaderboardRow(member, byMember.get(member.id) ?? [])),
+  const leaderboard = standings(results, members);
+
+  // Movement is against the board as it stood before the latest week — ranked
+  // over the same graded weeks rather than by scoring any of them a second
+  // time. The latest week is the highest week number rather than the last one
+  // passed in, so nothing here leans on read order.
+  const latest = Math.max(...results.map((r) => r.weekNumber));
+  const before = standings(
+    results.filter((r) => r.weekNumber !== latest),
+    members,
   );
-  return { weeks: results, leaderboard };
+  const previous = new Map(before.map((row) => [row.memberId, row]));
+
+  return {
+    weeks: results,
+    leaderboard: leaderboard.map((row) => {
+      // A member with no weeks on the earlier board held no place on it, which
+      // is a different thing from having held last place.
+      const was = previous.get(row.memberId)!;
+      return { ...row, previousRank: was.weeksPlayed === 0 ? null : was.rank };
+    }),
+  };
 }

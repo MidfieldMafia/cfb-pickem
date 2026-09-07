@@ -510,6 +510,8 @@ describe("the season leaderboard", () => {
       {
         member: { id: grandma.id, displayName: "Grandma", avatarId: null },
         rank: 1,
+        // Week 2 is the only played week, so there is no earlier board to have moved from.
+        previousRank: null,
         totalPoints: 30,
         correct: 2,
         incorrect: 0,
@@ -521,6 +523,7 @@ describe("the season leaderboard", () => {
       {
         member: { id: jonah.id, displayName: "Jonah", avatarId: null },
         rank: 2,
+        previousRank: null,
         totalPoints: 10,
         correct: 1,
         incorrect: 2,

@@ -204,6 +204,39 @@ export function averageLabel(averagePoints: number | null): string {
   return String(Math.round(averagePoints * 10) / 10);
 }
 
+/** Which way a member's rank moved, and by how far. */
+export interface Movement {
+  direction: "up" | "down";
+  /** Places moved. Always positive; `direction` carries the sign. */
+  places: number;
+  /** "Up 2 places, from 3rd" — what the glyph says out loud to a screen reader. */
+  label: string;
+}
+
+/**
+ * How a member's rank moved since the board before the latest played week.
+ *
+ * Null for a member who did not move, which is the same answer as for one who
+ * has no earlier place to have moved from — the season's first week, or a
+ * member whose first counted week is the latest one. The Leaderboard shows
+ * movers only, so all three read as a row with nothing to say about movement,
+ * and only the engine's `previousRank` distinguishes them.
+ *
+ * A lower rank number is a better place, so a fall in the number is a climb up
+ * the board: the arithmetic is inverted here rather than in JSX.
+ */
+export function movement(row: Pick<LeaderboardRow, "rank" | "previousRank">): Movement | null {
+  const { rank, previousRank } = row;
+  if (previousRank === null || previousRank === rank) return null;
+  const up = rank < previousRank;
+  const places = Math.abs(previousRank - rank);
+  return {
+    direction: up ? "up" : "down",
+    places,
+    label: `${up ? "Up" : "Down"} ${plural(places, "place")}, from ${ordinal(previousRank)}`,
+  };
+}
+
 /**
  * How much of the season a member has actually played, said out loud only
  * when it is less than the season has run: "2 of 3 weeks".

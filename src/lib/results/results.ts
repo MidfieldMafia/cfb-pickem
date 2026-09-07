@@ -436,6 +436,8 @@ export interface LeaderboardRow {
   member: ScoredMember;
   /** 1-based; members that tie on every season tiebreak share a rank. */
   rank: number;
+  /** The place this rank moved from; null when there is no earlier board to have held one on. */
+  previousRank: number | null;
   totalPoints: number;
   correct: number;
   incorrect: number;

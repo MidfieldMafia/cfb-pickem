@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Trophy } from "lucide-react";
+import { ArrowDown, ArrowUp, Trophy } from "lucide-react";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,38 @@ import { requireMember } from "@/lib/members/current";
 import { seasonResult } from "@/lib/results/results";
 import {
   averageLabel,
+  movement,
   record,
   weeklyWinSentence,
   weeksPlayedNote,
+  type Movement,
 } from "@/lib/results/summary";
+
+/**
+ * How far a member's rank moved since the board before the latest played week,
+ * beside the rank it moved to. Movers only: a member who held their place
+ * shows nothing, so the eye goes straight to what changed.
+ *
+ * Uncoloured on purpose. `win` is a light moss meant as a fill behind dark
+ * text — as ink on paper it measures 3.3:1, under the 4.5:1 every pair in the
+ * design notes is audited to — and colouring only the fall would say a drop
+ * matters and a climb does not. The arrow carries the direction, which is the
+ * rule the notes already set for win and loss: never hue alone.
+ *
+ * An arrow rather than a chevron because at 12px a chevron is just its head,
+ * and beside a digit it reads as the caret "^" rather than as movement. The
+ * stem is what makes the direction unmistakable at this size.
+ */
+function Move({ move }: { move: Movement }) {
+  const Arrow = move.direction === "up" ? ArrowUp : ArrowDown;
+  return (
+    <span className="inline-flex items-center text-xs font-bold text-foreground">
+      <Arrow size={12} strokeWidth={3} aria-hidden />
+      {move.places}
+      <span className="sr-only">{move.label}</span>
+    </span>
+  );
+}
 
 /**
  * The season standings, computed on every read: nothing here is stored, so a
@@ -36,6 +64,12 @@ export default async function Leaderboard() {
   const season = await seasonResult(db(), new Date());
   const played = season.weeks;
   const latest = played[played.length - 1];
+  // Null when nobody played the latest Week, which is not the same as an empty
+  // sentence: interpolating it straight into the footnote puts "null" on the board.
+  const won = latest ? weeklyWinSentence(latest.weeklyWin, latest.complete) : null;
+  // Movement is measured against the board before the latest played Week. With
+  // one week played there is no such board, so there are no arrows to explain.
+  const movedSince = played.length > 1 ? played[played.length - 2].week.weekNumber : null;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
@@ -54,7 +88,12 @@ export default async function Leaderboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-8">#</TableHead>
+                {/* Holds a two-digit rank beside a two-digit move. `pr-0` because
+                    the movement is the last thing in the cell and the Member
+                    column's own left padding already separates them: with the
+                    cell's default `p-2` the widest case put the table 1px over
+                    its container at 390px and gave the board a scrollbar. */}
+                <TableHead className="w-12 pr-0">#</TableHead>
                 <TableHead>Member</TableHead>
                 <TableHead className="text-right">Pts</TableHead>
                 <TableHead className="text-right">W–L</TableHead>
@@ -66,9 +105,15 @@ export default async function Leaderboard() {
               {season.leaderboard.map((row) => {
                 const you = row.member.id === member.id;
                 const weeks = weeksPlayedNote(row, played.length);
+                const move = movement(row);
                 return (
                   <TableRow key={row.member.id} className={you ? "bg-muted" : undefined}>
-                    <TableCell className="text-muted-foreground tabular-nums">{row.rank}</TableCell>
+                    <TableCell className="pr-0 text-muted-foreground tabular-nums">
+                      <span className="flex items-center gap-0.5">
+                        {row.rank}
+                        {move ? <Move move={move} /> : null}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-2">
                         <Pennant avatarId={row.member.avatarId} size={28} />
@@ -101,7 +146,8 @@ export default async function Leaderboard() {
         </div>
         <p className="pt-3 text-sm text-muted-foreground">
           Ties break by Weekly Wins, then by Tiebreaker Guess closeness.
-          {latest ? ` ${weeklyWinSentence(latest.weeklyWin, latest.complete)}.` : ""}
+          {won ? ` ${won}.` : ""}
+          {movedSince ? ` Arrows are places moved since Week ${movedSince}.` : ""}
         </p>
       </section>
 
