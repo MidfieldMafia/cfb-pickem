@@ -12,6 +12,6 @@
  * Deadline has not passed yet counts as a played week with zero points,
  * so pass it only once the Deadline is behind the server clock.
  */
-export { scoreWeek, playedWeek } from "./score-week";
+export { scoreWeek } from "./score-week";
 export { scoreSeason } from "./score-season";
 export type * from "./types";

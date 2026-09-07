@@ -11,9 +11,8 @@
  * with no Tiebreaker Guess, a points tie broken by the Tiebreaker Guess,
  * and a member who joined days before the Deadline.
  */
-import type { Game, GameDetail, GameId, Member, Rules, TeamDetail, TeamId, Week } from "../types";
-
-export const rules2026: Rules = { pointsPerCorrectPick: 10, lockMultiplier: 2 };
+import type { Game, GameDetail, GameId, Member, TeamDetail, TeamId, Week } from "../types";
+import { finalGame } from "./build";
 
 export const members: Member[] = [
   { id: "jonah", joinedAt: "2026-08-01T00:00:00Z" },
@@ -23,21 +22,17 @@ export const members: Member[] = [
   { id: "cousin-em", joinedAt: "2026-09-04T18:30:00Z" },
 ];
 
-function final(id: string, homeTeam: string, awayTeam: string, homeScore: number, awayScore: number): Game {
-  return { id, homeTeam, awayTeam, homeScore, awayScore, status: "final", void: false };
-}
-
 // Winners: Georgia, Texas, Alabama, Oklahoma, Notre Dame, Tennessee, Oregon, Penn State, Ole Miss. Game 10 is Void.
 const games: Game[] = [
-  final("g1", "Georgia", "Clemson", 34, 21),
-  final("g2", "Ohio State", "Texas", 17, 24),
-  final("g3", "Alabama", "Florida State", 42, 10),
-  final("g4", "LSU", "Oklahoma", 27, 31),
-  final("g5", "Michigan", "Notre Dame", 20, 23),
-  final("g6", "Tennessee", "Auburn", 38, 35), // Tiebreaker Game, combined 73
-  final("g7", "Oregon", "Washington", 45, 14),
-  final("g8", "Penn State", "USC", 28, 24),
-  final("g9", "Ole Miss", "Kentucky", 31, 13),
+  finalGame("g1", "Georgia", "Clemson", 34, 21),
+  finalGame("g2", "Ohio State", "Texas", 17, 24),
+  finalGame("g3", "Alabama", "Florida State", 42, 10),
+  finalGame("g4", "LSU", "Oklahoma", 27, 31),
+  finalGame("g5", "Michigan", "Notre Dame", 20, 23),
+  finalGame("g6", "Tennessee", "Auburn", 38, 35), // Tiebreaker Game, combined 73
+  finalGame("g7", "Oregon", "Washington", 45, 14),
+  finalGame("g8", "Penn State", "USC", 28, 24),
+  finalGame("g9", "Ole Miss", "Kentucky", 31, 13),
   { id: "g10", homeTeam: "Iowa State", awayTeam: "Kansas State", homeScore: null, awayScore: null, status: "scheduled", void: true },
 ];
 

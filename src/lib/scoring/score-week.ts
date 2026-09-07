@@ -1,8 +1,9 @@
 import type {
   Game,
-  Lock,
+  GameId,
   LockResult,
   Member,
+  MemberId,
   PickResult,
   Rules,
   TeamId,
@@ -12,18 +13,24 @@ import type {
   WeeklyWin,
 } from "./types";
 
-function winnerOf(game: Game): TeamId | null {
+/** Both final scores, or null when the game has not finished with a score on each side. */
+function finalScores(game: Game): { home: number; away: number } | null {
   if (game.status !== "final" || game.homeScore === null || game.awayScore === null) return null;
-  if (game.homeScore > game.awayScore) return game.homeTeam;
-  if (game.awayScore > game.homeScore) return game.awayTeam;
+  return { home: game.homeScore, away: game.awayScore };
+}
+
+function winnerOf(game: Game): TeamId | null {
+  const scores = finalScores(game);
+  if (scores === null) return null;
+  if (scores.home > scores.away) return game.homeTeam;
+  if (scores.away > scores.home) return game.awayTeam;
   return null;
 }
 
 function combinedFinalScore(game: Game | undefined): number | null {
-  if (!game || game.void || game.status !== "final" || game.homeScore === null || game.awayScore === null) {
-    return null;
-  }
-  return game.homeScore + game.awayScore;
+  if (!game || game.void) return null;
+  const scores = finalScores(game);
+  return scores === null ? null : scores.home + scores.away;
 }
 
 function scorePick(rules: Rules, game: Game, team: TeamId | undefined, locked: boolean): PickResult {
@@ -50,15 +57,15 @@ function scorePick(rules: Rules, game: Game, team: TeamId | undefined, locked: b
  */
 interface WeekIndex {
   picks: Map<string, TeamId>;
-  locks: Map<string, Lock>;
-  guesses: Map<string, number>;
-  voidGameIds: Set<string>;
+  locks: Map<MemberId, GameId>;
+  guesses: Map<MemberId, number>;
+  voidGameIds: Set<GameId>;
 }
 
 function indexWeek(week: Week): WeekIndex {
   return {
     picks: new Map(week.picks.map((p) => [`${p.memberId}:${p.gameId}`, p.team])),
-    locks: new Map(week.locks.map((l) => [l.memberId, l])),
+    locks: new Map(week.locks.map((l) => [l.memberId, l.gameId])),
     guesses: new Map(week.tiebreakerGuesses.map((t) => [t.memberId, t.guess])),
     voidGameIds: new Set(week.games.filter((g) => g.void).map((g) => g.id)),
   };
@@ -71,14 +78,15 @@ function scoreMember(
   member: Member,
   tiebreakerTotal: number | null,
 ): WeeklyScore {
-  const lock = index.locks.get(member.id);
+  const lockGameId = index.locks.get(member.id);
   const picks: PickResult[] = week.games.map((game) => {
     const team = index.picks.get(`${member.id}:${game.id}`);
-    return scorePick(rules, game, team, lock?.gameId === game.id);
+    return scorePick(rules, game, team, lockGameId === game.id);
   });
-  const lockResult: LockResult | null = lock
-    ? { gameId: lock.gameId, dropped: index.voidGameIds.has(lock.gameId) }
-    : null;
+  const lockResult: LockResult | null =
+    lockGameId === undefined
+      ? null
+      : { gameId: lockGameId, dropped: index.voidGameIds.has(lockGameId) };
   const tiebreakerGuess = index.guesses.get(member.id) ?? null;
   const tiebreakerError = tiebreakerTotal === null ? null : Math.abs((tiebreakerGuess ?? 0) - tiebreakerTotal);
   return {
@@ -119,7 +127,7 @@ function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
 }
 
 /** A member played a week when its Deadline fell after they joined. */
-export function playedWeek(member: Member, week: Week): boolean {
+function playedWeek(member: Member, week: Week): boolean {
   return Date.parse(member.joinedAt) < Date.parse(week.deadline);
 }
 

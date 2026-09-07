@@ -1,36 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { scoreWeek } from "./score-week";
-import type { Game, Member, Rules, Week } from "./types";
-
-const rules: Rules = { pointsPerCorrectPick: 10, lockMultiplier: 2 };
+import { finalGame, rules2026, week } from "./fixtures/build";
+import type { Game, Member } from "./types";
 
 const members: Member[] = [
   { id: "jonah", joinedAt: "2026-08-01T00:00:00Z" },
   { id: "alex", joinedAt: "2026-08-01T00:00:00Z" },
 ];
 
-function finalGame(id: string, home: string, away: string, homeScore: number, awayScore: number): Game {
-  return { id, homeTeam: home, awayTeam: away, homeScore, awayScore, status: "final", void: false };
-}
-
-function week(overrides: Partial<Week>): Week {
-  return {
-    weekNumber: 1,
-    deadline: "2026-09-05T16:00:00Z",
-    published: true,
-    tiebreakerGameId: null,
-    games: [],
-    picks: [],
-    locks: [],
-    tiebreakerGuesses: [],
-    ...overrides,
-  };
-}
-
 describe("scoreWeek", () => {
   it("awards 10 points per correct pick and 0 for an incorrect pick", () => {
     const result = scoreWeek(
-      rules,
+      rules2026,
       week({
         games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
         picks: [
@@ -51,7 +32,7 @@ describe("scoreWeek", () => {
 
   it("scores unpicked games as 0 without blocking the member", () => {
     const result = scoreWeek(
-      rules,
+      rules2026,
       week({
         games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
         picks: [{ memberId: "alex", gameId: "g2", team: "Texas" }],
@@ -68,7 +49,7 @@ describe("scoreWeek", () => {
 
   it("scores a correct Lock of the Week at 20 and an incorrect Lock at 0", () => {
     const result = scoreWeek(
-      rules,
+      rules2026,
       week({
         games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
         picks: [
@@ -98,7 +79,7 @@ describe("scoreWeek", () => {
   it("scores a Void game as 0 for everyone and drops a Lock placed on it", () => {
     const voided: Game = { ...finalGame("g1", "Georgia", "Clemson", 31, 17), void: true };
     const result = scoreWeek(
-      rules,
+      rules2026,
       week({
         games: [voided, finalGame("g2", "Ohio State", "Texas", 14, 24)],
         picks: [
@@ -126,7 +107,7 @@ describe("scoreWeek", () => {
     const live: Game = { id: "g1", homeTeam: "Georgia", awayTeam: "Clemson", homeScore: 14, awayScore: 3, status: "in_progress", void: false };
     const upcoming: Game = { id: "g2", homeTeam: "Ohio State", awayTeam: "Texas", homeScore: null, awayScore: null, status: "scheduled", void: false };
     const result = scoreWeek(
-      rules,
+      rules2026,
       week({
         games: [live, upcoming, finalGame("g3", "Alabama", "LSU", 21, 28)],
         picks: [
@@ -149,7 +130,7 @@ describe("scoreWeek", () => {
 
   it("marks a week complete when every non-void game is final", () => {
     const voided: Game = { id: "g1", homeTeam: "Georgia", awayTeam: "Clemson", homeScore: null, awayScore: null, status: "scheduled", void: true };
-    const result = scoreWeek(rules, week({ games: [voided, finalGame("g2", "Ohio State", "Texas", 14, 24)] }), members);
+    const result = scoreWeek(rules2026, week({ games: [voided, finalGame("g2", "Ohio State", "Texas", 14, 24)] }), members);
     expect(result.complete).toBe(true);
   });
 
@@ -158,7 +139,7 @@ describe("scoreWeek", () => {
 
     it("goes to the highest score and reports each member's tiebreaker error", () => {
       const result = scoreWeek(
-        rules,
+        rules2026,
         week({
           games,
           tiebreakerGameId: "g2",
@@ -194,7 +175,7 @@ describe("scoreWeek", () => {
 
     it("breaks a points tie by the smallest absolute Tiebreaker Guess error", () => {
       const result = scoreWeek(
-        rules,
+        rules2026,
         week({
           games,
           tiebreakerGameId: "g2",
@@ -213,7 +194,7 @@ describe("scoreWeek", () => {
 
     it("treats a missing Tiebreaker Guess as a guess of 0", () => {
       const result = scoreWeek(
-        rules,
+        rules2026,
         week({
           games,
           tiebreakerGameId: "g2",
@@ -231,7 +212,7 @@ describe("scoreWeek", () => {
 
     it("is shared when scores and tiebreaker errors both tie", () => {
       const result = scoreWeek(
-        rules,
+        rules2026,
         week({
           games,
           tiebreakerGameId: "g2",
@@ -249,7 +230,7 @@ describe("scoreWeek", () => {
 
     it("is shared when the Tiebreaker Game has no final score yet", () => {
       const result = scoreWeek(
-        rules,
+        rules2026,
         week({
           games,
           tiebreakerGameId: null,
@@ -262,14 +243,14 @@ describe("scoreWeek", () => {
     });
 
     it("is null when nobody played the week", () => {
-      expect(scoreWeek(rules, week({ games }), []).weeklyWin).toBeNull();
+      expect(scoreWeek(rules2026, week({ games }), []).weeklyWin).toBeNull();
     });
   });
 
   it("leaves out members who joined after the Deadline", () => {
     const lateJoiner: Member = { id: "grandma", joinedAt: "2026-09-06T00:00:00Z" };
     const result = scoreWeek(
-      rules,
+      rules2026,
       week({
         deadline: "2026-09-05T16:00:00Z",
         games: [finalGame("g1", "Georgia", "Clemson", 31, 17)],

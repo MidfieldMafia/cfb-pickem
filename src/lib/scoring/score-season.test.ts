@@ -1,24 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scoreSeason } from "./score-season";
-import type { Game, Member, Rules, Week } from "./types";
-
-const rules: Rules = { pointsPerCorrectPick: 10, lockMultiplier: 2 };
-
-function finalGame(id: string, home: string, away: string, homeScore: number, awayScore: number): Game {
-  return { id, homeTeam: home, awayTeam: away, homeScore, awayScore, status: "final", void: false };
-}
-
-function week(overrides: Partial<Week> & Pick<Week, "weekNumber" | "deadline">): Week {
-  return {
-    published: true,
-    tiebreakerGameId: null,
-    games: [],
-    picks: [],
-    locks: [],
-    tiebreakerGuesses: [],
-    ...overrides,
-  };
-}
+import { finalGame, rules2026, week } from "./fixtures/build";
+import type { Game, Member } from "./types";
 
 const members: Member[] = [
   { id: "jonah", joinedAt: "2026-08-01T00:00:00Z" },
@@ -54,7 +37,7 @@ describe("scoreSeason", () => {
       locks: [{ memberId: "grandma", gameId: "w2g2" }],
     });
 
-    const { leaderboard } = scoreSeason(rules, [week1, week2], members);
+    const { leaderboard } = scoreSeason(rules2026, [week1, week2], members);
 
     const row = (id: string) => leaderboard.find((r) => r.memberId === id)!;
     expect(row("jonah")).toMatchObject({ totalPoints: 30, correct: 3, incorrect: 1, weeksPlayed: 2, averagePoints: 15 });
@@ -87,7 +70,7 @@ describe("scoreSeason", () => {
       tiebreakerGuesses: [{ memberId: "jonah", guess: 60 }],
     });
 
-    const { leaderboard } = scoreSeason(rules, [week1, week2], members.slice(0, 2));
+    const { leaderboard } = scoreSeason(rules2026, [week1, week2], members.slice(0, 2));
 
     const row = (id: string) => leaderboard.find((r) => r.memberId === id)!;
     // Week 1 total is 48: Jonah is 2 off, Alex is 4 off. Week 2 is still live so it counts for nothing here.
@@ -141,7 +124,7 @@ describe("scoreSeason", () => {
       ],
     });
 
-    const { leaderboard } = scoreSeason(rules, [week1, week2], four);
+    const { leaderboard } = scoreSeason(rules2026, [week1, week2], four);
 
     // Everyone has 10 points. Wins: a 1, b 0, c 1, d 1. Errors: a 0, b 8, c 10, d 10.
     expect(leaderboard.map((r) => [r.memberId, r.rank])).toEqual([
@@ -167,7 +150,7 @@ describe("scoreSeason", () => {
       picks: [{ memberId: "alex", gameId: "w2g1", team: "Alabama" }],
     });
 
-    const { weeks, leaderboard } = scoreSeason(rules, [published, draft], members.slice(0, 2));
+    const { weeks, leaderboard } = scoreSeason(rules2026, [published, draft], members.slice(0, 2));
 
     expect(weeks.map((w) => w.weekNumber)).toEqual([1]);
     expect(leaderboard.find((r) => r.memberId === "alex")).toMatchObject({ totalPoints: 0, weeksPlayed: 1, averagePoints: 0 });
