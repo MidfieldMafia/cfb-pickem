@@ -13,12 +13,12 @@
 import { describe, expect, test } from "vitest";
 import type { Game, Member, Week } from "@/db/schema";
 import type { MemberPicks } from "@/lib/picks/picks";
+import { rules2026 } from "@/lib/scoring/fixtures/build";
 import { scoreWeek } from "@/lib/scoring";
 import { toEngineGame, toEngineMember, toEngineWeek } from "./engine";
 
 const KICKOFF = new Date("2026-09-12T16:00:00Z");
 const DEADLINE = new Date("2026-09-11T00:00:00Z");
-const RULES = { pointsPerCorrectPick: 10, lockMultiplier: 2 };
 
 /** Oklahoma at Michigan, scheduled and unplayed. Tests override only what they are about. */
 function game(overrides: Partial<Game> = {}): Game {
@@ -188,8 +188,8 @@ describe("the bridge under the engine", () => {
     const feed = game({ status: "final", homeScore: 27, awayScore: 24 });
     const corrected = game({ ...feed, overrideHomeScore: 24, overrideAwayScore: 27 });
 
-    const asFed = scoreWeek(RULES, toEngineWeek(week(), [feed], picked), graders);
-    const asCorrected = scoreWeek(RULES, toEngineWeek(week(), [corrected], picked), graders);
+    const asFed = scoreWeek(rules2026, toEngineWeek(week(), [feed], picked), graders);
+    const asCorrected = scoreWeek(rules2026, toEngineWeek(week(), [corrected], picked), graders);
 
     // Michigan picked and Locked: 20 on the feed's score, nothing once the commissioner flips it.
     expect(asFed.scores[0]).toMatchObject({ points: 20, correct: 1, incorrect: 0 });
@@ -199,7 +199,7 @@ describe("the bridge under the engine", () => {
   test("a Void drops the Lock sitting on it and leaves the week incomplete for nobody", () => {
     const voided = game({ status: "final", homeScore: 27, awayScore: 24, void: true, voidNote: "Postponed" });
 
-    const result = scoreWeek(RULES, toEngineWeek(week(), [voided], picked), graders);
+    const result = scoreWeek(rules2026, toEngineWeek(week(), [voided], picked), graders);
 
     expect(result.scores[0]).toMatchObject({ points: 0, lock: { gameId: "7", dropped: true } });
     expect(result.scores[0].picks[0].outcome).toBe("void");

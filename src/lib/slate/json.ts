@@ -146,7 +146,11 @@ export function toSlateCandidates(candidates: CandidateGame[], slateGames: Game[
   });
 }
 
-/** The display name of a team in a game, by CollegeFootballData team id. */
-export function teamName(game: GameJson, teamId: number): string {
+/**
+ * The display name of a team in a game, by CollegeFootballData team id. Takes
+ * only the three fields it reads, so a database `Game` row satisfies it as
+ * well as a `GameJson` and the server side needs no second copy.
+ */
+export function teamName(game: Pick<GameJson, "homeTeamId" | "homeTeam" | "awayTeam">, teamId: number): string {
   return teamId === game.homeTeamId ? game.homeTeam : game.awayTeam;
 }

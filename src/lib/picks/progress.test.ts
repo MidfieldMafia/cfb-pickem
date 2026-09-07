@@ -29,7 +29,7 @@ function countFor(pickedIds: number[], over: Over = {}): SheetProgress {
 
 describe("what is left before the deadline", () => {
   test("a Void game is off the count, and a pick on one does not fill it", () => {
-    expect(countFor([])).toEqual({ liveGames: 2, picksMade: 0, lockSet: false, guessSet: false, remaining: 3 });
+    expect(countFor([])).toEqual({ liveGames: 2, picksMade: 0, lockSet: false, guessSet: false, lockOpen: true, remaining: 3 });
     // A pick left over from before the Void still exists; it just stops counting.
     expect(countFor([2])).toMatchObject({ liveGames: 2, picksMade: 0, remaining: 3 });
     expect(countFor([1, 3])).toMatchObject({ picksMade: 2, remaining: 2 });
@@ -43,7 +43,7 @@ describe("what is left before the deadline", () => {
 
   test("every pick but no Lock has one thing left", () => {
     const progress = countFor([1, 3], { tiebreakerGuess: 52 });
-    expect(progress).toEqual({ liveGames: 2, picksMade: 2, lockSet: false, guessSet: true, remaining: 1 });
+    expect(progress).toEqual({ liveGames: 2, picksMade: 2, lockSet: false, guessSet: true, lockOpen: true, remaining: 1 });
     expect(remainingLabel(progress, 2, false)).toBe("1 thing left before the deadline");
   });
 
@@ -66,7 +66,7 @@ describe("what is left before the deadline", () => {
       lockDropped: false,
       tiebreakerGuess: 52,
     });
-    expect(progress).toEqual({ liveGames: 0, picksMade: 0, lockSet: false, guessSet: true, remaining: 0 });
+    expect(progress).toEqual({ liveGames: 0, picksMade: 0, lockSet: false, guessSet: true, lockOpen: false, remaining: 0 });
   });
 
   test("the label reads the same wherever it is shown", () => {

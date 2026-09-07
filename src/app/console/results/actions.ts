@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { cfbd } from "@/lib/cfbd";
 import { requireConsole } from "@/lib/members/current";
-import { safeInteger } from "@/lib/parse";
+import { integerField } from "@/lib/parse";
 import { plural } from "@/lib/plural";
 import {
   clearOverride,
@@ -21,11 +21,8 @@ type ResultActionState = ActionState;
 
 const RESULTS_PATH = "/console/results";
 
-function num(formData: FormData, name: string): number {
-  const value = safeInteger(formData.get(name));
-  if (value === null) throw new InvalidResult(`Missing ${name}.`);
-  return value;
-}
+const num = (formData: FormData, name: string) =>
+  integerField(formData, name, (message) => new InvalidResult(message));
 
 /** Wraps a result edit so validation failures come back as a message, not a crash. */
 async function attempt(work: () => Promise<string | undefined>): Promise<ResultActionState> {

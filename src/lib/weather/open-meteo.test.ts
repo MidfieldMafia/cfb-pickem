@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { httpOpenMeteo, recordedOpenMeteo } from "./open-meteo";
+import { httpOpenMeteo } from "./open-meteo";
+import { recordedOpenMeteo } from "./recorded";
 
 const MICHIGAN_STADIUM = { latitude: 42.2658365, longitude: -83.7486956 };
 const HARD_ROCK = { latitude: 25.958, longitude: -80.2389 };

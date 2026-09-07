@@ -5,6 +5,7 @@ import { cache } from "react";
 import { db } from "@/db";
 import type { Member } from "@/db/schema";
 import { getSession } from "./auth";
+import { isCommissioner } from "./members";
 import { SESSION_COOKIE } from "./cookie";
 
 /**
@@ -28,6 +29,6 @@ export async function requireMember(): Promise<Member> {
 /** For console pages and actions: the console does not exist for non-commissioners. */
 export async function requireConsole(): Promise<Member> {
   const member = await requireMember();
-  if (!member.isCommissioner) notFound();
+  if (!isCommissioner(member)) notFound();
   return member;
 }

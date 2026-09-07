@@ -10,6 +10,8 @@ export interface Avatar {
 /** The fixed set of pennants a member chooses from. Members never upload photos. */
 export const avatars: readonly Avatar[] = avatarList;
 
+const byId = new Map(avatars.map((a) => [a.id, a]));
+
 export function findAvatar(id: string | null | undefined): Avatar | undefined {
-  return avatars.find((a) => a.id === id);
+  return byId.get(id ?? "");
 }

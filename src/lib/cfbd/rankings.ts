@@ -13,7 +13,7 @@ export function rankLookup(pollWeeks: CfbdPollWeek[], week: number): Map<number,
     for (const name of POLL_PREFERENCE) {
       const poll = pollWeek.polls.find((p) => p.poll === name);
       if (poll) {
-        return new Map(poll.ranks.filter((r) => r.rank !== null).map((r) => [r.teamId, r.rank as number]));
+        return new Map(poll.ranks.flatMap((r) => (r.rank === null ? [] : [[r.teamId, r.rank] as const])));
       }
     }
   }

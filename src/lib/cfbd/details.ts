@@ -61,7 +61,7 @@ function bookLines(betting: CfbdBettingGame[]): Map<number, string> {
  * feed: 1 clear, 2 fair, 3 cloudy, 7 light rain, 8 rain, 18 heavy rain shower,
  * 25 thunderstorm; 0 with no text means unknown, so the chance of rain decides.
  */
-export function skyIcon(code: number | null, rainChance: number | null, night: boolean): SkyIcon {
+function skyIcon(code: number | null, rainChance: number | null, night: boolean): SkyIcon {
   switch (code) {
     case 1:
       return night ? "moon" : "sun";
@@ -75,10 +75,12 @@ export function skyIcon(code: number | null, rainChance: number | null, night: b
     case 18:
     case 25:
       return "cloud-rain";
-    default:
-      if (rainChance !== null && rainChance >= 50) return "cloud-rain";
-      if (rainChance !== null && rainChance >= 20) return "cloud-sun-rain";
+    default: {
+      const chance = rainChance ?? 0;
+      if (chance >= 50) return "cloud-rain";
+      if (chance >= 20) return "cloud-sun-rain";
       return night ? "moon" : "cloud-sun";
+    }
   }
 }
 
@@ -112,6 +114,31 @@ function spreadText(
   return `${favorite} -${Math.abs(modelSpread)}`;
 }
 
+function venueOf(game: CfbdGame, venueById: Map<number, CfbdVenue>): CfbdVenue | undefined {
+  return game.venueId === null ? undefined : venueById.get(game.venueId);
+}
+
+/**
+ * One Open-Meteo call for the whole week: every locatable venue at its kickoff
+ * hour. `flatMap` drops the games with no usable venue and keeps the narrowing,
+ * so the coordinates need no assertion downstream.
+ */
+async function rainChances(
+  games: CfbdGame[],
+  venueById: Map<number, CfbdVenue>,
+  rain: RainChanceSource,
+): Promise<Map<number, number | null>> {
+  const located = games.flatMap((game) => {
+    const venue = venueOf(game, venueById);
+    if (!venue || venue.latitude === null || venue.longitude === null) return [];
+    return [{ gameId: game.id, latitude: venue.latitude, longitude: venue.longitude, at: new Date(game.startDate) }];
+  });
+  const chances = await rain.rainChance(
+    located.map(({ latitude, longitude, at }) => ({ latitude, longitude, at })),
+  );
+  return new Map(located.map(({ gameId }, i) => [gameId, chances[i] ?? null]));
+}
+
 /**
  * The week's fan-out: one read per endpoint, joined once. `games` and `lines`
  * come back with the detail because the callers that want them already paid
@@ -130,9 +157,15 @@ export async function weekDetails(
   rain: RainChanceSource,
   query: WeekQuery,
 ): Promise<WeekFeed> {
-  const [games, pollWeeks, betting, seasonGames, records, stats, media, winProbability, venues, weather] =
+  const gamesRead = cfbd.games(query);
+  const venuesRead = cfbd.venues().then((vs) => new Map(vs.map((v) => [v.id, v])));
+  // Open-Meteo needs only the games and their venues, so it fans out with the
+  // rest of the feed rather than waiting for the season-wide reads to land.
+  const rainRead = Promise.all([gamesRead, venuesRead]).then(([gs, vs]) => rainChances(gs, vs, rain));
+
+  const [games, pollWeeks, betting, seasonGames, records, stats, media, winProbability, venueById, weather, rainByGame] =
     await Promise.all([
-      cfbd.games(query),
+      gamesRead,
       cfbd.rankings(query.year),
       cfbd.lines(query),
       cfbd.seasonGames(query.year),
@@ -140,57 +173,39 @@ export async function weekDetails(
       cfbd.teamStats(query.year),
       cfbd.media(query),
       cfbd.pregameWinProbability(query),
-      cfbd.venues(),
+      venuesRead,
       cfbd.weather(query),
+      rainRead,
     ]);
 
   const ranks = rankLookup(pollWeeks, query.week);
   const lines = bookLines(betting);
   const recordByTeam = new Map(records.map((r) => [r.teamId, r.total]));
-  const statsByTeam = new Map<string, Map<string, number>>();
-  for (const s of stats) {
-    let byName = statsByTeam.get(s.team);
-    if (!byName) statsByTeam.set(s.team, (byName = new Map()));
-    byName.set(s.statName, s.statValue);
-  }
+  const statValue = new Map(stats.map((s) => [`${s.team}|${s.statName}`, s.statValue]));
+  const stat = (team: string, name: string) => statValue.get(`${team}|${name}`);
   const points = pointsByTeam(seasonGames);
   const tvByGame = new Map<number, string>();
   for (const m of media) if (m.mediaType === "tv" && !tvByGame.has(m.id)) tvByGame.set(m.id, m.outlet);
   const wpByGame = new Map(winProbability.map((w) => [w.gameId, w]));
-  const venueById = new Map(venues.map((v) => [v.id, v]));
   const weatherByGame = new Map(weather.map((w) => [w.id, w]));
-
-  // One Open-Meteo call for the whole week: every outdoor venue at its kickoff hour.
-  const located = games
-    .map((game) => ({ game, venue: game.venueId === null ? undefined : venueById.get(game.venueId) }))
-    .filter(({ venue }) => venue && venue.latitude !== null && venue.longitude !== null);
-  const chances = await rain.rainChance(
-    located.map(({ game, venue }) => ({
-      latitude: venue!.latitude!,
-      longitude: venue!.longitude!,
-      at: new Date(game.startDate),
-    })),
-  );
-  const rainByGame = new Map(located.map(({ game }, i) => [game.id, chances[i] ?? null]));
 
   const form = (teamId: number, team: string): TeamDetail => {
     const record = recordByTeam.get(teamId);
     const tally = points.get(teamId);
-    const teamStats = statsByTeam.get(team);
-    const played = teamStats?.get("games");
+    const played = stat(team, "games");
     return {
       rank: ranks.get(teamId) ?? null,
       record: record ? `${record.wins}–${record.losses}${record.ties ? `–${record.ties}` : ""}` : "0–0",
       pointsFor: average(tally?.pointsFor, tally?.games),
       pointsAgainst: average(tally?.pointsAgainst, tally?.games),
-      yardsFor: average(teamStats?.get("totalYards"), played),
-      yardsAgainst: average(teamStats?.get("totalYardsOpponent"), played),
+      yardsFor: average(stat(team, "totalYards"), played),
+      yardsAgainst: average(stat(team, "totalYardsOpponent"), played),
     };
   };
 
   const details = new Map<number, GameDetail>();
   for (const game of games) {
-    const venue = game.venueId === null ? undefined : venueById.get(game.venueId);
+    const venue = venueOf(game, venueById);
     const wp = wpByGame.get(game.id);
     const kickoff = new Date(game.startDate);
     details.set(game.id, {

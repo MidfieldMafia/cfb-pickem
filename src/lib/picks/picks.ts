@@ -76,21 +76,30 @@ export interface PickSheet {
   locked: boolean;
 }
 
-function isLocked(deadline: Date, now: Date): boolean {
-  return now.getTime() >= deadline.getTime();
+/**
+ * The frozen Deadline of a published Week. Published and deadline-set are one
+ * condition — an unpublished Week has no frozen Deadline — so the guard hands
+ * back the Date it proves exists rather than leaving each caller to assert the
+ * pair and then re-read the field.
+ */
+export function publishedDeadline(week: Pick<Week, "published" | "deadline">): Date {
+  if (!week.published || !week.deadline) throw new InvalidPick("That week is not published.");
+  return week.deadline;
 }
 
 /** A Week members can pick in: published, so its Deadline is frozen. */
-async function openForPicks(db: Db, weekId: number, now: Date): Promise<Week> {
+async function openForPicks(db: Db, weekId: number, now: Date): Promise<void> {
   const week = await db.query.weeks.findFirst({ where: eq(weeks.id, weekId) });
-  if (!week || !week.published || !week.deadline) throw new InvalidPick("That week is not published.");
-  if (isLocked(week.deadline, now)) throw new DeadlinePassed();
-  return week;
+  if (!week) throw new InvalidPick("That week is not published.");
+  publishedDeadline(week);
+  if (deadlinePassed(week, now)) throw new DeadlinePassed();
 }
 
-async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> {
-  const game = await db.query.games.findFirst({ where: eq(games.id, gameId), with: { week: true } });
+/** One Game, confirmed to be on the given Week's slate. */
+export async function loadGame(db: Db, weekId: number, gameId: number): Promise<Game> {
+  const game = await db.query.games.findFirst({ where: eq(games.id, gameId) });
   if (!game) throw new InvalidPick("That game is not on the slate.");
+  if (game.weekId !== weekId) throw new InvalidPick("That game is not on this week's slate.");
   return game;
 }
 
@@ -100,7 +109,7 @@ async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> 
  * same rows to the sheet, the Reveal, and the score refresh.
  */
 export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date = new Date()): Promise<PickSheet> {
-  if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
+  const deadline = publishedDeadline(slate.week);
   const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
   const [rows, lock, guess] = await Promise.all([
@@ -125,7 +134,7 @@ export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date =
     week: slate.week,
     season: slate.season,
     games: slate.games,
-    deadline: slate.week.deadline,
+    deadline,
     picks: own,
     lockGameId,
     lockDropped,
@@ -138,7 +147,7 @@ export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date =
       tiebreakerGuess,
     }),
     serverNow: now,
-    locked: deadlinePassed(slate, now),
+    locked: deadlinePassed(slate.week, now),
   };
 }
 
@@ -207,8 +216,8 @@ function pickers(rows: PickTable[], lockRows: LockTable[], guessRows: GuessTable
  * the scoring path read.
  */
 export async function weekPicks(db: Db, _actor: Member, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
-  if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
-  if (!deadlinePassed(slate, now)) throw new PicksHidden();
+  publishedDeadline(slate.week);
+  if (!deadlinePassed(slate.week, now)) throw new PicksHidden();
   const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
   const [everyone, rows, lockRows, guessRows] = await Promise.all([
@@ -240,8 +249,8 @@ export async function seasonPicks(
   now: Date = new Date(),
 ): Promise<Map<number, MemberPicks[]>> {
   for (const { week } of weekGames) {
-    if (!week.published || !week.deadline) throw new InvalidPick("That week is not published.");
-    if (!isLocked(week.deadline, now)) throw new PicksHidden();
+    publishedDeadline(week);
+    if (!deadlinePassed(week, now)) throw new PicksHidden();
   }
   const weekIds = weekGames.map((w) => w.week.id);
   const gameIds = weekGames.flatMap((w) => w.games.map((g) => g.id));
@@ -290,8 +299,7 @@ export async function savePick(
   teamId: number,
   now: Date = new Date(),
 ): Promise<PickRow> {
-  const game = await loadGame(db, gameId);
-  if (game.weekId !== weekId) throw new InvalidPick("That game is not on this week's slate.");
+  const game = await loadGame(db, weekId, gameId);
   await openForPicks(db, weekId, now);
   if (game.void) throw new InvalidPick("That game is void; it scores zero for everyone.");
   if (teamId !== game.homeTeamId && teamId !== game.awayTeamId) {
@@ -321,8 +329,7 @@ export async function setLock(
     await db.delete(locks).where(and(eq(locks.memberId, actor.id), eq(locks.weekId, weekId)));
     return;
   }
-  const game = await loadGame(db, gameId);
-  if (game.weekId !== weekId) throw new InvalidPick("That game is not on this week's slate.");
+  const game = await loadGame(db, weekId, gameId);
   if (game.void) throw new InvalidPick("That game is void; it cannot be the Lock of the Week.");
   const pick = await db.query.picks.findFirst({ where: and(eq(picks.memberId, actor.id), eq(picks.gameId, gameId)) });
   if (!pick) throw new InvalidPick("Pick a winner in that game before locking it.");

@@ -7,7 +7,7 @@ import { requireConsole } from "@/lib/members/current";
 import { InvalidMember } from "@/lib/members/members";
 import { overrideLock, overridePick, overrideTiebreakerGuess } from "@/lib/picks/console";
 import { InvalidPick } from "@/lib/picks/picks";
-import { safeInteger } from "@/lib/parse";
+import { integerField } from "@/lib/parse";
 import { InvalidSlate, openWeek } from "@/lib/slate/slate";
 import type { ActionState } from "../action-form";
 
@@ -15,11 +15,8 @@ export type { ActionState };
 
 const PICKS_PATH = "/console/picks";
 
-function id(formData: FormData, name: string): number {
-  const value = safeInteger(formData.get(name));
-  if (value === null) throw new InvalidPick(`Missing ${name}.`);
-  return value;
-}
+const id = (formData: FormData, name: string) =>
+  integerField(formData, name, (message) => new InvalidPick(message));
 
 /** An optional whole number: an empty field clears the value. */
 function optional(formData: FormData, name: string): number | null {

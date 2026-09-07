@@ -6,8 +6,6 @@
  * single request. Forecasts run about sixteen days ahead; anything further
  * out is null and the pill simply omits the figure.
  */
-import recording2026w2 from "./fixtures/2026-week-2.json";
-
 export interface ForecastPoint {
   latitude: number;
   longitude: number;
@@ -20,13 +18,19 @@ export interface RainChanceSource {
   rainChance(points: ForecastPoint[]): Promise<(number | null)[]>;
 }
 
-interface HourlySeries {
+/** One Open-Meteo hourly series. Shared with the recorded double. */
+export interface HourlySeries {
   latitude: number;
   longitude: number;
   hourly: { time: string[]; precipitation_probability: (number | null)[] };
 }
 
-export const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
+const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
+
+/** No answer for any point: the horizon, or a feed that did not respond. */
+function unknown(points: ForecastPoint[]): (number | null)[] {
+  return points.map(() => null);
+}
 
 /** "2026-09-12T16:00": Open-Meteo's UTC hour key, matching the ISO hour of the point. */
 function hourKey(at: Date): string {
@@ -51,7 +55,7 @@ function closest(series: HourlySeries[], point: ForecastPoint): HourlySeries | u
   return best;
 }
 
-function lookup(series: HourlySeries[], points: ForecastPoint[]): (number | null)[] {
+export function lookup(series: HourlySeries[], points: ForecastPoint[]): (number | null)[] {
   return points.map((point) => {
     const s = closest(series, point);
     if (!s) return null;
@@ -76,38 +80,23 @@ export function httpOpenMeteo(fetchImpl: typeof fetch = fetch): RainChanceSource
       let series: HourlySeries[];
       try {
         const response = await fetchImpl(url);
-        if (!response.ok) return points.map(() => null);
+        if (!response.ok) return unknown(points);
         const body: unknown = await response.json();
         series = Array.isArray(body) ? (body as HourlySeries[]) : [body as HourlySeries];
       } catch {
-        return points.map(() => null);
+        return unknown(points);
       }
       return lookup(series, points);
     },
   };
 }
 
-export const rainRecordings = {
-  "2026-week-2": recording2026w2 as { results: HourlySeries[] },
-};
-
-export type RainRecordingName = keyof typeof rainRecordings;
-
-/** Replays a recording; points or hours it does not cover come back null. */
-export function recordedOpenMeteo(name: RainRecordingName): RainChanceSource {
-  const { results } = rainRecordings[name];
-  return { rainChance: async (points) => lookup(results, points) };
-}
-
 /** A source that never knows: for callers that have no forecast wired. */
 export const noRainChance: RainChanceSource = {
-  rainChance: async (points) => points.map(() => null),
+  rainChance: async (points) => unknown(points),
 };
 
-let cached: RainChanceSource | undefined;
-
-/** The production source. */
+/** The production source. Holds nothing worth caching, unlike `db()` and `cfbd()`. */
 export function openMeteo(): RainChanceSource {
-  if (!cached) cached = httpOpenMeteo();
-  return cached;
+  return httpOpenMeteo();
 }

@@ -1,18 +1,6 @@
-import type {
-  CfbdBettingGame,
-  CfbdClient,
-  CfbdGame,
-  CfbdGameMedia,
-  CfbdGameWeather,
-  CfbdPollWeek,
-  CfbdPregameWinProbability,
-  CfbdTeamRecord,
-  CfbdTeamStat,
-  CfbdVenue,
-  WeekQuery,
-} from "./types";
+import type { CfbdClient, WeekQuery } from "./types";
 
-export const CFBD_BASE_URL = "https://api.collegefootballdata.com";
+const CFBD_BASE_URL = "https://api.collegefootballdata.com";
 
 export class CfbdError extends Error {
   constructor(
@@ -39,15 +27,15 @@ export function httpCfbd(apiKey: string, fetchImpl: typeof fetch = fetch): CfbdC
   const regular = ({ year, week }: WeekQuery) => ({ year, week, seasonType: "regular" });
 
   return {
-    games: (q: WeekQuery) => get<CfbdGame[]>("/games", { ...regular(q), classification: "fbs" }),
-    rankings: (year: number) => get<CfbdPollWeek[]>("/rankings", { year, seasonType: "regular" }),
-    lines: (q: WeekQuery) => get<CfbdBettingGame[]>("/lines", regular(q)),
-    seasonGames: (year: number) => get<CfbdGame[]>("/games", { year, seasonType: "regular", classification: "fbs" }),
-    records: (year: number) => get<CfbdTeamRecord[]>("/records", { year }),
-    teamStats: (year: number) => get<CfbdTeamStat[]>("/stats/season", { year }),
-    media: (q: WeekQuery) => get<CfbdGameMedia[]>("/games/media", regular(q)),
-    pregameWinProbability: (q: WeekQuery) => get<CfbdPregameWinProbability[]>("/metrics/wp/pregame", regular(q)),
-    venues: () => get<CfbdVenue[]>("/venues"),
-    weather: (q: WeekQuery) => get<CfbdGameWeather[]>("/games/weather", regular(q)),
+    games: (q) => get("/games", { ...regular(q), classification: "fbs" }),
+    rankings: (year) => get("/rankings", { year, seasonType: "regular" }),
+    lines: (q) => get("/lines", regular(q)),
+    seasonGames: (year) => get("/games", { year, seasonType: "regular", classification: "fbs" }),
+    records: (year) => get("/records", { year }),
+    teamStats: (year) => get("/stats/season", { year }),
+    media: (q) => get("/games/media", regular(q)),
+    pregameWinProbability: (q) => get("/metrics/wp/pregame", regular(q)),
+    venues: () => get("/venues"),
+    weather: (q) => get("/games/weather", regular(q)),
   };
 }

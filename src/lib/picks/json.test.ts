@@ -8,7 +8,8 @@ import { describe, expect, test } from "vitest";
 import { pickSheet, savePick, setLock, setTiebreakerGuess } from "@/lib/picks/picks";
 import { slateFor, voidGame } from "@/lib/slate/slate";
 import { publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
-import { toSheetJson, teamName } from "./json";
+import { teamName } from "@/lib/slate/json";
+import { toSheetJson } from "./json";
 
 /** Grandma's Week 2 sheet, serialized, at a given moment. */
 async function sheetAt(now = THURSDAY) {
@@ -95,6 +96,7 @@ describe("toSheetJson", () => {
       picksMade: 0,
       lockSet: false,
       guessSet: false,
+      lockOpen: true,
       remaining: 3,
     });
 
@@ -109,6 +111,7 @@ describe("toSheetJson", () => {
       picksMade: 3,
       lockSet: true,
       guessSet: true,
+      lockOpen: false,
       remaining: 0,
     });
   });

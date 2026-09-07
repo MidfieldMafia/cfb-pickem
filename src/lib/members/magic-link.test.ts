@@ -33,12 +33,12 @@ describe("magic link sign-in", () => {
     const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
 
     const first = await exchangeToken(db, jonah.token);
-    expect(first?.landing).toBe("welcome");
+    expect(first?.member.welcomedAt).toBeNull();
 
     await completeWelcome(db, first!.member, { displayName: "Jonah M", avatarId: "pennants-01" });
 
     const second = await exchangeToken(db, jonah.token);
-    expect(second?.landing).toBe("week");
+    expect(second?.member.welcomedAt).not.toBeNull();
     expect(second?.member.displayName).toBe("Jonah M");
     expect(second?.member.avatarId).toBe("pennants-01");
   });

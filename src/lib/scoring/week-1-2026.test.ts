@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { members, rules2026, week1 } from "./fixtures/week-1-2026";
+import { members, week1 } from "./fixtures/week-1-2026";
+import { rules2026 } from "./fixtures/build";
 import { scoreSeason, scoreWeek } from "./index";
 
 /**

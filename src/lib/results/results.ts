@@ -7,10 +7,10 @@
  */
 import "server-only";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
-import { games, members, resultAudits, weeks, type Game, type GameStatus, type Member, type Season, type Week } from "@/db/schema";
+import { games, members, resultAudits, weeks, type Game, type Member, type ResultAuditKind, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
-import { requireCommissioner } from "@/lib/members/members";
+import { joinedOrder, requireCommissioner } from "@/lib/members/members";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
@@ -25,7 +25,9 @@ import {
 } from "@/lib/slate/json";
 import {
   activeSeason,
+  applyGamePatches,
   defaultWeekNumber,
+  gameWithWeek,
   openWeek,
   seasonWeeks,
   slateFor,
@@ -34,23 +36,19 @@ import {
 } from "@/lib/slate/slate";
 import { logResultChange } from "./audit";
 import {
-  describeResult,
   effectiveResult,
   type GameResult,
   type ResultLabel,
-  type ResultSource,
-  type ResultStatus,
-  type Score,
 } from "./result";
 import { toEngineMember, toEngineWeek } from "./engine";
 
-export { describeResult, effectiveResult };
-export type { GameResult, ResultLabel, ResultSource, ResultStatus, Score };
+export { effectiveResult };
+export type { GameResult, ResultLabel };
 
 export class InvalidResult extends Error {}
 
 /** How long a refresh claim holds before member traffic may pull the feed again. */
-export const REFRESH_INTERVAL_MS = 5 * 60_000;
+const REFRESH_INTERVAL_MS = 5 * 60_000;
 /** A game still pending this long after kickoff is postponed, canceled, or stuck in the feed: a commissioner should look. */
 export const REVIEW_AFTER_MS = 6 * 3600_000;
 /** The highest score the override form accepts. The record is 222; nobody needs more. */
@@ -87,13 +85,13 @@ export function reviewNotice(slateGames: Game[], now: Date): ReviewNotice | null
 }
 
 async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> {
-  const game = await db.query.games.findFirst({ where: eq(games.id, gameId), with: { week: true } });
+  const game = await gameWithWeek(db, gameId);
   if (!game) throw new InvalidResult("That game is not on the slate.");
   return game;
 }
 
 /** What the feed says about one game, in the shape of the `games` columns it owns. */
-function feedResult(feed: CfbdGame): { status: GameStatus; homeScore: number | null; awayScore: number | null } {
+function feedResult(feed: CfbdGame): Pick<Game, "status" | "homeScore" | "awayScore"> {
   const scored = feed.homePoints !== null && feed.awayPoints !== null;
   if (feed.completed && scored) return { status: "final", homeScore: feed.homePoints, awayScore: feed.awayPoints };
   if (scored) return { status: "in_progress", homeScore: feed.homePoints, awayScore: feed.awayPoints };
@@ -117,15 +115,13 @@ export async function ingestResults(
   const weekId = slate.week.id;
   const feed = await cfbd.games({ year: slate.season.year, week: slate.week.weekNumber });
   const byId = new Map(feed.map((g) => [g.id, g]));
-  let changed = 0;
-  for (const game of slate.games) {
+  const changed = await applyGamePatches(db, slate.games, (game) => {
     const fresh = byId.get(game.cfbdGameId);
-    if (!fresh) continue;
+    if (!fresh) return null;
     const next = feedResult(fresh);
-    if (next.status === game.status && next.homeScore === game.homeScore && next.awayScore === game.awayScore) continue;
-    await db.update(games).set({ ...next, updatedAt: now }).where(eq(games.id, game.id));
-    changed += 1;
-  }
+    const same = next.status === game.status && next.homeScore === game.homeScore && next.awayScore === game.awayScore;
+    return same ? null : next;
+  }, now);
   await db.update(weeks).set({ scoreboardFetchedAt: now }).where(eq(weeks.id, weekId));
   return { changed };
 }
@@ -257,7 +253,7 @@ export interface ResultAudit {
   gameId: number;
   awayTeam: string;
   homeTeam: string;
-  kind: (typeof resultAudits.$inferSelect)["kind"];
+  kind: ResultAuditKind;
   previousValue: string | null;
   newValue: string | null;
   note: string | null;
@@ -465,16 +461,27 @@ function memberIndex(rows: Member[]): Map<string, ScoredMember> {
 }
 
 function toWeeklyScore(score: engine.WeeklyScore, byId: Map<string, ScoredMember>): WeeklyScore {
+  const { lock } = score;
   return {
     member: byId.get(score.memberId)!,
     points: score.points,
     correct: score.correct,
     incorrect: score.incorrect,
     pending: score.pending,
-    lockGameId: score.lock === null ? null : Number(score.lock.gameId),
-    lockDropped: score.lock !== null && score.lock.dropped,
+    lockGameId: lock === null ? null : Number(lock.gameId),
+    lockDropped: lock !== null && lock.dropped,
     tiebreakerGuess: score.tiebreakerGuess,
     tiebreakerError: score.tiebreakerError,
+  };
+}
+
+/** One Week as a graded read model. Assembled here so `weekResult` and `seasonResult` cannot disagree. */
+function toGradedWeek(week: Week, graded: engine.WeekResult, byId: Map<string, ScoredMember>): GradedWeek {
+  return {
+    week,
+    complete: graded.complete,
+    scores: graded.scores.map((s) => toWeeklyScore(s, byId)),
+    weeklyWin: toWeeklyWin(graded.weeklyWin, byId),
   };
 }
 
@@ -495,7 +502,7 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now
     return {
       member,
       // The engine already decided the Lock was dropped; the board reads that rather than re-deriving it.
-      lock: score?.lock ?? null,
+      droppedGameId: score?.lock?.dropped ? score.lock.gameId : null,
       picks: new Map((score?.picks ?? []).map((p) => [p.gameId, p])),
     };
   });
@@ -506,7 +513,7 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now
     games: slate.games.map((game) => {
       const gameId = String(game.id);
       const picks: RevealPick[] = [];
-      for (const { member, lock, picks: byGame } of board) {
+      for (const { member, droppedGameId, picks: byGame } of board) {
         const pick = byGame.get(gameId);
         if (!pick || pick.team === null) continue;
         picks.push({
@@ -514,7 +521,7 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now
           teamId: Number(pick.team),
           outcome: pick.outcome,
           locked: pick.locked,
-          lockDropped: lock !== null && lock.gameId === gameId && lock.dropped,
+          lockDropped: droppedGameId === gameId,
         });
       }
       return { ...toGameView(game), picks };
@@ -542,20 +549,16 @@ export async function weekResult(
   slate: Slate,
   now: Date = new Date(),
 ): Promise<GradedWeekResult> {
-  const memberPicks = await weekPicks(db, actor, slate, now);
-  const ids = memberPicks.map((m) => m.memberId);
-  const rows = ids.length
-    ? await db.query.members.findMany({ where: inArray(members.id, ids), orderBy: [asc(members.joinedAt), asc(members.id)] })
-    : [];
+  // The roster does not depend on the picks, so it rides along rather than waiting on them.
+  const [memberPicks, roster] = await Promise.all([
+    weekPicks(db, actor, slate, now),
+    db.query.members.findMany({ orderBy: joinedOrder }),
+  ]);
+  const ids = new Set(memberPicks.map((m) => m.memberId));
+  const rows = roster.filter((m) => ids.has(m.id));
   const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, memberPicks), rows.map(toEngineMember));
   const byId = memberIndex(rows);
-  return {
-    week: slate.week,
-    complete: graded.complete,
-    scores: graded.scores.map((s) => toWeeklyScore(s, byId)),
-    weeklyWin: toWeeklyWin(graded.weeklyWin, byId),
-    reveal: revealFrom(slate, rows, graded, now),
-  };
+  return { ...toGradedWeek(slate.week, graded, byId), reveal: revealFrom(slate, rows, graded, now) };
 }
 
 /**
@@ -578,19 +581,23 @@ export async function seasonResult(db: Db, _actor: Member, now: Date = new Date(
   const played = published.filter((w) => w.deadline !== null && w.deadline.getTime() <= now.getTime());
   const weekIds = played.map((w) => w.id);
   const gameRows = weekIds.length ? await db.query.games.findMany({ where: inArray(games.weekId, weekIds) }) : [];
-  const gamesOf = new Map<number, Game[]>(weekIds.map((id) => [id, []]));
-  for (const game of gameRows) gamesOf.get(game.weekId)!.push(game);
-  const weekGames = played.map((week) => ({ week, games: slateOrder(gamesOf.get(week.id)!) }));
+  const weekGames = played.map((week) => ({
+    week,
+    games: slateOrder(gameRows.filter((g) => g.weekId === week.id)),
+  }));
 
-  const picksOf = await seasonPicks(db, weekGames, now);
-  // `seasonPicks` has already applied `roster` a Week at a time, so this is not
-  // a fourth answer to who is on the board — it is the season-wide superset of
-  // those boards, read in one trip so the grading has a name for every id.
+  // The member rows do not depend on the picks, so they ride along rather than waiting.
+  const [picksOf, everyone] = await Promise.all([
+    seasonPicks(db, weekGames, now),
+    db.query.members.findMany({ orderBy: joinedOrder }),
+  ]);
+  // `seasonPicks` has already applied `roster` a Week at a time, so this is not a
+  // fourth answer to who is on the board — it is the season-wide superset of those
+  // boards: active members plus anyone since deactivated who still has Picks, so
+  // the grading has a name for every id it hands back, and an empty season is a
+  // table of zeroes rather than an empty screen.
   const onABoard = new Set(weekGames.flatMap(({ week }) => picksOf.get(week.id)!.map((m) => m.memberId)));
-  const rows = await db.query.members.findMany({
-    where: onABoard.size ? or(eq(members.active, true), inArray(members.id, [...onABoard])) : eq(members.active, true),
-    orderBy: [asc(members.joinedAt), asc(members.id)],
-  });
+  const rows = everyone.filter((m) => m.active || onABoard.has(m.id));
 
   const graded = scoreSeason(
     season.rules,
@@ -602,22 +609,10 @@ export async function seasonResult(db: Db, _actor: Member, now: Date = new Date(
   const weekOf = new Map(played.map((w) => [w.weekNumber, w]));
   return {
     season,
-    weeks: graded.weeks.map((result) => ({
-      week: weekOf.get(result.weekNumber)!,
-      complete: result.complete,
-      scores: result.scores.map((s) => toWeeklyScore(s, byId)),
-      weeklyWin: toWeeklyWin(result.weeklyWin, byId),
-    })),
-    leaderboard: graded.leaderboard.map((row) => ({
-      member: byId.get(row.memberId)!,
-      rank: row.rank,
-      totalPoints: row.totalPoints,
-      correct: row.correct,
-      incorrect: row.incorrect,
-      weeklyWins: row.weeklyWins,
-      weeksPlayed: row.weeksPlayed,
-      averagePoints: row.averagePoints,
-      cumulativeTiebreakerError: row.cumulativeTiebreakerError,
+    weeks: graded.weeks.map((result) => toGradedWeek(weekOf.get(result.weekNumber)!, result, byId)),
+    leaderboard: graded.leaderboard.map(({ memberId, ...rest }) => ({
+      member: byId.get(memberId)!,
+      ...rest,
     })),
     serverNow: now,
   };

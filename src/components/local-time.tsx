@@ -22,7 +22,7 @@ const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
 };
 
 function formatLocal(at: Date, style: TimeStyle, timeZone?: string): string {
-  return formatterFor({ ...FORMATS[style], timeZone }, `${style}|${timeZone ?? ""}`).format(at);
+  return formatterFor({ ...FORMATS[style], timeZone }).format(at);
 }
 
 const subscribe = () => () => {};

@@ -1,9 +1,14 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { cleanDisplayName, MAX_DISPLAY_NAME, MAX_PHONE } from "./limits";
-import { newSecret } from "./token";
+
+/** A URL-safe secret for a Magic Link token or a session id. */
+export function newSecret(): string {
+  return randomBytes(32).toString("base64url");
+}
 
 export class NotCommissioner extends Error {
   constructor() {
@@ -13,9 +18,27 @@ export class NotCommissioner extends Error {
 
 export class InvalidMember extends Error {}
 
+/** A commissioner in good standing: the one definition, so no screen guesses. */
+export function isCommissioner(member: Member): boolean {
+  return member.isCommissioner && member.active;
+}
+
 /** Every console operation starts here. Server actions must call it too. */
 export function requireCommissioner(actor: Member): void {
-  if (!actor.isCommissioner || !actor.active) throw new NotCommissioner();
+  if (!isCommissioner(actor)) throw new NotCommissioner();
+}
+
+/** The roster order every screen reads in: as they joined, then by id. */
+export const joinedOrder = [asc(members.joinedAt), asc(members.id)];
+
+async function updateMember(
+  db: Db,
+  memberId: number,
+  patch: Partial<typeof members.$inferInsert>,
+): Promise<Member> {
+  const [updated] = await db.update(members).set(patch).where(eq(members.id, memberId)).returning();
+  if (!updated) throw new InvalidMember("No such member.");
+  return updated;
 }
 
 export interface NewMemberInput {
@@ -62,7 +85,7 @@ export async function addMember(db: Db, actor: Member, input: NewMemberInput): P
 /** Every member, commissioners and deactivated included, in the order they joined. */
 export async function listMembers(db: Db, actor: Member): Promise<Member[]> {
   requireCommissioner(actor);
-  return db.query.members.findMany({ orderBy: [asc(members.joinedAt), asc(members.id)] });
+  return db.query.members.findMany({ orderBy: joinedOrder });
 }
 
 /**
@@ -78,15 +101,13 @@ export async function regenerateMagicLink(
 ): Promise<Member> {
   requireCommissioner(actor);
   const keep = memberId === actor.id ? options.keepSessionId : undefined;
-  await db
-    .delete(sessions)
-    .where(keep ? and(eq(sessions.memberId, memberId), ne(sessions.id, keep)) : eq(sessions.memberId, memberId));
-  const [updated] = await db
-    .update(members)
-    .set({ token: newSecret() })
-    .where(eq(members.id, memberId))
-    .returning();
-  if (!updated) throw new InvalidMember("No such member.");
+  // Neither write reads the other, so the commissioner waits for one round trip.
+  const [, updated] = await Promise.all([
+    db
+      .delete(sessions)
+      .where(keep ? and(eq(sessions.memberId, memberId), ne(sessions.id, keep)) : eq(sessions.memberId, memberId)),
+    updateMember(db, memberId, { token: newSecret() }),
+  ]);
   return updated;
 }
 
@@ -100,7 +121,5 @@ export async function setMemberActive(
   requireCommissioner(actor);
   if (!active && memberId === actor.id) throw new InvalidMember("You cannot deactivate yourself.");
   if (!active) await db.delete(sessions).where(eq(sessions.memberId, memberId));
-  const [updated] = await db.update(members).set({ active }).where(eq(members.id, memberId)).returning();
-  if (!updated) throw new InvalidMember("No such member.");
-  return updated;
+  return updateMember(db, memberId, { active });
 }
