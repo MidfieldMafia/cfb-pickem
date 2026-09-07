@@ -78,21 +78,32 @@ async function refusal(query: Promise<unknown>): Promise<string> {
 describe("results ingest", () => {
   test("pulls final scores for the week's games, marks them final, and is safe to run again", async () => {
     const { db, week, miami, michigan, texas, reload, ingest } = await setup();
-    const feed = feedWith({ [FAMU_AT_MIAMI]: [7, 45], [OKLAHOMA_AT_MICHIGAN]: [24, 27] }, { [OHIO_STATE_AT_TEXAS]: [3, 0] });
+    const feed = feedWith(
+      { [FAMU_AT_MIAMI]: [7, 45], [OKLAHOMA_AT_MICHIGAN]: [24, 27] },
+      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"] },
+    );
 
     expect(await ingest(feed, SATURDAY_EVENING)).toEqual({ changed: 3 });
+    // One scoreboard read covers the slate; every game was on it, so `/games` was never needed.
+    expect(feed.reads).toEqual({ scoreboard: 1, games: 0 });
 
-    expect(await reload(miami.id)).toMatchObject({ status: "final", awayScore: 7, homeScore: 45 });
+    expect(await reload(miami.id)).toMatchObject({ status: "final", awayScore: 7, homeScore: 45, period: null, clock: null });
     expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
-    // Not completed but scoring: in progress, with the running score, never final.
-    expect(await reload(texas.id)).toMatchObject({ status: "in_progress", awayScore: 3, homeScore: 0 });
+    // Under way: in progress, with the running score and the clock, never final.
+    expect(await reload(texas.id)).toMatchObject({
+      status: "in_progress",
+      awayScore: 3,
+      homeScore: 0,
+      period: 1,
+      clock: "08:42",
+    });
     // The running score rides along as `live`, so a screen can show it without counting it.
     expect(effectiveResult(await reload(texas.id))).toEqual({
       status: "pending",
       homeScore: null,
       awayScore: null,
       source: null,
-      live: { awayScore: 3, homeScore: 0 },
+      live: { awayScore: 3, homeScore: 0, period: 1, clock: "08:42" },
       // A running score is what to put on screen; it is still not what counts.
       shown: { awayScore: 3, homeScore: 0 },
       label: "In progress",
@@ -186,6 +197,83 @@ describe("results ingest", () => {
     expect(finals.calls).toBe(1);
   });
 
+  test("a slate game the board does not list is read from /games, and a listed one never is", async () => {
+    const { reload, ingest, miami, michigan, texas } = await setup();
+    // The board has rolled past Michigan's final. `/games` has it; the board
+    // does not. And the two disagree about Miami — the board says it is still
+    // going, `/games` says it finished — which is how the test tells which
+    // feed a listed game was read from.
+    const feed = feedWith(
+      { [OKLAHOMA_AT_MICHIGAN]: [24, 27], [FAMU_AT_MIAMI]: [7, 45] },
+      {},
+      { offBoard: [OKLAHOMA_AT_MICHIGAN] },
+    );
+    const board = feed.scoreboard;
+    feed.scoreboard = async () =>
+      (await board()).map((g) =>
+        g.id === FAMU_AT_MIAMI
+          ? {
+              ...g,
+              status: "in_progress",
+              period: 4,
+              clock: "01:00",
+              awayTeam: { ...g.awayTeam, points: 7 },
+              homeTeam: { ...g.homeTeam, points: 38 },
+            }
+          : g,
+      );
+
+    expect(await ingest(feed, SATURDAY_EVENING)).toEqual({ changed: 2 });
+    // One board read, and one `/games` read for the game it left out.
+    expect(feed.reads).toEqual({ scoreboard: 1, games: 1 });
+    expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
+    // Miami was on the board, so the board's word stands over the feed's final.
+    expect(await reload(miami.id)).toMatchObject({ status: "in_progress", awayScore: 7, homeScore: 38, period: 4 });
+    // Texas is off the board too, but has not kicked off: nothing to read for it.
+    expect(await reload(texas.id)).toMatchObject({ status: "scheduled" });
+
+    // Michigan is final now, so the next pass has nothing unlisted to chase.
+    await ingest(feed, SUNDAY);
+    expect(feed.reads).toEqual({ scoreboard: 2, games: 1 });
+  });
+
+  test("the gate holds ninety seconds while a game is under way and five minutes between games", async () => {
+    const { michigan, reload, refresh } = await setup();
+    const kickoff = new Date("2026-09-12T16:05:00Z");
+    const at = (seconds: number) => new Date(kickoff.getTime() + seconds * 1000);
+
+    // Nothing under way yet, though Miami is past kickoff: the five-minute tier.
+    const live = feedWith({}, { [OKLAHOMA_AT_MICHIGAN]: [7, 3, 1, "10:00"] });
+    expect(await refresh(live, kickoff)).toBe("refreshed");
+    expect(await reload(michigan.id)).toMatchObject({ status: "in_progress", period: 1 });
+
+    // Michigan is under way now, so the gate reopens after ninety seconds rather than five minutes.
+    expect(await refresh(live, at(60))).toBe("fresh");
+    expect(await refresh(live, at(90))).toBe("refreshed");
+    expect(live.calls).toBe(2);
+
+    // Michigan ends. Miami is still pending past kickoff, so the gate stays open — on the slower tier.
+    const done = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] });
+    expect(await refresh(done, at(180))).toBe("refreshed");
+    expect(await reload(michigan.id)).toMatchObject({ status: "final", period: null, clock: null });
+    expect(await refresh(done, at(180 + 90))).toBe("fresh");
+    expect(await refresh(done, at(180 + 299))).toBe("fresh");
+    expect(await refresh(done, at(180 + 300))).toBe("refreshed");
+    expect(done.calls).toBe(2);
+  });
+
+  test("concurrent requests elect one caller, and the rest read what it wrote", async () => {
+    const { refresh } = await setup();
+    const feed = feedWith({});
+    const friday = new Date("2026-09-11T01:00:00Z");
+
+    const outcomes = await Promise.all([refresh(feed, friday), refresh(feed, friday), refresh(feed, friday)]);
+
+    expect(outcomes.filter((o) => o === "refreshed")).toHaveLength(1);
+    expect(outcomes.filter((o) => o === "fresh")).toHaveLength(2);
+    expect(feed.calls).toBe(1);
+  });
+
   test("a commissioner's refresh is not undone by the next member visit", async () => {
     const { michigan, reload, ingest, refresh } = await setup();
     // The production arrangement, on a clock this test turns: one ten-minute
@@ -194,7 +282,7 @@ describe("results ingest", () => {
     let world = feedWith({});
     let clock = 0;
     const feed = sharedFeed(
-      { ...recordedCfbd("2026-week-2"), games: (q) => world.games(q) },
+      { ...recordedCfbd("2026-week-2"), games: (q) => world.games(q), scoreboard: () => world.scoreboard() },
       10 * 60_000,
       () => clock,
     );

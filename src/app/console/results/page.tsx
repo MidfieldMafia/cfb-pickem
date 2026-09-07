@@ -7,6 +7,7 @@ import { TeamLogo } from "@/components/team-logo";
 import { requireConsole } from "@/lib/members/current";
 import { MAX_NOTE } from "@/lib/notes";
 import {
+  clockLabel,
   MAX_SCORE,
   resultsConsole,
   type GameResult,
@@ -50,10 +51,12 @@ const TONES: Record<ResultLabel, { variant?: "outline"; className?: string }> = 
  */
 function StatusBadge({ result, review }: { result: GameResult; review: boolean }) {
   if (review) return <Badge variant="destructive">Needs review</Badge>;
+  const clock = result.live ? clockLabel(result.live) : null;
   return (
     <Badge {...TONES[result.label]}>
       {result.label === "In progress" ? <Radio size={12} aria-hidden /> : null}
       {result.label}
+      {clock ? ` · ${clock}` : ""}
     </Badge>
   );
 }

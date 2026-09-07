@@ -11,11 +11,14 @@
  * guess — each of which the screen had to fold into the sheet it was already
  * holding; now the server does that folding once and the answer is the sheet.
  */
+import { createHash } from "node:crypto";
 import { asMember } from "@/lib/members/authority";
 import { applyEdit, type PickEdit } from "@/lib/picks/edits";
-import { integer, readBody, withPickContext, type PickRoute } from "@/lib/picks/http";
+import { integer, readBody, withPickContext, type ApiError, type PickRoute } from "@/lib/picks/http";
 import { toSheetJson } from "@/lib/picks/json";
 import { pickSheet } from "@/lib/picks/picks";
+import { toWeekStateJson, type WeekStateJson } from "@/lib/week/json";
+import { currentWeek } from "@/lib/week/week";
 
 /** How one route reads its own body into the one edit shape. */
 type ToEdit = (body: Record<string, unknown>) => PickEdit;
@@ -54,3 +57,44 @@ export const lockEdit: ToEdit = (body) => ({
 
 /** `{ guess }`: the predicted combined final score of the Tiebreaker Game. */
 export const guessEdit: ToEdit = (body) => ({ kind: "guess", guess: integer(body, "guess") });
+
+/**
+ * The ETag of a week state: a digest of everything in it but the server
+ * clock, which moves on every request and would otherwise make every poll a
+ * change. Weak, because two bodies that differ only in `serverNow` are the
+ * same Week and are meant to match.
+ */
+function weekStateEtag(state: WeekStateJson): string {
+  const digest = createHash("sha1")
+    .update(JSON.stringify({ ...state, serverNow: null }))
+    .digest("hex");
+  return `W/"${digest.slice(0, 20)}"`;
+}
+
+/**
+ * The whole current Week in one payload for the Live Board: the Slate with
+ * its live scores, everyone's picks and the provisional standings once the
+ * Deadline has passed, and the server clock. A poll carries the ETag it last
+ * saw and gets a 304 with no body while the Week has not moved.
+ *
+ * The feed is pulled on the way through, on the same stale gate `/week` and
+ * `/results` drive, so a phone polling every thirty seconds costs the quota
+ * nothing beyond the one call per interval the gate allows — and a feed that
+ * will not answer leaves the Week readable with the scores it had.
+ *
+ * 401 and 404 match `withPickContext`; this does not go through it because
+ * `currentWeek` already composes the Week from the published Slate, and
+ * reading the Slate twice per poll would be the one cost the poll can avoid.
+ */
+export async function getWeekState(request: Request, route: PickRoute): Promise<Response> {
+  const actor = await route.currentMember();
+  if (!actor) return Response.json({ error: "Open your Magic Link to sign in." } satisfies ApiError, { status: 401 });
+  const week = await currentWeek(route.db, actor, route.now?.() ?? new Date(), { graded: true, cfbd: route.cfbd });
+  if (!week) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
+  const state = toWeekStateJson(week);
+  const etag = weekStateEtag(state);
+  // `no-store`: the browser must not answer a later poll from its own cache, and the 304 must reach the script.
+  const headers = { etag, "cache-control": "no-store" };
+  if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
+  return Response.json(state, { headers });
+}

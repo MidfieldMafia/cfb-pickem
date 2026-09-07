@@ -28,7 +28,14 @@ payload=$(cat)
 # wrong in both directions: it blocked read-only commands that merely named this
 # repo's own `chore/push-gate-and-worktree-skills` branch, and it let a real
 # `git -C <path> push` through, because the subcommand is not adjacent to `git`.
-if ! target=$(PAYLOAD="$payload" node <<'JS'
+#
+# The script lives in a function rather than directly inside `$(...)`: bash 3.2
+# (macOS's /bin/bash) does not parse the inside of a command substitution, it
+# scans it for a matching paren while honouring quotes, so a stray apostrophe or
+# backtick in the JavaScript turned the rest of this file into an unterminated
+# string. A function body goes through the real parser.
+decide_target() {
+  PAYLOAD="$payload" node <<'JS'
 const p = (() => {
   try { return JSON.parse(process.env.PAYLOAD || "{}"); } catch { return {}; }
 })();
@@ -80,7 +87,9 @@ const segments = cmd.split(/\r?\n|&&|\|\||;|\||&|\$\(|`|\)|\}/);
 if (!segments.some(invokesPush)) { console.log("SKIP"); }
 else { console.log(p.cwd || process.cwd()); }
 JS
-); then
+}
+
+if ! target=$(decide_target); then
   # The decision script died (no node on PATH, a syntax error introduced while
   # editing this file). The old `|| exit 0` here made that failure silently
   # disable the gate, which is the one outcome worth avoiding: a needless 10s

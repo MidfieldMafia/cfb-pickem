@@ -4,6 +4,7 @@ import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { TeamLogo } from "@/components/team-logo";
+import { clockLabel } from "@/lib/results/result";
 import type { Reveal, RevealPick, ScoredMember } from "@/lib/results/results";
 import { isVoid } from "@/lib/slate/json";
 
@@ -98,6 +99,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
         {reveal.games.map((row) => {
           const { game, result } = row;
           const final = result.status === "final";
+          const clock = result.live ? clockLabel(result.live) : null;
           const away = row.picks.filter((p) => p.teamId === game.awayTeamId);
           const home = row.picks.filter((p) => p.teamId === game.homeTeamId);
           return (
@@ -105,6 +107,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
               <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                 <span>
                   {result.label}
+                  {clock ? ` · ${clock}` : ""}
                   {isVoid(row) && result.note ? ` · ${result.note}` : ""}
                 </span>
                 <span>·</span>

@@ -102,13 +102,13 @@ describe("a commissioner's result edit from the console", () => {
   test("a feed outage is a sentence under the button, not the error page", async () => {
     const { route, revalidated, week } = await setup();
     const down = {
-      games: async () => {
-        throw new CfbdError(503, "/games");
+      scoreboard: async () => {
+        throw new CfbdError(503, "/scoreboard");
       },
     } as unknown as CfbdClient;
 
     expect(await refreshResults(route, form({ weekId: week.id }), down)).toEqual({
-      error: "CollegeFootballData returned 503 for /games.",
+      error: "CollegeFootballData returned 503 for /scoreboard.",
     });
     expect(revalidated).toEqual([]);
   });

@@ -72,6 +72,15 @@ describe("the request the live client builds", () => {
     expect(url.search).not.toContain("secret-key");
   });
 
+  test("the scoreboard asks for the FBS board and nothing else, because the endpoint takes no week", async () => {
+    const fetch = spyFetch();
+    await httpCfbd("secret", fetch.impl).scoreboard();
+
+    const { url } = fetch.only();
+    expect(url.pathname).toBe("/scoreboard");
+    expect(paramsOf(url)).toEqual({ classification: "fbs" });
+  });
+
   test("every week-scoped endpoint carries the regular-season default", async () => {
     const fetch = spyFetch();
     const client = httpCfbd("secret", fetch.impl);

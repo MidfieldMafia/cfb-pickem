@@ -29,6 +29,13 @@
       "when": 1788732958127,
       "tag": "0003_result-final-has-scores",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788797991617,
+      "tag": "0004_live-clock",
+      "breakpoints": true
     }
   ]
 }

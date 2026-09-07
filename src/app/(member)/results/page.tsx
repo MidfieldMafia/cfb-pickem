@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
+import { BoardToggle } from "@/components/board-toggle";
 import { MemberChip } from "@/components/member-chip";
 import { RevealList } from "@/components/reveal";
 import { SECTION_LABEL } from "@/components/section-label";
+import { YourWeek } from "@/components/your-week";
 import { cfbd } from "@/lib/cfbd";
 import { requireMember } from "@/lib/members/current";
 import {
@@ -16,7 +18,7 @@ import {
 import { weekParam } from "@/lib/slate/slate";
 import { weekInReview } from "@/lib/week/week";
 import { WeeklyScoreList } from "./weekly-score";
-import { YourPicks, YourWeek } from "./your-week";
+import { YourPicks } from "./your-week";
 
 /**
  * One Week's results: every member's Weekly Score, the Weekly Win and how it
@@ -37,6 +39,9 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
         <AppHeader title="Week results" right={<MemberChip member={member} />} />
+        <div className="px-4">
+          <BoardToggle active="results" weekNumber={null} />
+        </div>
         <section className="mx-4 space-y-2 rounded-md border border-border bg-card p-3">
           <p className={SECTION_LABEL}>Nothing to show yet</p>
           <p className="text-muted-foreground">
@@ -73,9 +78,13 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
         right={<MemberChip member={member} />}
       />
 
+      <div className="px-4">
+        <BoardToggle active="results" weekNumber={weekNumber} />
+      </div>
+
       {/* Past weeks are plain links: a GET per week, nothing to hydrate, and
           the one on screen is the one the URL names. */}
-      <nav className="flex flex-wrap gap-2 px-4">
+      <nav aria-label="Weeks" className="flex flex-wrap gap-2 px-4">
         {played.map((number) => {
           const here = number === weekNumber;
           return (

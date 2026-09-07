@@ -10,9 +10,21 @@ import type { Member } from "@/db/schema";
 import { put } from "@/lib/picks/client";
 import type { PickRoute } from "@/lib/picks/http";
 import type { SheetJson } from "@/lib/picks/json";
+import { ingestResults } from "@/lib/results/results";
+import { slateFor } from "@/lib/slate/slate";
+import type { WeekStateJson } from "@/lib/week/json";
 import { createTestDb } from "@/test/db";
-import { publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
-import { getSheet, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
+import {
+  FAMU_AT_MIAMI,
+  feedWith,
+  OHIO_STATE_AT_TEXAS,
+  OKLAHOMA_AT_MICHIGAN,
+  pickAs,
+  publishWeek2,
+  SUNDAY,
+  THURSDAY,
+} from "@/test/week-2";
+import { getSheet, getWeekState, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
 
 /** A PUT the routes would receive, with the body as JSON on the wire. */
 function request(body: unknown): Request {
@@ -223,5 +235,108 @@ describe("what the phone makes of a refusal", () => {
 
     expect(result.ok).toBe(true);
     expect(result).toMatchObject({ ok: true, body: { serverNow: THURSDAY.toISOString() } });
+  });
+});
+
+/** A poll the Live Board would send: a GET, carrying the ETag it last saw when it has one. */
+function poll(etag?: string): Request {
+  return new Request("https://slate.test/api/week/state", { headers: etag ? { "if-none-match": etag } : {} });
+}
+
+describe("the week state", () => {
+  test("before the Deadline it carries the slate and nobody's picks, scores, or board", async () => {
+    const { asGrandma, week, slate, grandma, michigan, miami, texas, db } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+
+    const response = await getWeekState(poll(), asGrandma());
+    const state = await json<WeekStateJson>(response);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(state.week.id).toBe(week.id);
+    expect(state.year).toBe(2026);
+    expect(state.locked).toBe(false);
+    expect(state.complete).toBe(false);
+    expect(state.serverNow).toBe(THURSDAY.toISOString());
+    expect(state.games.map((g) => g.game.id)).toEqual([miami.id, michigan.id, texas.id]);
+    // Grandma's own pick is in the database; the state still says nothing, because nobody's picks show early.
+    expect(state.games.every((g) => g.picks.length === 0)).toBe(true);
+    expect(state.members).toEqual([]);
+    expect(state.scores).toBeNull();
+    expect(state.weeklyWin).toBeNull();
+  });
+
+  test("after the Deadline it carries everyone's picks, graded, and the provisional standings", async () => {
+    const { asGrandma, slate, grandma, jonah, michigan, texas, db } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY);
+    await pickAs(db, jonah, slate, texas, texas.homeTeamId, THURSDAY);
+    const feed = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }, { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "12:00"] });
+
+    const state = await json<WeekStateJson>(await getWeekState(poll(), { ...asGrandma(SUNDAY), cfbd: () => feed }));
+
+    // The poll drove the feed on the way through, once, and read what it wrote.
+    expect(feed.calls).toBe(1);
+    expect(state.locked).toBe(true);
+    expect(state.complete).toBe(false);
+    expect(state.members.map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
+    const michiganRow = state.games.find((g) => g.game.id === michigan.id)!;
+    expect(michiganRow.result.label).toBe("Final");
+    expect(michiganRow.picks.map((p) => [p.memberId, p.outcome])).toEqual([
+      [jonah.id, "incorrect"],
+      [grandma.id, "correct"],
+    ]);
+    const texasRow = state.games.find((g) => g.game.id === texas.id)!;
+    expect(texasRow.result.live).toEqual({ awayScore: 3, homeScore: 0, period: 1, clock: "12:00" });
+    expect(texasRow.picks.map((p) => [p.memberId, p.outcome])).toEqual([[jonah.id, "pending"]]);
+    // Provisional: Texas is not final, so Jonah's pick there counts nothing yet.
+    expect(state.scores!.map((s) => [s.member.displayName, s.points, s.pending])).toEqual([
+      ["Grandma", 10, 0],
+      ["Jonah", 0, 1],
+    ]);
+  });
+
+  test("answers 304 to the ETag it sent while the Week has not moved, and a fresh body once it has", async () => {
+    const { asGrandma, week, db } = await setup();
+    const friday = new Date("2026-09-11T01:00:00Z");
+    const later = new Date(friday.getTime() + 30_000);
+
+    const first = await getWeekState(poll(), asGrandma(friday));
+    const etag = first.headers.get("etag")!;
+    expect(etag).toMatch(/^W\/"[0-9a-f]+"$/);
+
+    // Thirty seconds on, nothing has changed but the clock: the clock is not the Week.
+    const again = await getWeekState(poll(etag), asGrandma(later));
+    expect(again.status).toBe(304);
+    expect(again.headers.get("etag")).toBe(etag);
+    expect(await again.text()).toBe("");
+
+    // A score lands: the same ETag no longer matches, and the body says why.
+    await ingestResults(db, feedWith({ [FAMU_AT_MIAMI]: [7, 45] }), await slateFor(db, week.id), later);
+    const moved = await getWeekState(poll(etag), asGrandma(later));
+    expect(moved.status).toBe(200);
+    expect(moved.headers.get("etag")).not.toBe(etag);
+    const state = await json<WeekStateJson>(moved);
+    expect(state.games[0].result).toMatchObject({ status: "final", awayScore: 7, homeScore: 45 });
+  });
+
+  test("a feed that will not answer leaves the state readable with the scores it had", async () => {
+    const { asGrandma } = await setup();
+    const angry = () => {
+      throw new Error("CFBD_API_KEY is not set");
+    };
+
+    const response = await getWeekState(poll(), { ...asGrandma(SUNDAY), cfbd: angry });
+
+    expect(response.status).toBe(200);
+    expect((await json<WeekStateJson>(response)).locked).toBe(true);
+  });
+
+  test("401 signed out, 404 before any Week is published", async () => {
+    const { route } = await setup();
+    expect((await getWeekState(poll(), route(null))).status).toBe(401);
+
+    const empty: PickRoute = { db: await createTestDb(), currentMember: async () => ({ id: 1 }) as Member };
+    expect((await getWeekState(poll(), empty)).status).toBe(404);
   });
 });
