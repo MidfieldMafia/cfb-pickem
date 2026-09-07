@@ -17,7 +17,7 @@ const ITEM = "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibo
 export function ConsoleNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-border px-4 py-2 md:w-56 md:flex-col md:overflow-visible md:border-b-0 md:border-r md:py-4">
+    <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-4 py-2 md:w-56 md:flex-col md:overflow-x-visible md:overflow-y-auto md:border-b-0 md:border-r md:py-4">
       {LINKS.map(({ href, label, Icon }) => {
         const active = pathname.startsWith(href);
         return (
