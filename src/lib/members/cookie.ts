@@ -2,7 +2,7 @@
 export const SESSION_COOKIE = "slate_session";
 
 /** A year. Members open the app on Saturdays for a whole season without re-signing in. */
-export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export function sessionCookieOptions() {
   return {

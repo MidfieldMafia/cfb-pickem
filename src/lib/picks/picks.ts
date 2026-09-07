@@ -76,10 +76,6 @@ export interface PickSheet {
   locked: boolean;
 }
 
-function isLocked(deadline: Date, now: Date): boolean {
-  return now.getTime() >= deadline.getTime();
-}
-
 /**
  * The frozen Deadline of a published Week. Published and deadline-set are one
  * condition — an unpublished Week has no frozen Deadline — so the guard hands
@@ -95,7 +91,8 @@ export function publishedDeadline(week: Pick<Week, "published" | "deadline">): D
 async function openForPicks(db: Db, weekId: number, now: Date): Promise<void> {
   const week = await db.query.weeks.findFirst({ where: eq(weeks.id, weekId) });
   if (!week) throw new InvalidPick("That week is not published.");
-  if (isLocked(publishedDeadline(week), now)) throw new DeadlinePassed();
+  publishedDeadline(week);
+  if (deadlinePassed(week, now)) throw new DeadlinePassed();
 }
 
 /** One Game, confirmed to be on the given Week's slate. */
@@ -150,7 +147,7 @@ export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date =
       tiebreakerGuess,
     }),
     serverNow: now,
-    locked: deadlinePassed(slate, now),
+    locked: deadlinePassed(slate.week, now),
   };
 }
 
@@ -220,7 +217,7 @@ function pickers(rows: PickTable[], lockRows: LockTable[], guessRows: GuessTable
  */
 export async function weekPicks(db: Db, _actor: Member, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
   publishedDeadline(slate.week);
-  if (!deadlinePassed(slate, now)) throw new PicksHidden();
+  if (!deadlinePassed(slate.week, now)) throw new PicksHidden();
   const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
   const [everyone, rows, lockRows, guessRows] = await Promise.all([
@@ -252,7 +249,8 @@ export async function seasonPicks(
   now: Date = new Date(),
 ): Promise<Map<number, MemberPicks[]>> {
   for (const { week } of weekGames) {
-    if (!isLocked(publishedDeadline(week), now)) throw new PicksHidden();
+    publishedDeadline(week);
+    if (!deadlinePassed(week, now)) throw new PicksHidden();
   }
   const weekIds = weekGames.map((w) => w.week.id);
   const gameIds = weekGames.flatMap((w) => w.games.map((g) => g.id));

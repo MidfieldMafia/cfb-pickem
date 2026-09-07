@@ -4,19 +4,11 @@ import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { findAvatar } from "@/lib/avatars";
 import { cleanDisplayName, MAX_DISPLAY_NAME } from "./limits";
-import { newSecret } from "./token";
-
-/** Where a fresh sign-in goes: the welcome page until it has been completed once. */
-export type Landing = "welcome" | "week";
+import { newSecret } from "./members";
 
 export interface SignIn {
   sessionId: string;
   member: Member;
-  landing: Landing;
-}
-
-export function landingFor(member: Member): Landing {
-  return member.welcomedAt ? "week" : "welcome";
 }
 
 /** Trades a Magic Link token for a session. Null when the link is unknown or the member is deactivated. */
@@ -29,7 +21,7 @@ export async function exchangeToken(db: Db, token: string): Promise<SignIn | nul
     db.insert(sessions).values({ id: sessionId, memberId: member.id, lastSeenAt: now }),
     db.update(members).set({ lastSeenAt: now }).where(eq(members.id, member.id)),
   ]);
-  return { sessionId, member: { ...member, lastSeenAt: now }, landing: landingFor(member) };
+  return { sessionId, member: { ...member, lastSeenAt: now } };
 }
 
 /** The member behind a session cookie, or null when the session is gone or the member is deactivated. */

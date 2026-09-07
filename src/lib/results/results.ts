@@ -10,7 +10,7 @@ import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { games, members, resultAudits, weeks, type Game, type Member, type ResultAuditKind, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
-import { requireCommissioner } from "@/lib/members/members";
+import { joinedOrder, requireCommissioner } from "@/lib/members/members";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
@@ -552,7 +552,7 @@ export async function weekResult(
   // The roster does not depend on the picks, so it rides along rather than waiting on them.
   const [memberPicks, roster] = await Promise.all([
     weekPicks(db, actor, slate, now),
-    db.query.members.findMany({ orderBy: [asc(members.joinedAt), asc(members.id)] }),
+    db.query.members.findMany({ orderBy: joinedOrder }),
   ]);
   const ids = new Set(memberPicks.map((m) => m.memberId));
   const rows = roster.filter((m) => ids.has(m.id));
@@ -589,7 +589,7 @@ export async function seasonResult(db: Db, _actor: Member, now: Date = new Date(
   // The member rows do not depend on the picks, so they ride along rather than waiting.
   const [picksOf, everyone] = await Promise.all([
     seasonPicks(db, weekGames, now),
-    db.query.members.findMany({ orderBy: [asc(members.joinedAt), asc(members.id)] }),
+    db.query.members.findMany({ orderBy: joinedOrder }),
   ]);
   // `seasonPicks` has already applied `roster` a Week at a time, so this is not a
   // fourth answer to who is on the board — it is the season-wide superset of those

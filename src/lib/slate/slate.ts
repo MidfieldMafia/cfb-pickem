@@ -30,11 +30,10 @@ export interface Slate {
   games: Game[];
   /** Null until the Slate has a Game. */
   deadline: Date | null;
-  earliestKickoff: Date | null;
 }
 
 /** The last week a season can reach: the regular season plus conference championship week. */
-export const MAX_WEEK_NUMBER = 15;
+const MAX_WEEK_NUMBER = 15;
 
 /** Every week number a commissioner can open, for the console's chooser. */
 export const WEEK_NUMBERS = Array.from({ length: MAX_WEEK_NUMBER }, (_, i) => i + 1);
@@ -43,8 +42,12 @@ export function isWeekNumber(weekNumber: number): boolean {
   return Number.isInteger(weekNumber) && weekNumber >= 1 && weekNumber <= MAX_WEEK_NUMBER;
 }
 
+async function findActiveSeason(db: Db): Promise<Season | undefined> {
+  return db.query.seasons.findFirst({ where: eq(seasons.active, true) });
+}
+
 export async function activeSeason(db: Db): Promise<Season> {
-  const season = await db.query.seasons.findFirst({ where: eq(seasons.active, true) });
+  const season = await findActiveSeason(db);
   if (!season) throw new InvalidSlate("There is no active season. Run the seed.");
   return season;
 }
@@ -82,9 +85,10 @@ export async function gameWithWeek(db: Db, gameId: number): Promise<(Game & { we
   return db.query.games.findFirst({ where: eq(games.id, gameId), with: { week: true } });
 }
 
-async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> {
+async function loadGame(db: Db, gameId: number, weekId?: number): Promise<Game & { week: Week }> {
   const game = await gameWithWeek(db, gameId);
   if (!game) throw new InvalidSlate("That game is not on the slate.");
+  if (weekId !== undefined && game.weekId !== weekId) throw new InvalidSlate("That game is not on this slate.");
   return game;
 }
 
@@ -122,8 +126,8 @@ function effectiveDeadline(week: Week, slateGames: Game[]): Date | null {
  * about whether the Week is closed. An unpublished Slate never locks — its
  * Deadline still floats.
  */
-export function deadlinePassed(slate: Slate, now: Date): boolean {
-  return slate.week.published && slate.deadline !== null && now.getTime() >= slate.deadline.getTime();
+export function deadlinePassed(week: Pick<Week, "published" | "deadline">, now: Date): boolean {
+  return week.published && week.deadline !== null && now.getTime() >= week.deadline.getTime();
 }
 
 /**
@@ -135,23 +139,27 @@ export function slateOrder(slateGames: Game[]): Game[] {
   return [...slateGames].sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime() || a.id - b.id);
 }
 
+function toSlate(week: Week & { season: Season; games: Game[] }): Slate {
+  const { season, games: slateGames, ...bare } = week;
+  const sorted = slateOrder(slateGames);
+  return { week: bare, season, games: sorted, deadline: effectiveDeadline(bare, sorted) };
+}
+
 export async function slateFor(db: Db, weekId: number): Promise<Slate> {
   const week = await db.query.weeks.findFirst({ where: eq(weeks.id, weekId), with: { season: true, games: true } });
   if (!week) throw new InvalidSlate("No such week.");
-  const { season, games: slateGames, ...bare } = week;
-  const sorted = slateOrder(slateGames);
-  return {
-    week: bare,
-    season,
-    games: sorted,
-    deadline: effectiveDeadline(bare, sorted),
-    earliestKickoff: earliest(sorted),
-  };
+  return toSlate(week);
 }
 
-export async function addGame(db: Db, actor: Member, weekId: number, candidate: CandidateGame): Promise<Game> {
+export async function addGame(
+  db: Db,
+  actor: Member,
+  weekId: number,
+  candidate: CandidateGame,
+  inWeek?: Week,
+): Promise<Game> {
   requireCommissioner(actor);
-  const week = await loadWeek(db, weekId);
+  const week = inWeek ?? (await loadWeek(db, weekId));
   if (week.published) throw new SlatePublished();
   const [game] = await db
     .insert(games)
@@ -170,19 +178,16 @@ export async function addGame(db: Db, actor: Member, weekId: number, candidate: 
       spread: candidate.spread,
       detail: candidate.detail,
     })
-    .onConflictDoNothing()
+    // The unique index makes a re-add a no-op that still returns the row, so
+    // there is no second read and nothing to assert about.
+    .onConflictDoUpdate({ target: [games.weekId, games.cfbdGameId], set: { weekId } })
     .returning();
-  if (game) return game;
-  const already = await db.query.games.findFirst({
-    where: and(eq(games.weekId, weekId), eq(games.cfbdGameId, candidate.cfbdGameId)),
-  });
-  return already!;
+  return game;
 }
 
 export async function setTiebreaker(db: Db, actor: Member, weekId: number, gameId: number): Promise<Week> {
   requireCommissioner(actor);
-  const game = await loadGame(db, gameId);
-  if (game.weekId !== weekId) throw new InvalidSlate("That game is not on this slate.");
+  const game = await loadGame(db, gameId, weekId);
   if (game.void) throw new InvalidSlate("A void game cannot be the Tiebreaker Game.");
   const [updated] = await db.update(weeks).set({ tiebreakerGameId: gameId }).where(eq(weeks.id, weekId)).returning();
   return updated;
@@ -206,14 +211,16 @@ export async function publishSlate(db: Db, actor: Member, weekId: number, now: D
 
 /** What members see: the latest published Slate in the active season, or null before one exists. */
 export async function publishedSlate(db: Db): Promise<Slate | null> {
-  const season = await db.query.seasons.findFirst({ where: eq(seasons.active, true) });
+  const season = await findActiveSeason(db);
   if (!season) return null;
+  // With the season and games on the week row this is the whole Slate. The
+  // path runs on every page render and every pick tap, so it reads once.
   const week = await db.query.weeks.findFirst({
     where: and(eq(weeks.seasonId, season.id), eq(weeks.published, true)),
     orderBy: [desc(weeks.weekNumber)],
+    with: { season: true, games: true },
   });
-  if (!week) return null;
-  return slateFor(db, week.id);
+  return week ? toSlate(week) : null;
 }
 
 /** Weeks that exist for the active season, for the console's week chooser. */
@@ -239,8 +246,8 @@ export async function setDeadline(db: Db, actor: Member, weekId: number, at: Dat
   requireCommissioner(actor);
   if (Number.isNaN(at.getTime())) throw new InvalidSlate("That is not a valid time.");
   const slate = await slateFor(db, weekId);
-  if (slate.deadline === null) throw new InvalidSlate("Add a game before setting the deadline.");
-  const ceiling = slate.week.published ? slate.week.deadline! : slate.earliestKickoff!;
+  const ceiling = slate.week.published ? slate.week.deadline : earliest(slate.games);
+  if (ceiling === null) throw new InvalidSlate("Add a game before setting the deadline.");
   const tooLate = slate.week.published ? at >= ceiling : at > ceiling;
   if (tooLate) {
     throw new InvalidSlate("The deadline can only move earlier, never later than the first kickoff.");
@@ -357,5 +364,5 @@ export async function addGameFromFeed(
   const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const candidate = feed.find((c) => c.cfbdGameId === cfbdGameId);
   if (!candidate) throw new InvalidSlate("That game is no longer in the feed.");
-  return addGame(db, actor, weekId, candidate);
+  return addGame(db, actor, weekId, candidate, slate.week);
 }

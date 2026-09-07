@@ -73,7 +73,7 @@ export async function currentWeek(
 ): Promise<WeekContext | null> {
   const published = await publishedSlate(db);
   if (!published) return null;
-  const locked = deadlinePassed(published, now);
+  const locked = deadlinePassed(published.week, now);
   // Any feed pull happens before the reads, so the sheet and the Reveal see the same rows.
   const slate = locked && options.cfbd ? await refreshQuietly(db, options.cfbd, published, now) : published;
   const [sheet, result] = await Promise.all([

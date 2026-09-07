@@ -22,7 +22,7 @@ import {
 } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
-import { InvalidMember, requireCommissioner } from "@/lib/members/members";
+import { InvalidMember, joinedOrder, requireCommissioner } from "@/lib/members/members";
 import { roster } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
 import { teamName, toGameView } from "@/lib/slate/json";
@@ -98,7 +98,7 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
   const liveIds = live.map((v) => v.game.id);
   const byGame = new Map(slate.games.map((g) => [g.id, g]));
   const [everyone, pickRows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany({ orderBy: [asc(members.joinedAt), asc(members.id)] }),
+    db.query.members.findMany({ orderBy: joinedOrder }),
     liveIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, liveIds) }) : [],
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),

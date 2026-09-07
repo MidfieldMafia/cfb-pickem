@@ -13,14 +13,10 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "../src/db/schema";
 import { appUrl } from "../src/lib/app-url";
+import { requireEnv } from "../src/lib/env";
 import { bootstrapCommissioner, magicLinkFor } from "../src/lib/members/members";
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.error("DATABASE_URL is not set. Run `npx vercel env pull .env.local` first.");
-  process.exit(1);
-}
-const db = drizzle({ client: neon(url), schema });
+const db = drizzle({ client: neon(requireEnv("DATABASE_URL")), schema });
 
 async function main() {
   const year = 2026;

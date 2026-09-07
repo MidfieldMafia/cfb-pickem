@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
   if (!signIn) return NextResponse.redirect(new URL("/expired", request.url));
 
   const response = NextResponse.redirect(
-    new URL(signIn.landing === "welcome" ? "/welcome" : "/week", request.url),
+    new URL(signIn.member.welcomedAt ? "/week" : "/welcome", request.url),
   );
   response.cookies.set(SESSION_COOKIE, signIn.sessionId, sessionCookieOptions());
   return response;
