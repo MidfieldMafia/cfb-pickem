@@ -162,7 +162,7 @@ export default async function MemberPicks({
 
 function BackLink({ weekNumber }: { weekNumber: number }) {
   return (
-    <Link href={`/console/picks?week=${weekNumber}`} className="text-sm font-semibold">
+    <Link href={`/console/picks?week=${weekNumber}`} className="tap inline-flex items-center text-sm font-semibold">
       ← Who hasn&apos;t picked
     </Link>
   );
