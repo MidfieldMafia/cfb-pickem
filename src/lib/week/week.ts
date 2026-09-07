@@ -16,8 +16,8 @@ import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
-import { refreshResultsIfStale, weekResult, type GradedWeekResult } from "@/lib/results/results";
-import { deadlinePassed, publishedSlate, type Slate } from "@/lib/slate/slate";
+import { playedWeeks, refreshResultsIfStale, weekResult, type GradedWeekResult } from "@/lib/results/results";
+import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
 
 /** The published Week for one member at one instant. */
 export interface WeekContext {
@@ -79,4 +79,55 @@ export async function currentWeek(
     locked && options.graded ? weekResult(db, actor, slate, now) : null,
   ]);
   return { slate, sheet, result };
+}
+
+/** A Week the season has finished with, graded, with the Weeks a member may look at instead. */
+export interface WeekReview {
+  slate: Slate;
+  /**
+   * Always graded, unlike `WeekContext.result`: a Week is only reviewable once
+   * its Deadline has passed, so there is no state of this screen where the
+   * scores and the Reveal are missing and every section has to guard for it.
+   */
+  result: GradedWeekResult;
+  /** Every Week whose Deadline has passed, in week order: what the chooser offers. */
+  played: number[];
+}
+
+/**
+ * The Week a member is looking back at — the counterpart to `currentWeek`,
+ * which composes the Week they are standing in.
+ *
+ * `weekNumber` is the one they asked for; a number the season has not played
+ * yet (a nonsense `?week=`, or a Week still open) falls back to the latest it
+ * has, so the screen opens on the most recent results rather than on an
+ * error. Null when the season has played no Week at all, which is the one
+ * "there is nothing here yet" this screen has — the same shape `currentWeek`
+ * uses for it.
+ *
+ * The member's own Picks are not read separately: the Reveal carries every
+ * member's Pick per Game from the same grading pass, so
+ * `summary.pickBreakdown` transposes theirs out of it rather than this
+ * loading a second, ungraded copy that could disagree with the board.
+ */
+export async function weekInReview(
+  db: Db,
+  actor: Member,
+  weekNumber: number | undefined,
+  now: Date = new Date(),
+  options: Pick<WeekOptions, "cfbd"> = {},
+): Promise<WeekReview | null> {
+  const season = await activeSeason(db);
+  const played = await playedWeeks(db, season, now);
+  const chosen = played.find((w) => w.weekNumber === weekNumber) ?? played[played.length - 1];
+  if (!chosen) return null;
+  const loaded = await slateFor(db, chosen.id);
+  // A member landing here straight after a game ends drives the feed too, on
+  // the same stale gate `/week` uses; grading then reads the rows it left.
+  const slate = options.cfbd ? await refreshQuietly(db, options.cfbd, loaded, now) : loaded;
+  return {
+    slate,
+    result: await weekResult(db, actor, slate, now),
+    played: played.map((w) => w.weekNumber),
+  };
 }
