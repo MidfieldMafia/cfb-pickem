@@ -15,7 +15,7 @@ import { LiveBoard } from "./live-board";
  */
 export default async function Live() {
   const member = await requireMember();
-  const week = await currentWeek(db(), member, new Date(), { graded: true, cfbd });
+  const week = await currentWeek(db(), member, new Date(), { graded: true, season: true, cfbd });
   if (!week) return <NoSlate />;
   return <LiveBoard initial={toWeekStateJson(week)} viewer={toMemberJson(member)} />;
 }

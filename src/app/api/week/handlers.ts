@@ -89,7 +89,7 @@ function weekStateEtag(state: WeekStateJson): string {
 export async function getWeekState(request: Request, route: PickRoute): Promise<Response> {
   const actor = await route.currentMember();
   if (!actor) return Response.json({ error: "Open your Magic Link to sign in." } satisfies ApiError, { status: 401 });
-  const week = await currentWeek(route.db, actor, route.now?.() ?? new Date(), { graded: true, cfbd: route.cfbd });
+  const week = await currentWeek(route.db, actor, route.now?.() ?? new Date(), { graded: true, season: true, cfbd: route.cfbd });
   if (!week) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
   const state = toWeekStateJson(week);
   const etag = weekStateEtag(state);

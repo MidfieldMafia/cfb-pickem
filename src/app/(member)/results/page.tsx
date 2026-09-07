@@ -5,7 +5,7 @@ import { BoardToggle } from "@/components/board-toggle";
 import { MemberChip } from "@/components/member-chip";
 import { RevealList } from "@/components/reveal";
 import { SECTION_LABEL } from "@/components/section-label";
-import { YourWeek } from "@/components/your-week";
+import { YourWeek } from "@/components/standing-card";
 import { cfbd } from "@/lib/cfbd";
 import { requireMember } from "@/lib/members/current";
 import {
