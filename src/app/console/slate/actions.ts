@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { cfbd } from "@/lib/cfbd";
+import { cfbd, freshCfbd } from "@/lib/cfbd";
 import { requireConsole } from "@/lib/members/current";
 import { integerField } from "@/lib/parse";
 import { openMeteo } from "@/lib/weather/open-meteo";
@@ -91,8 +91,6 @@ export async function voidGameAction(formData: FormData) {
 
 export async function refreshAction(formData: FormData) {
   await requireConsole();
-  const client = cfbd();
-  client.invalidate();
-  await refreshFromFeed(db(), client, num(formData, "weekId"), openMeteo());
+  await refreshFromFeed(db(), freshCfbd(), num(formData, "weekId"), openMeteo());
   revalidatePath(SLATE_PATH);
 }

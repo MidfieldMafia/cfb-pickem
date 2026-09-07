@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { games, weeks, type Member } from "@/db/schema";
+import { sharedFeed } from "@/lib/cfbd/cache";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
 import { NotCommissioner } from "@/lib/members/members";
@@ -199,6 +200,42 @@ describe("results ingest", () => {
     await overrideResult(db, jonah, texas.id, { awayScore: 31, homeScore: 28, note: "Feed stuck" });
     expect(await refresh(finals, SUNDAY)).toBe("idle");
     expect(finals.calls).toBe(1);
+  });
+
+  test("a commissioner's refresh is not undone by the next member visit", async () => {
+    const { michigan, reload, ingest, refresh } = await setup();
+    // The production arrangement, on a clock this test turns: one ten-minute
+    // cache with a door for member traffic and a door for the refresh button.
+    // `world` is what CollegeFootballData would answer if asked right now.
+    let world = feedWith({});
+    let clock = 0;
+    const feed = sharedFeed(
+      { ...recordedCfbd("2026-week-2"), games: (q) => world.games(q) },
+      10 * 60_000,
+      () => clock,
+    );
+    const at = (minutes: number) => new Date(SATURDAY_EVENING.getTime() + minutes * 60_000);
+    const tick = (minutes: number) => (clock = minutes * 60_000);
+
+    // Member traffic pulls the feed while Michigan is still going. The cache holds that answer.
+    expect(await refresh(feed.cfbd(), at(0))).toBe("refreshed");
+    expect(await reload(michigan.id)).toMatchObject({ status: "scheduled" });
+
+    // The game ends: CollegeFootballData knows, the cache does not.
+    world = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] });
+    tick(2);
+
+    // "Check the feed now". The read goes through, and the cache keeps what it read.
+    await ingest(feed.freshCfbd(), at(2));
+    expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
+
+    // Five minutes on, the stale gate reopens — still inside the ten-minute
+    // cache. A refresh that had skipped the cache rather than emptying it would
+    // leave the pre-final answer sitting there for this visit to write back,
+    // and the score on screen would go backwards.
+    tick(7);
+    expect(await refresh(feed.cfbd(), at(7))).toBe("refreshed");
+    expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
   });
 });
 
