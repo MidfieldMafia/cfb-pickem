@@ -83,6 +83,11 @@ function scoreMember(
     const team = index.picks.get(`${member.id}:${game.id}`);
     return scorePick(rules, game, team, lockGameId === game.id);
   });
+  // A Dropped Lock, for graded screens. `void` reaches the engine already
+  // folded through `effectiveResult` by `toEngineGame`, so this is the same
+  // derivation the ungraded screens get from `isDroppedLock` — not a second
+  // opinion. The engine holds no database row, which is why it cannot share
+  // the function itself.
   const lockResult: LockResult | null =
     lockGameId === undefined
       ? null

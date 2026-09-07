@@ -8,7 +8,7 @@
 import { describe, expect, test, vi } from "vitest";
 import type { Member } from "@/db/schema";
 import { put } from "@/lib/picks/client";
-import type { PickRoute } from "@/lib/picks/http";
+import type { ApiError, PickRoute } from "@/lib/picks/http";
 import type { SheetJson } from "@/lib/picks/json";
 import { ingestResults } from "@/lib/results/results";
 import { slateFor } from "@/lib/slate/slate";
@@ -171,9 +171,8 @@ describe("pick entry route refusals", () => {
     expect(await json(response)).toEqual({ error: "Pick a winner in that game before locking it." });
   });
 
-  test("423 once the Deadline has passed, on every route that writes", async () => {
-    const { asGrandma, michigan } = await setup();
-    const locked = { error: "Picks are locked: the deadline has passed.", locked: true };
+  test("423 once the Deadline has passed, on every route that writes, and the refusal carries the sheet", async () => {
+    const { asGrandma, miami, michigan, texas } = await setup();
 
     const responses = await Promise.all([
       putPick(request({ gameId: michigan.id, teamId: michigan.homeTeamId }), asGrandma(SUNDAY)),
@@ -183,7 +182,16 @@ describe("pick entry route refusals", () => {
 
     for (const response of responses) {
       expect(response.status).toBe(423);
-      expect(await json(response)).toEqual(locked);
+      const body = await json<ApiError<SheetJson>>(response);
+      expect(body.error).toBe("Picks are locked: the deadline has passed.");
+      expect(body.locked).toBe(true);
+
+      // The refusal the phone most needs server truth for was the one that used
+      // to answer without any, leaving the screen to revert to a remembered
+      // local value. The sheet now comes with it: same shape the 200 returns.
+      expect(body.sheet!.locked).toBe(true);
+      expect(body.sheet!.serverNow).toBe(SUNDAY.toISOString());
+      expect(body.sheet!.games.map((g) => g.game.id)).toEqual([miami.id, michigan.id, texas.id]);
     }
   });
 
@@ -204,20 +212,24 @@ describe("what the phone makes of a refusal", () => {
     // One request, answered by the handler above; `put` clones nothing, so hand it the body once.
     vi.stubGlobal("fetch", async () => sent);
     try {
-      return await put<{ serverNow: string }>("/api/week/picks", {});
+      return await put<SheetJson>("/api/week/picks", {});
     } finally {
       vi.unstubAllGlobals();
     }
   }
 
-  test("a 423 becomes locked, so the screen can flip itself", async () => {
+  test("a 423 becomes locked and hands back the server's sheet, so the screen flips to truth rather than a guess", async () => {
     const { asGrandma, michigan } = await setup();
 
     const result = await through(
       putPick(request({ gameId: michigan.id, teamId: michigan.homeTeamId }), asGrandma(SUNDAY)),
     );
 
-    expect(result).toEqual({ ok: false, error: "Picks are locked: the deadline has passed.", locked: true });
+    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ error: "Picks are locked: the deadline has passed.", locked: true });
+    // `body` on the failed branch too: the screen reads the same field either way.
+    expect(result.ok === false && result.body?.locked).toBe(true);
+    expect(result.ok === false && result.body?.serverNow).toBe(SUNDAY.toISOString());
   });
 
   test("a 400 is a message to show, not a lock", async () => {

@@ -28,6 +28,7 @@ import { formatterFor } from "@/lib/intl-time";
 import { InvalidMember, joinedOrder, requireCommissioner } from "@/lib/members/members";
 import { roster } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
+import { isDroppedLock } from "@/lib/results/result";
 import { teamName, toGameView } from "@/lib/slate/json";
 import { slateFor } from "@/lib/slate/slate";
 import { pickSheet, publishedDeadline, type PickSheet } from "./picks";
@@ -118,7 +119,7 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
     const own = pickedBy.get(member.id) ?? new Map<number, number>();
     const lockGameId = lockOf.get(member.id) ?? null;
     const lockGame = lockGameId === null ? undefined : byGame.get(lockGameId);
-    const lockDropped = lockGame?.void ?? false;
+    const lockDropped = isDroppedLock(lockGame);
     const lockedTeam = lockGame && !lockDropped ? own.get(lockGame.id) : undefined;
     const tiebreakerGuess = guessOf.get(member.id) ?? null;
     const progress = sheetProgress({

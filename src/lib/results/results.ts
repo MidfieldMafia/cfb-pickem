@@ -467,14 +467,18 @@ export interface RevealPick {
   memberId: number;
   teamId: number;
   outcome: engine.PickOutcome;
-  /** The member's Lock of the Week sits on this pick and still counts. */
-  locked: boolean;
   /**
-   * The member's Lock sits on this pick but the Game is Void: a Dropped Lock.
-   * Never true at the same time as `locked`. The board shows it so a member
-   * who spent their Lock here is not mistaken for one who set none.
+   * The member's Lock of the Week on this pick: `"counts"` while it earns the
+   * multiplier, `"dropped"` once the Game is Void — a Dropped Lock — and null
+   * when their Lock is elsewhere or unset. The board shows a Dropped Lock so a
+   * member who spent theirs here is not mistaken for one who set none.
+   *
+   * One field rather than two booleans, because "counting" and "dropped" are
+   * exclusive and a pair could say both. That exclusion used to rest on
+   * `score-week` clearing `locked` in its void branch, three modules from the
+   * board that promised it; here it cannot be expressed.
    */
-  lockDropped: boolean;
+  lock: "counts" | "dropped" | null;
 }
 
 /** The Game, its result, and who took which side: the shared pair plus the board's own column. */
@@ -630,8 +634,9 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult): Re
           memberId: member.id,
           teamId: Number(pick.team),
           outcome: pick.outcome,
-          locked: pick.locked,
-          lockDropped: droppedGameId === gameId,
+          // Dropped first: a Void game is the one case where the engine's
+          // `locked` and the board's own column could otherwise both speak.
+          lock: droppedGameId === gameId ? "dropped" : pick.locked ? "counts" : null,
         });
       }
       return { ...toGameView(game), picks };

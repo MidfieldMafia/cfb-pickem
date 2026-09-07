@@ -9,7 +9,8 @@ import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { integerField } from "@/lib/parse";
 import { publishedSlate, type Slate } from "@/lib/slate/slate";
-import { DeadlinePassed, InvalidPick, PicksHidden } from "./picks";
+import { toSheetJson, type SheetJson } from "./json";
+import { DeadlinePassed, InvalidPick, pickSheet, PicksHidden } from "./picks";
 
 import type { ApiError } from "./client";
 
@@ -37,13 +38,36 @@ export interface PickRoute {
   cfbd?: () => CfbdClient;
 }
 
-export function errorResponse(error: unknown): Response {
+/**
+ * A refusal as JSON the phone can show. `sheet` is the server's answer to send
+ * with a 423 and is ignored by every other branch; omitted, a 423 still sends
+ * the refusal alone, which is what a caller with no context to read it from
+ * gets.
+ *
+ * The `instanceof` order is load-bearing: `DeadlinePassed extends InvalidPick`,
+ * so testing the general class first would answer 400 for a passed Deadline and
+ * the screen would never flip to locked.
+ */
+export function errorResponse(error: unknown, sheet?: SheetJson): Response {
   if (error instanceof DeadlinePassed) {
-    return Response.json({ error: error.message, locked: true } satisfies ApiError, { status: 423 });
+    return Response.json({ error: error.message, locked: true, sheet } satisfies ApiError<SheetJson>, { status: 423 });
   }
   if (error instanceof PicksHidden) return Response.json({ error: error.message } satisfies ApiError, { status: 403 });
   if (error instanceof InvalidPick) return Response.json({ error: error.message } satisfies ApiError, { status: 400 });
   throw error;
+}
+
+/**
+ * The sheet to send with a 423. Best effort on purpose: the refusal is the part
+ * that must arrive, so a sheet that cannot be read must not turn a 423 into a
+ * 500 and leave the screen with neither.
+ */
+async function refusalSheet(db: Db, actor: Member, slate: Slate, now: Date): Promise<SheetJson | undefined> {
+  try {
+    return toSheetJson(await pickSheet(db, actor, slate, now));
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -53,6 +77,11 @@ export function errorResponse(error: unknown): Response {
  * the Week again. It stops short of building the sheet itself — three of the
  * four routes only save a change, and would pay for a sheet nobody reads.
  * "No published Week" is the 404, the one shape `currentWeek`'s null takes here.
+ *
+ * A passed Deadline is the exception: that refusal answers with the sheet, so
+ * the screen adopts server truth instead of reverting to a remembered local
+ * value. It is read here rather than in the handlers because this is where the
+ * refusal is caught, and here the Slate and the clock are already in hand.
  */
 export async function withPickContext(
   route: PickRoute,
@@ -62,10 +91,13 @@ export async function withPickContext(
   const [actor, slate] = await Promise.all([route.currentMember(), publishedSlate(route.db)]);
   if (!actor) return Response.json({ error: "Open your Magic Link to sign in." } satisfies ApiError, { status: 401 });
   if (!slate) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
+  const now = route.now?.() ?? new Date();
   try {
-    return await work({ db: route.db, actor, slate, now: route.now?.() ?? new Date() });
+    return await work({ db: route.db, actor, slate, now });
   } catch (error) {
-    return errorResponse(error);
+    // Only a 423 carries one, and only it pays for the extra read.
+    const sheet = error instanceof DeadlinePassed ? await refusalSheet(route.db, actor, slate, now) : undefined;
+    return errorResponse(error, sheet);
   }
 }
 

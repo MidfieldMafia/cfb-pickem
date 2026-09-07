@@ -150,6 +150,28 @@ export function effectiveResult(game: Game): GameResult {
   };
 }
 
+/**
+ * Whether a member's Lock of the Week has become a Dropped Lock: the Game
+ * carrying it is Void.
+ *
+ * Behind `effectiveResult` rather than beside it. Reading the `void` column
+ * direct — which `pickSheet` and the picks console both used to do — puts a
+ * second opinion on what Void means next to the seam that exists to hold the
+ * only one, so a change to how Void, a Result Override and the feed rank would
+ * reach the screens that call this and miss the ones that did not.
+ *
+ * Takes the Game the Lock sits on: undefined when the member set no Lock, or
+ * when their Lock names a Game off this Slate. Both are "not dropped".
+ *
+ * Graded screens get this from the scoring engine's own `LockResult.dropped`
+ * instead. The engine never sees a database row, so it cannot call this — but
+ * `toEngineGame` hands it `void` already folded through `effectiveResult`, so
+ * the two answers come from one derivation across a bridge, not from two.
+ */
+export function isDroppedLock(lockGame: Game | undefined | null): boolean {
+  return !!lockGame && effectiveResult(lockGame).status === "void";
+}
+
 /** "Oklahoma 24, Michigan 27", or "pending" / "void": the audit log reads without joins. */
 export function describeResult(game: Game): string {
   const result = effectiveResult(game);

@@ -184,9 +184,9 @@ describe("the week in review", () => {
     ]);
     expect(review.result.complete).toBe(false);
     const michiganRow = review.result.reveal.games.find((g) => g.game.id === michigan.id)!;
-    expect(michiganRow.picks.map((p) => [p.memberId, p.outcome, p.locked])).toEqual([
-      [jonah.id, "incorrect", false],
-      [grandma.id, "correct", true],
+    expect(michiganRow.picks.map((p) => [p.memberId, p.outcome, p.lock])).toEqual([
+      [jonah.id, "incorrect", null],
+      [grandma.id, "correct", "counts"],
     ]);
   });
 

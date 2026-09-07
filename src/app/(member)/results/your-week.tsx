@@ -9,11 +9,12 @@ import { isVoid, teamName, voidNote, type GameView } from "@/lib/slate/json";
 function PickChip({ view, pick }: { view: GameView; pick: RevealPick | null }) {
   if (pick === null) return <Badge variant="outline">No pick</Badge>;
   const team = teamName(view.game, pick.teamId);
-  const lock = pick.locked ? (
-    <Lock size={12} aria-label="Lock of the Week" />
-  ) : pick.lockDropped ? (
-    <LockOpen size={12} aria-label="Lock of the Week, dropped: the game is void" />
-  ) : null;
+  const lock =
+    pick.lock === "counts" ? (
+      <Lock size={12} aria-label="Lock of the Week" />
+    ) : pick.lock === "dropped" ? (
+      <LockOpen size={12} aria-label="Lock of the Week, dropped: the game is void" />
+    ) : null;
   if (pick.outcome === "correct") {
     return (
       <Badge className="bg-win text-win-foreground">
