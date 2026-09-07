@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { cfbd, freshCfbd } from "@/lib/cfbd";
 import type { ActionState } from "@/lib/console/state";
 import {
@@ -11,16 +10,11 @@ import {
   editPublish,
   editVoidGame,
   refreshSlate,
-  slateWeekHref,
 } from "@/lib/slate/console-edits";
 import { openMeteo } from "@/lib/weather/open-meteo";
 import { consoleRoute } from "../context";
 
 export type SlateActionState = ActionState;
-
-export async function chooseWeekAction(formData: FormData) {
-  redirect(await slateWeekHref(consoleRoute(), formData));
-}
 
 export async function addGameAction(formData: FormData) {
   await addGame(consoleRoute(), formData, cfbd(), openMeteo());

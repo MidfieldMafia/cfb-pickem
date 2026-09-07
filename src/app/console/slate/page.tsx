@@ -12,14 +12,13 @@ import { requireConsole } from "@/lib/members/current";
 import { MAX_NOTE } from "@/lib/notes";
 import { plural } from "@/lib/plural";
 import { isVoid, toGameView, toSlateCandidates, voidNote, type GameView } from "@/lib/slate/json";
-import { activeSeason, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
 import { ActionForm } from "../action-form";
 import { pillClass } from "../pill";
 import { requestedWeekNumber } from "../week-param";
 import { filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
 import {
   addGameAction,
-  chooseWeekAction,
   refreshAction,
   removeGameAction,
   setTiebreakerAction,
@@ -74,32 +73,12 @@ export default async function SlateBuilder({
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1>Slate builder</h1>
-          <p className="text-sm text-muted-foreground">
-            {season.year} · Week {weekNumber} ·{" "}
-            {slate.week.published ? "published; voids and the deadline are the only edits" : "draft; edit freely until you publish"}
-          </p>
-        </div>
-        <form action={chooseWeekAction} className="flex items-center gap-2 text-sm font-semibold">
-          Week
-          <select
-            name="weekNumber"
-            defaultValue={weekNumber}
-            className="h-11 rounded-md border border-input bg-card px-3 text-sm"
-          >
-            {WEEK_NUMBERS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-                {existing.find((w) => w.weekNumber === n)?.published ? " · published" : ""}
-              </option>
-            ))}
-          </select>
-          <Button type="submit" variant="outline">
-            Go
-          </Button>
-        </form>
+      <div>
+        <h1>Slate builder</h1>
+        <p className="text-sm text-muted-foreground">
+          Week {weekNumber} ·{" "}
+          {slate.week.published ? "published; voids and the deadline are the only edits" : "draft; edit freely until you publish"}
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">

@@ -2,28 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { pillClass } from "./pill";
+import { ClipboardCheck, ListPlus, Pencil, Smartphone, Users } from "lucide-react";
 
 const LINKS = [
-  { href: "/console/slate", label: "Slate builder" },
-  { href: "/console/members", label: "Members" },
-  { href: "/console/picks", label: "Who hasn't picked" },
-  { href: "/console/results", label: "Result overrides" },
-];
+  { href: "/console/slate", label: "Slate builder", Icon: ListPlus },
+  { href: "/console/members", label: "Members", Icon: Users },
+  { href: "/console/picks", label: "Who hasn't picked", Icon: ClipboardCheck },
+  { href: "/console/results", label: "Result overrides", Icon: Pencil },
+] as const;
+
+/** The rail's row: icon, label, and the pine fill when it is the screen you are on. */
+const ITEM = "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold whitespace-nowrap no-underline";
 
 export function ConsoleNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 border-b border-border px-4 py-2 md:w-56 md:flex-col md:border-b-0 md:border-r md:py-4">
-      {LINKS.map((link) => {
-        const active = pathname.startsWith(link.href);
+    <nav className="flex gap-1 overflow-x-auto border-b border-border px-4 py-2 md:w-56 md:flex-col md:overflow-visible md:border-b-0 md:border-r md:py-4">
+      {LINKS.map(({ href, label, Icon }) => {
+        const active = pathname.startsWith(href);
         return (
-          <Link key={link.href} href={link.href} className={pillClass(active)}>
-            {link.label}
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={`${ITEM} ${active ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+          >
+            <Icon size={20} aria-hidden />
+            {label}
           </Link>
         );
       })}
-      <Link href="/week" className="rounded-md px-3 py-2 text-sm font-semibold no-underline md:mt-auto">
+      <Link href="/week" className={`${ITEM} text-muted-foreground hover:bg-accent md:mt-auto`}>
+        <Smartphone size={20} aria-hidden />
         Open the app
       </Link>
     </nav>

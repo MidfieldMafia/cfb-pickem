@@ -8,9 +8,8 @@ import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL } from "@/components/section-label";
 import { requireConsole } from "@/lib/members/current";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
-import { activeSeason, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
 import { requestedWeekNumber } from "../week-param";
-import { choosePicksWeekAction } from "./actions";
 import { DeadlineCountdown } from "./deadline-countdown";
 
 const KINDS: Record<PickAudit["kind"], string> = {
@@ -90,36 +89,16 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1>Who hasn&apos;t picked</h1>
-          <p className="text-sm text-muted-foreground">
-            {season.year} · Week {weekNumber}
-            {report ? (
-              <>
-                {" · "}Deadline <LocalTime at={report.deadline} style="deadline" />
-              </>
-            ) : null}
-          </p>
-        </div>
-        <form action={choosePicksWeekAction} className="flex items-center gap-2 text-sm font-semibold">
-          Week
-          <select
-            name="weekNumber"
-            defaultValue={weekNumber}
-            className="h-11 rounded-md border border-input bg-card px-3 text-sm"
-          >
-            {WEEK_NUMBERS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-                {existing.find((w) => w.weekNumber === n)?.published ? " · published" : ""}
-              </option>
-            ))}
-          </select>
-          <Button type="submit" variant="outline">
-            Go
-          </Button>
-        </form>
+      <div>
+        <h1>Who hasn&apos;t picked</h1>
+        <p className="text-sm text-muted-foreground">
+          Week {weekNumber}
+          {report ? (
+            <>
+              {" · "}Deadline <LocalTime at={report.deadline} style="deadline" />
+            </>
+          ) : null}
+        </p>
       </div>
 
       {!report ? (

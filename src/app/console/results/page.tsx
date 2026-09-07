@@ -1,6 +1,5 @@
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
 import { TeamLogo } from "@/components/team-logo";
@@ -14,10 +13,8 @@ import {
   type ResultLabel,
 } from "@/lib/results/results";
 import { isVoid, type GameView } from "@/lib/slate/json";
-import { WEEK_NUMBERS } from "@/lib/slate/slate";
 import { weekParam } from "../week-param";
 import {
-  chooseResultsWeekAction,
   clearOverrideAction,
   overrideResultAction,
   refreshResultsAction,
@@ -61,7 +58,7 @@ const KINDS: Record<ResultAudit["kind"], string> = {
 export default async function ResultOverrides({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const commissioner = await requireConsole();
   const params = await searchParams;
-  const { year, week, weeks, rows, review, feedCheckedAt, log } = await resultsConsole(
+  const { week, rows, review, feedCheckedAt, log } = await resultsConsole(
     db(),
     commissioner,
     weekParam(params.week),
@@ -69,31 +66,11 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1>Result overrides</h1>
-          <p className="text-sm text-muted-foreground">
-            {year} · Week {week.weekNumber} · scores from CollegeFootballData
-          </p>
-        </div>
-        <form action={chooseResultsWeekAction} className="flex items-center gap-2 text-sm font-semibold">
-          Week
-          <select
-            name="weekNumber"
-            defaultValue={week.weekNumber}
-            className="h-11 rounded-md border border-input bg-card px-3 text-sm"
-          >
-            {WEEK_NUMBERS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-                {weeks.find((w) => w.weekNumber === n)?.published ? " · published" : ""}
-              </option>
-            ))}
-          </select>
-          <Button type="submit" variant="outline">
-            Go
-          </Button>
-        </form>
+      <div>
+        <h1>Result overrides</h1>
+        <p className="text-sm text-muted-foreground">
+          Week {week.weekNumber} · scores from CollegeFootballData
+        </p>
       </div>
 
       <p className="max-w-3xl text-sm text-muted-foreground">
