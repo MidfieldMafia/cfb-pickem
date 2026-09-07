@@ -51,7 +51,7 @@ describe("pick entry routes", () => {
     expect(sheet.year).toBe(2026);
     expect(sheet.locked).toBe(false);
     expect(sheet.serverNow).toBe(THURSDAY.toISOString());
-    expect(sheet.games.map((g) => g.id)).toEqual([miami.id, michigan.id, texas.id]);
+    expect(sheet.games.map((g) => g.game.id)).toEqual([miami.id, michigan.id, texas.id]);
     expect(sheet.tiebreakerGameId).toBe(texas.id);
     expect(sheet.picks).toEqual([]);
   });

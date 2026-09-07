@@ -9,12 +9,7 @@
  * count the state they hold in the browser with the very same function.
  */
 import { plural } from "@/lib/plural";
-
-/** The least of a Game these counts need: enough to apply the Void rule. */
-export interface CountableGame {
-  id: number;
-  void: boolean;
-}
+import { isVoid, type GameView } from "@/lib/slate/json";
 
 /** What is left before the Deadline. */
 export interface SheetProgress {
@@ -35,16 +30,16 @@ export interface SheetProgress {
 }
 
 /** The games that still count. The Void rule is applied here, not on the screens. */
-export function liveGames<G extends CountableGame>(games: readonly G[]): G[] {
-  return games.filter((g) => !g.void);
+export function liveGames<G extends GameView>(games: readonly G[]): G[] {
+  return games.filter((g) => !isVoid(g));
 }
 
 /** The first live Game with no Pick: where "keep picking" sends the member. */
-export function firstOpenGame<G extends CountableGame>(
+export function firstOpenGame<G extends GameView>(
   games: readonly G[],
   picked: (gameId: number) => boolean,
 ): G | undefined {
-  return liveGames(games).find((g) => !picked(g.id));
+  return liveGames(games).find((g) => !picked(g.game.id));
 }
 
 /**
@@ -62,14 +57,14 @@ export function sheetProgress({
   lockDropped,
   tiebreakerGuess,
 }: {
-  games: readonly CountableGame[];
+  games: readonly GameView[];
   picked: (gameId: number) => boolean;
   lockGameId: number | null;
   lockDropped: boolean;
   tiebreakerGuess: number | null;
 }): SheetProgress {
   const live = liveGames(games);
-  const picksMade = live.filter((g) => picked(g.id)).length;
+  const picksMade = live.filter((g) => picked(g.game.id)).length;
   const lockSet = lockGameId !== null && !lockDropped;
   const guessSet = tiebreakerGuess !== null;
   // A Lock needs a live game to sit on, so a wholly voided slate leaves none to set.

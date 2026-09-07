@@ -14,6 +14,7 @@ import { put } from "@/lib/picks/client";
 import { useDeadlineClock } from "@/lib/picks/clock";
 import type { PickJson, SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { firstOpenGame, sheetProgress } from "@/lib/picks/progress";
+import { isVoid, voidNote } from "@/lib/slate/json";
 
 type Status = "saved" | "saving" | "failed";
 
@@ -36,6 +37,9 @@ function firstUnpicked(games: SheetGameJson[], picks: LocalPicks): number {
   return open ? games.indexOf(open) : 0;
 }
 
+/** A row is the shared Game-and-result pair plus the pick screen's detail; the id sits on the Game. */
+const idOf = (view: SheetGameJson) => view.game.id;
+
 function ProgressStrip({
   games,
   picks,
@@ -50,11 +54,11 @@ function ProgressStrip({
   return (
     <nav aria-label="Games" className="flex gap-1 px-4">
       {games.map((g, i) => {
-        const done = isSaved(picks[g.id]);
+        const done = isSaved(picks[idOf(g)]);
         const cur = i === current;
         return (
           <button
-            key={g.id}
+            key={idOf(g)}
             type="button"
             aria-current={cur ? "step" : undefined}
             aria-label={`Game ${i + 1}${done ? ", picked" : ""}`}
@@ -114,7 +118,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
     Object.fromEntries(sheet.picks.map((p) => [p.gameId, { teamId: p.teamId, status: "saved" as const }])),
   );
   const [index, setIndex] = useState(() => {
-    const requested = games.findIndex((g) => g.id === startGameId);
+    const requested = games.findIndex((g) => idOf(g) === startGameId);
     return requested === -1 ? firstUnpicked(games, picks) : requested;
   });
   const [lockedByServer, setLockedByServer] = useState(sheet.locked);
@@ -127,8 +131,10 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
 
   useEffect(() => () => clearTimeout(advanceTimer.current), []);
 
-  const game = games[index];
-  const detail = game.detail;
+  const view = games[index];
+  const { game, detail } = view;
+  const voided = isVoid(view);
+  const why = voidNote(view);
   const pick = picks[game.id];
   // Recounted from the local picks, which hold only what the server took: an
   // in-flight or failed save leaves its game open here just as it does on the sheet.
@@ -153,7 +159,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
   };
 
   const choose = async (teamId: number) => {
-    if (locked || game.void) return;
+    if (locked || voided) return;
     const gameId = game.id;
     const attemptId = (attempts.current.get(gameId) ?? 0) + 1;
     attempts.current.set(gameId, attemptId);
@@ -179,7 +185,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
       next = { teamId, status: "failed", error: result.error };
     }
     setPicks((p) => ({ ...p, [gameId]: next }));
-    if (next?.status === "saved" && games[index]?.id === gameId) {
+    if (next?.status === "saved" && games[index]?.game.id === gameId) {
       setFlash(true);
       advanceTimer.current = setTimeout(() => {
         setFlash(false);
@@ -231,7 +237,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
             ) : null}
           </span>
           {game.id === sheet.tiebreakerGameId ? <Badge variant="secondary">Tiebreaker</Badge> : null}
-          {game.void ? <Badge variant="outline">Void{game.voidNote ? `: ${game.voidNote}` : ""}</Badge> : null}
+          {voided ? <Badge variant="outline">Void{why ? `: ${why}` : ""}</Badge> : null}
           {detail?.weather ? <WeatherPill weather={detail.weather} /> : null}
         </div>
 
@@ -250,7 +256,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
             side="away"
             picked={pick?.teamId === game.awayTeamId}
             dimmed={!!pick && pick.teamId !== game.awayTeamId}
-            disabled={locked || game.void}
+            disabled={locked || voided}
             onPick={() => choose(game.awayTeamId)}
           />
           <div className="w-6 shrink-0 self-center text-center text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
@@ -263,7 +269,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
             side="home"
             picked={pick?.teamId === game.homeTeamId}
             dimmed={!!pick && pick.teamId !== game.homeTeamId}
-            disabled={locked || game.void}
+            disabled={locked || voided}
             onPick={() => choose(game.homeTeamId)}
           />
         </div>
@@ -293,7 +299,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
                 : "Saved. Next game…"
               : locked
                 ? "Nothing more to enter this week."
-                : game.void
+                : voided
                   ? "This game is void: it scores zero for everyone."
                   : "Tap a team. Saved the moment you tap; there is no submit step."}
           </span>

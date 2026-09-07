@@ -6,18 +6,15 @@ import { LocalTime } from "@/components/local-time";
 import { TeamLogo } from "@/components/team-logo";
 import { requireConsole } from "@/lib/members/current";
 import {
-  effectiveResult,
   MAX_SCORE,
-  needsReview,
-  resultAuditsFor,
-  REVIEW_AFTER_MS,
+  resultsConsole,
   type GameResult,
   type ResultAudit,
   type ResultLabel,
 } from "@/lib/results/results";
-import { toGameJson } from "@/lib/slate/json";
-import { activeSeason, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
-import { requestedWeekNumber } from "../week-param";
+import { isVoid, type GameView } from "@/lib/slate/json";
+import { WEEK_NUMBERS } from "@/lib/slate/slate";
+import { weekParam } from "../week-param";
 import {
   chooseResultsWeekAction,
   clearOverrideAction,
@@ -27,8 +24,6 @@ import {
   voidResultAction,
 } from "./actions";
 import { ActionForm } from "../action-form";
-
-const REVIEW_HOURS = REVIEW_AFTER_MS / 3600_000;
 
 function Team({ name, rank }: { name: string; rank: number | null }) {
   return (
@@ -65,20 +60,11 @@ const KINDS: Record<ResultAudit["kind"], string> = {
 export default async function ResultOverrides({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const commissioner = await requireConsole();
   const params = await searchParams;
-  const database = db();
-  const season = await activeSeason(database);
-  const existing = await seasonWeeks(database, season);
-  const weekNumber = requestedWeekNumber(existing, params.week);
-  const week = await openWeek(database, commissioner, weekNumber, season);
-  const slate = await slateFor(database, week.id);
-  const log = await resultAuditsFor(database, commissioner, week.id);
-  const now = new Date();
-  const rows = slate.games.map((game) => ({
-    game: toGameJson(game),
-    result: effectiveResult(game),
-    review: needsReview(game, now),
-  }));
-  const reviewCount = rows.filter((r) => r.review).length;
+  const { year, week, weeks, rows, review, feedCheckedAt, log } = await resultsConsole(
+    db(),
+    commissioner,
+    weekParam(params.week),
+  );
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -86,20 +72,20 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
         <div>
           <h1>Result overrides</h1>
           <p className="text-sm text-muted-foreground">
-            {season.year} · Week {weekNumber} · scores from CollegeFootballData
+            {year} · Week {week.weekNumber} · scores from CollegeFootballData
           </p>
         </div>
         <form action={chooseResultsWeekAction} className="flex items-center gap-2 text-sm font-semibold">
           Week
           <select
             name="weekNumber"
-            defaultValue={weekNumber}
+            defaultValue={week.weekNumber}
             className="h-11 rounded-md border border-input bg-card px-3 text-sm"
           >
             {WEEK_NUMBERS.map((n) => (
               <option key={n} value={n}>
                 {n}
-                {existing.find((w) => w.weekNumber === n)?.published ? " · published" : ""}
+                {weeks.find((w) => w.weekNumber === n)?.published ? " · published" : ""}
               </option>
             ))}
           </select>
@@ -115,17 +101,17 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
         zero for everyone and drops any Lock on it.
       </p>
 
-      {!slate.week.published ? (
+      {!week.published ? (
         <p role="status" className="rounded-md border border-border bg-card p-3 text-sm">
-          Week {weekNumber} is not published. Results and overrides start once the slate is out.
+          Week {week.weekNumber} is not published. Results and overrides start once the slate is out.
         </p>
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">
-              {slate.week.scoreboardFetchedAt ? (
+              {feedCheckedAt ? (
                 <>
-                  Feed last checked <LocalTime at={slate.week.scoreboardFetchedAt} />
+                  Feed last checked <LocalTime at={feedCheckedAt} />
                 </>
               ) : (
                 "The feed has not been checked for this week yet."
@@ -141,11 +127,11 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
             />
           </div>
 
-          {reviewCount > 0 ? (
+          {review ? (
             <p role="alert" className="rounded-md border border-destructive bg-card p-3 text-sm font-semibold">
-              {reviewCount === 1 ? "One game is" : `${reviewCount} games are`} still not final {REVIEW_HOURS} hours after
-              kickoff. The feed has no postponed or canceled status, so it stays pending until you act: set the score if
-              it finished, or void it if it will not be played.
+              {review.subject} still not final {review.hours} hours after kickoff. The feed has no postponed or
+              canceled status, so it stays pending until you act: set the score if it finished, or void it if it will
+              not be played.
             </p>
           ) : null}
 
@@ -162,122 +148,59 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {rows.map(({ game, result, review }) => (
-                  <tr key={game.id} className={`align-top ${result.status === "void" ? "opacity-70" : ""}`}>
-                    <td className="p-3">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <Team name={game.awayTeam} rank={game.awayRank} />
-                        <span className="text-muted-foreground">at</span>
-                        <Team name={game.homeTeam} rank={game.homeRank} />
-                        {game.id === slate.week.tiebreakerGameId ? (
-                          <Badge className="bg-secondary text-secondary-foreground">Tiebreaker</Badge>
-                        ) : null}
-                      </div>
-                      {result.status === "void" && result.note ? (
-                        <p className="mt-1 text-xs text-muted-foreground">Void: {result.note}</p>
-                      ) : null}
-                      {result.source === "override" ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Override: {result.note}
-                          {result.feedFinal
-                            ? ` · feed says ${result.feedFinal.awayScore}–${result.feedFinal.homeScore}`
-                            : " · feed has no final"}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="p-3 whitespace-nowrap text-muted-foreground">
-                      <LocalTime at={game.kickoff} style="slot" />
-                    </td>
-                    <td className="p-3 text-right font-display text-lg font-black tabular-nums">
-                      {result.awayScore ?? result.live?.awayScore ?? "–"}
-                    </td>
-                    <td className="p-3 text-right font-display text-lg font-black tabular-nums">
-                      {result.homeScore ?? result.live?.homeScore ?? "–"}
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <StatusBadge result={result} review={review} />
-                    </td>
-                    <td className="p-3">
-                      {result.status === "void" ? (
-                        <ActionForm
-                          action={restoreGameAction}
-                          hidden={{ gameId: game.id }}
-                          submit="Restore game"
-                          pendingLabel="Restoring…"
-                        />
-                      ) : (
-                        <div className="space-y-2">
-                          <ActionForm
-                            action={overrideResultAction}
-                            hidden={{ gameId: game.id }}
-                            submit="Set score"
-                            pendingLabel="Saving…"
-                          >
-                            <Input
-                              name="awayScore"
-                              type="number"
-                              min={0}
-                              max={MAX_SCORE}
-                              step={1}
-                              required
-                              defaultValue={result.awayScore ?? ""}
-                              aria-label={`${game.awayTeam} score`}
-                              placeholder={game.awayTeam}
-                              className="h-9 w-20"
-                            />
-                            <Input
-                              name="homeScore"
-                              type="number"
-                              min={0}
-                              max={MAX_SCORE}
-                              step={1}
-                              required
-                              defaultValue={result.homeScore ?? ""}
-                              aria-label={`${game.homeTeam} score`}
-                              placeholder={game.homeTeam}
-                              className="h-9 w-20"
-                            />
-                            <Input
-                              name="note"
-                              required
-                              maxLength={200}
-                              placeholder="Why (required)"
-                              aria-label={`Override note for ${game.awayTeam} at ${game.homeTeam}`}
-                              className="h-9 w-44"
-                            />
-                          </ActionForm>
-                          <div className="flex flex-wrap gap-2">
-                            {result.source === "override" ? (
-                              <ActionForm
-                                action={clearOverrideAction}
-                                hidden={{ gameId: game.id }}
-                                submit="Clear override"
-                                pendingLabel="Clearing…"
-                                variant="ghost"
-                              />
-                            ) : null}
-                            <ActionForm
-                              action={voidResultAction}
-                              hidden={{ gameId: game.id }}
-                              submit="Void"
-                              pendingLabel="Voiding…"
-                              variant="destructive"
-                            >
-                              <Input
-                                name="note"
-                                required
-                                maxLength={120}
-                                placeholder="Void note (why)"
-                                aria-label={`Void note for ${game.awayTeam} at ${game.homeTeam}`}
-                                className="h-9 w-44"
-                              />
-                            </ActionForm>
-                          </div>
+                {rows.map((row) => {
+                  const { game, result, review: overdue } = row;
+                  const voided = isVoid(row);
+                  return (
+                    <tr key={game.id} className={`align-top ${voided ? "opacity-70" : ""}`}>
+                      <td className="p-3">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <Team name={game.awayTeam} rank={game.awayRank} />
+                          <span className="text-muted-foreground">at</span>
+                          <Team name={game.homeTeam} rank={game.homeRank} />
+                          {game.id === week.tiebreakerGameId ? (
+                            <Badge className="bg-secondary text-secondary-foreground">Tiebreaker</Badge>
+                          ) : null}
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                        {voided && result.note ? (
+                          <p className="mt-1 text-xs text-muted-foreground">Void: {result.note}</p>
+                        ) : null}
+                        {result.source === "override" ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Override: {result.note}
+                            {result.feedFinal
+                              ? ` · feed says ${result.feedFinal.awayScore}–${result.feedFinal.homeScore}`
+                              : " · feed has no final"}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="p-3 whitespace-nowrap text-muted-foreground">
+                        <LocalTime at={game.kickoff} style="slot" />
+                      </td>
+                      <td className="p-3 text-right font-display text-lg font-black tabular-nums">
+                        {result.shown?.awayScore ?? "–"}
+                      </td>
+                      <td className="p-3 text-right font-display text-lg font-black tabular-nums">
+                        {result.shown?.homeScore ?? "–"}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <StatusBadge result={result} review={overdue} />
+                      </td>
+                      <td className="p-3">
+                        {voided ? (
+                          <ActionForm
+                            action={restoreGameAction}
+                            hidden={{ gameId: game.id }}
+                            submit="Restore game"
+                            pendingLabel="Restoring…"
+                          />
+                        ) : (
+                          <OverrideCell row={row} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 {rows.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-3 text-muted-foreground">
@@ -315,6 +238,81 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
           </section>
         </>
       )}
+    </div>
+  );
+}
+
+/** Set the score, clear an override, or void: everything a live game's last column offers. */
+function OverrideCell({ row }: { row: GameView }) {
+  const { game, result } = row;
+  return (
+    <div className="space-y-2">
+      <ActionForm
+        action={overrideResultAction}
+        hidden={{ gameId: game.id }}
+        submit="Set score"
+        pendingLabel="Saving…"
+      >
+        <Input
+          name="awayScore"
+          type="number"
+          min={0}
+          max={MAX_SCORE}
+          step={1}
+          required
+          defaultValue={result.awayScore ?? ""}
+          aria-label={`${game.awayTeam} score`}
+          placeholder={game.awayTeam}
+          className="h-9 w-20"
+        />
+        <Input
+          name="homeScore"
+          type="number"
+          min={0}
+          max={MAX_SCORE}
+          step={1}
+          required
+          defaultValue={result.homeScore ?? ""}
+          aria-label={`${game.homeTeam} score`}
+          placeholder={game.homeTeam}
+          className="h-9 w-20"
+        />
+        <Input
+          name="note"
+          required
+          maxLength={200}
+          placeholder="Why (required)"
+          aria-label={`Override note for ${game.awayTeam} at ${game.homeTeam}`}
+          className="h-9 w-44"
+        />
+      </ActionForm>
+      <div className="flex flex-wrap gap-2">
+        {result.source === "override" ? (
+          <ActionForm
+            action={clearOverrideAction}
+            hidden={{ gameId: game.id }}
+            submit="Clear override"
+            pendingLabel="Clearing…"
+            variant="ghost"
+          />
+        ) : null}
+        <ActionForm
+          action={voidResultAction}
+          hidden={{ gameId: game.id }}
+          submit="Void"
+          pendingLabel="Voiding…"
+          variant="destructive"
+        >
+          <Input
+            name="note"
+            required
+            maxLength={120}
+            placeholder="Void note (why)"
+            aria-label={`Void note for ${game.awayTeam} at ${game.homeTeam}`}
+            className="h-9 w-44"
+          />
+        </ActionForm>
+      </div>
     </div>
   );
 }

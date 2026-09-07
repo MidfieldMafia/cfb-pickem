@@ -213,6 +213,16 @@ export async function seasonWeeks(db: Db, season: Season): Promise<Week[]> {
 }
 
 /**
+ * The Week a console page opens on when the commissioner did not ask for one:
+ * the latest published Week, else the latest that exists, else 1. Stated here
+ * rather than in the route so `resultsConsole` and `week-param.ts` cannot
+ * land on different Weeks for the same season.
+ */
+export function defaultWeekNumber(existing: Week[]): number {
+  return existing.filter((w) => w.published).at(-1)?.weekNumber ?? existing.at(-1)?.weekNumber ?? 1;
+}
+
+/**
  * Moves the Deadline earlier. Before publish it may sit anywhere at or before
  * the earliest kickoff; after publish it may only move earlier than it is.
  */

@@ -1,12 +1,17 @@
 import { describe, expect, test } from "vitest";
+import type { GameView } from "@/lib/slate/json";
 import { firstOpenGame, liveGames, remainingLabel, sheetProgress, type SheetProgress } from "./progress";
 
+/** The least of a `GameView` the counts read: the id, and whether the result says Void. */
+function view(id: number, voided = false): GameView {
+  return {
+    game: { id } as GameView["game"],
+    result: { status: voided ? "void" : "pending" } as GameView["result"],
+  };
+}
+
 /** Three games with the middle one Void: the shape every screen counts over. */
-const SLATE = [
-  { id: 1, void: false },
-  { id: 2, void: true },
-  { id: 3, void: false },
-];
+const SLATE = [view(1), view(2, true), view(3)];
 
 type Over = Partial<Omit<Parameters<typeof sheetProgress>[0], "games" | "picked">>;
 
@@ -55,7 +60,7 @@ describe("what is left before the deadline", () => {
 
   test("a wholly voided slate leaves no Lock to set", () => {
     const progress = sheetProgress({
-      games: [{ id: 1, void: true }],
+      games: [view(1, true)],
       picked: () => false,
       lockGameId: null,
       lockDropped: false,
@@ -76,12 +81,12 @@ describe("what is left before the deadline", () => {
 
 describe("finding the games behind the counts", () => {
   test("the live games are the slate minus its Void games", () => {
-    expect(liveGames(SLATE).map((g) => g.id)).toEqual([1, 3]);
+    expect(liveGames(SLATE).map((g) => g.game.id)).toEqual([1, 3]);
   });
 
   test("the first open game skips Void games and games already picked", () => {
-    expect(firstOpenGame(SLATE, () => false)?.id).toBe(1);
-    expect(firstOpenGame(SLATE, (id) => id === 1)?.id).toBe(3);
+    expect(firstOpenGame(SLATE, () => false)?.game.id).toBe(1);
+    expect(firstOpenGame(SLATE, (id) => id === 1)?.game.id).toBe(3);
     expect(firstOpenGame(SLATE, (id) => id !== 2)).toBeUndefined();
   });
 });

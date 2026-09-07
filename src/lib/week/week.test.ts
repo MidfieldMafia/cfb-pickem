@@ -88,6 +88,7 @@ describe("the current week", () => {
       homeScore: 27,
       source: "feed",
       live: null,
+      shown: { awayScore: 24, homeScore: 27 },
       label: "Final",
       note: null,
       feedFinal: null,
