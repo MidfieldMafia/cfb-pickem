@@ -25,6 +25,9 @@ import {
   refreshResultsIfStale,
   restoreGame,
   resultAuditsFor,
+  resultsConsole,
+  REVIEW_AFTER_MS,
+  reviewNotice,
   seasonResult,
   weekResult,
 } from "./results";
@@ -525,5 +528,67 @@ describe("the season leaderboard", () => {
       ["Grandma", 1, 0, 0],
     ]);
     expect(season.leaderboard.every((r) => r.averagePoints === null)).toBe(true);
+  });
+});
+
+describe("the results console", () => {
+  test("composes the week the screen renders: the chooser, the rows, the log, and when the feed was last read", async () => {
+    const { db, jonah, grandma, week, miami, michigan, texas, ingest } = await setup();
+    const feed = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }, { [OHIO_STATE_AT_TEXAS]: [3, 0] });
+    await ingest(feed, SATURDAY_EVENING);
+    await voidGame(db, jonah, miami.id, "Hurricane", SATURDAY_EVENING);
+
+    const view = await resultsConsole(db, jonah, 2, SATURDAY_EVENING);
+
+    expect(view.year).toBe(2026);
+    expect(view.week).toEqual({ id: week.id, weekNumber: 2, published: true, tiebreakerGameId: texas.id });
+    expect(view.weeks.map((w) => [w.weekNumber, w.published])).toEqual([[2, true]]);
+    expect(view.feedCheckedAt).toEqual(SATURDAY_EVENING);
+
+    // One row per Game in slate order, each the shared pair plus this table's own column.
+    expect(view.rows.map((r) => r.game.id)).toEqual([miami.id, michigan.id, texas.id]);
+    expect(view.rows.map((r) => [r.result.label, r.result.shown, r.review])).toEqual([
+      ["Void", null, false],
+      ["Final", { awayScore: 24, homeScore: 27 }, false],
+      // The running score is what the table puts on screen; it is still not final.
+      ["In progress", { awayScore: 3, homeScore: 0 }, false],
+    ]);
+
+    expect(view.log.map((e) => [e.kind, e.awayTeam, e.note])).toEqual([["void", miami.awayTeam, "Hurricane"]]);
+    await expect(resultsConsole(db, grandma, 2, SATURDAY_EVENING)).rejects.toBeInstanceOf(NotCommissioner);
+  });
+
+  test("opens the week asked for, creating it, and falls back to the default week when none is", async () => {
+    const { db, jonah, week } = await setup();
+
+    // No `?week=`: the latest published week, which is the one the fixture published.
+    expect((await resultsConsole(db, jonah, undefined, THURSDAY)).week.id).toBe(week.id);
+
+    // Week 5 does not exist yet; visiting it creates it and the chooser lists it at once.
+    const fresh = await resultsConsole(db, jonah, 5, THURSDAY);
+    expect(fresh.week).toMatchObject({ weekNumber: 5, published: false, tiebreakerGameId: null });
+    expect(fresh.weeks.map((w) => w.weekNumber)).toEqual([2, 5]);
+    expect(fresh.rows).toEqual([]);
+    expect(fresh.review).toBeNull();
+    expect(fresh.feedCheckedAt).toBeNull();
+  });
+
+  test("the review notice counts the overdue games and says the hours out loud, plural and all", async () => {
+    const { db, jonah, miami, michigan } = await setup();
+    // Miami kicks off on Friday and Michigan on Saturday, so they come due in turn.
+    const miamiDue = new Date(miami.kickoff.getTime() + REVIEW_AFTER_MS);
+    const bothDue = new Date(michigan.kickoff.getTime() + REVIEW_AFTER_MS);
+
+    // A game still inside its six hours has not earned the notice.
+    expect(reviewNotice([miami, michigan], new Date(miamiDue.getTime() - 1))).toBeNull();
+
+    expect(reviewNotice([miami, michigan], miamiDue)).toEqual({ count: 1, hours: 6, subject: "One game is" });
+    expect(reviewNotice([miami, michigan], bothDue)).toEqual({ count: 2, hours: 6, subject: "2 games are" });
+
+    // A Void is not something to chase: it is already decided. Texas has not
+    // kicked off by then either, so voiding Miami leaves Michigan alone.
+    await voidGame(db, jonah, miami.id, "Hurricane", bothDue);
+    const notice = (await resultsConsole(db, jonah, 2, bothDue)).review;
+    expect(notice).toEqual({ count: 1, hours: 6, subject: "One game is" });
   });
 });
