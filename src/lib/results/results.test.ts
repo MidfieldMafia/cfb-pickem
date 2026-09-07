@@ -5,10 +5,12 @@ import { sharedFeed } from "@/lib/cfbd/cache";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
 import { NotCommissioner } from "@/lib/members/members";
-import { PicksHidden, savePick, setLock } from "@/lib/picks/picks";
+import { PicksHidden } from "@/lib/picks/picks";
 import { slateFor, voidGame } from "@/lib/slate/slate";
 import {
   FAMU_AT_MIAMI,
+  lockAs,
+  pickAs,
   OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   publishWeek2,
@@ -64,14 +66,14 @@ function feedWith(finals: Finals, live: Finals = {}): CfbdClient & { calls: numb
  */
 async function setup() {
   const fixture = await publishWeek2();
-  const { db, jonah, grandma, week, miami, michigan, texas } = fixture;
+  const { db, slate, jonah, grandma, week, miami, michigan, texas } = fixture;
 
-  await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY); // Michigan
-  await savePick(db, grandma, week.id, texas.id, texas.awayTeamId, THURSDAY); // Ohio State
-  await setLock(db, grandma, week.id, michigan.id, THURSDAY);
-  await savePick(db, jonah, week.id, michigan.id, michigan.awayTeamId, THURSDAY); // Oklahoma
-  await savePick(db, jonah, week.id, texas.id, texas.homeTeamId, THURSDAY); // Texas
-  await savePick(db, jonah, week.id, miami.id, miami.homeTeamId, THURSDAY); // Miami
+  await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY); // Michigan
+  await pickAs(db, grandma, slate, texas, texas.awayTeamId, THURSDAY); // Ohio State
+  await lockAs(db, grandma, slate, michigan.id, THURSDAY);
+  await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY); // Oklahoma
+  await pickAs(db, jonah, slate, texas, texas.homeTeamId, THURSDAY); // Texas
+  await pickAs(db, jonah, slate, miami, miami.homeTeamId, THURSDAY); // Miami
 
   return {
     ...fixture,
@@ -420,8 +422,8 @@ describe("the reveal", () => {
   });
 
   test("a Dropped Lock stays on the board, so its owner is not mistaken for a member who set none", async () => {
-    const { db, jonah, grandma, week, michigan, texas, ingest, revealAt } = await setup();
-    await setLock(db, jonah, week.id, texas.id, THURSDAY);
+    const { db, slate, jonah, grandma, michigan, texas, ingest, revealAt } = await setup();
+    await lockAs(db, jonah, slate, texas.id, THURSDAY);
     await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SATURDAY_EVENING);
     await voidGame(db, jonah, texas.id, "Postponed to December");
 
@@ -501,8 +503,8 @@ describe("the week result", () => {
   });
 
   test("a Dropped Lock is reported on the score, so a member is not read as having set none", async () => {
-    const { db, jonah, week, texas, gradeAt, ingest } = await setup();
-    await setLock(db, jonah, week.id, texas.id, THURSDAY);
+    const { db, slate, jonah, texas, gradeAt, ingest } = await setup();
+    await lockAs(db, jonah, slate, texas.id, THURSDAY);
     await ingest(feedWith(ALL_FINAL), SUNDAY);
     await voidGame(db, jonah, texas.id, "Postponed to December");
 
@@ -520,7 +522,7 @@ describe("the season leaderboard", () => {
     const { db, jonah, grandma, ingest } = await setup();
     await ingest(feedWith(ALL_FINAL), SUNDAY);
 
-    const season = await seasonResult(db, grandma, SUNDAY);
+    const season = await seasonResult(db, SUNDAY);
 
     expect(season.season.year).toBe(2026);
     expect(season.weeks.map((w) => [w.week.weekNumber, w.complete])).toEqual([[2, true]]);
@@ -552,11 +554,11 @@ describe("the season leaderboard", () => {
   });
 
   test("a published week whose deadline has not passed is not a week played", async () => {
-    const { db, grandma } = await setup();
+    const { db } = await setup();
 
     // Week 2 is published, but Thursday is inside it: counting it would score every member zero
     // for a week nobody has picked yet, and drag every average down with it.
-    const season = await seasonResult(db, grandma, THURSDAY);
+    const season = await seasonResult(db, THURSDAY);
 
     expect(season.weeks).toEqual([]);
     // Everyone is still on the board at zero: an empty season is a table of zeroes, not an empty screen.

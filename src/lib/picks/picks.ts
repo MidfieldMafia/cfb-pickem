@@ -1,27 +1,20 @@
 /**
- * Pick entry: a Member's Picks, Lock of the Week, and Tiebreaker Guess for
- * a Week. Vocabulary follows CONTEXT.md. Every function takes the database
- * first and the acting member second; `now` is the server clock, injected so
+ * Reading pick entry: a Member's Picks, Lock of the Week, and Tiebreaker
+ * Guess for a Week, and the Reveal of everyone's once the Deadline has
+ * passed. Changing any of it goes through `applyEdit` in `edits.ts` — the one
+ * writer — so nothing here writes.
+ *
+ * Vocabulary follows CONTEXT.md. Every function takes the database first and
+ * the Slate the caller already loaded; `now` is the server clock, injected so
  * tests can sit on either side of the Deadline.
  */
 import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
-import {
-  games,
-  locks,
-  picks,
-  tiebreakerGuesses,
-  weeks,
-  type Game,
-  type Member,
-  type Season,
-  type Week,
-} from "@/db/schema";
+import { locks, picks, tiebreakerGuesses, type Game, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { roster } from "@/lib/members/roster";
 import { toGameView } from "@/lib/slate/json";
 import { deadlinePassed, type Slate } from "@/lib/slate/slate";
-import { tiebreakerGuessError } from "./limits";
 import { sheetProgress, type SheetProgress } from "./progress";
 
 export class InvalidPick extends Error {}
@@ -87,28 +80,17 @@ export function publishedDeadline(week: Pick<Week, "published" | "deadline">): D
   return week.deadline;
 }
 
-/** A Week members can pick in: published, so its Deadline is frozen. */
-async function openForPicks(db: Db, weekId: number, now: Date): Promise<void> {
-  const week = await db.query.weeks.findFirst({ where: eq(weeks.id, weekId) });
-  if (!week) throw new InvalidPick("That week is not published.");
-  publishedDeadline(week);
-  if (deadlinePassed(week, now)) throw new DeadlinePassed();
-}
-
-/** One Game, confirmed to be on the given Week's slate. */
-export async function loadGame(db: Db, weekId: number, gameId: number): Promise<Game> {
-  const game = await db.query.games.findFirst({ where: eq(games.id, gameId) });
-  if (!game) throw new InvalidPick("That game is not on the slate.");
-  if (game.weekId !== weekId) throw new InvalidPick("That game is not on this week's slate.");
-  return game;
-}
-
 /**
  * One member's sheet for a Slate the caller already loaded. Taking the Slate
  * rather than a week id is what lets a screen read the Week once and hand the
  * same rows to the sheet, the Reveal, and the score refresh.
  */
-export async function pickSheet(db: Db, actor: Member, slate: Slate, now: Date = new Date()): Promise<PickSheet> {
+export async function pickSheet(
+  db: Db,
+  actor: Pick<Member, "id">,
+  slate: Slate,
+  now: Date = new Date(),
+): Promise<PickSheet> {
   const deadline = publishedDeadline(slate.week);
   const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
@@ -215,7 +197,7 @@ function pickers(rows: PickTable[], lockRows: LockTable[], guessRows: GuessTable
  * Who is on the board is `roster`'s answer, the same one the console table and
  * the scoring path read.
  */
-export async function weekPicks(db: Db, _actor: Member, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
+export async function weekPicks(db: Db, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
   publishedDeadline(slate.week);
   if (!deadlinePassed(slate.week, now)) throw new PicksHidden();
   const weekId = slate.week.id;
@@ -288,73 +270,4 @@ export async function seasonPicks(
       ];
     }),
   );
-}
-
-/** Saves or replaces the member's Pick for one Game. Saved the moment it is tapped; there is no submit step. */
-export async function savePick(
-  db: Db,
-  actor: Member,
-  weekId: number,
-  gameId: number,
-  teamId: number,
-  now: Date = new Date(),
-): Promise<PickRow> {
-  const game = await loadGame(db, weekId, gameId);
-  await openForPicks(db, weekId, now);
-  if (game.void) throw new InvalidPick("That game is void; it scores zero for everyone.");
-  if (teamId !== game.homeTeamId && teamId !== game.awayTeamId) {
-    throw new InvalidPick("Pick one of the two teams in the game.");
-  }
-  const [row] = await db
-    .insert(picks)
-    .values({ memberId: actor.id, gameId, teamId, updatedAt: now, updatedBy: actor.id })
-    .onConflictDoUpdate({
-      target: [picks.memberId, picks.gameId],
-      set: { teamId, updatedAt: now, updatedBy: actor.id },
-    })
-    .returning();
-  return { gameId: row.gameId, teamId: row.teamId, updatedAt: row.updatedAt };
-}
-
-/** Marks one Game as the Lock of the Week, replacing any earlier Lock; null clears it. */
-export async function setLock(
-  db: Db,
-  actor: Member,
-  weekId: number,
-  gameId: number | null,
-  now: Date = new Date(),
-): Promise<void> {
-  await openForPicks(db, weekId, now);
-  if (gameId === null) {
-    await db.delete(locks).where(and(eq(locks.memberId, actor.id), eq(locks.weekId, weekId)));
-    return;
-  }
-  const game = await loadGame(db, weekId, gameId);
-  if (game.void) throw new InvalidPick("That game is void; it cannot be the Lock of the Week.");
-  const pick = await db.query.picks.findFirst({ where: and(eq(picks.memberId, actor.id), eq(picks.gameId, gameId)) });
-  if (!pick) throw new InvalidPick("Pick a winner in that game before locking it.");
-  await db
-    .insert(locks)
-    .values({ memberId: actor.id, weekId, gameId, updatedAt: now, updatedBy: actor.id })
-    .onConflictDoUpdate({ target: [locks.memberId, locks.weekId], set: { gameId, updatedAt: now, updatedBy: actor.id } });
-}
-
-/** Records the member's predicted combined final score of the Tiebreaker Game. */
-export async function setTiebreakerGuess(
-  db: Db,
-  actor: Member,
-  weekId: number,
-  guess: number,
-  now: Date = new Date(),
-): Promise<void> {
-  await openForPicks(db, weekId, now);
-  const invalid = tiebreakerGuessError(guess);
-  if (invalid) throw new InvalidPick(invalid);
-  await db
-    .insert(tiebreakerGuesses)
-    .values({ memberId: actor.id, weekId, guess, updatedAt: now, updatedBy: actor.id })
-    .onConflictDoUpdate({
-      target: [tiebreakerGuesses.memberId, tiebreakerGuesses.weekId],
-      set: { guess, updatedAt: now, updatedBy: actor.id },
-    });
 }

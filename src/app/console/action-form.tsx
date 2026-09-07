@@ -2,12 +2,9 @@
 
 import { useActionState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import type { ActionState } from "@/lib/console/state";
 
-/** What every console edit answers with: a refusal to show, or a sentence saying what happened. */
-export interface ActionState {
-  error?: string;
-  done?: string;
-}
+export type { ActionState };
 
 type Action = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 

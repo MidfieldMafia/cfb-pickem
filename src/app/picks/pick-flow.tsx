@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
 import { put } from "@/lib/picks/client";
 import { useDeadlineClock } from "@/lib/picks/clock";
-import type { PickJson, SheetGameJson, SheetJson } from "@/lib/picks/json";
+import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { firstOpenGame, sheetProgress } from "@/lib/picks/progress";
 import { isVoid, voidNote } from "@/lib/slate/json";
 
@@ -168,7 +168,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
     setFlash(false);
     setPicks((p) => ({ ...p, [gameId]: { teamId, status: "saving" } }));
 
-    const result = await put<{ pick: PickJson; serverNow: string }>("/api/week/picks", { gameId, teamId });
+    const result = await put<SheetJson>("/api/week/picks", { gameId, teamId });
     // A newer tap on this same game supersedes this answer; other games are unaffected.
     if (attempts.current.get(gameId) !== attemptId) return;
 

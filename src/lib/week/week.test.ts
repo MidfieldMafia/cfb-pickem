@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
-import { savePick, setLock, setTiebreakerGuess } from "@/lib/picks/picks";
 import { openWeek } from "@/lib/slate/slate";
-import { OKLAHOMA_AT_MICHIGAN, publishWeek2, seedWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
+import { guessAs, lockAs, OKLAHOMA_AT_MICHIGAN, pickAs, publishWeek2, seedWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
 import { currentWeek } from "./week";
 
 /** Michigan reported final. `calls` counts feed reads, so a test can prove the gate held. */
@@ -38,10 +37,10 @@ describe("the current week", () => {
   });
 
   test("carries the published slate and the member's own sheet before the deadline", async () => {
-    const { db, grandma, week, michigan, texas } = await publishWeek2();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
-    await setLock(db, grandma, week.id, michigan.id, THURSDAY);
-    await setTiebreakerGuess(db, grandma, week.id, 55, THURSDAY);
+    const { db, slate, grandma, week, michigan, texas } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await lockAs(db, grandma, slate, michigan.id, THURSDAY);
+    await guessAs(db, grandma, slate, 55, THURSDAY);
 
     const current = (await currentWeek(db, grandma, THURSDAY))!;
     expect(current.slate.week.id).toBe(week.id);
@@ -58,9 +57,9 @@ describe("the current week", () => {
   });
 
   test("grades the week after the deadline, and only for the screen that asks", async () => {
-    const { db, jonah, grandma, week, michigan } = await publishWeek2();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
-    await savePick(db, jonah, week.id, michigan.id, michigan.awayTeamId, THURSDAY);
+    const { db, slate, jonah, grandma, michigan } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY);
 
     // Locked, but nobody asked: grading costs a read per member, so it stays undone.
     const quiet = (await currentWeek(db, grandma, SUNDAY))!;
@@ -74,8 +73,8 @@ describe("the current week", () => {
   });
 
   test("pulls the feed before grading, so the reveal never shows the scores it walked in with", async () => {
-    const { db, grandma, week, michigan } = await publishWeek2();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    const { db, slate, grandma, michigan } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
     const feed = feedWithMichiganFinal();
 
     const graded = (await currentWeek(db, grandma, SUNDAY, { graded: true, cfbd: () => feed }))!;
@@ -107,8 +106,8 @@ describe("the current week", () => {
   });
 
   test("a feed that will not answer leaves the week readable with the scores it had", async () => {
-    const { db, grandma, week, michigan } = await publishWeek2();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    const { db, slate, grandma, michigan } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
 
     const current = (await currentWeek(db, grandma, SUNDAY, { graded: true, cfbd: angryFeed }))!;
     expect(current.sheet.locked).toBe(true);

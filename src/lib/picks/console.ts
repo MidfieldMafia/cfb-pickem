@@ -1,22 +1,25 @@
 /**
- * The commissioner side of pick entry: entering or fixing any member's
- * Picks, Lock of the Week, and Tiebreaker Guess from the console, before or
- * after the Deadline, with every edit audited; and the who-hasn't-picked
- * view that drives reminders. Vocabulary follows CONTEXT.md. Every function
- * takes the database first and the acting commissioner second; `now` is the
- * server clock, injected so tests can sit on either side of the Deadline.
+ * The commissioner side of pick entry, minus the writing: one member's sheet
+ * read early, the who-hasn't-picked view that drives reminders, and the
+ * change log. Entering or fixing anyone's Picks, Lock of the Week, or
+ * Tiebreaker Guess goes through `applyEdit` in `edits.ts` under a
+ * commissioner `Authority` — the same writer the phone uses — so the rules
+ * exist once and the audit row is a property of the Authority rather than of
+ * three functions that live here.
+ *
+ * Vocabulary follows CONTEXT.md. Every function takes the database first and
+ * the acting commissioner second; `now` is the server clock, injected so
+ * tests can sit on either side of the Deadline.
  */
 import "server-only";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import {
   locks,
   members,
   pickAudits,
   picks,
   tiebreakerGuesses,
-  type Game,
   type Member,
-  type PickAuditKind,
   type Season,
   type Week,
 } from "@/db/schema";
@@ -27,8 +30,7 @@ import { roster } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
 import { teamName, toGameView } from "@/lib/slate/json";
 import { slateFor } from "@/lib/slate/slate";
-import { tiebreakerGuessError } from "./limits";
-import { InvalidPick, loadGame, pickSheet, publishedDeadline, type PickSheet } from "./picks";
+import { pickSheet, publishedDeadline, type PickSheet } from "./picks";
 import { liveGames, sheetProgress, type SheetProgress } from "./progress";
 
 async function loadMember(db: Db, memberId: number): Promise<Member> {
@@ -171,138 +173,6 @@ export function reminderText(report: PickReport): string {
   if (behind.length === 0) return `${lead} Everyone is in.`;
   const names = behind.map((m) => `${m.member.displayName} (${owed(m).join(", ")})`);
   return `${lead} Still need: ${names.join(", ")}.`;
-}
-
-/**
- * Sets or replaces one member's Pick for a Game on the commissioner's say-so.
- * The Deadline does not apply; the audit row does, always, so a late change
- * is on the record even when a commissioner edits their own picks.
- */
-export async function overridePick(
-  db: Db,
-  actor: Member,
-  memberId: number,
-  weekId: number,
-  gameId: number,
-  teamId: number,
-  now: Date = new Date(),
-): Promise<void> {
-  requireCommissioner(actor);
-  const game = await loadGame(db, weekId, gameId);
-  if (game.void) throw new InvalidPick("That game is void; it scores zero for everyone.");
-  if (teamId !== game.homeTeamId && teamId !== game.awayTeamId) {
-    throw new InvalidPick("Pick one of the two teams in the game.");
-  }
-  const before = await db.query.picks.findFirst({ where: and(eq(picks.memberId, memberId), eq(picks.gameId, gameId)) });
-  await db
-    .insert(picks)
-    .values({ memberId, gameId, teamId, updatedAt: now, updatedBy: actor.id })
-    .onConflictDoUpdate({ target: [picks.memberId, picks.gameId], set: { teamId, updatedAt: now, updatedBy: actor.id } });
-  await logPickChange(db, actor, memberId, weekId, gameId, "pick", {
-    previousValue: before ? teamName(game, before.teamId) : null,
-    newValue: teamName(game, teamId),
-    at: now,
-  });
-}
-
-/**
- * Sets, moves, or clears (null) one member's Lock of the Week on the
- * commissioner's say-so. The Lock still needs a pick to sit on and still
- * refuses a void game; only the Deadline is waived.
- */
-export async function overrideLock(
-  db: Db,
-  actor: Member,
-  memberId: number,
-  weekId: number,
-  gameId: number | null,
-  now: Date = new Date(),
-): Promise<void> {
-  requireCommissioner(actor);
-  const before = await db.query.locks.findFirst({ where: and(eq(locks.memberId, memberId), eq(locks.weekId, weekId)) });
-  const beforeGame = before ? await loadGame(db, weekId, before.gameId) : null;
-  let afterName: string | null = null;
-  if (gameId === null) {
-    await db.delete(locks).where(and(eq(locks.memberId, memberId), eq(locks.weekId, weekId)));
-  } else {
-    const afterGame = await loadGame(db, weekId, gameId);
-    if (afterGame.void) throw new InvalidPick("That game is void; it cannot be the Lock of the Week.");
-    const pick = await db.query.picks.findFirst({ where: and(eq(picks.memberId, memberId), eq(picks.gameId, gameId)) });
-    if (!pick) throw new InvalidPick("Pick a winner in that game before locking it.");
-    // The pick is in hand, so the new Lock names itself without a second read.
-    afterName = teamName(afterGame, pick.teamId);
-    await db
-      .insert(locks)
-      .values({ memberId, weekId, gameId, updatedAt: now, updatedBy: actor.id })
-      .onConflictDoUpdate({ target: [locks.memberId, locks.weekId], set: { gameId, updatedAt: now, updatedBy: actor.id } });
-  }
-  await logPickChange(db, actor, memberId, weekId, gameId ?? before?.gameId ?? null, "lock", {
-    previousValue: beforeGame ? await lockName(db, memberId, beforeGame) : null,
-    newValue: afterName,
-    at: now,
-  });
-}
-
-/** Sets or clears (null) one member's Tiebreaker Guess on the commissioner's say-so. */
-export async function overrideTiebreakerGuess(
-  db: Db,
-  actor: Member,
-  memberId: number,
-  weekId: number,
-  guess: number | null,
-  now: Date = new Date(),
-): Promise<void> {
-  requireCommissioner(actor);
-  const before = await db.query.tiebreakerGuesses.findFirst({
-    where: and(eq(tiebreakerGuesses.memberId, memberId), eq(tiebreakerGuesses.weekId, weekId)),
-  });
-  if (guess === null) {
-    await db
-      .delete(tiebreakerGuesses)
-      .where(and(eq(tiebreakerGuesses.memberId, memberId), eq(tiebreakerGuesses.weekId, weekId)));
-  } else {
-    const invalid = tiebreakerGuessError(guess);
-    if (invalid) throw new InvalidPick(invalid);
-    await db
-      .insert(tiebreakerGuesses)
-      .values({ memberId, weekId, guess, updatedAt: now, updatedBy: actor.id })
-      .onConflictDoUpdate({
-        target: [tiebreakerGuesses.memberId, tiebreakerGuesses.weekId],
-        set: { guess, updatedAt: now, updatedBy: actor.id },
-      });
-  }
-  await logPickChange(db, actor, memberId, weekId, null, "tiebreaker_guess", {
-    previousValue: before ? String(before.guess) : null,
-    newValue: guess === null ? null : String(guess),
-    at: now,
-  });
-}
-
-/** A Lock reads as the team the member locked, so the audit log shows it without a join. */
-async function lockName(db: Db, memberId: number, game: Game): Promise<string> {
-  const pick = await db.query.picks.findFirst({ where: and(eq(picks.memberId, memberId), eq(picks.gameId, game.id)) });
-  return pick ? teamName(game, pick.teamId) : `${game.awayTeam} at ${game.homeTeam}`;
-}
-
-async function logPickChange(
-  db: Db,
-  actor: Member,
-  memberId: number,
-  weekId: number,
-  gameId: number | null,
-  kind: PickAuditKind,
-  change: { previousValue: string | null; newValue: string | null; at: Date },
-): Promise<void> {
-  await db.insert(pickAudits).values({
-    memberId,
-    weekId,
-    gameId,
-    kind,
-    previousValue: change.previousValue,
-    newValue: change.newValue,
-    changedBy: actor.id,
-    changedAt: change.at,
-  });
 }
 
 type PickAuditRow = typeof pickAudits.$inferSelect;

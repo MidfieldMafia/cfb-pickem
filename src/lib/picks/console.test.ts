@@ -1,114 +1,40 @@
+/**
+ * The commissioner's side of pick entry that is not the writer: reading
+ * another member's sheet early, and the who-hasn't-picked view that drives the
+ * reminder. What a commissioner's *edit* does now lives in `edits.test.ts`,
+ * over the one writer, where "a member cannot" is a row in a table over
+ * `Authority` rather than a second copy of every rule.
+ */
 import { describe, expect, test } from "vitest";
+import { asCommissioner } from "@/lib/members/authority";
 import { NotCommissioner, setMemberActive } from "@/lib/members/members";
-import { addGame, openWeek, publishSlate, setTiebreaker, slateFor, voidGame } from "@/lib/slate/slate";
-import { FAMU_AT_MIAMI, joinAt, OHIO_STATE_AT_TEXAS, OKLAHOMA_AT_MICHIGAN, seedWeek2 } from "@/test/week-2";
-import {
-  memberSheet,
-  overrideLock,
-  overridePick,
-  overrideTiebreakerGuess,
-  pickAuditsFor,
-  reminderText,
-  whoHasntPicked,
-} from "./console";
-import { pickSheet, savePick, setLock, setTiebreakerGuess } from "./picks";
+import { voidGame } from "@/lib/slate/slate";
+import { guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
+import { memberSheet, pickAuditsFor, reminderText, whoHasntPicked } from "./console";
+import { applyEdit } from "./edits";
 
-const TUESDAY = new Date("2026-09-08T18:00:00Z");
-const THURSDAY = new Date("2026-09-10T20:00:00Z");
-
-/** A published Week 2 slate of three games with the Texas game as the Tiebreaker Game. */
+/** The shared published Week 2, plus the moment just after its Deadline. */
 async function setup() {
-  const { db, jonah, grandma, candidate } = await seedWeek2();
-  const week = await openWeek(db, jonah, 2);
-  const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
-  const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
-  const florida = await addGame(db, jonah, week.id, candidate(FAMU_AT_MIAMI));
-  await setTiebreaker(db, jonah, week.id, texas.id);
-  const slate = await publishSlate(db, jonah, week.id, TUESDAY);
-  const deadline = slate.deadline!;
-  return { db, jonah, grandma, week, michigan, texas, florida, deadline, afterDeadline: new Date(deadline.getTime() + 3600_000) };
+  const fixture = await publishWeek2();
+  return { ...fixture, afterDeadline: new Date(fixture.deadline.getTime() + 3600_000) };
 }
 
-describe("commissioner pick override", () => {
-  test("a commissioner changes a member's pick after the deadline; a member cannot; the edit is audited", async () => {
-    const { db, jonah, grandma, week, michigan, afterDeadline } = await setup();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
-
-    await expect(
-      overridePick(db, grandma, grandma.id, week.id, michigan.id, michigan.awayTeamId, afterDeadline),
-    ).rejects.toBeInstanceOf(NotCommissioner);
-
-    await overridePick(db, jonah, grandma.id, week.id, michigan.id, michigan.awayTeamId, afterDeadline);
-
-    const sheet = await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline);
-    expect(sheet.picks).toEqual([{ gameId: michigan.id, teamId: michigan.awayTeamId, updatedAt: afterDeadline }]);
-
-    const log = await pickAuditsFor(db, jonah, week.id);
-    expect(log).toHaveLength(1);
-    expect(log[0]).toMatchObject({
-      memberId: grandma.id,
-      memberName: "Grandma",
-      gameId: michigan.id,
-      kind: "pick",
-      previousValue: "Michigan",
-      newValue: "Oklahoma",
-      changedBy: jonah.id,
-      changedByName: "Jonah",
-      changedAt: afterDeadline,
-    });
-    await expect(pickAuditsFor(db, grandma, week.id)).rejects.toBeInstanceOf(NotCommissioner);
-  });
-
-  test("a commissioner sets, moves, and clears a member's Lock and Tiebreaker Guess after the deadline, each audited", async () => {
-    const { db, jonah, grandma, week, michigan, texas, florida, afterDeadline } = await setup();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
-    await savePick(db, grandma, week.id, texas.id, texas.homeTeamId, THURSDAY);
-
-    // A Lock still needs a pick to sit on, and a void game still cannot take one.
-    await expect(overrideLock(db, jonah, grandma.id, week.id, florida.id, afterDeadline)).rejects.toThrow(/pick/i);
-    await voidGame(db, jonah, florida.id, "Hurricane");
-    await expect(overrideLock(db, jonah, grandma.id, week.id, florida.id, afterDeadline)).rejects.toThrow(/void/i);
-
-    await overrideLock(db, jonah, grandma.id, week.id, michigan.id, afterDeadline);
-    await overrideLock(db, jonah, grandma.id, week.id, texas.id, afterDeadline);
-    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).lockGameId).toBe(texas.id);
-    await overrideLock(db, jonah, grandma.id, week.id, null, afterDeadline);
-    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).lockGameId).toBeNull();
-
-    await expect(overrideTiebreakerGuess(db, jonah, grandma.id, week.id, 300, afterDeadline)).rejects.toThrow(
-      /whole number/i,
-    );
-    await overrideTiebreakerGuess(db, jonah, grandma.id, week.id, 55, afterDeadline);
-    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).tiebreakerGuess).toBe(55);
-    await overrideTiebreakerGuess(db, jonah, grandma.id, week.id, null, afterDeadline);
-    expect((await pickSheet(db, grandma, await slateFor(db, week.id), afterDeadline)).tiebreakerGuess).toBeNull();
-
-    await expect(overrideLock(db, grandma, grandma.id, week.id, null, afterDeadline)).rejects.toBeInstanceOf(
-      NotCommissioner,
-    );
-    await expect(overrideTiebreakerGuess(db, grandma, grandma.id, week.id, 1, afterDeadline)).rejects.toBeInstanceOf(
-      NotCommissioner,
-    );
-
-    const log = await pickAuditsFor(db, jonah, week.id);
-    expect(log.map((e) => [e.kind, e.previousValue, e.newValue])).toEqual([
-      ["lock", null, "Michigan"],
-      ["lock", "Michigan", "Texas"],
-      ["lock", "Texas", null],
-      ["tiebreaker_guess", null, "55"],
-      ["tiebreaker_guess", "55", null],
-    ]);
-    expect(log.every((e) => e.memberId === grandma.id && e.changedBy === jonah.id)).toBe(true);
-  });
-
+describe("reading a member's sheet from the console", () => {
   test("a commissioner reads and enters a member's picks before the deadline; a member cannot read another's", async () => {
-    const { db, jonah, grandma, week, michigan, texas } = await setup();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    const { db, slate, jonah, grandma, week, michigan, texas } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
 
     await expect(memberSheet(db, grandma, jonah.id, week.id, THURSDAY)).rejects.toBeInstanceOf(NotCommissioner);
     await expect(memberSheet(db, jonah, 999999, week.id, THURSDAY)).rejects.toThrow(/no such member/i);
 
-    await overridePick(db, jonah, grandma.id, week.id, texas.id, texas.awayTeamId, THURSDAY);
+    await applyEdit(
+      db,
+      asCommissioner(jonah, grandma.id),
+      slate,
+      { kind: "pick", gameId: texas.id, teamId: texas.awayTeamId },
+      THURSDAY,
+    );
+
     const sheet = await memberSheet(db, jonah, grandma.id, week.id, THURSDAY);
     expect(sheet.member.displayName).toBe("Grandma");
     expect(sheet.sheet.picks.map((p) => [p.gameId, p.teamId])).toEqual([
@@ -117,23 +43,47 @@ describe("commissioner pick override", () => {
     ]);
     expect(sheet.sheet.locked).toBe(false);
   });
+
+  test("the change log is a commissioner's to read, and names both members", async () => {
+    const { db, slate, jonah, grandma, week, michigan, afterDeadline } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await applyEdit(
+      db,
+      asCommissioner(jonah, grandma.id),
+      slate,
+      { kind: "pick", gameId: michigan.id, teamId: michigan.awayTeamId },
+      afterDeadline,
+    );
+
+    const log = await pickAuditsFor(db, jonah, week.id);
+    expect(log).toHaveLength(1);
+    expect(log[0]).toMatchObject({
+      memberName: "Grandma",
+      changedByName: "Jonah",
+      previousValue: "Michigan",
+      newValue: "Oklahoma",
+      changedAt: afterDeadline,
+    });
+
+    await expect(pickAuditsFor(db, grandma, week.id)).rejects.toBeInstanceOf(NotCommissioner);
+  });
 });
 
 describe("who hasn't picked", () => {
   test("lists every active member's progress, counts the ready ones, and drafts the reminder in Central time", async () => {
-    const { db, jonah, grandma, week, michigan, texas, florida, deadline } = await setup();
+    const { db, slate, jonah, grandma, week, michigan, texas, miami, deadline } = await setup();
     const em = await joinAt(db, jonah, "Cousin Em", TUESDAY);
     const gone = await joinAt(db, jonah, "Gone", TUESDAY);
     await setMemberActive(db, jonah, gone.id, false);
 
     // Jonah is done: every pick, a Lock, and a guess.
-    for (const game of [michigan, texas, florida]) await savePick(db, jonah, week.id, game.id, game.homeTeamId, THURSDAY);
-    await setLock(db, jonah, week.id, texas.id, THURSDAY);
-    await setTiebreakerGuess(db, jonah, week.id, 70, THURSDAY);
+    for (const game of [michigan, texas, miami]) await pickAs(db, jonah, slate, game, game.homeTeamId, THURSDAY);
+    await lockAs(db, jonah, slate, texas.id, THURSDAY);
+    await guessAs(db, jonah, slate, 70, THURSDAY);
     // Grandma has every pick but no Lock; Em has one pick and nothing else.
-    for (const game of [michigan, texas, florida]) await savePick(db, grandma, week.id, game.id, game.awayTeamId, THURSDAY);
-    await setTiebreakerGuess(db, grandma, week.id, 66, THURSDAY);
-    await savePick(db, em, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    for (const game of [michigan, texas, miami]) await pickAs(db, grandma, slate, game, game.awayTeamId, THURSDAY);
+    await guessAs(db, grandma, slate, 66, THURSDAY);
+    await pickAs(db, em, slate, michigan, michigan.homeTeamId, THURSDAY);
 
     const report = await whoHasntPicked(db, jonah, week.id, THURSDAY);
     expect(report.deadline).toEqual(deadline);
@@ -146,8 +96,8 @@ describe("who hasn't picked", () => {
     ]);
 
     // A void game is not a missing pick, and a Lock sitting on it is a Dropped Lock: something to move, so not done.
-    await setLock(db, jonah, week.id, florida.id, THURSDAY);
-    await voidGame(db, jonah, florida.id, "Hurricane");
+    await lockAs(db, jonah, slate, miami.id, THURSDAY);
+    await voidGame(db, jonah, miami.id, "Hurricane");
     const afterVoid = await whoHasntPicked(db, jonah, week.id, THURSDAY);
     expect(afterVoid.needed).toBe(2);
     expect(afterVoid.ready).toBe(0);
@@ -166,12 +116,12 @@ describe("who hasn't picked", () => {
   });
 
   test("a member who joins after the Deadline is not chased, and neither is one who picked and left", async () => {
-    const { db, jonah, grandma, week, michigan, deadline } = await setup();
+    const { db, slate, jonah, grandma, week, michigan, deadline } = await setup();
     const late = await joinAt(db, jonah, "Late", new Date(deadline.getTime() + 3600_000));
     // The Reveal keeps this one, because their points happened; the reminder
     // does not, because there is nobody left to remind.
     const gone = await joinAt(db, jonah, "Gone", TUESDAY);
-    await savePick(db, gone, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, gone, slate, michigan, michigan.homeTeamId, THURSDAY);
     await setMemberActive(db, jonah, gone.id, false);
 
     const report = await whoHasntPicked(db, jonah, week.id, THURSDAY);
@@ -184,11 +134,11 @@ describe("who hasn't picked", () => {
   });
 
   test("the reminder says so when everyone is in", async () => {
-    const { db, jonah, grandma, week, michigan, texas, florida } = await setup();
+    const { db, slate, jonah, grandma, week, michigan, texas, miami } = await setup();
     for (const member of [jonah, grandma]) {
-      for (const game of [michigan, texas, florida]) await savePick(db, member, week.id, game.id, game.homeTeamId, THURSDAY);
-      await setLock(db, member, week.id, michigan.id, THURSDAY);
-      await setTiebreakerGuess(db, member, week.id, 50, THURSDAY);
+      for (const game of [michigan, texas, miami]) await pickAs(db, member, slate, game, game.homeTeamId, THURSDAY);
+      await lockAs(db, member, slate, michigan.id, THURSDAY);
+      await guessAs(db, member, slate, 50, THURSDAY);
     }
     const report = await whoHasntPicked(db, jonah, week.id, THURSDAY);
     expect(report.ready).toBe(2);

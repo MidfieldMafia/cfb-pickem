@@ -9,9 +9,11 @@ import { TeamName } from "@/components/team-name";
 import { cfbd } from "@/lib/cfbd";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { requireConsole } from "@/lib/members/current";
+import { MAX_NOTE } from "@/lib/notes";
 import { plural } from "@/lib/plural";
 import { isVoid, toGameView, toSlateCandidates, voidNote, type GameView } from "@/lib/slate/json";
 import { activeSeason, openWeek, seasonWeeks, slateFor, WEEK_NUMBERS } from "@/lib/slate/slate";
+import { ActionForm } from "../action-form";
 import { pillClass } from "../pill";
 import { requestedWeekNumber } from "../week-param";
 import { filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
@@ -293,13 +295,22 @@ function SlateRow({
         </div>
       </div>
       {published && !voided ? (
-        <form action={voidGameAction} className="flex gap-2">
-          <input type="hidden" name="gameId" value={game.id} />
-          <Input name="note" required maxLength={120} placeholder="Void note (why)" aria-label="Void note" className="h-9" />
-          <Button type="submit" size="sm" variant="destructive">
-            Void
-          </Button>
-        </form>
+        <ActionForm
+          action={voidGameAction}
+          hidden={{ gameId: game.id }}
+          submit="Void"
+          pendingLabel="Voiding…"
+          variant="destructive"
+        >
+          <Input
+            name="note"
+            required
+            maxLength={MAX_NOTE}
+            placeholder="Void note (why)"
+            aria-label="Void note"
+            className="h-9"
+          />
+        </ActionForm>
       ) : null}
     </li>
   );

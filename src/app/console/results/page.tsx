@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
 import { TeamLogo } from "@/components/team-logo";
 import { requireConsole } from "@/lib/members/current";
+import { MAX_NOTE } from "@/lib/notes";
 import {
   MAX_SCORE,
   resultsConsole,
@@ -280,7 +281,7 @@ function OverrideCell({ row }: { row: GameView }) {
         <Input
           name="note"
           required
-          maxLength={200}
+          maxLength={MAX_NOTE}
           placeholder="Why (required)"
           aria-label={`Override note for ${game.awayTeam} at ${game.homeTeam}`}
           className="h-9 w-44"
@@ -306,7 +307,7 @@ function OverrideCell({ row }: { row: GameView }) {
           <Input
             name="note"
             required
-            maxLength={120}
+            maxLength={MAX_NOTE}
             placeholder="Void note (why)"
             aria-label={`Void note for ${game.awayTeam} at ${game.homeTeam}`}
             className="h-9 w-44"
