@@ -21,18 +21,11 @@ import type {
   CfbdVenue,
 } from "./types";
 
-export interface Recording {
-  games: CfbdGame[];
-  rankings: CfbdPollWeek[];
-  lines: CfbdBettingGame[];
-  seasonGames: CfbdGame[];
-  records: CfbdTeamRecord[];
-  teamStats: CfbdTeamStat[];
-  media: CfbdGameMedia[];
-  pregameWinProbability: CfbdPregameWinProbability[];
-  venues: CfbdVenue[];
-  weather: CfbdGameWeather[];
-}
+/**
+ * One recorded response per client method, derived from the client itself so a
+ * new endpoint cannot be added to the contract and forgotten here.
+ */
+export type Recording = { [K in keyof CfbdClient]: Awaited<ReturnType<CfbdClient[K]>> };
 
 /**
  * Responses recorded from the live API with the project key. Rankings hold

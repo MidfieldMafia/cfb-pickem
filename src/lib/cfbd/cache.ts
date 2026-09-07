@@ -1,14 +1,17 @@
 import type { CfbdClient, WeekQuery } from "./types";
 
+/** The shared client with the Refresh button's escape hatch on it. */
+export interface CachingCfbdClient extends CfbdClient {
+  invalidate(): void;
+}
+
 /**
  * The shared cache in front of CollegeFootballData. Quota is monthly, so a
  * console page that re-renders on every filter click must not cost ten
  * calls each time. Entries live in process memory for `ttlMs`; `invalidate`
  * forces the next read through (the Refresh button).
  */
-export function cachingCfbd(inner: CfbdClient, ttlMs: number, now: () => number = Date.now): CfbdClient & {
-  invalidate(): void;
-} {
+export function cachingCfbd(inner: CfbdClient, ttlMs: number, now: () => number = Date.now): CachingCfbdClient {
   const entries = new Map<string, { expires: number; value: Promise<unknown> }>();
 
   function remember<T>(key: string, load: () => Promise<T>): Promise<T> {

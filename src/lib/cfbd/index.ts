@@ -1,4 +1,5 @@
-import { cachingCfbd } from "./cache";
+import { requireEnv } from "@/lib/env";
+import { cachingCfbd, type CachingCfbdClient } from "./cache";
 import { httpCfbd } from "./http";
 import type { CfbdClient } from "./types";
 
@@ -15,12 +16,10 @@ export interface CfbdOptions {
 
 /** The live client, keyed from the environment. Throws if the key is missing. */
 function cfbdFromEnv(): CfbdClient {
-  const apiKey = process.env.CFBD_API_KEY;
-  if (!apiKey) throw new Error("CFBD_API_KEY is not set; run `vercel env pull .env.local`.");
-  return httpCfbd(apiKey);
+  return httpCfbd(requireEnv("CFBD_API_KEY"));
 }
 
-let cached: (CfbdClient & { invalidate(): void }) | undefined;
+let cached: CachingCfbdClient | undefined;
 
 /**
  * The one production entry to the feed: HTTP with the env key, behind the
@@ -28,7 +27,7 @@ let cached: (CfbdClient & { invalidate(): void }) | undefined;
  * whether a call costs quota is this argument, visible at the call site,
  * rather than which module a screen happened to import from.
  */
-export function cfbd(options?: { bypassCache?: false }): CfbdClient & { invalidate(): void };
+export function cfbd(options?: { bypassCache?: false }): CachingCfbdClient;
 export function cfbd(options: { bypassCache: true }): CfbdClient;
 export function cfbd(options: CfbdOptions = {}): CfbdClient {
   if (options.bypassCache) return cfbdFromEnv();
