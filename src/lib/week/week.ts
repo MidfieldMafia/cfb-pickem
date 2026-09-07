@@ -16,7 +16,14 @@ import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
-import { playedWeeks, refreshResultsIfStale, weekResult, type GradedWeekResult } from "@/lib/results/results";
+import {
+  playedWeeks,
+  refreshResultsIfStale,
+  seasonResult,
+  weekResult,
+  type GradedWeekResult,
+} from "@/lib/results/results";
+import { seasonStanding, type SeasonStanding } from "@/lib/results/summary";
 import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
 
 /** The published Week for one member at one instant. */
@@ -29,6 +36,13 @@ export interface WeekContext {
    * that did not ask for it — grading costs a read per member.
    */
   result: GradedWeekResult | null;
+  /**
+   * Where the member stands in the season, this Week's provisional points
+   * included. Null before the Deadline and for the screens that did not ask
+   * for it — the season costs a grading pass over every played Week, not just
+   * this one.
+   */
+  season: SeasonStanding | null;
 }
 
 export interface WeekOptions {
@@ -37,6 +51,13 @@ export interface WeekOptions {
    * scores arrive together from one pass, so asking for either is this flag.
    */
   graded?: boolean;
+  /**
+   * Grade the season as well, for the Live Board's own card: the member's
+   * place and total across every played Week. Separate from `graded` because
+   * it is a pass over the whole season rather than this Week, and only the
+   * Live Board wants it — the Leaderboard reads `seasonResult` directly.
+   */
+  season?: boolean;
   /**
    * Keep the scores fresh: member traffic schedules the feed, and a visit
    * after the Deadline pulls CollegeFootballData when a game is past kickoff
@@ -74,11 +95,17 @@ export async function currentWeek(
   const locked = deadlinePassed(published.week, now);
   // Any feed pull happens before the reads, so the sheet and the Reveal see the same rows.
   const slate = locked && options.cfbd ? await refreshQuietly(db, options.cfbd, published, now) : published;
-  const [sheet, result] = await Promise.all([
+  const [sheet, result, season] = await Promise.all([
     pickSheet(db, actor, slate, now),
     locked && options.graded ? weekResult(db, actor, slate, now) : null,
+    locked && options.season ? seasonResult(db, now) : null,
   ]);
-  return { slate, sheet, result };
+  return {
+    slate,
+    sheet,
+    result,
+    season: season ? seasonStanding(season.leaderboard, actor.id) : null,
+  };
 }
 
 /** A Week the season has finished with, graded, with the Weeks a member may look at instead. */

@@ -10,11 +10,11 @@ import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
 import { TeamName } from "@/components/team-name";
 import { Badge } from "@/components/ui/badge";
-import { YourWeek } from "@/components/your-week";
+import { YourSeason } from "@/components/standing-card";
 import { clockLabel, type GameResult } from "@/lib/results/result";
 import type { RevealGame, RevealPick, ScoredMember } from "@/lib/results/results";
-import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
-import { standing } from "@/lib/results/summary";
+import { pennantRow, sideStanding, type Side, type SideStanding } from "@/lib/results/side";
+import { plural } from "@/lib/plural";
 import { isVoid, type MemberJson } from "@/lib/slate/json";
 import { fetchWeekState } from "@/lib/week/client";
 import type { WeekStateJson } from "@/lib/week/json";
@@ -159,13 +159,14 @@ function SideRow({
   const stands = sideStanding(result, side);
   const behind = stands === "lost" || stands === "trailing";
   const took = row.picks.filter((p) => p.teamId === teamId);
+  const { shown, hidden } = pennantRow(took, viewerId);
   return (
     <div className="flex min-h-11 items-center gap-2">
       <TeamLogo team={team} size={28} />
       <TeamName name={team} rank={rank} className={`min-w-0 flex-1 truncate text-lg ${behind ? "text-muted-foreground" : ""}`} />
       {/* Overlapping pennants, the newest member on top: the row stays one line whoever picked. */}
-      <ul className="flex items-center -space-x-1.5 pr-1">
-        {took.map((pick) => {
+      <ul className="flex shrink-0 items-center -space-x-1.5 pr-1">
+        {shown.map((pick) => {
           const member = members.get(pick.memberId);
           if (!member) return null;
           return (
@@ -178,6 +179,14 @@ function SideRow({
             />
           );
         })}
+        {hidden > 0 ? (
+          <li
+            className={`grid size-7 shrink-0 place-items-center rounded-full bg-muted text-[11px] font-bold tabular-nums text-muted-foreground ring-2 ${RING[stands]}`}
+          >
+            <span aria-hidden>+{hidden}</span>
+            <span className="sr-only">and {plural(hidden, "other member")}</span>
+          </li>
+        ) : null}
       </ul>
       <Mark standing={stands} />
       <span
@@ -245,8 +254,9 @@ function YourCard({ state, viewerId }: { state: WeekStateJson; viewerId: number 
     );
   }
   const mine = state.scores?.find((s) => s.member.id === viewerId) ?? null;
-  const place = state.scores ? standing(state.scores, viewerId) : null;
-  if (!mine || !place) {
+  // No weekly score and no season place are the same member: one who joined
+  // after this Deadline and so is on neither board.
+  if (!mine || !state.season) {
     return (
       <div className="rounded-md border border-border bg-card p-3">
         <p className="text-sm text-muted-foreground">
@@ -255,7 +265,7 @@ function YourCard({ state, viewerId }: { state: WeekStateJson; viewerId: number 
       </div>
     );
   }
-  return <YourWeek weekNumber={weekNumber} score={mine} place={place} />;
+  return <YourSeason season={state.season} score={mine} />;
 }
 
 export function LiveBoard({ initial, viewer }: { initial: WeekStateJson; viewer: MemberJson }) {

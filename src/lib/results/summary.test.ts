@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vitest";
 import type { GameResult } from "./result";
-import type { Reveal, RevealGame, RevealPick, ScoredMember, WeeklyScore, WeeklyWin } from "./results";
+import type {
+  LeaderboardRow,
+  Reveal,
+  RevealGame,
+  RevealPick,
+  ScoredMember,
+  WeeklyScore,
+  WeeklyWin,
+} from "./results";
 import type { GameJson, GameView } from "@/lib/slate/json";
 import {
   averageLabel,
@@ -8,6 +16,7 @@ import {
   ordinal,
   pickBreakdown,
   record,
+  seasonStanding,
   standing,
   tiebreakerOutcome,
   tiebreakerSentence,
@@ -84,6 +93,22 @@ const GRANDMA = member(1, "Grandma");
 const JONAH = member(2, "Jonah");
 const ALEX = member(3, "Alex");
 
+/** One Leaderboard row, ranked as `scoreSeason` already ranked it. */
+function row(who: ScoredMember, rank: number, totalPoints: number): LeaderboardRow {
+  return {
+    member: who,
+    rank,
+    previousRank: null,
+    totalPoints,
+    correct: totalPoints / 10,
+    incorrect: 0,
+    weeklyWins: 0,
+    weeksPlayed: 1,
+    averagePoints: totalPoints,
+    cumulativeTiebreakerError: 0,
+  };
+}
+
 function score(who: ScoredMember, points: number, over: Partial<WeeklyScore> = {}): WeeklyScore {
   return {
     member: who,
@@ -151,6 +176,22 @@ describe("a member's record and place", () => {
     expect(standing(scores, JONAH.id)!.place).toBe(2);
     // A member who joined after the Deadline is not in the scores at all.
     expect(standing(scores, ALEX.id)).toBeNull();
+  });
+
+  test("a season place is the rank the engine gave, with the season total beside it", () => {
+    // Two members tie on every season tiebreak, so `scoreSeason` gave them the
+    // same rank and nobody holds 2nd. The helper must not re-rank around that.
+    const board = [row(GRANDMA, 1, 120), row(JONAH, 1, 120), row(ALEX, 3, 90)];
+
+    expect(seasonStanding(board, GRANDMA.id)).toEqual({ place: 1, of: 3, label: "1st of 3", points: 120 });
+    expect(seasonStanding(board, JONAH.id)).toEqual({ place: 1, of: 3, label: "1st of 3", points: 120 });
+    expect(seasonStanding(board, ALEX.id)).toEqual({ place: 3, of: 3, label: "3rd of 3", points: 90 });
+  });
+
+  test("has no season place for a member the board does not carry", () => {
+    // Nothing to show a member who has played no Week yet, as with a weekly place.
+    expect(seasonStanding([row(GRANDMA, 1, 30)], ALEX.id)).toBeNull();
+    expect(seasonStanding([], GRANDMA.id)).toBeNull();
   });
 });
 

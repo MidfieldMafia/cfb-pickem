@@ -12,6 +12,7 @@
  * and imports this module.
  */
 import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/results";
+import type { SeasonStanding } from "@/lib/results/summary";
 import { toGameView, toWeekJson, type WeekJson } from "@/lib/slate/json";
 import type { WeekContext } from "./week";
 
@@ -37,6 +38,18 @@ export interface WeekStateJson {
    */
   scores: WeeklyScore[] | null;
   weeklyWin: WeeklyWin | null;
+  /**
+   * The viewer's own place and total across the season, this Week's
+   * provisional points included: the card at the top of the Live Board, as
+   * mockup 05 draws it. Null before the Deadline, and for a member who has
+   * played no Week yet.
+   *
+   * The viewer's standing rather than the whole Leaderboard, because that card
+   * is the only thing on this screen that reads the season, and shipping every
+   * member's season row down a thirty-second poll to render one line would be
+   * paying for the Leaderboard on the Live Board's budget.
+   */
+  season: SeasonStanding | null;
 }
 
 /**
@@ -45,7 +58,7 @@ export interface WeekStateJson {
  * is what the Deadline gates, and `currentWeek` never grades before it — so
  * the two shapes of the screen are one shape with two empty halves.
  */
-export function toWeekStateJson({ slate, sheet, result }: WeekContext): WeekStateJson {
+export function toWeekStateJson({ slate, sheet, result, season }: WeekContext): WeekStateJson {
   return {
     week: toWeekJson(slate.week),
     year: slate.season.year,
@@ -57,5 +70,6 @@ export function toWeekStateJson({ slate, sheet, result }: WeekContext): WeekStat
     games: result ? result.reveal.games : slate.games.map((game) => ({ ...toGameView(game), picks: [] })),
     scores: result?.scores ?? null,
     weeklyWin: result?.weeklyWin ?? null,
+    season,
   };
 }
