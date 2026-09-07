@@ -34,15 +34,15 @@ export async function setTiebreakerAction(formData: FormData) {
   await chooseTiebreaker(consoleRoute(), formData);
 }
 
-export function setDeadlineAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
+export async function setDeadlineAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
   return editDeadline(consoleRoute(), formData);
 }
 
-export function publishAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
+export async function publishAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
   return editPublish(consoleRoute(), formData);
 }
 
-export function voidGameAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
+export async function voidGameAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
   return editVoidGame(consoleRoute(), formData);
 }
 

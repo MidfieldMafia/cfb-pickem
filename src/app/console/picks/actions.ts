@@ -7,15 +7,15 @@ import { consoleRoute } from "../context";
 
 export type { ActionState };
 
-export function overridePickAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function overridePickAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return editPick(consoleRoute(), formData);
 }
 
-export function overrideLockAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function overrideLockAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return editLock(consoleRoute(), formData);
 }
 
-export function overrideTiebreakerAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function overrideTiebreakerAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return editGuess(consoleRoute(), formData);
 }
 
