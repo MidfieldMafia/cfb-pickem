@@ -100,7 +100,7 @@ function score(who: ScoredMember, points: number, over: Partial<WeeklyScore> = {
 }
 
 function pick(who: ScoredMember, teamId: number, over: Partial<RevealPick> = {}): RevealPick {
-  return { memberId: who.id, teamId, outcome: "correct", locked: false, lockDropped: false, ...over };
+  return { memberId: who.id, teamId, outcome: "correct", lock: null, ...over };
 }
 
 function reveal(games: RevealGame[], tiebreakerGameId: number | null = null): Reveal {
@@ -258,9 +258,9 @@ describe("one member's own week", () => {
     const miami = view(3, "FAMU", "Miami", VOID);
     const board = reveal(
       [
-        { ...michigan, picks: [pick(GRANDMA, michigan.game.homeTeamId, { locked: true })] },
+        { ...michigan, picks: [pick(GRANDMA, michigan.game.homeTeamId, { lock: "counts" })] },
         { ...texas, picks: [pick(JONAH, texas.game.homeTeamId, { outcome: "incorrect" })] },
-        { ...miami, picks: [pick(GRANDMA, miami.game.homeTeamId, { outcome: "void", lockDropped: true })] },
+        { ...miami, picks: [pick(GRANDMA, miami.game.homeTeamId, { outcome: "void", lock: "dropped" })] },
       ],
       texas.game.id,
     );
@@ -273,8 +273,8 @@ describe("one member's own week", () => {
       [texas.game.id, null, true],
       [miami.game.id, "void", false],
     ]);
-    expect(mine[0].pick!.locked).toBe(true);
-    expect(mine[2].pick!.lockDropped).toBe(true);
+    expect(mine[0].pick!.lock).toBe("counts");
+    expect(mine[2].pick!.lock).toBe("dropped");
   });
 });
 

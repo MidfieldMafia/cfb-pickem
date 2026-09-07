@@ -479,8 +479,8 @@ describe("the reveal", () => {
       feedFinal: null,
     });
     expect(michiganRow.picks).toEqual([
-      { memberId: jonah.id, teamId: michigan.awayTeamId, outcome: "incorrect", locked: false, lockDropped: false },
-      { memberId: grandma.id, teamId: michigan.homeTeamId, outcome: "correct", locked: true, lockDropped: false },
+      { memberId: jonah.id, teamId: michigan.awayTeamId, outcome: "incorrect", lock: null },
+      { memberId: grandma.id, teamId: michigan.homeTeamId, outcome: "correct", lock: "counts" },
     ]);
     // A pending game shows the picks without a grade.
     expect(texasRow.result.status).toBe("pending");
@@ -489,7 +489,7 @@ describe("the reveal", () => {
       [grandma.id, "pending"],
     ]);
     expect(miamiRow.picks).toEqual([
-      { memberId: jonah.id, teamId: miami.homeTeamId, outcome: "pending", locked: false, lockDropped: false },
+      { memberId: jonah.id, teamId: miami.homeTeamId, outcome: "pending", lock: null },
     ]);
   });
 
@@ -502,9 +502,9 @@ describe("the reveal", () => {
     const reveal = await revealAt(jonah, SUNDAY);
     const michiganRow = reveal.games.find((g) => g.game.id === michigan.id)!;
     expect(michiganRow.result).toMatchObject({ awayScore: 30, source: "override" });
-    expect(michiganRow.picks.map((p) => [p.memberId, p.outcome, p.locked])).toEqual([
-      [jonah.id, "correct", false],
-      [grandma.id, "incorrect", true],
+    expect(michiganRow.picks.map((p) => [p.memberId, p.outcome, p.lock])).toEqual([
+      [jonah.id, "correct", null],
+      [grandma.id, "incorrect", "counts"],
     ]);
     const texasRow = reveal.games.find((g) => g.game.id === texas.id)!;
     expect(texasRow.result.status).toBe("void");
@@ -521,17 +521,23 @@ describe("the reveal", () => {
 
     // Jonah spent his Lock on the game that was voided. It scores nothing, but the board still shows he spent it.
     const texasRow = reveal.games.find((g) => g.game.id === texas.id)!;
-    expect(texasRow.picks.map((p) => [p.memberId, p.locked, p.lockDropped])).toEqual([
-      [jonah.id, false, true],
-      [grandma.id, false, false],
+    expect(texasRow.picks.map((p) => [p.memberId, p.lock])).toEqual([
+      [jonah.id, "dropped"],
+      [grandma.id, null],
     ]);
 
     // Grandma's Lock sits on a live game, so the Void leaves it counting.
     const michiganRow = reveal.games.find((g) => g.game.id === michigan.id)!;
-    expect(michiganRow.picks.map((p) => [p.memberId, p.locked, p.lockDropped])).toEqual([
-      [jonah.id, false, false],
-      [grandma.id, true, false],
+    expect(michiganRow.picks.map((p) => [p.memberId, p.lock])).toEqual([
+      [jonah.id, null],
+      [grandma.id, "counts"],
     ]);
+
+    // The one field cannot say both at once, which is what `RevealPick.lock` is for:
+    // the exclusion used to rest on `score-week` setting `locked: false` in its void
+    // branch, three modules from the board that promised it.
+    const every = reveal.games.flatMap((g) => g.picks.map((p) => p.lock));
+    expect(every.filter((lock) => lock === "dropped")).toHaveLength(1);
   });
 });
 

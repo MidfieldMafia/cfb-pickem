@@ -128,6 +128,27 @@ async function writePick(
   });
 }
 
+/**
+ * Sets, moves or clears the member's Lock of the Week.
+ *
+ * **Before the Deadline a member may move a Dropped Lock; after it, they
+ * cannot, and the week goes on without one.** The rule reads as three
+ * mechanisms that never mention each other, so it is written here where a
+ * change to any of them would be made:
+ *
+ * - `applyEdit` refuses a member's edit once the Deadline has passed, so after
+ *   it there is no route to this function for them at all — a Dropped Lock
+ *   stands for the rest of the week.
+ * - The Void check below refuses a *new* Lock on a Void game, so the move is
+ *   always onto a live one; a Dropped Lock cannot be re-placed where it sits.
+ * - `locks` is keyed on (member, week), so a move overwrites rather than
+ *   adding a second Lock — which is why "moving" needs no delete.
+ *
+ * A Commissioner is not bound by the Deadline (`applyEdit` checks
+ * `by.as === "member"`), so they can still move a member's Lock afterwards.
+ * Restoring the Game is the other way back: `isDroppedLock` reads the Game's
+ * effective result, so the Lock counts again with no write here.
+ */
 async function writeLock(
   db: Db,
   by: Authority,

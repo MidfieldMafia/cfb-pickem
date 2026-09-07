@@ -147,18 +147,28 @@ export function Review({ initial }: { initial: SheetJson }) {
     setLockPending(true);
     setLockError(null);
     touched.current.lock = true;
-    const previous = sheet.lockGameId;
-    const previousDropped = sheet.lockDropped;
-    // The drawer only offers live games, so moving the Lock always clears a Dropped Lock.
-    setSheet((s) => ({ ...s, lockGameId: gameId, lockDropped: false }));
+    const previous = { lockGameId: sheet.lockGameId, lockDropped: sheet.lockDropped };
+    // Optimistic in `lockGameId` alone — the field the member just chose. Whether
+    // that leaves a Dropped Lock is the server's to answer, and it answers with
+    // the whole sheet; this screen used to assert `lockDropped: false` here while
+    // that answer went unread two lines below.
+    setSheet((s) => ({ ...s, lockGameId: gameId }));
     const result = await put<SheetJson>("/api/week/lock", { gameId });
     setLockPending(false);
     if (result.ok) {
+      setSheet(result.body);
       sync(result.body.serverNow);
       setLockOpen(false);
       return;
     }
-    setSheet((s) => ({ ...s, lockGameId: previous, lockDropped: previousDropped }));
+    if (result.body) {
+      // A passed Deadline answers with the sheet: adopt it rather than putting
+      // back a value this screen only remembered.
+      setSheet(result.body);
+      sync(result.body.serverNow);
+    } else {
+      setSheet((s) => ({ ...s, ...previous }));
+    }
     setLockError(result.error);
     if (result.locked) setSheet((s) => ({ ...s, locked: true }));
   };
@@ -175,10 +185,15 @@ export function Review({ initial }: { initial: SheetJson }) {
     touched.current.guess = true;
     const result = await put<SheetJson>("/api/week/tiebreaker", { guess: value });
     if (result.ok) {
+      // The stored Guess as the server has it, rather than the value sent to it.
+      setSheet(result.body);
       sync(result.body.serverNow);
-      setSheet((s) => ({ ...s, tiebreakerGuess: value }));
       setGuessState({ saved: true });
       return;
+    }
+    if (result.body) {
+      setSheet(result.body);
+      sync(result.body.serverNow);
     }
     setGuessState({ error: result.error });
     if (result.locked) setSheet((s) => ({ ...s, locked: true }));

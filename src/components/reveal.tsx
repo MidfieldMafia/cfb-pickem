@@ -71,14 +71,14 @@ function Side({
               className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs font-semibold ${
                 you ? "border-primary" : "border-border"
               }`}
-              title={`${member.displayName}${pick.locked ? " · Lock of the Week" : ""}${
-                pick.lockDropped ? " · Lock of the Week, dropped: the game is void" : ""
+              title={`${member.displayName}${pick.lock === "counts" ? " · Lock of the Week" : ""}${
+                pick.lock === "dropped" ? " · Lock of the Week, dropped: the game is void" : ""
               }`}
             >
               <Pennant avatarId={member.avatarId} size={20} />
               <span className="max-w-24 truncate">{you ? "You" : member.displayName}</span>
-              {pick.locked ? <Lock size={12} aria-label="Lock of the Week" /> : null}
-              {pick.lockDropped ? (
+              {pick.lock === "counts" ? <Lock size={12} aria-label="Lock of the Week" /> : null}
+              {pick.lock === "dropped" ? (
                 <LockOpen size={12} className="text-muted-foreground" aria-label="Lock of the Week, dropped: the game is void" />
               ) : null}
             </li>

@@ -177,10 +177,21 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
       sync(result.body.serverNow);
       next = { teamId, status: "saved" };
     } else if (result.locked) {
-      // The Deadline passed under us: what the server holds is what counts, so show that.
+      // The Deadline passed under us: what the server holds is what counts, and
+      // now it says so. The refusal carries the sheet, so this reads the pick the
+      // server actually has for this game — where it used to re-show a remembered
+      // local value under a comment claiming the same thing.
       setLockedByServer(true);
       setLateError(result.error);
-      next = isSaved(previous) ? previous : undefined;
+      if (result.body) {
+        sync(result.body.serverNow);
+        const held = result.body.picks.find((p) => p.gameId === gameId);
+        next = held ? { teamId: held.teamId, status: "saved" } : undefined;
+      } else {
+        // No sheet came with the refusal; the last value the server confirmed is
+        // the best answer left.
+        next = isSaved(previous) ? previous : undefined;
+      }
     } else {
       next = { teamId, status: "failed", error: result.error };
     }

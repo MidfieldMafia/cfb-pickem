@@ -14,6 +14,7 @@ import { locks, picks, tiebreakerGuesses, type Game, type Member, type Season, t
 import type { Db } from "@/db/types";
 import { roster } from "@/lib/members/roster";
 import { Refusal } from "@/lib/refusal";
+import { isDroppedLock } from "@/lib/results/result";
 import { toGameView } from "@/lib/slate/json";
 import { deadlinePassed, type Slate } from "@/lib/slate/slate";
 import { sheetProgress, type SheetProgress } from "./progress";
@@ -117,7 +118,7 @@ export async function pickSheet(
     if (row) own.push({ gameId: row.gameId, teamId: row.teamId, updatedAt: row.updatedAt });
   }
   const lockGameId = lock?.gameId ?? null;
-  const lockDropped = slate.games.some((g) => g.id === lockGameId && g.void);
+  const lockDropped = isDroppedLock(slate.games.find((g) => g.id === lockGameId));
   const tiebreakerGuess = guess?.guess ?? null;
   return {
     week: slate.week,

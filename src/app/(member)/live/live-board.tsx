@@ -116,7 +116,12 @@ function PickAvatar({
   you: boolean;
   ring: string;
 }) {
-  const lock = pick.locked ? "Lock of the Week" : pick.lockDropped ? "Lock of the Week, dropped: the game is void" : null;
+  const lock =
+    pick.lock === "counts"
+      ? "Lock of the Week"
+      : pick.lock === "dropped"
+        ? "Lock of the Week, dropped: the game is void"
+        : null;
   return (
     <li className="relative" title={`${member.displayName}${lock ? ` · ${lock}` : ""}`}>
       <span className={`block rounded-full bg-card ring-2 ${ring} ${you ? "ring-offset-2 ring-offset-background" : ""}`}>
@@ -124,7 +129,7 @@ function PickAvatar({
       </span>
       {lock ? (
         <span className="absolute -right-1 -bottom-1 grid size-4 place-items-center rounded-full bg-secondary text-secondary-foreground">
-          {pick.locked ? <Lock size={9} aria-hidden /> : <LockOpen size={9} aria-hidden />}
+          {pick.lock === "counts" ? <Lock size={9} aria-hidden /> : <LockOpen size={9} aria-hidden />}
         </span>
       ) : null}
       <span className="sr-only">
