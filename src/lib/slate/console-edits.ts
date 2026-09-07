@@ -13,7 +13,6 @@ import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import {
   addGameFromFeed,
   InvalidSlate,
-  openWeek,
   publishSlate,
   refreshFromFeed,
   removeGame,
@@ -101,9 +100,3 @@ export function refreshSlate(
   });
 }
 
-/** Where "go to week N" lands, so the action above is one `redirect` over this. */
-export async function slateWeekHref(route: ConsoleRoute, form: FormData): Promise<string> {
-  const actor = await route.requireConsole();
-  const week = await openWeek(route.db, actor, num(form, "weekNumber"));
-  return `${SLATE_PATH}?week=${week.weekNumber}`;
-}
