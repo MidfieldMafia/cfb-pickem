@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scoreSeason } from "./score-season";
+import { scoreSeason } from "./index";
 import { finalGame, rules2026, week } from "./fixtures/build";
 import type { Game, Member } from "./types";
 

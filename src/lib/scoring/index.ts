@@ -14,4 +14,3 @@
  */
 export { scoreWeek } from "./score-week";
 export { scoreSeason } from "./score-season";
-export type * from "./types";

@@ -23,10 +23,11 @@ import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { Wordmark } from "@/components/wordmark";
 import { put } from "@/lib/picks/client";
 import { formatCountdown, useDeadlineClock } from "@/lib/picks/clock";
-import { isVoid, teamName, voidNote, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
+import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
 import { firstOpenGame, liveGames, remainingLabel, sheetProgress } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
+import { isVoid, teamName, voidNote } from "@/lib/slate/json";
 
 function StepRow({
   done,
