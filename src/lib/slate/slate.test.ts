@@ -1,8 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
-import { savePick, setLock } from "@/lib/picks/picks";
 import {
   FAMU_AT_MIAMI,
+  lockAs,
+  pickAs,
   OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   seedWeek2,
@@ -130,10 +131,10 @@ describe("slate builder", () => {
     const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
     const famu = await addGame(db, jonah, week.id, candidate(FAMU_AT_MIAMI));
     await setTiebreaker(db, jonah, week.id, texas.id);
-    await publishSlate(db, jonah, week.id, TUESDAY_BEFORE);
+    const slate = await publishSlate(db, jonah, week.id, TUESDAY_BEFORE);
 
-    await savePick(db, grandma, week.id, famu.id, famu.homeTeamId, THURSDAY_BEFORE);
-    await setLock(db, grandma, week.id, famu.id, THURSDAY_BEFORE);
+    await pickAs(db, grandma, slate, famu, famu.homeTeamId, THURSDAY_BEFORE);
+    await lockAs(db, grandma, slate, famu.id, THURSDAY_BEFORE);
     await voidGame(db, jonah, famu.id, "Hurricane");
 
     expect(await db.query.locks.findMany()).toHaveLength(1);

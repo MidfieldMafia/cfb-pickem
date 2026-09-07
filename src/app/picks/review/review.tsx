@@ -150,7 +150,7 @@ export function Review({ initial }: { initial: SheetJson }) {
     const previousDropped = sheet.lockDropped;
     // The drawer only offers live games, so moving the Lock always clears a Dropped Lock.
     setSheet((s) => ({ ...s, lockGameId: gameId, lockDropped: false }));
-    const result = await put<{ lockGameId: number | null; serverNow: string }>("/api/week/lock", { gameId });
+    const result = await put<SheetJson>("/api/week/lock", { gameId });
     setLockPending(false);
     if (result.ok) {
       sync(result.body.serverNow);
@@ -172,7 +172,7 @@ export function Review({ initial }: { initial: SheetJson }) {
     }
     setGuessState({ pending: true });
     touched.current.guess = true;
-    const result = await put<{ tiebreakerGuess: number; serverNow: string }>("/api/week/tiebreaker", { guess: value });
+    const result = await put<SheetJson>("/api/week/tiebreaker", { guess: value });
     if (result.ok) {
       sync(result.body.serverNow);
       setSheet((s) => ({ ...s, tiebreakerGuess: value }));

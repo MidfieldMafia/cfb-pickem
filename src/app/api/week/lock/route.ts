@@ -1,4 +1,4 @@
 import { pickRoute } from "../context";
-import { putLock } from "../handlers";
+import { lockEdit, putEdit } from "../handlers";
 
-export const PUT = (request: Request) => putLock(request, pickRoute());
+export const PUT = (request: Request) => putEdit(request, pickRoute(), lockEdit);

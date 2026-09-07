@@ -11,6 +11,7 @@ import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { requireCommissioner } from "@/lib/members/members";
+import { noteError } from "@/lib/notes";
 import { logResultChange } from "@/lib/results/audit";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 
@@ -281,8 +282,9 @@ export async function voidGame(db: Db, actor: Member, gameId: number, note: stri
   const game = await loadGame(db, gameId);
   if (!game.week.published) throw new InvalidSlate("The slate is not published; remove the game instead.");
   if (game.void) return game;
+  const invalid = noteError(note);
+  if (invalid) throw new InvalidSlate(invalid);
   const voidNote = note.trim();
-  if (voidNote.length === 0) throw new InvalidSlate("Say why in the note.");
   const [updated] = await db
     .update(games)
     .set({ void: true, voidNote, updatedAt: now })

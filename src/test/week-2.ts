@@ -11,7 +11,9 @@ import { recordedCfbd } from "@/lib/cfbd/recorded";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
 import type { CfbdClient } from "@/lib/cfbd/types";
+import { asMember } from "@/lib/members/authority";
 import { addMember, bootstrapCommissioner } from "@/lib/members/members";
+import { applyEdit } from "@/lib/picks/edits";
 import { addGame, openWeek, publishSlate, setTiebreaker, type Slate } from "@/lib/slate/slate";
 import type { Game, Member, Week } from "@/db/schema";
 import { createTestDb } from "./db";
@@ -110,4 +112,26 @@ export async function publishWeek2(): Promise<PublishedWeek2> {
   await setTiebreaker(db, jonah, week.id, texas.id);
   const slate = await publishSlate(db, jonah, week.id, TUESDAY);
   return { ...seeded, week, slate, deadline: slate.deadline!, miami, michigan, texas };
+}
+
+/**
+ * Seeding a member's own sheet, the way the phone does it: through the one
+ * writer, under a member's own Authority, so the Deadline applies and nothing
+ * is audited. A suite that wants a commissioner's edit calls `applyEdit` with
+ * `asCommissioner` itself — that is the thing under test, not a fixture.
+ *
+ * These take the Slate because the writer does. A suite that voids a game
+ * re-reads it with `slateFor` before editing against it, which is the point:
+ * the rows the caller is holding are what the writer decides from.
+ */
+export function pickAs(db: Db, member: Member, slate: Slate, game: Game, teamId: number, now: Date) {
+  return applyEdit(db, asMember(member), slate, { kind: "pick", gameId: game.id, teamId }, now);
+}
+
+export function lockAs(db: Db, member: Member, slate: Slate, gameId: number | null, now: Date) {
+  return applyEdit(db, asMember(member), slate, { kind: "lock", gameId }, now);
+}
+
+export function guessAs(db: Db, member: Member, slate: Slate, guess: number | null, now: Date) {
+  return applyEdit(db, asMember(member), slate, { kind: "guess", guess }, now);
 }

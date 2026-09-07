@@ -12,7 +12,7 @@ import type { PickRoute } from "@/lib/picks/http";
 import type { SheetJson } from "@/lib/picks/json";
 import { createTestDb } from "@/test/db";
 import { publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
-import { getSheet, putLock, putPick, putTiebreaker } from "./handlers";
+import { getSheet, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
 
 /** A PUT the routes would receive, with the body as JSON on the wire. */
 function request(body: unknown): Request {
@@ -38,6 +38,11 @@ async function setup() {
   return { ...fixture, route, asGrandma: (now?: Date) => route(fixture.grandma, now) };
 }
 
+/** The three write routes, each as its own body parser over the one handler. */
+const putPick = (request: Request, route: PickRoute) => putEdit(request, route, pickEdit);
+const putLock = (request: Request, route: PickRoute) => putEdit(request, route, lockEdit);
+const putTiebreaker = (request: Request, route: PickRoute) => putEdit(request, route, guessEdit);
+
 describe("pick entry routes", () => {
   test("GET returns the signed-in member's sheet, serialized", async () => {
     const { asGrandma, week, miami, michigan, texas } = await setup();
@@ -56,32 +61,29 @@ describe("pick entry routes", () => {
     expect(sheet.picks).toEqual([]);
   });
 
-  test("a saved pick comes back on the next sheet", async () => {
+  test("a saved pick comes back on the sheet the save itself answers", async () => {
     const { asGrandma, michigan } = await setup();
 
     const saved = await putPick(request({ gameId: michigan.id, teamId: michigan.homeTeamId }), asGrandma());
-    expect(saved.status).toBe(200);
-    expect(await json(saved)).toMatchObject({
-      pick: { gameId: michigan.id, teamId: michigan.homeTeamId },
-      serverNow: THURSDAY.toISOString(),
-    });
 
-    const sheet = await json<SheetJson>(await getSheet(asGrandma()));
+    expect(saved.status).toBe(200);
+    const sheet = await json<SheetJson>(saved);
     expect(sheet.picks).toEqual([
       { gameId: michigan.id, teamId: michigan.homeTeamId, updatedAt: THURSDAY.toISOString() },
     ]);
+    expect(sheet.serverNow).toBe(THURSDAY.toISOString());
+    // The same shape the GET answers, so a screen folds nothing in by hand.
+    expect(await json(await getSheet(asGrandma()))).toEqual(sheet);
   });
 
   test("the Lock and the Tiebreaker Guess save through their own routes", async () => {
     const { asGrandma, michigan } = await setup();
     await putPick(request({ gameId: michigan.id, teamId: michigan.homeTeamId }), asGrandma());
 
-    expect(await json(await putLock(request({ gameId: michigan.id }), asGrandma()))).toMatchObject({
-      lockGameId: michigan.id,
-    });
-    expect(await json(await putTiebreaker(request({ guess: 55 }), asGrandma()))).toMatchObject({
-      tiebreakerGuess: 55,
-    });
+    const locked = await json<SheetJson>(await putLock(request({ gameId: michigan.id }), asGrandma()));
+    expect(locked.lockGameId).toBe(michigan.id);
+    const guessed = await json<SheetJson>(await putTiebreaker(request({ guess: 55 }), asGrandma()));
+    expect(guessed.tiebreakerGuess).toBe(55);
 
     const sheet = await json<SheetJson>(await getSheet(asGrandma()));
     expect(sheet.lockGameId).toBe(michigan.id);
@@ -93,8 +95,22 @@ describe("pick entry routes", () => {
     await putPick(request({ gameId: michigan.id, teamId: michigan.homeTeamId }), asGrandma());
     await putLock(request({ gameId: michigan.id }), asGrandma());
 
-    expect(await json(await putLock(request({ gameId: null }), asGrandma()))).toMatchObject({ lockGameId: null });
+    const cleared = await json<SheetJson>(await putLock(request({ gameId: null }), asGrandma()));
+
+    expect(cleared.lockGameId).toBe(null);
     expect((await json<SheetJson>(await getSheet(asGrandma()))).lockGameId).toBe(null);
+  });
+
+  test("a write answers the whole sheet, progress and games included", async () => {
+    const { asGrandma, michigan, miami, texas } = await setup();
+
+    const sheet = await json<SheetJson>(
+      await putPick(request({ gameId: michigan.id, teamId: michigan.homeTeamId }), asGrandma()),
+    );
+
+    expect(sheet.games.map((g) => g.game.id)).toEqual([miami.id, michigan.id, texas.id]);
+    expect(sheet.progress).toMatchObject({ liveGames: 3, picksMade: 1 });
+    expect(sheet.locked).toBe(false);
   });
 });
 

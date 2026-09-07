@@ -6,7 +6,7 @@
  */
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
-import { safeInteger } from "@/lib/parse";
+import { integerField } from "@/lib/parse";
 import { publishedSlate, type Slate } from "@/lib/slate/slate";
 import { DeadlinePassed, InvalidPick, PicksHidden } from "./picks";
 
@@ -70,9 +70,7 @@ export async function readBody(request: Request): Promise<Record<string, unknown
   }
 }
 
+/** A required whole number from a JSON body, worded for the phone. */
 export function integer(body: Record<string, unknown>, key: string): number {
-  // A JSON body must carry a real number; a numeric string is a malformed client.
-  const value = typeof body[key] === "number" ? safeInteger(body[key]) : null;
-  if (value === null) throw new InvalidPick(`${key} must be a whole number.`);
-  return value;
+  return integerField(body, key, (name) => new InvalidPick(`${name} must be a whole number.`));
 }

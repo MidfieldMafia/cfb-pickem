@@ -11,6 +11,7 @@ import { games, members, resultAudits, weeks, type Game, type Member, type Resul
 import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
 import { joinedOrder, requireCommissioner } from "@/lib/members/members";
+import { noteError } from "@/lib/notes";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
@@ -180,10 +181,9 @@ export interface OverrideInput {
 }
 
 function cleanNote(note: string): string {
-  const trimmed = note.trim();
-  if (trimmed.length === 0) throw new InvalidResult("Say why in the note.");
-  if (trimmed.length > 200) throw new InvalidResult("Keep the note under 200 characters.");
-  return trimmed;
+  const invalid = noteError(note);
+  if (invalid) throw new InvalidResult(invalid);
+  return note.trim();
 }
 
 /** Result Override: a commissioner sets the final score by hand. Beats the feed until cleared; logged. */
@@ -551,7 +551,7 @@ export async function weekResult(
 ): Promise<GradedWeekResult> {
   // The roster does not depend on the picks, so it rides along rather than waiting on them.
   const [memberPicks, roster] = await Promise.all([
-    weekPicks(db, actor, slate, now),
+    weekPicks(db, slate, now),
     db.query.members.findMany({ orderBy: joinedOrder }),
   ]);
   const ids = new Set(memberPicks.map((m) => m.memberId));
@@ -572,7 +572,7 @@ export async function weekResult(
  * Deadline of the season: an empty season is a table of zeroes, not an empty
  * screen.
  */
-export async function seasonResult(db: Db, _actor: Member, now: Date = new Date()): Promise<SeasonResult> {
+export async function seasonResult(db: Db, now: Date = new Date()): Promise<SeasonResult> {
   const season = await activeSeason(db);
   const published = await db.query.weeks.findMany({
     where: and(eq(weeks.seasonId, season.id), eq(weeks.published, true)),

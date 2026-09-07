@@ -14,7 +14,7 @@ export interface AddMemberState {
 }
 
 const memberId = (formData: FormData) =>
-  integerField(formData, "memberId", (message) => new InvalidMember(message));
+  integerField(formData, "memberId", (name) => new InvalidMember(`Missing ${name}.`));
 
 export async function addMemberAction(_prev: AddMemberState, formData: FormData): Promise<AddMemberState> {
   const actor = await requireConsole();

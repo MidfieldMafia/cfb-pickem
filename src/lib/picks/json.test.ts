@@ -5,9 +5,9 @@
  * Object]` on a phone.
  */
 import { describe, expect, test } from "vitest";
-import { pickSheet, savePick, setLock, setTiebreakerGuess } from "@/lib/picks/picks";
+import { pickSheet } from "@/lib/picks/picks";
 import { slateFor, voidGame } from "@/lib/slate/slate";
-import { publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
+import { guessAs, lockAs, pickAs, publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
 import { teamName } from "@/lib/slate/json";
 import { toSheetJson } from "./json";
 
@@ -62,11 +62,11 @@ describe("toSheetJson", () => {
   });
 
   test("picks, the Lock, and the Guess come through as the member left them", async () => {
-    const { db, grandma, week, michigan, texas, read } = await sheetAt();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
-    await savePick(db, grandma, week.id, texas.id, texas.awayTeamId, THURSDAY);
-    await setLock(db, grandma, week.id, michigan.id, THURSDAY);
-    await setTiebreakerGuess(db, grandma, week.id, 55, THURSDAY);
+    const { db, slate, grandma, michigan, texas, read } = await sheetAt();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, grandma, slate, texas, texas.awayTeamId, THURSDAY);
+    await lockAs(db, grandma, slate, michigan.id, THURSDAY);
+    await guessAs(db, grandma, slate, 55, THURSDAY);
 
     const json = await read(THURSDAY);
 
@@ -89,7 +89,7 @@ describe("toSheetJson", () => {
   });
 
   test("the progress count travels with the sheet, so no screen counts it again", async () => {
-    const { db, grandma, week, miami, michigan, texas, read } = await sheetAt();
+    const { db, slate, grandma, miami, michigan, texas, read } = await sheetAt();
 
     expect((await read(THURSDAY)).progress).toEqual({
       liveGames: 3,
@@ -100,11 +100,11 @@ describe("toSheetJson", () => {
       remaining: 3,
     });
 
-    await savePick(db, grandma, week.id, miami.id, miami.homeTeamId, THURSDAY);
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
-    await savePick(db, grandma, week.id, texas.id, texas.awayTeamId, THURSDAY);
-    await setLock(db, grandma, week.id, michigan.id, THURSDAY);
-    await setTiebreakerGuess(db, grandma, week.id, 55, THURSDAY);
+    await pickAs(db, grandma, slate, miami, miami.homeTeamId, THURSDAY);
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, grandma, slate, texas, texas.awayTeamId, THURSDAY);
+    await lockAs(db, grandma, slate, michigan.id, THURSDAY);
+    await guessAs(db, grandma, slate, 55, THURSDAY);
 
     expect((await read(THURSDAY)).progress).toEqual({
       liveGames: 3,
@@ -117,9 +117,9 @@ describe("toSheetJson", () => {
   });
 
   test("a Dropped Lock is marked, and the void game says why", async () => {
-    const { db, jonah, grandma, week, michigan, read } = await sheetAt();
-    await savePick(db, grandma, week.id, michigan.id, michigan.homeTeamId, THURSDAY);
-    await setLock(db, grandma, week.id, michigan.id, THURSDAY);
+    const { db, slate, jonah, grandma, michigan, read } = await sheetAt();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await lockAs(db, grandma, slate, michigan.id, THURSDAY);
     await voidGame(db, jonah, michigan.id, "Lightning; no makeup.");
 
     const json = await read(THURSDAY);

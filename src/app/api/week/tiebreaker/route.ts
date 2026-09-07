@@ -1,4 +1,4 @@
 import { pickRoute } from "../context";
-import { putTiebreaker } from "../handlers";
+import { guessEdit, putEdit } from "../handlers";
 
-export const PUT = (request: Request) => putTiebreaker(request, pickRoute());
+export const PUT = (request: Request) => putEdit(request, pickRoute(), guessEdit);
