@@ -379,7 +379,6 @@ export interface Reveal {
   year: number;
   members: ScoredMember[];
   games: RevealGame[];
-  serverNow: Date;
 }
 
 /*
@@ -452,7 +451,6 @@ export interface SeasonResult {
   /** Published Weeks whose Deadline has passed, in week order. */
   weeks: GradedWeek[];
   leaderboard: LeaderboardRow[];
-  serverNow: Date;
 }
 
 /** The member rows a graded read joins against, keyed the way the engine names them. */
@@ -495,7 +493,7 @@ function toWeeklyWin(win: engine.WeeklyWin | null, byId: Map<string, ScoredMembe
  * are indexed once, so a game's row is a lookup per member rather than a scan
  * of that member's whole week.
  */
-function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now: Date): Reveal {
+function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult): Reveal {
   const scoreOf = new Map(graded.scores.map((s) => [s.memberId, s]));
   const board = rows.map((member) => {
     const score = scoreOf.get(String(member.id));
@@ -526,7 +524,6 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult, now
       }
       return { ...toGameView(game), picks };
     }),
-    serverNow: now,
   };
 }
 
@@ -549,16 +546,16 @@ export async function weekResult(
   slate: Slate,
   now: Date = new Date(),
 ): Promise<GradedWeekResult> {
-  // The roster does not depend on the picks, so it rides along rather than waiting on them.
-  const [memberPicks, roster] = await Promise.all([
+  // The member rows do not depend on the picks, so they ride along rather than waiting on them.
+  const [memberPicks, everyone] = await Promise.all([
     weekPicks(db, slate, now),
     db.query.members.findMany({ orderBy: joinedOrder }),
   ]);
   const ids = new Set(memberPicks.map((m) => m.memberId));
-  const rows = roster.filter((m) => ids.has(m.id));
+  const rows = everyone.filter((m) => ids.has(m.id));
   const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, memberPicks), rows.map(toEngineMember));
   const byId = memberIndex(rows);
-  return { ...toGradedWeek(slate.week, graded, byId), reveal: revealFrom(slate, rows, graded, now) };
+  return { ...toGradedWeek(slate.week, graded, byId), reveal: revealFrom(slate, rows, graded) };
 }
 
 /**
@@ -632,6 +629,5 @@ export async function seasonResult(db: Db, now: Date = new Date()): Promise<Seas
       member: byId.get(memberId)!,
       ...rest,
     })),
-    serverNow: now,
   };
 }

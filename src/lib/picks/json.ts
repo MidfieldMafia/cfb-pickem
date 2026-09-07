@@ -9,8 +9,6 @@ import { toGameView, type GameView } from "@/lib/slate/json";
 import type { PickSheet } from "./picks";
 import type { SheetProgress } from "./progress";
 
-export { isVoid, teamName, voidNote } from "@/lib/slate/json";
-
 /** The Game-and-result pair every screen shares, plus the detail only the pick screen shows. */
 export interface SheetGameJson extends GameView {
   /** Venue, TV, line, win probability, forecast, and each team's form. Null for games added before the snapshot existed. */

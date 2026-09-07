@@ -108,7 +108,6 @@ function reveal(games: RevealGame[], tiebreakerGameId: number | null = null): Re
     year: 2026,
     members: [GRANDMA, JONAH],
     games,
-    serverNow: new Date("2026-09-13T12:00:00Z"),
   };
 }
 
