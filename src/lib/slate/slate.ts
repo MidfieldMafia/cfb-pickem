@@ -43,6 +43,18 @@ export function isWeekNumber(weekNumber: number): boolean {
   return Number.isInteger(weekNumber) && weekNumber >= 1 && weekNumber <= MAX_WEEK_NUMBER;
 }
 
+/**
+ * The `?week=` a screen was asked for, when it is a real week number, and
+ * undefined when it is missing or nonsense. Every screen that reads a week out
+ * of the URL — the three console pages and the week results screen — takes its
+ * answer from here, so a junk parameter lands each of them on their own
+ * default rather than on `NaN`.
+ */
+export function weekParam(param: string | undefined): number | undefined {
+  const requested = Number(param);
+  return isWeekNumber(requested) ? requested : undefined;
+}
+
 async function findActiveSeason(db: Db): Promise<Season | undefined> {
   return db.query.seasons.findFirst({ where: eq(seasons.active, true) });
 }

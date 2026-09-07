@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
 import { MemberChip } from "@/components/member-chip";
+import { RevealList } from "@/components/reveal";
 import { SECTION_LABEL } from "@/components/section-label";
 import { TeamName } from "@/components/team-name";
 import { Wordmark } from "@/components/wordmark";
@@ -14,7 +15,6 @@ import { plural } from "@/lib/plural";
 import { isVoid, toSlateJson, voidNote } from "@/lib/slate/json";
 import { currentWeek } from "@/lib/week/week";
 import { callToAction } from "./call-to-action";
-import { RevealList } from "./reveal";
 
 /** The published Slate as a list, with the door into pick entry; after the Deadline, the Reveal. */
 export default async function Week() {
@@ -128,10 +128,25 @@ export default async function Week() {
         </section>
       )}
 
+      {/* The season screens, until the bottom nav lands with the Live Board. */}
+      <nav className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold">
+        {sheet?.locked && slate ? (
+          <Link
+            href={`/results?week=${slate.week.weekNumber}`}
+            className="tap inline-flex items-center underline underline-offset-4"
+          >
+            Week {slate.week.weekNumber} results
+          </Link>
+        ) : null}
+        <Link href="/leaderboard" className="tap inline-flex items-center underline underline-offset-4">
+          Leaderboard
+        </Link>
+      </nav>
+
       {member.isCommissioner ? (
         <Link
           href="/console/slate"
-          className="text-sm font-semibold underline underline-offset-4"
+          className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
         >
           Open the commissioner console
         </Link>

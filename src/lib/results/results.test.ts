@@ -553,6 +553,66 @@ describe("the season leaderboard", () => {
     ]);
   });
 
+  test("a corrected result changes the standings on the next read, because no total is stored", async () => {
+    const { db, jonah, michigan, ingest } = await setup();
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+
+    expect((await seasonResult(db, SUNDAY)).leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints])).toEqual([
+      ["Grandma", 1, 30],
+      ["Jonah", 2, 10],
+    ]);
+
+    // The feed had Michigan winning 27–24. A commissioner corrects it to Oklahoma,
+    // which is the game Grandma spent her Lock of the Week on.
+    await overrideResult(
+      db,
+      jonah,
+      michigan.id,
+      { homeScore: 24, awayScore: 30, note: "Feed had the teams the wrong way round" },
+      SUNDAY,
+    );
+
+    const after = await seasonResult(db, SUNDAY);
+    // Grandma loses a doubled 20 and keeps Ohio State; Jonah's Oklahoma is now right.
+    expect(after.leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints, r.correct, r.incorrect])).toEqual([
+      ["Jonah", 1, 20, 2, 1],
+      ["Grandma", 2, 10, 1, 1],
+    ]);
+    // The Weekly Win moves with the points, and it is the same one week behind the season.
+    expect(after.weeks[0].weeklyWin!.winners.map((m) => m.displayName)).toEqual(["Jonah"]);
+    expect(after.leaderboard.map((r) => [r.member.displayName, r.weeklyWins])).toEqual([
+      ["Jonah", 1],
+      ["Grandma", 0],
+    ]);
+
+    // Clearing the override hands the week back to the feed, and the standings with it:
+    // proof that nothing was written down on the way through.
+    await clearOverride(db, jonah, michigan.id, SUNDAY);
+    expect((await seasonResult(db, SUNDAY)).leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints])).toEqual([
+      ["Grandma", 1, 30],
+      ["Jonah", 2, 10],
+    ]);
+  });
+
+  test("a void changes the standings the same way, and drops the lock that sat on it", async () => {
+    const { db, jonah, michigan, ingest } = await setup();
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+
+    await voidGame(db, jonah, michigan.id, "Called at halftime, lightning");
+
+    const after = await seasonResult(db, SUNDAY);
+    // Grandma's 20 was a Dropped Lock's worth: the game scores zero for everyone,
+    // so she is left with Ohio State and Jonah with Miami — level, and level on
+    // tiebreaker error too, since neither of them guessed.
+    expect(after.leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints])).toEqual([
+      ["Jonah", 1, 10],
+      ["Grandma", 1, 10],
+    ]);
+    // Nothing separates them, so the week is shared rather than handed to a read order.
+    expect(after.weeks[0].weeklyWin!.decidedBy).toBe("shared");
+    expect(after.leaderboard.every((r) => r.weeklyWins === 1)).toBe(true);
+  });
+
   test("a published week whose deadline has not passed is not a week played", async () => {
     const { db } = await setup();
 

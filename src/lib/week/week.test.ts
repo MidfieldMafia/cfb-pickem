@@ -1,9 +1,22 @@
 import { describe, expect, test } from "vitest";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
 import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
-import { openWeek } from "@/lib/slate/slate";
-import { guessAs, lockAs, OKLAHOMA_AT_MICHIGAN, pickAs, publishWeek2, seedWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
-import { currentWeek } from "./week";
+import { ingestResults } from "@/lib/results/results";
+import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
+import {
+  FAMU_AT_MIAMI,
+  guessAs,
+  lockAs,
+  OKLAHOMA_AT_MICHIGAN,
+  pickAs,
+  publishWeek2,
+  seedWeek2,
+  SUNDAY,
+  THURSDAY,
+  TUESDAY,
+  type Week2Fixture,
+} from "@/test/week-2";
+import { currentWeek, weekInReview } from "./week";
 
 /** Michigan reported final. `calls` counts feed reads, so a test can prove the gate held. */
 function feedWithMichiganFinal(): CfbdClient & { calls: number } {
@@ -112,5 +125,98 @@ describe("the current week", () => {
     const current = (await currentWeek(db, grandma, SUNDAY, { graded: true, cfbd: angryFeed }))!;
     expect(current.sheet.locked).toBe(true);
     expect(current.result!.reveal.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("pending");
+  });
+});
+
+/**
+ * A second published Week, so a test can look back past the latest one. The
+ * recording is one week of games, and the schema's unique index is per Week
+ * (`games_week_cfbd_idx`), so a later Week is those same games with its own
+ * Deadline — enough for a chooser to have two entries.
+ */
+async function publishAlso(fixture: Week2Fixture, weekNumber: number) {
+  const { db, jonah, candidate } = fixture;
+  const week = await openWeek(db, jonah, weekNumber);
+  await addGame(db, jonah, week.id, candidate(FAMU_AT_MIAMI));
+  const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
+  await setTiebreaker(db, jonah, week.id, michigan.id);
+  await publishSlate(db, jonah, week.id, TUESDAY);
+  return { week, michigan };
+}
+
+describe("the week in review", () => {
+  test("opens on the latest week the season has played, and offers every one of them", async () => {
+    const fixture = await publishWeek2();
+    const three = await publishAlso(fixture, 3);
+
+    const review = (await weekInReview(fixture.db, fixture.grandma, undefined, SUNDAY))!;
+
+    expect(review.played).toEqual([2, 3]);
+    expect(review.slate.week.id).toBe(three.week.id);
+    // The Reveal and the scores come from the Week it landed on, not from the live one.
+    expect(review.result.reveal.week.weekNumber).toBe(3);
+  });
+
+  test("looks back at an older week when asked, and falls back when asked for one the season has not played", async () => {
+    const fixture = await publishWeek2();
+    await publishAlso(fixture, 3);
+    const { db, grandma } = fixture;
+
+    expect((await weekInReview(db, grandma, 2, SUNDAY))!.slate.week.weekNumber).toBe(2);
+    // Week 9 does not exist, and week 1 was never published: both land on the latest played.
+    expect((await weekInReview(db, grandma, 9, SUNDAY))!.slate.week.weekNumber).toBe(3);
+    expect((await weekInReview(db, grandma, 1, SUNDAY))!.slate.week.weekNumber).toBe(3);
+  });
+
+  test("there is nothing to review until a deadline has passed", async () => {
+    const { db, jonah, grandma } = await publishWeek2();
+
+    // Thursday is inside Week 2: the Reveal is what the Deadline gates, so the
+    // week is not reviewable yet — asked for by number or not.
+    expect(await weekInReview(db, grandma, undefined, THURSDAY)).toBeNull();
+    expect(await weekInReview(db, grandma, 2, THURSDAY)).toBeNull();
+
+    // An unpublished Week is not reviewable either, whatever the clock says:
+    // asking for Week 4 lands on Week 2, the one the season has played.
+    await openWeek(db, jonah, 4);
+    expect((await weekInReview(db, grandma, 4, SUNDAY))!.slate.week.weekNumber).toBe(2);
+  });
+
+  test("grades the week it lands on, with everyone's picks on the board", async () => {
+    const { db, slate, jonah, grandma, michigan, week } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY); // Michigan
+    await lockAs(db, grandma, slate, michigan.id, THURSDAY);
+    await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY); // Oklahoma
+    await ingestResults(db, feedWithMichiganFinal(), await slateFor(db, week.id), SUNDAY);
+
+    const review = (await weekInReview(db, grandma, 2, SUNDAY))!;
+
+    // Michigan won: Grandma's Lock doubles it, Jonah has nothing.
+    expect(review.result.scores.map((s) => [s.member.displayName, s.points])).toEqual([
+      ["Grandma", 20],
+      ["Jonah", 0],
+    ]);
+    expect(review.result.complete).toBe(false);
+    const michiganRow = review.result.reveal.games.find((g) => g.game.id === michigan.id)!;
+    expect(michiganRow.picks.map((p) => [p.memberId, p.outcome, p.locked])).toEqual([
+      [jonah.id, "incorrect", false],
+      [grandma.id, "correct", true],
+    ]);
+  });
+
+  test("drives the feed on the same stale gate as the current week", async () => {
+    const { db, slate, grandma, michigan } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    const feed = feedWithMichiganFinal();
+
+    const review = (await weekInReview(db, grandma, 2, SUNDAY, { cfbd: () => feed }))!;
+
+    expect(feed.calls).toBe(1);
+    // Graded off the rows the pull left behind, not the ones the read started from.
+    expect(review.result.reveal.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("final");
+    expect(review.result.scores.find((s) => s.member.id === grandma.id)!.points).toBe(10);
+
+    await weekInReview(db, grandma, 2, SUNDAY, { cfbd: () => feed });
+    expect(feed.calls).toBe(1);
   });
 });

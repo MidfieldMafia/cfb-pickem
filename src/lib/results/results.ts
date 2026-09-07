@@ -572,13 +572,31 @@ export async function weekResult(
  * Deadline of the season: an empty season is a table of zeroes, not an empty
  * screen.
  */
-export async function seasonResult(db: Db, now: Date = new Date()): Promise<SeasonResult> {
-  const season = await activeSeason(db);
+/**
+ * The Weeks a season counts, in week order: published, and past their
+ * Deadline on the server clock.
+ *
+ * Both halves matter, and both are easy to lose. An unpublished Week has no
+ * frozen Deadline and no Slate anyone has seen. A published Week still open
+ * scores zero for everyone, and counting it would drag every average down as
+ * a week played (see `@/lib/scoring`) — and `weekPicks` would refuse the read
+ * anyway, because the Reveal is what the Deadline gates.
+ *
+ * Stated once here because three screens now turn on it: the Leaderboard adds
+ * these up, the week results screen offers exactly these in its chooser, and
+ * `seasonResult` grades them.
+ */
+export async function playedWeeks(db: Db, season: Season, now: Date = new Date()): Promise<Week[]> {
   const published = await db.query.weeks.findMany({
     where: and(eq(weeks.seasonId, season.id), eq(weeks.published, true)),
     orderBy: [asc(weeks.weekNumber)],
   });
-  const played = published.filter((w) => w.deadline !== null && w.deadline.getTime() <= now.getTime());
+  return published.filter((w) => w.deadline !== null && w.deadline.getTime() <= now.getTime());
+}
+
+export async function seasonResult(db: Db, now: Date = new Date()): Promise<SeasonResult> {
+  const season = await activeSeason(db);
+  const played = await playedWeeks(db, season, now);
   const weekIds = played.map((w) => w.id);
   const gameRows = weekIds.length ? await db.query.games.findMany({ where: inArray(games.weekId, weekIds) }) : [];
   const weekGames = played.map((week) => ({

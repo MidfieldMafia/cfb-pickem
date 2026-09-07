@@ -14,7 +14,7 @@ import {
   type ResultLabel,
 } from "@/lib/results/results";
 import { isVoid, type GameView } from "@/lib/slate/json";
-import { weekParam } from "../week-param";
+import { weekParam } from "@/lib/slate/slate";
 import {
   clearOverrideAction,
   overrideResultAction,
