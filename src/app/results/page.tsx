@@ -118,7 +118,10 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="px-4">
-        <Link href="/leaderboard" className="text-sm font-semibold underline underline-offset-4">
+        <Link
+          href="/leaderboard"
+          className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
+        >
           See the season leaderboard
         </Link>
       </div>

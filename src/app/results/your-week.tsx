@@ -84,7 +84,10 @@ export function YourPicks({
           <li key={game.game.id} className={`space-y-1 p-3 ${isVoid(game) ? "opacity-70" : ""}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">
+                {/* Wraps rather than truncates: "Mississippi State at Minnesota"
+                    is 204px against 195px of room at 390px wide, and a clipped
+                    matchup is the one thing this row exists to say. */}
+                <p className="text-sm font-semibold">
                   {game.game.awayTeam} at {game.game.homeTeam}
                 </p>
                 <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">

@@ -133,12 +133,12 @@ export default async function Week() {
         {sheet?.locked && slate ? (
           <Link
             href={`/results?week=${slate.week.weekNumber}`}
-            className="underline underline-offset-4"
+            className="tap inline-flex items-center underline underline-offset-4"
           >
             Week {slate.week.weekNumber} results
           </Link>
         ) : null}
-        <Link href="/leaderboard" className="underline underline-offset-4">
+        <Link href="/leaderboard" className="tap inline-flex items-center underline underline-offset-4">
           Leaderboard
         </Link>
       </nav>
@@ -146,7 +146,7 @@ export default async function Week() {
       {member.isCommissioner ? (
         <Link
           href="/console/slate"
-          className="text-sm font-semibold underline underline-offset-4"
+          className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
         >
           Open the commissioner console
         </Link>
