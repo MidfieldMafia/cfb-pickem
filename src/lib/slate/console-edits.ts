@@ -37,8 +37,11 @@ export function editDeadline(route: ConsoleRoute, form: FormData): Promise<Actio
 }
 
 export function editPublish(route: ConsoleRoute, form: FormData): Promise<ActionState> {
-  return consoleEdit(route, async ({ db, actor }) => {
-    await publishSlate(db, actor, num(form, "weekId"));
+  return consoleEdit(route, async ({ db, actor, now }) => {
+    // The route's clock, not the wall clock: publishing refuses a Deadline
+    // that has already passed, so this is the one rule here a test can only
+    // reach by pinning the moment.
+    await publishSlate(db, actor, num(form, "weekId"), now);
     return { done: "Published. Members can see the slate now.", revalidate: slateOnly };
   });
 }

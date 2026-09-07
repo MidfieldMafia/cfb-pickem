@@ -6,15 +6,14 @@
  * run and what rows get written.
  */
 import { describe, expect, test } from "vitest";
-import type { Member } from "@/db/schema";
-import type { ConsoleRoute } from "@/lib/console/route";
 import { asCommissioner, asMember } from "@/lib/members/authority";
 import { NotCommissioner } from "@/lib/members/members";
 import { editVoidGame } from "@/lib/slate/console-edits";
 import { slateFor, voidGame } from "@/lib/slate/slate";
-import { publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
+import { form, routeFor } from "@/test/console";
+import { pickAs, publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
 import { pickAuditsFor } from "./console";
-import { editGuess, editPick } from "./console-edits";
+import { editGuess, editLock, editPick } from "./console-edits";
 import { applyEdit, type PickEdit } from "./edits";
 import { DeadlinePassed } from "./picks";
 
@@ -243,27 +242,9 @@ describe("what the Authority decides", () => {
  * the actions imported `db()`, `cookies()` and `revalidatePath` directly.
  */
 describe("a commissioner's edit from the console", () => {
-  /** A `ConsoleRoute` signed in as a commissioner, collecting what it invalidated. */
-  function routeFor(db: ConsoleRoute["db"], actor: Member, now = SUNDAY) {
-    const revalidated: string[] = [];
-    const route: ConsoleRoute = {
-      db,
-      requireConsole: async () => actor,
-      revalidate: (path) => revalidated.push(path),
-      now: () => now,
-    };
-    return { route, revalidated };
-  }
-
-  function form(fields: Record<string, string | number>): FormData {
-    const data = new FormData();
-    for (const [name, value] of Object.entries(fields)) data.append(name, String(value));
-    return data;
-  }
-
   test("a pick edit invalidates the console table, that member's page, and the three member screens", async () => {
     const { db, jonah, grandma, week, michigan } = await publishWeek2();
-    const { route, revalidated } = routeFor(db, jonah);
+    const { route, revalidated } = routeFor(db, jonah, SUNDAY);
 
     const state = await editPick(
       route,
@@ -280,9 +261,44 @@ describe("a commissioner's edit from the console", () => {
     ]);
   });
 
+  /**
+   * The Lock is the one console edit whose sentence has two branches, and the
+   * same `optional()` parse that decides between them decides clear from
+   * refuse — an empty field clears, a typo does not.
+   */
+  test("the Lock says whether it was saved or cleared, and a typo clears nothing", async () => {
+    const { db, jonah, grandma, slate, week, michigan } = await publishWeek2();
+    const { route, revalidated } = routeFor(db, jonah, SUNDAY);
+    const lock = (gameId: string | number) => editLock(route, form({ memberId: grandma.id, weekId: week.id, gameId }));
+
+    // A Lock needs a pick under it, and that refusal is a message.
+    expect((await lock(michigan.id)).error).toMatch(/pick a winner/i);
+    expect(revalidated).toEqual([]);
+
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    expect(await lock(michigan.id)).toEqual({ done: "Lock saved and logged." });
+    expect(revalidated).toEqual([
+      "/console/picks",
+      `/console/picks/${grandma.id}`,
+      "/week",
+      "/picks",
+      "/picks/review",
+    ]);
+
+    // An empty field is the console's clear; a typo is a refusal, not a clear.
+    expect(await lock("")).toEqual({ done: "Lock cleared and logged." });
+    expect((await lock("michigan")).error).toMatch(/whole number/i);
+
+    const log = await pickAuditsFor(db, jonah, week.id);
+    expect(log.map((e) => [e.kind, e.previousValue, e.newValue])).toEqual([
+      ["lock", null, "Michigan"],
+      ["lock", "Michigan", null],
+    ]);
+  });
+
   test("a refusal comes back as a message, and nothing is invalidated", async () => {
     const { db, jonah, grandma, week } = await publishWeek2();
-    const { route, revalidated } = routeFor(db, jonah);
+    const { route, revalidated } = routeFor(db, jonah, SUNDAY);
 
     const state = await editGuess(route, form({ memberId: grandma.id, weekId: week.id, guess: 300 }));
 
@@ -293,7 +309,7 @@ describe("a commissioner's edit from the console", () => {
 
   test("an empty Guess field clears it rather than reaching the database as NaN", async () => {
     const { db, jonah, grandma, week } = await publishWeek2();
-    const { route } = routeFor(db, jonah);
+    const { route } = routeFor(db, jonah, SUNDAY);
 
     expect(await editGuess(route, form({ memberId: grandma.id, weekId: week.id, guess: "" }))).toEqual({
       done: "Tiebreaker Guess cleared and logged.",
@@ -307,7 +323,7 @@ describe("a commissioner's edit from the console", () => {
 
   test("a Void note must be given and must fit, and the message reaches the screen either way", async () => {
     const { db, jonah, miami } = await publishWeek2();
-    const { route } = routeFor(db, jonah);
+    const { route } = routeFor(db, jonah, SUNDAY);
 
     expect(await editVoidGame(route, form({ gameId: miami.id, note: "   " }))).toEqual({
       error: "Say why in the note.",

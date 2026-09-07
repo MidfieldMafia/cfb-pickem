@@ -7,10 +7,10 @@ import { eq } from "drizzle-orm";
 import { members, seasons } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
-import { recordedCfbd } from "@/lib/cfbd/recorded";
+import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
-import type { CfbdClient } from "@/lib/cfbd/types";
+import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
 import { asMember } from "@/lib/members/authority";
 import { addMember, bootstrapCommissioner } from "@/lib/members/members";
 import { applyEdit } from "@/lib/picks/edits";
@@ -134,4 +134,35 @@ export function lockAs(db: Db, member: Member, slate: Slate, gameId: number | nu
 
 export function guessAs(db: Db, member: Member, slate: Slate, guess: number | null, now: Date) {
   return applyEdit(db, asMember(member), slate, { kind: "guess", guess }, now);
+}
+
+/** Scores by recorded game id: `[away, home]`. */
+export type Finals = Record<number, [away: number, home: number]>;
+
+/**
+ * The Week 2 recording with some games reported final, and some in play. The
+ * fixture files carry no scores at all — every recorded game is `completed:
+ * false` with null points, because the week had not been played when it was
+ * recorded — so a suite that wants a result says so here.
+ *
+ * `calls` counts feed reads, which is what the stale gate is judged on.
+ */
+export function feedWith(finals: Finals, live: Finals = {}): CfbdClient & { calls: number } {
+  const feedGames: CfbdGame[] = recordings["2026-week-2"].games.map((g) => {
+    const final = finals[g.id];
+    const inPlay = live[g.id];
+    if (final) return { ...g, completed: true, awayPoints: final[0], homePoints: final[1] };
+    if (inPlay) return { ...g, completed: false, awayPoints: inPlay[0], homePoints: inPlay[1] };
+    return g;
+  });
+  const inner = recordedCfbd("2026-week-2", { games: feedGames });
+  const client = {
+    ...inner,
+    calls: 0,
+    games: async (q: { year: number; week: number }) => {
+      client.calls += 1;
+      return inner.games(q);
+    },
+  };
+  return client;
 }
