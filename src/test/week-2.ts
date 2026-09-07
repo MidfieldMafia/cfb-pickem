@@ -7,10 +7,10 @@ import { eq } from "drizzle-orm";
 import { members, seasons } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
-import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
+import { recordedCfbd, recordings, scoreboardOf } from "@/lib/cfbd/recorded";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
-import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
+import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
 import { asMember } from "@/lib/members/authority";
 import { addMember, bootstrapCommissioner } from "@/lib/members/members";
 import { applyEdit } from "@/lib/picks/edits";
@@ -139,29 +139,72 @@ export function guessAs(db: Db, member: Member, slate: Slate, guess: number | nu
 /** Scores by recorded game id: `[away, home]`. */
 export type Finals = Record<number, [away: number, home: number]>;
 
+/** A running score by recorded game id, with the quarter and clock the board would show for it. */
+export type Live = Record<number, [away: number, home: number, period?: number, clock?: string]>;
+
+/** How many times each feed endpoint answered. */
+export interface FeedReads {
+  games: number;
+  scoreboard: number;
+}
+
+export type Feed = CfbdClient & {
+  /** Every feed read, whichever endpoint: what the stale gate is judged on. */
+  calls: number;
+  reads: FeedReads;
+};
+
 /**
- * The Week 2 recording with some games reported final, and some in play. The
- * fixture files carry no scores at all — every recorded game is `completed:
- * false` with null points, because the week had not been played when it was
- * recorded — so a suite that wants a result says so here.
+ * The Week 2 recording with some games reported final, and some in play,
+ * said the same way on both feeds the ingest reads — the scoreboard it reads
+ * first, and the `/games` week it falls back to for a game the board does
+ * not list. The fixture files carry no scores at all: every recorded game is
+ * `completed: false` with null points, because the week had not been played
+ * when it was recorded, so a suite that wants a result says so here.
  *
- * `calls` counts feed reads, which is what the stale gate is judged on.
+ * `calls` counts feed reads, which is what the stale gate is judged on;
+ * `reads` says which endpoint took them, for the one suite that cares.
+ *
+ * `offBoard` drops games from the scoreboard while `/games` still carries
+ * them: the board is the week being played, and a game can be missing from it
+ * either side of its own week.
  */
-export function feedWith(finals: Finals, live: Finals = {}): CfbdClient & { calls: number } {
-  const feedGames: CfbdGame[] = recordings["2026-week-2"].games.map((g) => {
+export function feedWith(finals: Finals, live: Live = {}, { offBoard = [] as number[] } = {}): Feed {
+  const recorded = recordings["2026-week-2"].games;
+  const feedGames: CfbdGame[] = recorded.map((g) => {
     const final = finals[g.id];
     const inPlay = live[g.id];
     if (final) return { ...g, completed: true, awayPoints: final[0], homePoints: final[1] };
     if (inPlay) return { ...g, completed: false, awayPoints: inPlay[0], homePoints: inPlay[1] };
     return g;
   });
-  const inner = recordedCfbd("2026-week-2", { games: feedGames });
-  const client = {
+  const board: CfbdScoreboardGame[] = scoreboardOf(recorded.filter((g) => !offBoard.includes(g.id))).map((g) => {
+    const final = finals[g.id];
+    const inPlay = live[g.id];
+    const sides = (away: number, home: number) => ({
+      awayTeam: { ...g.awayTeam, points: away },
+      homeTeam: { ...g.homeTeam, points: home },
+    });
+    if (final) return { ...g, status: "completed", ...sides(final[0], final[1]) };
+    if (inPlay) {
+      return { ...g, status: "in_progress", period: inPlay[2] ?? null, clock: inPlay[3] ?? null, ...sides(inPlay[0], inPlay[1]) };
+    }
+    return g;
+  });
+  const inner = recordedCfbd("2026-week-2", { games: feedGames, scoreboard: board });
+  const client: Feed = {
     ...inner,
     calls: 0,
+    reads: { games: 0, scoreboard: 0 },
     games: async (q: { year: number; week: number }) => {
       client.calls += 1;
+      client.reads.games += 1;
       return inner.games(q);
+    },
+    scoreboard: async () => {
+      client.calls += 1;
+      client.reads.scoreboard += 1;
+      return inner.scoreboard();
     },
   };
   return client;

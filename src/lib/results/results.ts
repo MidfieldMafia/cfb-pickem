@@ -9,7 +9,7 @@ import "server-only";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { games, members, resultAudits, weeks, type Game, type Member, type ResultAuditKind, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
-import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
+import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
 import { joinedOrder, requireCommissioner } from "@/lib/members/members";
 import { noteError } from "@/lib/notes";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
@@ -38,19 +38,32 @@ import {
 } from "@/lib/slate/slate";
 import { logResultChange } from "./audit";
 import {
+  clockLabel,
   effectiveResult,
   type GameResult,
+  type LiveScore,
   type ResultLabel,
 } from "./result";
 import { toEngineMember, toEngineWeek } from "./engine";
 
-export { effectiveResult };
-export type { GameResult, ResultLabel };
+export { clockLabel, effectiveResult };
+export type { GameResult, LiveScore, ResultLabel };
 
 export class InvalidResult extends Refusal {}
 
-/** How long a refresh claim holds before member traffic may pull the feed again. */
-const REFRESH_INTERVAL_MS = 5 * 60_000;
+/**
+ * How long a refresh claim holds between games: a pending game is past
+ * kickoff and none is under way, so the feed can only tell us a kickoff or a
+ * delay, and five minutes is soon enough for either.
+ */
+export const REFRESH_INTERVAL_MS = 5 * 60_000;
+/**
+ * How long it holds while a slate game is in progress. Ninety seconds is
+ * about 480 calls over a Saturday and about 3,300 over a five-Saturday month
+ * on the 5,000-call tier; sixty would be about 4,600, which leaves nothing
+ * for the slate builder, and a score ninety seconds old is still a live one.
+ */
+export const LIVE_REFRESH_INTERVAL_MS = 90_000;
 /** A game still pending this long after kickoff is postponed, canceled, or stuck in the feed: a commissioner should look. */
 export const REVIEW_AFTER_MS = 6 * 3600_000;
 /** The highest score the override form accepts. The record is 222; nobody needs more. */
@@ -92,27 +105,80 @@ async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> 
   return game;
 }
 
-/** What the feed says about one game, in the shape of the `games` columns it owns. */
-function feedResult(feed: CfbdGame): Pick<Game, "status" | "homeScore" | "awayScore"> {
+/** The columns a feed read owns on a `games` row. */
+type FeedColumns = Pick<Game, "status" | "homeScore" | "awayScore" | "period" | "clock">;
+
+const NOT_STARTED: FeedColumns = { status: "scheduled", homeScore: null, awayScore: null, period: null, clock: null };
+
+/**
+ * What the scoreboard says about one game, in the shape of the columns it
+ * owns. Only `completed` with both scores makes a game final — the database
+ * refuses a final without them — so a completed game the board never scored
+ * stays pending for `needsReview` to flag.
+ */
+function boardResult(board: CfbdScoreboardGame): FeedColumns {
+  const homeScore = board.homeTeam.points;
+  const awayScore = board.awayTeam.points;
+  const scored = homeScore !== null && awayScore !== null;
+  if (board.status === "completed" && scored) return { status: "final", homeScore, awayScore, period: null, clock: null };
+  if (board.status === "in_progress") {
+    // Under way and not yet scored is 0–0, which is a running score, not the absence of one.
+    return {
+      status: "in_progress",
+      homeScore: homeScore ?? 0,
+      awayScore: awayScore ?? 0,
+      period: board.period,
+      clock: board.clock,
+    };
+  }
+  return NOT_STARTED;
+}
+
+/** What the `/games` feed says, which carries points and `completed` and no clock. */
+function feedResult(feed: CfbdGame): FeedColumns {
   const scored = feed.homePoints !== null && feed.awayPoints !== null;
-  if (feed.completed && scored) return { status: "final", homeScore: feed.homePoints, awayScore: feed.awayPoints };
-  if (scored) return { status: "in_progress", homeScore: feed.homePoints, awayScore: feed.awayPoints };
-  return { status: "scheduled", homeScore: null, awayScore: null };
+  if (feed.completed && scored) {
+    return { status: "final", homeScore: feed.homePoints, awayScore: feed.awayPoints, period: null, clock: null };
+  }
+  if (scored) {
+    return { status: "in_progress", homeScore: feed.homePoints, awayScore: feed.awayPoints, period: null, clock: null };
+  }
+  return NOT_STARTED;
+}
+
+function sameColumns(next: FeedColumns, game: Game): boolean {
+  return (
+    next.status === game.status &&
+    next.homeScore === game.homeScore &&
+    next.awayScore === game.awayScore &&
+    next.period === game.period &&
+    next.clock === game.clock
+  );
 }
 
 /**
- * Pulls the week from CollegeFootballData and writes each slate game's feed
- * score and status. Only `completed` makes a game final; a game the feed
- * never completes stays pending (there is no postponed or canceled status,
- * see docs/research/collegefootballdata-api.md), for `needsReview` to flag.
- * Overrides and voids live in other columns, so a re-run never disturbs
- * them. Returns how many games changed.
+ * Pulls the scoreboard from CollegeFootballData and writes each slate game's
+ * score, status, period and clock. Only `completed` makes a game final; a
+ * game the feed never completes stays pending (there is no postponed or
+ * canceled status, see docs/research/collegefootballdata-api.md), for
+ * `needsReview` to flag. Overrides and voids live in other columns, so a
+ * re-run never disturbs them. Returns how many games changed.
+ *
+ * One call covers the whole slate, which is what makes the Saturday cadence
+ * affordable. But the board is the week being played and nothing else: a
+ * slate game past kickoff that it does not list is either waiting for the
+ * board to roll onto its week, or has rolled off it with its final unread —
+ * a Thursday game before the previous Monday's has cleared, or a Saturday
+ * final nobody visited for until Tuesday. For those, and only those, one
+ * `/games` read for the week is the backstop. It is applied only to the games
+ * the board left out, so a cached `/games` answer can never write over a
+ * score the board gave in the same pass.
  *
  * Deliberately does not touch `weeks.scoreboard_fetched_at`: that column is
  * the stale gate's claim, and `refreshResultsIfStale` is its only writer.
  * Stamping it here meant a commissioner pressing "Check the feed now" — which
  * calls this directly, past the gate — claimed the gate and suppressed the
- * member-scheduled pull for the next five minutes. It also wrote the column
+ * member-scheduled pull for the next interval. It also wrote the column
  * twice in one request on the gated path, once for the claim and once here
  * inside the ingest that claim had just authorised.
  */
@@ -122,21 +188,42 @@ export async function ingestResults(
   slate: Slate,
   now: Date = new Date(),
 ): Promise<{ changed: number }> {
-  const feed = await cfbd.games({ year: slate.season.year, week: slate.week.weekNumber });
-  const byId = new Map(feed.map((g) => [g.id, g]));
+  const board = new Map((await cfbd.scoreboard()).map((g) => [g.id, g]));
+  const unlisted = new Set(
+    slate.games
+      .filter((g) => !board.has(g.cfbdGameId) && effectiveResult(g).status === "pending" && g.kickoff <= now)
+      .map((g) => g.cfbdGameId),
+  );
+  const feed = new Map(
+    unlisted.size ? (await cfbd.games({ year: slate.season.year, week: slate.week.weekNumber })).map((g) => [g.id, g]) : [],
+  );
   return {
-    changed: await applyGamePatches(db, slate.games, (game) => {
-      const fresh = byId.get(game.cfbdGameId);
-      if (!fresh) return null;
-      const next = feedResult(fresh);
-      const same = next.status === game.status && next.homeScore === game.homeScore && next.awayScore === game.awayScore;
-      return same ? null : next;
-    }, now),
+    changed: await applyGamePatches(
+      db,
+      slate.games,
+      (game) => {
+        const listed = board.get(game.cfbdGameId);
+        const backstop = unlisted.has(game.cfbdGameId) ? feed.get(game.cfbdGameId) : undefined;
+        const next = listed ? boardResult(listed) : backstop ? feedResult(backstop) : null;
+        return next === null || sameColumns(next, game) ? null : next;
+      },
+      now,
+    ),
   };
 }
 
+/**
+ * How long the current claim holds: the live interval while any slate game
+ * is under way, the idle one otherwise. Read off the rows in hand, so the
+ * decision costs nothing and a test can put a game in progress and watch the
+ * gate tighten.
+ */
+export function refreshInterval(slateGames: Game[]): number {
+  return slateGames.some((g) => effectiveResult(g).live !== null) ? LIVE_REFRESH_INTERVAL_MS : REFRESH_INTERVAL_MS;
+}
+
 export type RefreshOutcome =
-  /** No pending game has kicked off, so a call could not change anything. */
+  /** No pending game has kicked off, or every one that has is final: a call could not change anything. */
   | "idle"
   /** Another request pulled the feed within the interval. */
   | "fresh"
@@ -156,10 +243,14 @@ export interface RefreshedSlate {
 
 /**
  * The stale gate: member traffic schedules feed calls, and this bounds them.
- * Runs `ingestResults` only when a non-void game is past kickoff without a
- * final, and only when nobody has pulled the feed in the last interval. The
- * claim is one atomic update of `weeks.scoreboard_fetched_at`, so concurrent
- * requests across Vercel instances elect a single caller.
+ * Runs `ingestResults` only when a call could change something — a non-void
+ * game is past kickoff without a final — and only when nobody has pulled the
+ * feed in the last interval: `LIVE_REFRESH_INTERVAL_MS` while a slate game
+ * is under way, `REFRESH_INTERVAL_MS` between games, and never before the
+ * first kickoff or once every game is final. The claim is one atomic update
+ * of `weeks.scoreboard_fetched_at`, so concurrent requests across Vercel
+ * instances elect a single caller; the in-process cache in `@/lib/cfbd` is
+ * per instance and could not hold this bound on its own.
  */
 export async function refreshResultsIfStale(
   db: Db,
@@ -171,7 +262,7 @@ export async function refreshResultsIfStale(
   if (!slate.week.published) return { outcome: "idle", slate };
   const waiting = slate.games.some((g) => effectiveResult(g).status === "pending" && g.kickoff <= now);
   if (!waiting) return { outcome: "idle", slate };
-  const cutoff = new Date(now.getTime() - REFRESH_INTERVAL_MS);
+  const cutoff = new Date(now.getTime() - refreshInterval(slate.games));
   const claimed = await db
     .update(weeks)
     .set({ scoreboardFetchedAt: now })

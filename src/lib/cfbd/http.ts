@@ -35,6 +35,8 @@ export function httpCfbd(apiKey: string, fetchImpl: typeof fetch = fetch): CfbdC
 
   return {
     games: (q) => get("/games", { ...regular(q), classification: "fbs" }),
+    // No year or week: the endpoint has neither, and answers the week being played.
+    scoreboard: () => get("/scoreboard", { classification: "fbs" }),
     rankings: (year) => get("/rankings", { year, seasonType: "regular" }),
     lines: (q) => get("/lines", regular(q)),
     seasonGames: (year) => get("/games", { year, seasonType: "regular", classification: "fbs" }),

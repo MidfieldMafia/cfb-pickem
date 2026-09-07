@@ -106,6 +106,14 @@ export const games = pgTable(
     homeScore: integer("home_score"),
     awayScore: integer("away_score"),
     status: text("status", { enum: gameStatuses }).notNull().default("scheduled"),
+    /**
+     * Where a game in progress stands, from the feed's scoreboard: the quarter
+     * (5 and up is overtime) and the game clock as the feed writes it, "08:42".
+     * Both null before kickoff and once final — the Live Board reads them, the
+     * scoring never does. Written by the same refresh that writes the score.
+     */
+    period: integer("period"),
+    clock: text("clock"),
     /** Canceled or postponed after publish: scores 0 for everyone. */
     void: boolean("void").notNull().default(false),
     voidNote: text("void_note"),

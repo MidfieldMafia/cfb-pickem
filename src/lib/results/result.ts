@@ -21,6 +21,30 @@ export interface Score {
   awayScore: number;
 }
 
+/** The running score, and where in the game it stands. */
+export interface LiveScore extends Score {
+  /** The quarter, 5 and up for overtime. Null when the feed has not said. */
+  period: number | null;
+  /** "08:42", as the feed writes it. Null when the feed has not said. */
+  clock: string | null;
+}
+
+/**
+ * Where a game in progress stands, in the words a screen puts beside the
+ * score: "Q3 · 8:12", "OT · 2:00", "2OT" once the clock is gone. Null when the
+ * feed has given neither a period nor a clock, so a screen shows the label
+ * alone rather than "Q · ". One spelling, for the console, the Reveal and the
+ * Live Board alike.
+ */
+export function clockLabel(live: Pick<LiveScore, "period" | "clock">): string | null {
+  const { period, clock } = live;
+  const quarter = period === null ? null : period <= 4 ? `Q${period}` : period === 5 ? "OT" : `${period - 4}OT`;
+  // The feed pads to "08:42"; the leading zero is noise beside a quarter.
+  const time = clock === null ? null : clock.replace(/^0(\d:)/, "$1");
+  if (quarter === null) return time;
+  return time === null ? quarter : `${quarter} · ${time}`;
+}
+
 /** Every word a screen puts on a Game's state. One vocabulary, so the Reveal and the console agree. */
 export type ResultLabel = "Scheduled" | "In progress" | "Final" | "Final · override" | "Void";
 
@@ -36,8 +60,11 @@ export interface GameResult {
   homeScore: number | null;
   awayScore: number | null;
   source: ResultSource | null;
-  /** The feed's running score. Set only while pending and under way; null once final, void, or before kickoff. */
-  live: Score | null;
+  /**
+   * The feed's running score and clock. Set only while pending and under way;
+   * null once final, void, or before kickoff.
+   */
+  live: LiveScore | null;
   /**
    * The score to put on screen: the final where there is one, else the running
    * score, else null for a game with no numbers yet. A screen renders this or
@@ -105,9 +132,9 @@ export function effectiveResult(game: Game): GameResult {
   }
   // The feed only reports in_progress with a score, so one condition settles
   // both the running score and the word for it.
-  const live =
+  const live: LiveScore | null =
     game.status === "in_progress" && game.homeScore !== null && game.awayScore !== null
-      ? { homeScore: game.homeScore, awayScore: game.awayScore }
+      ? { homeScore: game.homeScore, awayScore: game.awayScore, period: game.period, clock: game.clock }
       : null;
   return {
     status: "pending",
@@ -115,7 +142,8 @@ export function effectiveResult(game: Game): GameResult {
     awayScore: null,
     source: null,
     live,
-    shown: live,
+    // `shown` is the pair alone: the clock is the label's business, not the score's.
+    shown: live ? { homeScore: live.homeScore, awayScore: live.awayScore } : null,
     label: live ? "In progress" : "Scheduled",
     note: null,
     feedFinal: null,

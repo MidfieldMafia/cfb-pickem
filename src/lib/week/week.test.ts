@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
-import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
+import type { CfbdClient } from "@/lib/cfbd/types";
 import { ingestResults } from "@/lib/results/results";
 import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
 import {
   FAMU_AT_MIAMI,
+  feedWith,
   guessAs,
   lockAs,
   OKLAHOMA_AT_MICHIGAN,
@@ -19,21 +19,7 @@ import {
 import { currentWeek, weekInReview } from "./week";
 
 /** Michigan reported final. `calls` counts feed reads, so a test can prove the gate held. */
-function feedWithMichiganFinal(): CfbdClient & { calls: number } {
-  const feedGames: CfbdGame[] = recordings["2026-week-2"].games.map((g) =>
-    g.id === OKLAHOMA_AT_MICHIGAN ? { ...g, completed: true, awayPoints: 24, homePoints: 27 } : g,
-  );
-  const inner = recordedCfbd("2026-week-2", { games: feedGames });
-  const client = {
-    ...inner,
-    calls: 0,
-    games: async (q: { year: number; week: number }) => {
-      client.calls += 1;
-      return inner.games(q);
-    },
-  };
-  return client;
-}
+const feedWithMichiganFinal = () => feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] });
 
 const angryFeed = (): CfbdClient => {
   throw new Error("CFBD_API_KEY is not set; run `vercel env pull .env.local`.");

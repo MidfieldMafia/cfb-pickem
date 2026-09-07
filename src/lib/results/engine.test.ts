@@ -40,6 +40,8 @@ function game(overrides: Partial<Game> = {}): Game {
     homeScore: null,
     awayScore: null,
     status: "scheduled",
+    period: null,
+    clock: null,
     void: false,
     voidNote: null,
     overrideHomeScore: null,

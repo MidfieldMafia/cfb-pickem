@@ -23,4 +23,13 @@ describe("shared CollegeFootballData cache", () => {
     await cfbd.games({ year: 2026, week: 2 });
     expect(inner.calls).toBe(4);
   });
+
+  test("the scoreboard goes through every time: the stale gate is its bound, not this cache", async () => {
+    const inner = recordedCfbd("2026-week-2");
+    const cfbd = cachingCfbd(inner, 1000, () => 0);
+
+    await cfbd.scoreboard();
+    await cfbd.scoreboard();
+    expect(inner.calls).toBe(2);
+  });
 });

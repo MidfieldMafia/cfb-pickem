@@ -29,6 +29,14 @@ export function cachingCfbd(inner: CfbdClient, ttlMs: number, now: () => number 
 
   return {
     games: (q) => remember(weekKey("games", q), () => inner.games(q)),
+    /**
+     * Never cached. A ten-minute entry would hand the Live Board the same
+     * score for ten minutes however often the stale gate reopened, and this
+     * cache is per Vercel instance anyway, so it could not bound the quota on
+     * its own. The atomic claim on `weeks.scoreboard_fetched_at` is the bound,
+     * and it is the only one — see `refreshResultsIfStale`.
+     */
+    scoreboard: () => inner.scoreboard(),
     rankings: (year) => remember(`rankings:${year}`, () => inner.rankings(year)),
     lines: (q) => remember(weekKey("lines", q), () => inner.lines(q)),
     seasonGames: (year) => remember(`seasonGames:${year}`, () => inner.seasonGames(year)),
