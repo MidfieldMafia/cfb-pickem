@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { cfbd } from "@/lib/cfbd";
+import { freshCfbd } from "@/lib/cfbd";
 import { requireConsole } from "@/lib/members/current";
 import { integerField } from "@/lib/parse";
 import { plural } from "@/lib/plural";
@@ -43,12 +43,12 @@ export async function chooseResultsWeekAction(formData: FormData) {
   redirect(`${RESULTS_PATH}?week=${week.weekNumber}`);
 }
 
-/** Pulls the week's scores from CollegeFootballData now, uncached, whatever the stale gate thinks. */
+/** Pulls the week's scores from CollegeFootballData now, through the cache, whatever the stale gate thinks. */
 export async function refreshResultsAction(_prev: ResultActionState, formData: FormData): Promise<ResultActionState> {
   await requireConsole();
   return attempt(async () => {
     const slate = await slateFor(db(), num(formData, "weekId"));
-    const { changed } = await ingestResults(db(), cfbd({ bypassCache: true }), slate);
+    const { changed } = await ingestResults(db(), freshCfbd(), slate);
     return changed === 0
       ? "Checked the feed; nothing changed."
       : `Checked the feed; ${plural(changed, "game")} updated.`;

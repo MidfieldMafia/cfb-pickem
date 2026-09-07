@@ -41,3 +41,33 @@ export function cachingCfbd(inner: CfbdClient, ttlMs: number, now: () => number 
     invalidate: () => entries.clear(),
   };
 }
+
+/** The two doors onto one shared cache: the everyday read, and the read that must go through. */
+export interface SharedFeed {
+  cfbd(): CfbdClient;
+  freshCfbd(): CfbdClient;
+}
+
+/**
+ * The two doors onto one shared cache — the arrangement `cfbd()` and
+ * `freshCfbd()` wire the env key into. Member traffic reads whatever is there;
+ * a commissioner's refresh empties the cache first, so its read goes through
+ * to CollegeFootballData *and* leaves behind what it read.
+ *
+ * The second half is the point. A refresh that skipped the cache instead would
+ * leave it serving the scores the refresh just corrected, and the results
+ * stale gate reopens after five minutes while an entry lives for ten — so the
+ * next member visit would ingest the old feed back over the new scores, and
+ * the score on screen would go backwards. Kept here, apart from the env key,
+ * so that arrangement is under test.
+ */
+export function sharedFeed(inner: CfbdClient, ttlMs: number, now?: () => number): SharedFeed {
+  const cache = cachingCfbd(inner, ttlMs, now);
+  return {
+    cfbd: (): CfbdClient => cache,
+    freshCfbd: (): CfbdClient => {
+      cache.invalidate();
+      return cache;
+    },
+  };
+}
