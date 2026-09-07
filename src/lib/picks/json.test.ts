@@ -95,6 +95,7 @@ describe("toSheetJson", () => {
       picksMade: 0,
       lockSet: false,
       guessSet: false,
+      lockOpen: true,
       remaining: 3,
     });
 
@@ -109,6 +110,7 @@ describe("toSheetJson", () => {
       picksMade: 3,
       lockSet: true,
       guessSet: true,
+      lockOpen: false,
       remaining: 0,
     });
   });

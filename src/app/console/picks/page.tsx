@@ -35,7 +35,7 @@ function PickDots({ picked, needed }: { picked: number; needed: number }) {
 }
 
 function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: number; weekNumber: number }) {
-  const missing = owed(row, needed);
+  const missing = owed(row);
   return (
     <tr className="align-middle">
       <td className="p-3">

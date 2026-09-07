@@ -9,7 +9,6 @@
 import "server-only";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
-  games,
   locks,
   members,
   pickAudits,
@@ -26,11 +25,11 @@ import { formatterFor } from "@/lib/intl-time";
 import { InvalidMember, requireCommissioner } from "@/lib/members/members";
 import { roster } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
-import { toGameView } from "@/lib/slate/json";
+import { teamName, toGameView } from "@/lib/slate/json";
 import { slateFor } from "@/lib/slate/slate";
 import { tiebreakerGuessError } from "./limits";
-import { InvalidPick, pickSheet, type PickSheet } from "./picks";
-import { sheetProgress, type SheetProgress } from "./progress";
+import { InvalidPick, loadGame, pickSheet, publishedDeadline, type PickSheet } from "./picks";
+import { liveGames, sheetProgress, type SheetProgress } from "./progress";
 
 async function loadMember(db: Db, memberId: number): Promise<Member> {
   const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
@@ -93,12 +92,11 @@ export interface PickReport {
 export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<PickReport> {
   requireCommissioner(actor);
   const slate = await slateFor(db, weekId);
-  if (!slate.week.published || !slate.week.deadline) throw new InvalidPick("That week is not published.");
-  const deadline = slate.week.deadline;
-  const live = slate.games.filter((g) => !g.void);
-  const liveIds = live.map((g) => g.id);
-  const byGame = new Map(slate.games.map((g) => [g.id, g]));
+  const deadline = publishedDeadline(slate.week);
   const views = slate.games.map(toGameView);
+  const live = liveGames(views);
+  const liveIds = live.map((v) => v.game.id);
+  const byGame = new Map(slate.games.map((g) => [g.id, g]));
   const [everyone, pickRows, lockRows, guessRows] = await Promise.all([
     db.query.members.findMany({ orderBy: [asc(members.joinedAt), asc(members.id)] }),
     liveIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, liveIds) }) : [],
@@ -132,7 +130,7 @@ export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now:
       member,
       progress,
       picked: progress.picksMade,
-      lockTeam: lockGame && lockedTeam !== undefined ? teamNameIn(lockGame, lockedTeam) : null,
+      lockTeam: lockGame && lockedTeam !== undefined ? teamName(lockGame, lockedTeam) : null,
       lockDropped,
       tiebreakerGuess,
       complete: progress.remaining === 0,
@@ -157,11 +155,11 @@ export function deadlineInCentral(deadline: Date): string {
 }
 
 /** What one member still owes, for the reminder: "2 picks, Lock of the Week, Tiebreaker Guess". */
-export function owed(row: MemberProgress, needed: number): string[] {
+export function owed(row: MemberProgress): string[] {
   const missing: string[] = [];
-  const picksLeft = needed - row.progress.picksMade;
+  const picksLeft = row.progress.liveGames - row.progress.picksMade;
   if (picksLeft > 0) missing.push(plural(picksLeft, "pick"));
-  if (needed > 0 && !row.progress.lockSet) missing.push("Lock of the Week");
+  if (row.progress.lockOpen) missing.push("Lock of the Week");
   if (!row.progress.guessSet) missing.push("Tiebreaker Guess");
   return missing;
 }
@@ -171,19 +169,8 @@ export function reminderText(report: PickReport): string {
   const lead = `Saturday Slate Week ${report.week.weekNumber} picks lock ${deadlineInCentral(report.deadline)}.`;
   const behind = report.members.filter((m) => !m.complete);
   if (behind.length === 0) return `${lead} Everyone is in.`;
-  const names = behind.map((m) => `${m.member.displayName} (${owed(m, report.needed).join(", ")})`);
+  const names = behind.map((m) => `${m.member.displayName} (${owed(m).join(", ")})`);
   return `${lead} Still need: ${names.join(", ")}.`;
-}
-
-async function loadGame(db: Db, weekId: number, gameId: number): Promise<Game> {
-  const game = await db.query.games.findFirst({ where: eq(games.id, gameId) });
-  if (!game || game.weekId !== weekId) throw new InvalidPick("That game is not on this week's slate.");
-  return game;
-}
-
-/** The display name of a team in a game, by CollegeFootballData team id. */
-function teamNameIn(game: Game, teamId: number): string {
-  return teamId === game.homeTeamId ? game.homeTeam : game.awayTeam;
 }
 
 /**
@@ -212,8 +199,8 @@ export async function overridePick(
     .values({ memberId, gameId, teamId, updatedAt: now, updatedBy: actor.id })
     .onConflictDoUpdate({ target: [picks.memberId, picks.gameId], set: { teamId, updatedAt: now, updatedBy: actor.id } });
   await logPickChange(db, actor, memberId, weekId, gameId, "pick", {
-    previousValue: before ? teamNameIn(game, before.teamId) : null,
-    newValue: teamNameIn(game, teamId),
+    previousValue: before ? teamName(game, before.teamId) : null,
+    newValue: teamName(game, teamId),
     at: now,
   });
 }
@@ -234,14 +221,16 @@ export async function overrideLock(
   requireCommissioner(actor);
   const before = await db.query.locks.findFirst({ where: and(eq(locks.memberId, memberId), eq(locks.weekId, weekId)) });
   const beforeGame = before ? await loadGame(db, weekId, before.gameId) : null;
-  let afterGame: Game | null = null;
+  let afterName: string | null = null;
   if (gameId === null) {
     await db.delete(locks).where(and(eq(locks.memberId, memberId), eq(locks.weekId, weekId)));
   } else {
-    afterGame = await loadGame(db, weekId, gameId);
+    const afterGame = await loadGame(db, weekId, gameId);
     if (afterGame.void) throw new InvalidPick("That game is void; it cannot be the Lock of the Week.");
     const pick = await db.query.picks.findFirst({ where: and(eq(picks.memberId, memberId), eq(picks.gameId, gameId)) });
     if (!pick) throw new InvalidPick("Pick a winner in that game before locking it.");
+    // The pick is in hand, so the new Lock names itself without a second read.
+    afterName = teamName(afterGame, pick.teamId);
     await db
       .insert(locks)
       .values({ memberId, weekId, gameId, updatedAt: now, updatedBy: actor.id })
@@ -249,7 +238,7 @@ export async function overrideLock(
   }
   await logPickChange(db, actor, memberId, weekId, gameId ?? before?.gameId ?? null, "lock", {
     previousValue: beforeGame ? await lockName(db, memberId, beforeGame) : null,
-    newValue: afterGame ? await lockName(db, memberId, afterGame) : null,
+    newValue: afterName,
     at: now,
   });
 }
@@ -292,7 +281,7 @@ export async function overrideTiebreakerGuess(
 /** A Lock reads as the team the member locked, so the audit log shows it without a join. */
 async function lockName(db: Db, memberId: number, game: Game): Promise<string> {
   const pick = await db.query.picks.findFirst({ where: and(eq(picks.memberId, memberId), eq(picks.gameId, game.id)) });
-  return pick ? teamNameIn(game, pick.teamId) : `${game.awayTeam} at ${game.homeTeam}`;
+  return pick ? teamName(game, pick.teamId) : `${game.awayTeam} at ${game.homeTeam}`;
 }
 
 async function logPickChange(
@@ -316,38 +305,29 @@ async function logPickChange(
   });
 }
 
-export interface PickAudit {
-  id: number;
-  memberId: number;
+type PickAuditRow = typeof pickAudits.$inferSelect;
+
+/** One audited edit as the console shows it: the stored row plus the two names. */
+export interface PickAudit extends PickAuditRow {
   memberName: string;
-  gameId: number | null;
-  kind: (typeof pickAudits.$inferSelect)["kind"];
-  previousValue: string | null;
-  newValue: string | null;
-  changedBy: number;
   changedByName: string;
-  changedAt: Date;
 }
 
 /** The week's commissioner edits, oldest first, for the console. */
 export async function pickAuditsFor(db: Db, actor: Member, weekId: number): Promise<PickAudit[]> {
   requireCommissioner(actor);
-  const rows = await db.query.pickAudits.findMany({
-    where: eq(pickAudits.weekId, weekId),
-    orderBy: [asc(pickAudits.changedAt), asc(pickAudits.id)],
-  });
-  const everyone = await db.query.members.findMany();
+  // Neither read depends on the other, so the commissioner waits for one round trip.
+  const [rows, everyone] = await Promise.all([
+    db.query.pickAudits.findMany({
+      where: eq(pickAudits.weekId, weekId),
+      orderBy: [asc(pickAudits.changedAt), asc(pickAudits.id)],
+    }),
+    db.query.members.findMany(),
+  ]);
   const nameOf = new Map(everyone.map((m) => [m.id, m.displayName]));
   return rows.map((r) => ({
-    id: r.id,
-    memberId: r.memberId,
+    ...r,
     memberName: nameOf.get(r.memberId) ?? "?",
-    gameId: r.gameId,
-    kind: r.kind,
-    previousValue: r.previousValue,
-    newValue: r.newValue,
-    changedBy: r.changedBy,
     changedByName: nameOf.get(r.changedBy) ?? "?",
-    changedAt: r.changedAt,
   }));
 }

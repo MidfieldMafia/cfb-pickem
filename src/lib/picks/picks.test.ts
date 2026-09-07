@@ -150,6 +150,7 @@ describe("pick entry", () => {
       picksMade: 0,
       lockSet: false,
       guessSet: false,
+      lockOpen: true,
       remaining: 3,
     });
 
@@ -162,6 +163,7 @@ describe("pick entry", () => {
       picksMade: 3,
       lockSet: false,
       guessSet: true,
+      lockOpen: true,
       remaining: 1,
     });
 
@@ -176,6 +178,7 @@ describe("pick entry", () => {
       picksMade: 2,
       lockSet: false,
       guessSet: true,
+      lockOpen: true,
       remaining: 1,
     });
   });

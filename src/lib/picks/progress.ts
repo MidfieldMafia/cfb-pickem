@@ -22,6 +22,12 @@ export interface SheetProgress {
   /** True when the Tiebreaker Guess is in. */
   guessSet: boolean;
   /**
+   * True when a Lock of the Week is still to set: none counts yet and the
+   * slate has a live game to put one on. Returned rather than left to the
+   * screens, which otherwise re-derive it from `lockSet` and `liveGames`.
+   */
+  lockOpen: boolean;
+  /**
    * The things still to do, 0 to 3: every Pick made, the Lock set, the Guess
    * entered. Open Picks are one thing however many games are open, so this
    * number is the one the screens say out loud.
@@ -74,6 +80,7 @@ export function sheetProgress({
     picksMade,
     lockSet,
     guessSet,
+    lockOpen,
     remaining: (picksMade < live.length ? 1 : 0) + (lockOpen ? 1 : 0) + (guessSet ? 0 : 1),
   };
 }
