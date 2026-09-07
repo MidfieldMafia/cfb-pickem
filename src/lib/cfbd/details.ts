@@ -6,7 +6,7 @@
  * onto the slate; the scoring engine never reads any of it.
  */
 import { hourIn } from "@/lib/intl-time";
-import type { GameDetail, SkyIcon, TeamDetail, Weather } from "@/lib/scoring/types";
+import type { GameDetail, SkyIcon, TeamDetail, Weather } from "@/lib/detail";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { rankLookup } from "./rankings";
 import type { CfbdBettingGame, CfbdClient, CfbdGame, CfbdGameWeather, CfbdVenue, WeekQuery } from "./types";
@@ -209,7 +209,6 @@ export async function weekDetails(
     const wp = wpByGame.get(game.id);
     const kickoff = new Date(game.startDate);
     details.set(game.id, {
-      gameId: String(game.id),
       kickoff: kickoff.toISOString(),
       venue: game.venue ?? venue?.name ?? "",
       city: venue?.city ? (venue.state ? `${venue.city}, ${venue.state}` : venue.city) : "",

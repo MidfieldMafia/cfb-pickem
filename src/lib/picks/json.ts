@@ -4,7 +4,7 @@
  * strings so the same object serializes from a server component and from a
  * route handler.
  */
-import type { GameDetail } from "@/lib/scoring/types";
+import type { GameDetail } from "@/lib/detail";
 import { toGameView, type GameView } from "@/lib/slate/json";
 import type { PickSheet } from "./picks";
 import type { SheetProgress } from "./progress";

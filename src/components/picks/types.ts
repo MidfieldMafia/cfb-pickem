@@ -1,4 +1,4 @@
-import type { GameDetail } from "@/lib/scoring/types";
+import type { GameDetail } from "@/lib/detail";
 
 /**
  * What the matchup panel reads out of a Game's snapshotted detail: the win bar

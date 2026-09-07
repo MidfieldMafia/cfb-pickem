@@ -1,4 +1,4 @@
-import type { GameDetail } from "@/lib/scoring/types";
+import type { GameDetail } from "@/lib/detail";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { weekDetails } from "./details";
 import type { CfbdClient, CfbdGame, WeekQuery } from "./types";

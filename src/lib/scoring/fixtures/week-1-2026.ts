@@ -11,7 +11,8 @@
  * with no Tiebreaker Guess, a points tie broken by the Tiebreaker Guess,
  * and a member who joined days before the Deadline.
  */
-import type { Game, GameDetail, GameId, Member, TeamDetail, TeamId, Week } from "../types";
+import type { GameDetail, TeamDetail } from "@/lib/detail";
+import type { Game, GameId, Member, TeamId, Week } from "../types";
 import { finalGame } from "./build";
 
 export const members: Member[] = [
@@ -132,9 +133,8 @@ export function teamDetail(team: TeamId): TeamDetail {
   return teamDetails[team] ?? UNKNOWN_TEAM;
 }
 
-export const gameDetails: GameDetail[] = [
-  {
-    gameId: "g1",
+export const gameDetails: Record<GameId, GameDetail> = {
+  g1: {
     kickoff: NOON,
     venue: "Sanford Stadium",
     city: "Athens, GA",
@@ -145,8 +145,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Georgia"),
     away: teamDetail("Clemson"),
   },
-  {
-    gameId: "g2",
+  g2: {
     kickoff: NOON,
     venue: "Ohio Stadium",
     city: "Columbus, OH",
@@ -157,8 +156,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Ohio State"),
     away: teamDetail("Texas"),
   },
-  {
-    gameId: "g3",
+  g3: {
     kickoff: AFTERNOON,
     venue: "Bryant-Denny Stadium",
     city: "Tuscaloosa, AL",
@@ -169,8 +167,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Alabama"),
     away: teamDetail("Florida State"),
   },
-  {
-    gameId: "g4",
+  g4: {
     kickoff: AFTERNOON,
     venue: "Tiger Stadium",
     city: "Baton Rouge, LA",
@@ -181,8 +178,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("LSU"),
     away: teamDetail("Oklahoma"),
   },
-  {
-    gameId: "g5",
+  g5: {
     kickoff: NIGHT,
     venue: "Michigan Stadium",
     city: "Ann Arbor, MI",
@@ -193,8 +189,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Michigan"),
     away: teamDetail("Notre Dame"),
   },
-  {
-    gameId: "g6",
+  g6: {
     kickoff: NIGHT,
     venue: "Neyland Stadium",
     city: "Knoxville, TN",
@@ -205,8 +200,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Tennessee"),
     away: teamDetail("Auburn"),
   },
-  {
-    gameId: "g7",
+  g7: {
     kickoff: NIGHT,
     venue: "Autzen Stadium",
     city: "Eugene, OR",
@@ -217,8 +211,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Oregon"),
     away: teamDetail("Washington"),
   },
-  {
-    gameId: "g8",
+  g8: {
     kickoff: NIGHT,
     venue: "Beaver Stadium",
     city: "University Park, PA",
@@ -229,8 +222,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Penn State"),
     away: teamDetail("USC"),
   },
-  {
-    gameId: "g9",
+  g9: {
     kickoff: NIGHT,
     venue: "Vaught-Hemingway Stadium",
     city: "Oxford, MS",
@@ -241,8 +233,7 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Ole Miss"),
     away: teamDetail("Kentucky"),
   },
-  {
-    gameId: "g10",
+  g10: {
     kickoff: NIGHT,
     venue: "Jack Trice Stadium",
     city: "Ames, IA",
@@ -253,10 +244,8 @@ export const gameDetails: GameDetail[] = [
     home: teamDetail("Iowa State"),
     away: teamDetail("Kansas State"),
   },
-];
-
-const detailsById = new Map(gameDetails.map((d) => [d.gameId, d]));
+};
 
 export function gameDetail(id: GameId): GameDetail | undefined {
-  return detailsById.get(id);
+  return gameDetails[id];
 }

@@ -19,14 +19,20 @@ import {
   uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import type { GameDetail, GameStatus, Rules } from "@/lib/scoring/types";
+import type { GameDetail } from "@/lib/detail";
+import type { Rules } from "@/lib/scoring/types";
 
 const utc = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
 export const seasons = pgTable("seasons", {
   id: serial("id").primaryKey(),
   year: integer("year").notNull().unique(),
-  /** Scoring parameters. Inputs to scoring, never baked into stored totals. */
+  /**
+   * Scoring parameters. Inputs to scoring, never baked into stored totals.
+   * The one scoring type this module imports, and it belongs here: the column
+   * stores the engine's own inputs, so naming them with the engine's type is
+   * the point rather than a leak.
+   */
   rules: jsonb("rules").$type<Rules>().notNull(),
   active: boolean("active").notNull().default(false),
   createdAt: utc("created_at").notNull().defaultNow(),
@@ -57,11 +63,19 @@ export const weeks = pgTable(
 );
 
 /**
- * The stored statuses, checked against the scoring engine's union so adding one
- * in only one of the two places is a compile error rather than a silent drift.
+ * The stored statuses, owned here. The scoring engine names the same three
+ * words in its own `GameStatus`, and the two are deliberately not tied
+ * together: nothing carries this column's value into that union. What reads it
+ * is `results/result.ts`, comparing against this enum to fold the Void and the
+ * Result Override into a `ResultStatus`, and `results/engine.ts` builds the
+ * engine's status from *that* — so the engine's union sits three hops away
+ * across two translations. The `satisfies readonly GameStatus[]` that used to
+ * stand here read as a drift guard but bound two types with no data path
+ * between them, and it was the last reason a database module imported the
+ * scoring engine's types for anything but `Rules`.
  */
-export const gameStatuses = ["scheduled", "in_progress", "final"] as const satisfies readonly GameStatus[];
-export type { GameStatus };
+export const gameStatuses = ["scheduled", "in_progress", "final"] as const;
+export type GameStatus = (typeof gameStatuses)[number];
 
 export const games = pgTable(
   "games",

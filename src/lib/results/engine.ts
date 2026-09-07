@@ -8,7 +8,7 @@
 import type { Game, Member, Week } from "@/db/schema";
 import type { MemberPicks } from "@/lib/picks/picks";
 import type * as engine from "@/lib/scoring/types";
-import { effectiveResult } from "./audit";
+import { effectiveResult } from "./result";
 
 export function toEngineGame(game: Game): engine.Game {
   const result = effectiveResult(game);
