@@ -134,6 +134,16 @@ export interface LeaderboardRow {
   memberId: MemberId;
   /** 1-based; members that tie on every season tiebreak share a rank. */
   rank: number;
+  /**
+   * The rank this member held on the board as it stood before the latest week
+   * passed in — what `rank` moved from.
+   *
+   * Null when there is no earlier board to have held a place on: the first
+   * week of the season, and a member whose first counted week is the latest
+   * one. A member who joined mid-season is not shown climbing from a place
+   * they never occupied.
+   */
+  previousRank: number | null;
   totalPoints: number;
   correct: number;
   incorrect: number;

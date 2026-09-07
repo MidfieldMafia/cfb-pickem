@@ -4,6 +4,7 @@ import type { Reveal, RevealGame, RevealPick, ScoredMember, WeeklyScore, WeeklyW
 import type { GameJson, GameView } from "@/lib/slate/json";
 import {
   averageLabel,
+  movement,
   ordinal,
   pickBreakdown,
   record,
@@ -291,5 +292,29 @@ describe("the leaderboard's own columns", () => {
     expect(weeksPlayedNote({ weeksPlayed: 1 }, 1)).toBeNull();
     expect(weeksPlayedNote({ weeksPlayed: 3 }, 3)).toBeNull();
     expect(weeksPlayedNote({ weeksPlayed: 0 }, 0)).toBeNull();
+  });
+
+  test("a climb up the board is a fall in the rank number", () => {
+    expect(movement({ rank: 1, previousRank: 3 })).toEqual({
+      direction: "up",
+      places: 2,
+      label: "Up 2 places, from 3rd",
+    });
+    expect(movement({ rank: 4, previousRank: 3 })).toEqual({
+      direction: "down",
+      places: 1,
+      label: "Down 1 place, from 3rd",
+    });
+  });
+
+  test("a member who moved nowhere, and one with nowhere to have moved from, both say nothing", () => {
+    expect(movement({ rank: 2, previousRank: 2 })).toBeNull();
+    // The season's first week, and a member whose first counted week is this one.
+    expect(movement({ rank: 2, previousRank: null })).toBeNull();
+  });
+
+  test("the ordinal in the label survives the teens, where the naive rule does not", () => {
+    expect(movement({ rank: 10, previousRank: 11 })!.label).toBe("Up 1 place, from 11th");
+    expect(movement({ rank: 22, previousRank: 21 })!.label).toBe("Down 1 place, from 21st");
   });
 });

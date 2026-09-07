@@ -156,3 +156,76 @@ describe("scoreSeason", () => {
     expect(leaderboard.find((r) => r.memberId === "alex")).toMatchObject({ totalPoints: 0, weeksPlayed: 1, averagePoints: 0 });
   });
 });
+
+/**
+ * Grandma joins on 2026-09-08: after Week 1's Deadline and before Week 2's, so
+ * Week 2 is her first counted week and the Week 1 board is one she was never on.
+ */
+const movementWeek1 = week({
+  weekNumber: 1,
+  deadline: "2026-09-05T16:00:00Z",
+  games: [finalGame("w1g1", "Georgia", "Clemson", 31, 17), finalGame("w1g2", "Ohio State", "Texas", 14, 24)],
+  picks: [
+    // Alex takes both and leads on 20; Jonah takes one and sits second on 10.
+    { memberId: "alex", gameId: "w1g1", team: "Georgia" },
+    { memberId: "alex", gameId: "w1g2", team: "Texas" },
+    { memberId: "jonah", gameId: "w1g1", team: "Georgia" },
+    { memberId: "jonah", gameId: "w1g2", team: "Ohio State" },
+  ],
+});
+
+const movementWeek2 = week({
+  weekNumber: 2,
+  deadline: "2026-09-12T16:00:00Z",
+  games: [finalGame("w2g1", "Alabama", "LSU", 28, 21), finalGame("w2g2", "Michigan", "Oregon", 10, 7)],
+  picks: [
+    // Jonah takes both with the Lock on one — 30 — and passes Alex, who takes none.
+    { memberId: "jonah", gameId: "w2g1", team: "Alabama" },
+    { memberId: "jonah", gameId: "w2g2", team: "Michigan" },
+    { memberId: "alex", gameId: "w2g1", team: "LSU" },
+    { memberId: "alex", gameId: "w2g2", team: "Oregon" },
+    { memberId: "grandma", gameId: "w2g1", team: "Alabama" },
+    { memberId: "grandma", gameId: "w2g2", team: "Oregon" },
+  ],
+  locks: [{ memberId: "jonah", gameId: "w2g1" }],
+});
+
+describe("scoreSeason previousRank", () => {
+  it("ranks the board as it stood before the latest week", () => {
+    const { leaderboard } = scoreSeason(rules2026, [movementWeek1, movementWeek2], members);
+
+    // Totals: Jonah 40, Alex 20, Grandma 10. Before Week 2: Alex 20, Jonah 10.
+    expect(leaderboard.map((r) => [r.memberId, r.rank, r.previousRank])).toEqual([
+      ["jonah", 1, 2],
+      ["alex", 2, 1],
+      // Week 2 is Grandma's first counted week, so she climbed from no place at all.
+      ["grandma", 3, null],
+    ]);
+  });
+
+  it("has no earlier board to compare against in the first week of the season", () => {
+    const { leaderboard } = scoreSeason(rules2026, [movementWeek1], members);
+
+    expect(leaderboard.every((r) => r.previousRank === null)).toBe(true);
+  });
+
+  it("takes the latest week by week number, not by the order the weeks arrive in", () => {
+    const forwards = scoreSeason(rules2026, [movementWeek1, movementWeek2], members);
+    const backwards = scoreSeason(rules2026, [movementWeek2, movementWeek1], members);
+
+    const ranks = (result: typeof forwards) =>
+      result.leaderboard.map((r) => [r.memberId, r.rank, r.previousRank]);
+    expect(ranks(backwards)).toEqual(ranks(forwards));
+  });
+
+  it("leaves a member who held their place with a previousRank equal to their rank", () => {
+    // Nobody scores in Week 2, so the Week 1 board stands and every place holds.
+    const quiet = week({ weekNumber: 2, deadline: "2026-09-12T16:00:00Z" });
+    const { leaderboard } = scoreSeason(rules2026, [movementWeek1, quiet], members.slice(0, 2));
+
+    expect(leaderboard.map((r) => [r.memberId, r.rank, r.previousRank])).toEqual([
+      ["alex", 1, 1],
+      ["jonah", 2, 2],
+    ]);
+  });
+});
