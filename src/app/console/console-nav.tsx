@@ -11,8 +11,13 @@ const LINKS = [
   { href: "/console/results", label: "Result overrides", Icon: Pencil },
 ] as const;
 
-/** The rail's row: icon, label, and the pine fill when it is the screen you are on. */
-const ITEM = "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold whitespace-nowrap no-underline";
+/**
+ * The rail's row: icon, label, and the pine fill when it is the screen you are
+ * on. `tap` is the design system's opt-in 44px minimum — the base layer forces
+ * it on buttons and inputs, but a link has to ask, and on a phone this rail is
+ * the only way around the console.
+ */
+const ITEM = "tap flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold whitespace-nowrap no-underline";
 
 export function ConsoleNav() {
   const pathname = usePathname();

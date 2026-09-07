@@ -231,8 +231,8 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
 }
 
 /** The two disclosures' handles, as the mockups draw them: a button, and a word. */
-const SET_SCORE = "inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 py-2 font-semibold hover:bg-accent";
-const VOID = "inline-flex w-fit cursor-pointer items-center gap-1.5 py-2 font-semibold text-destructive";
+const SET_SCORE = "inline-flex min-h-tap w-fit cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 font-semibold hover:bg-accent";
+const VOID = "inline-flex min-h-tap w-fit cursor-pointer items-center gap-1.5 font-semibold text-destructive";
 
 /**
  * Set the score, clear an override, or void: everything a live game's last

@@ -67,8 +67,12 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
         )}
       </td>
       <td className="p-3 text-right">
+        {/* `asChild` renders a link, which the base layer's 44px rule does not
+            reach; `tap` is how a link asks for it. */}
         <Button asChild variant="outline" size="sm">
-          <Link href={`/console/picks/${row.member.id}?week=${weekNumber}`}>Edit picks</Link>
+          <Link href={`/console/picks/${row.member.id}?week=${weekNumber}`} className="tap">
+            Edit picks
+          </Link>
         </Button>
       </td>
     </tr>

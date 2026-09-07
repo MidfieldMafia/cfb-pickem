@@ -323,7 +323,10 @@ function SlateRow({
         <details>
           {/* Short on screen, whole matchup for a screen reader working down
               ten rows that would otherwise all say the same word. */}
-          <summary aria-label={`Void ${matchup}`} className="w-fit cursor-pointer py-1 text-xs font-bold text-destructive">
+          <summary
+            aria-label={`Void ${matchup}`}
+            className="flex min-h-tap w-fit cursor-pointer items-center text-xs font-bold text-destructive"
+          >
             Void
           </summary>
           <ActionForm
