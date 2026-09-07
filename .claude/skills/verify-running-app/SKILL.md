@@ -15,6 +15,9 @@ Every screen except `/expired` needs a session, and the app has no password
 login. The only way in is a Magic Link, which is minted from the database by a
 commissioner. **You cannot issue one yourself. Ask.**
 
+Alex works on Windows and Jonah on macOS, so the few steps that differ say
+which is which. Everything unmarked is the same on both.
+
 ## 1. Work out which checkout you are in
 
 ```bash
@@ -94,8 +97,8 @@ The fix is a real install in the worktree:
 npm ci --no-audit --no-fund
 ```
 
-Do not substitute a symlink or a junction to the main checkout's `node_modules`.
-Turbopack rejects it outright and panics:
+Do not substitute a link to the main checkout's `node_modules` — a symlink, or
+a junction on Windows. Turbopack rejects it outright and panics:
 
 ```
 Symlink [project]/node_modules is invalid, it points out of the filesystem root
@@ -152,12 +155,12 @@ any of them.
 
 ## 5. Fetch the screens the diff touched
 
-`$SCRATCH` below is this session's scratchpad directory, as a Windows-style
-absolute path — the one named in your system prompt. Step 6 says why the path
-shape matters.
+`$SCRATCH` below is this session's scratchpad directory — the one named in your
+system prompt. Take it from there rather than composing one; on Windows use it
+exactly as given, which step 6 explains.
 
 ```bash
-SCRATCH="C:/Users/<you>/AppData/Local/Temp/claude/<project>/<session>/scratchpad"
+SCRATCH="<the scratchpad path from your system prompt>"
 
 curl -s -b "$S" "$BASE/week" \
   -o "$SCRATCH/week.html" -w "status=%{http_code} bytes=%{size_download}\n"
@@ -178,9 +181,12 @@ either way: see "What this does not cover".
 grep -oE "<h1[^>]*>[^<]*</h1>" "$SCRATCH/week.html"
 ```
 
-## 6. Windows path trap
+## 6. Path trap, on Windows only
 
-`node` here is a Windows binary and Git Bash paths do not reach it. A file
+Skip this on macOS: `node` is native there, and the POSIX paths the shell writes
+are the same ones node reads.
+
+On Windows `node` is a Windows binary and Git Bash paths do not reach it. A file
 written to `/tmp/week.html` from the shell is read back by
 `node -e "fs.readFileSync('/tmp/week.html')"` as `C:\tmp\week.html`, which fails
 with `ENOENT`.
@@ -203,18 +209,37 @@ a control that submits its own form on change, a `details` disclosure, and the
 real size of a tap target.
 
 There is no `chromium-cli` here — it is not an npm package and nothing installs
-it. What is missing is a driver, not a browser: Chrome and Edge are both on the
-machine. Install the driver into the scratchpad, never the repo, so
-`package.json` stays clean:
+it. What is usually missing is the driver, not the browser. Install the driver
+into the scratchpad, never the repo, so `package.json` stays clean:
 
 ```bash
 npm i puppeteer-core --prefix "$SCRATCH" --no-audit --no-fund
 ```
 
+Then confirm the browser is where you are about to tell it to look, rather than
+trusting the path — this is the mistake the `chromium-cli` line used to make:
+
+```bash
+# macOS
+ls "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# Windows
+ls "/c/Program Files/Google/Chrome/Application/chrome.exe"
+```
+
+Edge is Chromium too and drives identically if Chrome is absent; find its path
+the same way. `puppeteer-core` ships no browser of its own, so let the script
+choose rather than hardcoding one platform's path:
+
 ```js
 const puppeteer = require("puppeteer-core");
+
+const CHROME =
+  process.platform === "darwin"
+    ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+
 const browser = await puppeteer.launch({
-  executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  executablePath: CHROME,
   headless: true,
   args: ["--no-sandbox"],
 });
