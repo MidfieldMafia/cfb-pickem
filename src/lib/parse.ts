@@ -8,10 +8,18 @@
 /** Postgres `integer` range; anything outside is a bad request. */
 export const MAX_INT = 2_147_483_647;
 
-/** A non-negative Postgres `integer` from anything, or null when it is not one. */
-export function safeInteger(value: unknown): number | null {
+/**
+ * A non-negative Postgres `integer` from anything, or null when it is not one.
+ *
+ * `max` narrows the upper bound for a field with a domain range of its own, so
+ * that field's caller words one refusal for every way its value can be wrong
+ * rather than wording the low end and leaving the high end to a second check
+ * further in — which is how a score of `-1` came to be reported as a missing
+ * field. Anything above `MAX_INT` is still a bad request, whatever `max` says.
+ */
+export function safeInteger(value: unknown, max: number = MAX_INT): number | null {
   const n = typeof value === "string" ? Number(value) : value;
-  if (typeof n !== "number" || !Number.isSafeInteger(n) || n < 0 || n > MAX_INT) return null;
+  if (typeof n !== "number" || !Number.isSafeInteger(n) || n < 0 || n > Math.min(max, MAX_INT)) return null;
   return n;
 }
 
@@ -31,10 +39,18 @@ function raw(source: Fields, name: string): unknown {
  * A form field arrives as a string and is coerced; a JSON body must carry a
  * real number, because a numeric string there is our own client malfunctioning
  * rather than a person typing.
+ *
+ * `max` is the field's own upper bound where it has one; the refusal `fail`
+ * words then covers the whole range, and nothing downstream re-checks it.
  */
-export function integerField(source: Fields, name: string, fail: (name: string) => Error): number {
+export function integerField(
+  source: Fields,
+  name: string,
+  fail: (name: string) => Error,
+  max: number = MAX_INT,
+): number {
   const value = raw(source, name);
-  const parsed = source instanceof FormData || typeof value === "number" ? safeInteger(value) : null;
+  const parsed = source instanceof FormData || typeof value === "number" ? safeInteger(value, max) : null;
   if (parsed === null) throw fail(name);
   return parsed;
 }

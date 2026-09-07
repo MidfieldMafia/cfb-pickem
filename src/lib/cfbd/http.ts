@@ -1,8 +1,15 @@
+import { Refusal } from "@/lib/refusal";
 import type { CfbdClient, WeekQuery } from "./types";
 
 const CFBD_BASE_URL = "https://api.collegefootballdata.com";
 
-export class CfbdError extends Error {
+/**
+ * A `Refusal`, not a fault: the feed being down is not the commissioner's
+ * mistake, but "Check the feed now" is a button they pressed, so the honest
+ * answer is a sentence under it rather than the error page. The message names
+ * the service and the status so they can tell an outage from a bad key.
+ */
+export class CfbdError extends Refusal {
   constructor(
     public readonly status: number,
     path: string,

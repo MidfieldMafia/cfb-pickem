@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { Refusal } from "@/lib/refusal";
 import { cleanDisplayName, MAX_DISPLAY_NAME, MAX_PHONE } from "./limits";
 
 /** A URL-safe secret for a Magic Link token or a session id. */
@@ -10,13 +11,19 @@ export function newSecret(): string {
   return randomBytes(32).toString("base64url");
 }
 
+/**
+ * Deliberately not a `Refusal`: every console screen answers a
+ * non-commissioner with `notFound()`, so a member who reaches one of these
+ * must be told nothing rather than told what they may not do. It stays a
+ * fault, and `consoleEdit` lets it through to the error page.
+ */
 export class NotCommissioner extends Error {
   constructor() {
     super("Only a commissioner can do that.");
   }
 }
 
-export class InvalidMember extends Error {}
+export class InvalidMember extends Refusal {}
 
 /** A commissioner in good standing: the one definition, so no screen guesses. */
 export function isCommissioner(member: Member): boolean {
