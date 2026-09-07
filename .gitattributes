@@ -1,0 +1,5 @@
+# Shell scripts must keep LF endings. core.autocrlf=true would otherwise write
+# CRLF into a Windows working copy, and Git Bash then fails the script with
+# `$'\r': command not found` -- including .claude/hooks/preflight.sh, which runs
+# in every fresh worktree.
+*.sh text eol=lf
