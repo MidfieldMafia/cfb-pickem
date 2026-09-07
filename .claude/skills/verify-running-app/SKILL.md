@@ -7,11 +7,16 @@ description: Sign in to a running Saturday Slate and check a change on a real sc
 
 The test suite covers the server seams — picks, slate, results, scoring — and
 nothing covers rendering. A change to a page or a component is unverified until
-it has been fetched from a running server.
+it has been fetched from a running server. Fetching is the floor, not the
+ceiling: anything the browser decides — a control that reacts, a layout that
+resolves, a target big enough to hit — needs step 8.
 
 Every screen except `/expired` needs a session, and the app has no password
 login. The only way in is a Magic Link, which is minted from the database by a
 commissioner. **You cannot issue one yourself. Ask.**
+
+Alex works on Windows and Jonah on macOS, so the few steps that differ say
+which is which. Everything unmarked is the same on both.
 
 ## 1. Work out which checkout you are in
 
@@ -92,8 +97,8 @@ The fix is a real install in the worktree:
 npm ci --no-audit --no-fund
 ```
 
-Do not substitute a symlink or a junction to the main checkout's `node_modules`.
-Turbopack rejects it outright and panics:
+Do not substitute a link to the main checkout's `node_modules` — a symlink, or
+a junction on Windows. Turbopack rejects it outright and panics:
 
 ```
 Symlink [project]/node_modules is invalid, it points out of the filesystem root
@@ -150,26 +155,38 @@ any of them.
 
 ## 5. Fetch the screens the diff touched
 
+`$SCRATCH` below is this session's scratchpad directory — the one named in your
+system prompt. Take it from there rather than composing one; on Windows use it
+exactly as given, which step 6 explains.
+
 ```bash
+SCRATCH="<the scratchpad path from your system prompt>"
+
 curl -s -b "$S" "$BASE/week" \
   -o "$SCRATCH/week.html" -w "status=%{http_code} bytes=%{size_download}\n"
 ```
 
 Member screens: `/week`, `/picks`, `/picks/review`, `/welcome`.
 Commissioner screens, which need a member whose `isCommissioner` is set:
-`/console`, `/console/slate`, `/console/results`, `/console/members`.
+`/console`, `/console/slate`, `/console/members`, `/console/picks`,
+`/console/picks/<memberId>`, `/console/results`. Most take `?week=<n>`, so a
+change that depends on a Week's state needs the week named.
 
-A `200` proves the route compiled and rendered. Then actually read the HTML for
-the thing you changed — a page that renders is not a page that renders
-correctly.
+A `200` means the route rendered for this request. Then actually read the HTML
+for the thing you changed — a page that renders is not a page that renders
+correctly. A `307` means the auth guard answered instead, and proves nothing
+either way: see "What this does not cover".
 
 ```bash
 grep -oE "<h1[^>]*>[^<]*</h1>" "$SCRATCH/week.html"
 ```
 
-## 6. Windows path trap
+## 6. Path trap, on Windows only
 
-`node` here is a Windows binary and Git Bash paths do not reach it. A file
+Skip this on macOS: `node` is native there, and the POSIX paths the shell writes
+are the same ones node reads.
+
+On Windows `node` is a Windows binary and Git Bash paths do not reach it. A file
 written to `/tmp/week.html` from the shell is read back by
 `node -e "fs.readFileSync('/tmp/week.html')"` as `C:\tmp\week.html`, which fails
 with `ENOENT`.
@@ -183,10 +200,81 @@ Both are live session material. Keep them in the shell for the length of the
 check. Do not write them into a file, a commit, a PR body, an issue, or any
 request that leaves this machine. Local does not mean harmless.
 
-## What this does not cover
+## 8. What curl cannot see, and how to drive a browser
 
 `curl` returns server-rendered HTML with no JavaScript executed, so anything
 client-only shows its first server pass and not its settled state: the drawer,
-`useHydrated` time rendering in `LocalTime`, and the pick flow's chip
-transitions. For those, drive a real browser — check whether `chromium-cli` is
-available before assuming one is.
+`useHydrated` time rendering in `LocalTime`, the pick flow's chip transitions,
+a control that submits its own form on change, a `details` disclosure, and the
+real size of a tap target.
+
+There is no `chromium-cli` here — it is not an npm package and nothing installs
+it. What is usually missing is the driver, not the browser. Install the driver
+into the scratchpad, never the repo, so `package.json` stays clean:
+
+```bash
+npm i puppeteer-core --prefix "$SCRATCH" --no-audit --no-fund
+```
+
+Then confirm the browser is where you are about to tell it to look, rather than
+trusting the path — this is the mistake the `chromium-cli` line used to make:
+
+```bash
+# macOS
+ls "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# Windows
+ls "/c/Program Files/Google/Chrome/Application/chrome.exe"
+```
+
+Edge is Chromium too and drives identically if Chrome is absent; find its path
+the same way. `puppeteer-core` ships no browser of its own, so let the script
+choose rather than hardcoding one platform's path:
+
+```js
+const puppeteer = require("puppeteer-core");
+
+const CHROME =
+  process.platform === "darwin"
+    ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+
+const browser = await puppeteer.launch({
+  executablePath: CHROME,
+  headless: true,
+  args: ["--no-sandbox"],
+});
+const page = await browser.newPage();
+await page.setViewport({ width: 1440, height: 900 });
+// The cookie from step 4. `domain` is the host with no port.
+await page.setCookie({ name: "slate_session", value: SESSION, domain: "localhost", path: "/" });
+```
+
+**Measure; do not eyeball.** A screenshot shows you the things you thought to
+look at. Assert on numbers — `getBoundingClientRect()`, `scrollWidth >
+clientWidth`, `document.elementFromPoint(x, y) === el` — and read the
+screenshot afterwards for what numbers miss. PR #67's four rendering defects
+were all found by a measurement that disagreed with the screenshot: a rail
+8,000px tall, a header wider than the viewport, a mis-sorted-looking kickoff
+column, and a class of 40px tap targets.
+
+Two traps in the measuring:
+
+- A **closed `details`** keeps a layout rect in Chrome, so height is not a test
+  of hidden-ness. Its subtree is not painted and not hit-tested: check that
+  `innerText` is empty, or that `elementFromPoint` does not return the element.
+- A **checkbox's hit area** is the `label` wrapping it, not the 20px box. Walk
+  up with `closest("label")` before measuring.
+
+Driving the console is a **real write to the shared Neon database**. Prefer a
+week nobody is using, prefer an action that reverses itself, and confirm the
+reversal — PR #67 checked the slate builder's checkbox by putting one game on
+a past, empty, unpublished week and taking it back off, asserting the count
+returned to `0 games`.
+
+## What this does not cover
+
+Rendering is not compiling. Every console and member screen answers **307**
+from its layout's auth guard before rendering, so a redirect tells you nothing
+about whether the route builds. When a diff touches a `"use server"` file, a
+route handler, or the client/server boundary, `npx next build` is the check —
+see the Checks section of `CLAUDE.md`.
