@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { UserPlus } from "lucide-react";
 import { SECTION_LABEL } from "@/components/section-label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ export function AddMemberForm() {
           <Input name="phone" type="tel" maxLength={MAX_PHONE} placeholder="(256) 555-0140" autoComplete="off" />
         </label>
         <Button type="submit" disabled={pending}>
+          <UserPlus size={16} aria-hidden />
           {pending ? "Creating…" : "Create Magic Link"}
         </Button>
       </div>
