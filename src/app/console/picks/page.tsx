@@ -56,9 +56,12 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
       <td className="p-3 tabular-nums">
         {row.tiebreakerGuess === null ? <Badge variant="outline">Not set</Badge> : row.tiebreakerGuess}
       </td>
+      {/* `live` is the one hot orange and belongs to a game in progress; a
+          member who is finished is a win, with the glyph the design notes
+          require so the state does not rest on hue alone. */}
       <td className="p-3">
         {row.complete ? (
-          <Badge className="bg-live text-live-foreground">Done</Badge>
+          <Badge className="bg-win text-win-foreground">✓ Done</Badge>
         ) : (
           <span className="text-sm text-muted-foreground">Missing {missing.join(", ")}</span>
         )}

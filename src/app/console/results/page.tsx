@@ -1,3 +1,4 @@
+import { Ban, Pencil, Radio } from "lucide-react";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -42,10 +43,19 @@ const TONES: Record<ResultLabel, { variant?: "outline"; className?: string }> = 
   Void: { variant: "outline" },
 };
 
-/** The result's label, unless the game is overdue for a commissioner's attention. */
+/**
+ * The result's label, unless the game is overdue for a commissioner's
+ * attention. A game in progress carries the broadcast mark as well as the hot
+ * orange, so the one state that moves is not told by hue alone.
+ */
 function StatusBadge({ result, review }: { result: GameResult; review: boolean }) {
   if (review) return <Badge variant="destructive">Needs review</Badge>;
-  return <Badge {...TONES[result.label]}>{result.label}</Badge>;
+  return (
+    <Badge {...TONES[result.label]}>
+      {result.label === "In progress" ? <Radio size={12} aria-hidden /> : null}
+      {result.label}
+    </Badge>
+  );
 }
 
 const KINDS: Record<ResultAudit["kind"], string> = {
@@ -220,77 +230,103 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
   );
 }
 
-/** Set the score, clear an override, or void: everything a live game's last column offers. */
+/** The two disclosures' handles, as the mockups draw them: a button, and a word. */
+const SET_SCORE = "inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 py-2 font-semibold hover:bg-accent";
+const VOID = "inline-flex w-fit cursor-pointer items-center gap-1.5 py-2 font-semibold text-destructive";
+
+/**
+ * Set the score, clear an override, or void: everything a live game's last
+ * column offers — folded away until asked for. Ten rows each standing two
+ * score boxes and two notes open made the week's scores unreadable, and
+ * overriding is the exception, not the routine.
+ */
 function OverrideCell({ row }: { row: GameView }) {
   const { game, result } = row;
+  const matchup = `${game.awayTeam} at ${game.homeTeam}`;
   return (
-    <div className="space-y-2">
-      <ActionForm
-        action={overrideResultAction}
-        hidden={{ gameId: game.id }}
-        submit="Set score"
-        pendingLabel="Saving…"
-      >
-        <Input
-          name="awayScore"
-          type="number"
-          min={0}
-          max={MAX_SCORE}
-          step={1}
-          required
-          defaultValue={result.awayScore ?? ""}
-          aria-label={`${game.awayTeam} score`}
-          placeholder={game.awayTeam}
-          className="h-9 w-20"
-        />
-        <Input
-          name="homeScore"
-          type="number"
-          min={0}
-          max={MAX_SCORE}
-          step={1}
-          required
-          defaultValue={result.homeScore ?? ""}
-          aria-label={`${game.homeTeam} score`}
-          placeholder={game.homeTeam}
-          className="h-9 w-20"
-        />
-        <Input
-          name="note"
-          required
-          maxLength={MAX_NOTE}
-          placeholder="Why (required)"
-          aria-label={`Override note for ${game.awayTeam} at ${game.homeTeam}`}
-          className="h-9 w-44"
-        />
-      </ActionForm>
-      <div className="flex flex-wrap gap-2">
-        {result.source === "override" ? (
-          <ActionForm
-            action={clearOverrideAction}
-            hidden={{ gameId: game.id }}
-            submit="Clear override"
-            pendingLabel="Clearing…"
-            variant="ghost"
+    // Both handles on one line, as the mockup has them, so a row of scores
+    // stays a row and not a stack.
+    <div className="flex flex-wrap items-start gap-x-3">
+      <details>
+        <summary aria-label={`Set the score for ${matchup}`} className={SET_SCORE}>
+          <Pencil size={14} aria-hidden />
+          Set score
+        </summary>
+        <ActionForm
+          action={overrideResultAction}
+          hidden={{ gameId: game.id }}
+          submit="Save score"
+          pendingLabel="Saving…"
+          className="mt-2 space-y-2"
+        >
+          <Input
+            name="awayScore"
+            type="number"
+            min={0}
+            max={MAX_SCORE}
+            step={1}
+            required
+            defaultValue={result.awayScore ?? ""}
+            aria-label={`${game.awayTeam} score`}
+            // "Away", not the team: the column above says which team that is,
+            // and a name wide enough to matter is a name that gets clipped.
+            placeholder="Away"
+            className="h-9 w-20"
           />
-        ) : null}
+          <Input
+            name="homeScore"
+            type="number"
+            min={0}
+            max={MAX_SCORE}
+            step={1}
+            required
+            defaultValue={result.homeScore ?? ""}
+            aria-label={`${game.homeTeam} score`}
+            placeholder="Home"
+            className="h-9 w-20"
+          />
+          <Input
+            name="note"
+            required
+            maxLength={MAX_NOTE}
+            placeholder="Why (required)"
+            aria-label={`Override note for ${matchup}`}
+            className="h-9 w-44"
+          />
+        </ActionForm>
+      </details>
+      {result.source === "override" ? (
+        <ActionForm
+          action={clearOverrideAction}
+          hidden={{ gameId: game.id }}
+          submit="Clear override"
+          pendingLabel="Clearing…"
+          variant="ghost"
+        />
+      ) : null}
+      <details>
+        <summary aria-label={`Void ${matchup}`} className={VOID}>
+          <Ban size={14} aria-hidden />
+          Void
+        </summary>
         <ActionForm
           action={voidResultAction}
           hidden={{ gameId: game.id }}
           submit="Void"
           pendingLabel="Voiding…"
           variant="destructive"
+          className="mt-2 space-y-2"
         >
           <Input
             name="note"
             required
             maxLength={MAX_NOTE}
             placeholder="Void note (why)"
-            aria-label={`Void note for ${game.awayTeam} at ${game.homeTeam}`}
+            aria-label={`Void note for ${matchup}`}
             className="h-9 w-44"
           />
         </ActionForm>
-      </div>
+      </details>
     </div>
   );
 }
