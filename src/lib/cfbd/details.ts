@@ -44,9 +44,10 @@ function pointsByTeam(seasonGames: CfbdGame[]): Map<number, Tally> {
 
 /**
  * The line the first sportsbook posted for each game, preferring the feed's own
- * formatting. Shared with `weekCandidates`, which shows it on the slate builder.
+ * formatting. Comes back on `WeekFeed`, so the slate builder shows it without
+ * a second read of `/lines`.
  */
-export function bookLines(betting: CfbdBettingGame[]): Map<number, string> {
+function bookLines(betting: CfbdBettingGame[]): Map<number, string> {
   const lines = new Map<number, string>();
   for (const b of betting) {
     const line = b.lines.find((l) => l.spread !== null);
@@ -111,11 +112,24 @@ function spreadText(
   return `${favorite} -${Math.abs(modelSpread)}`;
 }
 
+/**
+ * The week's fan-out: one read per endpoint, joined once. `games` and `lines`
+ * come back with the detail because the callers that want them already paid
+ * for them here — asking the client for either again doubles what a
+ * slate-builder render costs against a monthly quota, and no test can see it.
+ */
+export interface WeekFeed {
+  details: Map<number, GameDetail>;
+  games: CfbdGame[];
+  /** The first posted spread per game, "Texas -1.5". */
+  lines: Map<number, string>;
+}
+
 export async function weekDetails(
   cfbd: CfbdClient,
   rain: RainChanceSource,
   query: WeekQuery,
-): Promise<Map<number, GameDetail>> {
+): Promise<WeekFeed> {
   const [games, pollWeeks, betting, seasonGames, records, stats, media, winProbability, venues, weather] =
     await Promise.all([
       cfbd.games(query),
@@ -192,5 +206,5 @@ export async function weekDetails(
       away: form(game.awayId, game.awayTeam),
     });
   }
-  return details;
+  return { details, games, lines };
 }

@@ -51,10 +51,3 @@ export function httpCfbd(apiKey: string, fetchImpl: typeof fetch = fetch): CfbdC
     weather: (q: WeekQuery) => get<CfbdGameWeather[]>("/games/weather", regular(q)),
   };
 }
-
-/** The production client, keyed from the environment. Throws if the key is missing. */
-export function cfbdFromEnv(): CfbdClient {
-  const apiKey = process.env.CFBD_API_KEY;
-  if (!apiKey) throw new Error("CFBD_API_KEY is not set; run `vercel env pull .env.local`.");
-  return httpCfbd(apiKey);
-}

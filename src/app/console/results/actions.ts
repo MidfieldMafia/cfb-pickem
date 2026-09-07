@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { cfbdFromEnv } from "@/lib/cfbd/http";
+import { cfbd } from "@/lib/cfbd";
 import { requireConsole } from "@/lib/members/current";
 import { safeInteger } from "@/lib/parse";
 import { plural } from "@/lib/plural";
@@ -51,7 +51,7 @@ export async function refreshResultsAction(_prev: ResultActionState, formData: F
   await requireConsole();
   return attempt(async () => {
     const slate = await slateFor(db(), num(formData, "weekId"));
-    const { changed } = await ingestResults(db(), cfbdFromEnv(), slate);
+    const { changed } = await ingestResults(db(), cfbd({ bypassCache: true }), slate);
     return changed === 0
       ? "Checked the feed; nothing changed."
       : `Checked the feed; ${plural(changed, "game")} updated.`;

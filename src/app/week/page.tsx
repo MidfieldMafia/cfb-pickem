@@ -7,7 +7,7 @@ import { MemberChip } from "@/components/member-chip";
 import { SECTION_LABEL } from "@/components/section-label";
 import { TeamName } from "@/components/team-name";
 import { Wordmark } from "@/components/wordmark";
-import { cfbdFromEnv } from "@/lib/cfbd/http";
+import { cfbd } from "@/lib/cfbd";
 import { requireMember } from "@/lib/members/current";
 import { remainingLabel } from "@/lib/picks/progress";
 import { plural } from "@/lib/plural";
@@ -20,7 +20,7 @@ export default async function Week() {
   const member = await requireMember();
   const week = await currentWeek(db(), member, new Date(), {
     graded: true,
-    cfbd: cfbdFromEnv,
+    cfbd,
   });
   const slate = week?.slate ?? null;
   const games = slate?.games.map(toGameJson) ?? [];
