@@ -17,7 +17,13 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    /**
+     * `.tsx` as well, or a component suite is collected by nobody and passes
+     * by not existing. Each such file opts into jsdom with its own
+     * `@vitest-environment` pragma, the way `picks/clock.test.ts` already
+     * does — the server seams are the majority and stay on `node`.
+     */
+    include: ["src/**/*.test.{ts,tsx}"],
     /**
      * A server-seam file's first test pays for the migrations — `createTestDb`
      * runs them once and copies the result for every test after it — and with

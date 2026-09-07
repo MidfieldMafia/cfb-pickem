@@ -2,13 +2,15 @@ import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { games, weeks, type Member } from "@/db/schema";
 import { sharedFeed } from "@/lib/cfbd/cache";
-import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
-import type { CfbdClient, CfbdGame } from "@/lib/cfbd/types";
+import { recordedCfbd } from "@/lib/cfbd/recorded";
+import type { CfbdClient } from "@/lib/cfbd/types";
 import { NotCommissioner } from "@/lib/members/members";
 import { PicksHidden } from "@/lib/picks/picks";
 import { slateFor, voidGame } from "@/lib/slate/slate";
 import {
   FAMU_AT_MIAMI,
+  feedWith,
+  type Finals,
   lockAs,
   pickAs,
   OHIO_STATE_AT_TEXAS,
@@ -34,29 +36,6 @@ import {
   seasonResult,
   weekResult,
 } from "./results";
-
-type Finals = Record<number, [away: number, home: number]>;
-
-/** The Week 2 recording with some games reported final. `calls` counts feed reads. */
-function feedWith(finals: Finals, live: Finals = {}): CfbdClient & { calls: number } {
-  const feedGames: CfbdGame[] = recordings["2026-week-2"].games.map((g) => {
-    const final = finals[g.id];
-    const inPlay = live[g.id];
-    if (final) return { ...g, completed: true, awayPoints: final[0], homePoints: final[1] };
-    if (inPlay) return { ...g, completed: false, awayPoints: inPlay[0], homePoints: inPlay[1] };
-    return g;
-  });
-  const inner = recordedCfbd("2026-week-2", { games: feedGames });
-  const client = {
-    ...inner,
-    calls: 0,
-    games: async (q: { year: number; week: number }) => {
-      client.calls += 1;
-      return inner.games(q);
-    },
-  };
-  return client;
-}
 
 /**
  * The shared published Week 2 with Grandma's and Jonah's picks in. Ingest, the
