@@ -144,7 +144,34 @@ Order matters: prune once the files are actually gone.
 
 ## 7. When the probe stays locked
 
-Something outside this session holds it. Ask that question directly:
+Something the path scan cannot see holds it. **A working directory is not part
+of a command line**, so a process merely *sitting* in the worktree is invisible
+to step 3 — and the only thing matching the path is often your own scanning
+shell, which reads as a reassuring "nothing holds it" while the delete keeps
+failing.
+
+That is a real case, not a hypothetical: a `until gh pr checks 62 ...; do sleep
+20; done` loop, launched with its cwd inside a worktree, outlived that worktree
+and blocked the delete with `Device or resource busy`. Nothing in its command
+line named the tree.
+
+Run **both** scans. They cover different populations, and neither is a superset
+of the other.
+
+Working directories, from Git Bash — catches anything descended from a shell:
+
+```bash
+wt=<worktree path fragment>
+for p in /proc/[0-9]*; do
+  c=$(readlink "$p/cwd" 2>/dev/null)
+  case "$c" in *$wt*) echo "$p winpid=$(cat $p/winpid 2>/dev/null) $(tr '\0' ' ' < $p/cmdline | cut -c1-80)";; esac
+done
+```
+
+Kill the **parent** and rescan. A `sleep` child rotates its pid on every loop,
+so chasing the child never converges.
+
+Command lines, from PowerShell — catches anything launched outside a shell:
 
 ```powershell
 Get-CimInstance Win32_Process |
@@ -153,10 +180,19 @@ Get-CimInstance Win32_Process |
     @{n='cmd';e={ $_.CommandLine.Substring(0, [Math]::Min(100, $_.CommandLine.Length)) }}
 ```
 
-Dropping the `Name='node.exe'` filter widens it to every process, which catches
-the usual non-node holders: an editor indexing the tree (the pycharm MCP server
-in this setup runs one), another shell parked in the directory, a file manager
-with it open, or a virus scanner mid-pass. An editor or a file manager belongs
-to the user — report what holds it and ask, rather than ending their process.
+Dropping the `Name='node.exe'` filter widens it to the usual non-node holders:
+an editor indexing the tree (the pycharm MCP server in this setup runs one), a
+file manager with it open, or a virus scanner mid-pass. An editor or a file
+manager belongs to the user — report what holds it and ask, rather than ending
+their process.
 
-The macOS equivalent, should it ever be needed: `lsof +D <worktree>`.
+Where each scan is blind, measured on this machine: `/proc` lists only
+Git Bash descendants, so a `node.exe` started from PowerShell with its cwd in
+the tree is absent from it, while `Win32_Process` shows that same process
+without ever revealing its cwd. A holder that is both started outside a shell
+and unnamed in its own command line escapes both — the rename probe still proves
+the lock is real, so say that plainly and hand it to the user rather than
+reporting the tree as clean.
+
+The macOS equivalent of the whole step: `lsof +D <worktree>`, which reports cwd
+and open files together.
