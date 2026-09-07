@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/preflight.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/preflight.sh\"",
             "timeout": 900,
             "statusMessage": "Preflight: next build + typecheck before push"
           }
