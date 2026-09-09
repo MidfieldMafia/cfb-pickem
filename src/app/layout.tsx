@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     // Turns an iOS home screen launch into a real standalone window, which is
     // also what makes navigator.standalone answer truthfully.
     capable: true,
-    title: "Sat Slate",
+    title: "Saturday Slate",
     statusBarStyle: "default",
   },
   // Next emits only the modern `mobile-web-app-capable`. iOS before 16.4 reads

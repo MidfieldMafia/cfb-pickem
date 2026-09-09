@@ -49,9 +49,9 @@ describe("embedded browsers, where Add to Home Screen may be missing", () => {
     expect(readBrowser(AGENTS.androidWebview)).toEqual({ phone: "android", embedded: true });
   });
 
-  test("the browser Messages opens cannot be told apart from Safari, so iOS is warned either way", () => {
-    // A Safari View Controller sends Safari's own user agent. The welcome flow
-    // relies on the iOS copy covering this, not on detection.
+  test("a Safari View Controller passes as Safari, so an iPhone is only warned on proof", () => {
+    // It sends Safari's own user agent. Since iOS 17 its share sheet has Add
+    // to Home Screen as well, so nothing is lost by not warning here.
     expect(readBrowser(AGENTS.iphoneSafari).embedded).toBe(false);
   });
 });
