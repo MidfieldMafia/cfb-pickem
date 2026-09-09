@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Pennant } from "@/components/pennant";
 import { appUrl } from "@/lib/app-url";
 import { requireConsole } from "@/lib/members/current";
-import { listMembers, magicLinkFor } from "@/lib/members/members";
+import { deleteWarning } from "@/lib/members/console-edits";
+import { listMembers, magicLinkFor, pickCountByMember } from "@/lib/members/members";
 import { plural } from "@/lib/plural";
 import { relativeTime } from "@/lib/relative-time";
-import { regenerateAction, setActiveAction } from "./actions";
+import { deleteMemberAction, regenerateAction, setActiveAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
+import { ActionForm } from "../action-form";
 import { CopyButton } from "@/components/copy-button";
 
 function maskedLink(link: string): string {
@@ -19,7 +21,10 @@ function maskedLink(link: string): string {
 
 export default async function Members() {
   const commissioner = await requireConsole();
-  const roster = await listMembers(db(), commissioner);
+  const [roster, pickCounts] = await Promise.all([
+    listMembers(db(), commissioner),
+    pickCountByMember(db(), commissioner),
+  ]);
   const base = appUrl();
   const commissioners = roster.filter((m) => m.isCommissioner).length;
 
@@ -104,13 +109,33 @@ export default async function Members() {
                           >
                             <MoreHorizontal size={16} aria-hidden />
                           </summary>
-                          <form action={setActiveAction} className="mt-1">
-                            <input type="hidden" name="memberId" value={member.id} />
-                            <input type="hidden" name="active" value={member.active ? "false" : "true"} />
-                            <Button type="submit" variant={member.active ? "destructive" : "secondary"} size="sm">
-                              {member.active ? "Deactivate" : "Reactivate"}
-                            </Button>
-                          </form>
+                          <div className="mt-1 flex flex-col items-end gap-2">
+                            <form action={setActiveAction}>
+                              <input type="hidden" name="memberId" value={member.id} />
+                              <input type="hidden" name="active" value={member.active ? "false" : "true"} />
+                              <Button type="submit" variant={member.active ? "destructive" : "secondary"} size="sm">
+                                {member.active ? "Deactivate" : "Reactivate"}
+                              </Button>
+                            </form>
+                            {/* Deleting is only offered once they are deactivated,
+                                so the irreversible step is never one click from
+                                the reversible one, and the sentence says what
+                                goes with them before the button does it. */}
+                            {member.active ? null : (
+                              <ActionForm
+                                action={deleteMemberAction}
+                                hidden={{ memberId: member.id }}
+                                submit="Delete"
+                                pendingLabel="Deleting…"
+                                variant="destructive"
+                                className="space-y-1 text-right"
+                              >
+                                <span className="max-w-56 text-xs text-muted-foreground">
+                                  {deleteWarning(pickCounts.get(member.id) ?? 0)}
+                                </span>
+                              </ActionForm>
+                            )}
+                          </div>
                         </details>
                       )}
                     </div>

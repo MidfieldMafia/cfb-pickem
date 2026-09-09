@@ -5,8 +5,11 @@ import { cookies } from "next/headers";
 import { db } from "@/db";
 import { SESSION_COOKIE } from "@/lib/members/cookie";
 import { requireConsole } from "@/lib/members/current";
+import type { ActionState } from "@/lib/console/state";
+import { deleteMember } from "@/lib/members/console-edits";
 import { addMember, InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
 import { integerField } from "@/lib/parse";
+import { consoleRoute } from "../context";
 
 export interface AddMemberState {
   error?: string;
@@ -42,4 +45,8 @@ export async function setActiveAction(formData: FormData) {
   const actor = await requireConsole();
   await setMemberActive(db(), actor, memberId(formData), formData.get("active") === "true");
   revalidatePath("/console/members");
+}
+
+export async function deleteMemberAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return deleteMember(consoleRoute(), formData);
 }
