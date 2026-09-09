@@ -1,7 +1,16 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, eq, ne } from "drizzle-orm";
-import { members, sessions, type Member } from "@/db/schema";
+import { and, asc, count, eq, ne } from "drizzle-orm";
+import {
+  locks,
+  members,
+  pickAudits,
+  picks,
+  resultAudits,
+  sessions,
+  tiebreakerGuesses,
+  type Member,
+} from "@/db/schema";
 import type { Db } from "@/db/types";
 import { Refusal } from "@/lib/refusal";
 import { cleanDisplayName, MAX_DISPLAY_NAME, MAX_PHONE } from "./limits";
@@ -129,4 +138,76 @@ export async function setMemberActive(
   if (!active && memberId === actor.id) throw new InvalidMember("You cannot deactivate yourself.");
   if (!active) await db.delete(sessions).where(eq(sessions.memberId, memberId));
   return updateMember(db, memberId, { active });
+}
+
+/**
+ * How many Picks each member has, keyed by member id; a member with none is
+ * absent. The console reads it next to the Delete button, so the sentence
+ * before the click says what goes with them rather than the one after.
+ */
+export async function pickCountByMember(db: Db, actor: Member): Promise<Map<number, number>> {
+  requireCommissioner(actor);
+  const rows = await db.select({ memberId: picks.memberId, picks: count() }).from(picks).groupBy(picks.memberId);
+  return new Map(rows.map((row) => [row.memberId, row.picks]));
+}
+
+/**
+ * Deletes a member outright: the row, their sessions, and every Pick, Lock,
+ * Tiebreaker Guess and change-log entry about them. Deactivating keeps a
+ * member on the boards they played (`roster.ts` says why); deleting is the
+ * commissioner's decision to take them off, so the Leaderboard changes for
+ * any Week they picked in. Two refusals:
+ *
+ * - The member must already be deactivated. Deactivating is reversible and
+ *   deleting is not, so the second step is never one click from the first.
+ * - A member whose console edits are on the record — a former commissioner
+ *   who changed someone else's pick or a result — stays, because the log that
+ *   names them is worth more than the row. Their own audits go with them.
+ *
+ * The Neon HTTP driver runs no transactions, so the writes go in an order
+ * that leaves a retryable member behind if one fails midway: the row itself
+ * goes last.
+ */
+export async function removeMember(db: Db, actor: Member, memberId: number): Promise<Member> {
+  requireCommissioner(actor);
+  if (memberId === actor.id) throw new InvalidMember("You cannot delete yourself.");
+  const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
+  if (!member) throw new InvalidMember("No such member.");
+  if (member.active) throw new InvalidMember(`Deactivate ${member.displayName} first.`);
+  if (await madeConsoleEdits(db, memberId)) {
+    throw new InvalidMember(
+      `${member.displayName} made commissioner edits that are on the record, so they cannot be deleted.`,
+    );
+  }
+  await db.delete(sessions).where(eq(sessions.memberId, memberId));
+  await db.delete(pickAudits).where(eq(pickAudits.memberId, memberId));
+  await db.delete(tiebreakerGuesses).where(eq(tiebreakerGuesses.memberId, memberId));
+  await db.delete(locks).where(eq(locks.memberId, memberId));
+  await db.delete(picks).where(eq(picks.memberId, memberId));
+  const [deleted] = await db.delete(members).where(eq(members.id, memberId)).returning();
+  return deleted;
+}
+
+/** Whether a row that is not the member's own names them as the one who changed it. */
+async function madeConsoleEdits(db: Db, memberId: number): Promise<boolean> {
+  const rows = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(picks)
+      .where(and(ne(picks.memberId, memberId), eq(picks.updatedBy, memberId))),
+    db
+      .select({ n: count() })
+      .from(locks)
+      .where(and(ne(locks.memberId, memberId), eq(locks.updatedBy, memberId))),
+    db
+      .select({ n: count() })
+      .from(tiebreakerGuesses)
+      .where(and(ne(tiebreakerGuesses.memberId, memberId), eq(tiebreakerGuesses.updatedBy, memberId))),
+    db
+      .select({ n: count() })
+      .from(pickAudits)
+      .where(and(ne(pickAudits.memberId, memberId), eq(pickAudits.changedBy, memberId))),
+    db.select({ n: count() }).from(resultAudits).where(eq(resultAudits.changedBy, memberId)),
+  ]);
+  return rows.some(([row]) => row.n > 0);
 }

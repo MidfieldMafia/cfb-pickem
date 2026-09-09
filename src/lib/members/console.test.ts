@@ -1,12 +1,19 @@
 import { describe, expect, test } from "vitest";
+import { eq } from "drizzle-orm";
+import { members, picks } from "@/db/schema";
 import { createTestDb } from "@/test/db";
+import { pickAs, publishWeek2, THURSDAY } from "@/test/week-2";
+import { applyEdit } from "@/lib/picks/edits";
+import { asCommissioner } from "./authority";
 import {
   addMember,
   bootstrapCommissioner,
   listMembers,
   magicLinkFor,
   NotCommissioner,
+  pickCountByMember,
   regenerateMagicLink,
+  removeMember,
   setMemberActive,
 } from "./members";
 import { exchangeToken, getSession } from "./auth";
@@ -79,11 +86,56 @@ describe("commissioner console", () => {
     await expect(listMembers(db, grandma)).rejects.toBeInstanceOf(NotCommissioner);
     await expect(regenerateMagicLink(db, grandma, jonah.id)).rejects.toBeInstanceOf(NotCommissioner);
     await expect(setMemberActive(db, grandma, jonah.id, false)).rejects.toBeInstanceOf(NotCommissioner);
+    await expect(removeMember(db, grandma, jonah.id)).rejects.toBeInstanceOf(NotCommissioner);
+    await expect(pickCountByMember(db, grandma)).rejects.toBeInstanceOf(NotCommissioner);
   });
 
   test("a commissioner cannot deactivate themselves", async () => {
     const { db, jonah } = await setup();
 
     await expect(setMemberActive(db, jonah, jonah.id, false)).rejects.toThrow(/yourself/);
+  });
+
+  test("deleting a deactivated member takes their picks, their sessions and their link with them", async () => {
+    const { db, jonah, grandma, slate, michigan, texas } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, grandma, slate, texas, texas.awayTeamId, THURSDAY);
+    const session = await exchangeToken(db, grandma.token);
+    await setMemberActive(db, jonah, grandma.id, false);
+    expect(await pickCountByMember(db, jonah)).toEqual(new Map([[grandma.id, 2]]));
+
+    const gone = await removeMember(db, jonah, grandma.id);
+
+    expect(gone.id).toBe(grandma.id);
+    expect((await listMembers(db, jonah)).map((m) => m.displayName)).toEqual(["Jonah"]);
+    expect(await db.query.picks.findMany({ where: eq(picks.memberId, grandma.id) })).toEqual([]);
+    expect(await pickCountByMember(db, jonah)).toEqual(new Map());
+    expect(await getSession(db, session!.sessionId)).toBeNull();
+    expect(await exchangeToken(db, grandma.token)).toBeNull();
+    await expect(removeMember(db, jonah, grandma.id)).rejects.toThrow(/no such member/i);
+  });
+
+  test("an active member is deactivated first, and a commissioner is never deleted by themselves", async () => {
+    const { db, jonah, grandma } = await setup();
+
+    await expect(removeMember(db, jonah, grandma.id)).rejects.toThrow(/deactivate grandma first/i);
+    await expect(removeMember(db, jonah, jonah.id)).rejects.toThrow(/yourself/);
+    expect((await listMembers(db, jonah)).map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
+  });
+
+  test("a former commissioner whose edits are on the record stays", async () => {
+    const { db, jonah, grandma, slate, michigan } = await publishWeek2();
+    const [alex] = await db.update(members).set({ isCommissioner: true }).where(eq(members.id, grandma.id)).returning();
+    await applyEdit(
+      db,
+      asCommissioner(alex, jonah.id),
+      slate,
+      { kind: "pick", gameId: michigan.id, teamId: michigan.awayTeamId },
+      THURSDAY,
+    );
+    await setMemberActive(db, jonah, alex.id, false);
+
+    await expect(removeMember(db, jonah, alex.id)).rejects.toThrow(/on the record/);
+    expect((await listMembers(db, jonah)).map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
   });
 });
