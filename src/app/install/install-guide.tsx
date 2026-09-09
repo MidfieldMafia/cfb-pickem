@@ -60,21 +60,15 @@ function browserHere(): Browser {
 /**
  * What to say when the steps below will not work where the member is standing.
  *
- * A Magic Link arrives by text, so the first tap usually lands in whatever
- * browser Messages embeds — and an embedded browser's share sheet often has no
- * Add to Home Screen. iOS gets this warning even when nothing proves it,
- * because the Safari View Controller that Messages uses is indistinguishable
- * from Safari itself.
+ * An app's embedded browser often has no Add to Home Screen in its share
+ * sheet, so the member has to reopen the link in a real browser first. Only a
+ * proven embed gets this: a link tapped in Messages opens the phone's default
+ * browser app, where the steps work as written.
  */
 function reopenAdvice(phone: Guided, embedded: boolean): string | null {
-  const browser = phone === "ios" ? "Safari" : "Chrome";
-  if (embedded) {
-    return `You’re inside another app’s browser, which has no Add to Home Screen. Tap its ••• menu and choose Open in ${browser} first.`;
-  }
-  if (phone === "ios") {
-    return "Opened this straight from Messages? Tap ••• and choose Open in Safari first — the built-in browser may not offer Add to Home Screen.";
-  }
-  return null;
+  if (!embedded) return null;
+  const browser = phone === "ios" ? "Safari or Chrome" : "Chrome";
+  return `You’re inside another app’s browser, which has no Add to Home Screen. Tap its ••• menu and choose Open in ${browser} first.`;
 }
 
 function subscribeInstalled(changed: () => void) {

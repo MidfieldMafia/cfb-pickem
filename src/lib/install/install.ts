@@ -18,11 +18,10 @@ export interface Browser {
    * may have no "Add to Home Screen", so the member has to reopen the link in
    * Safari or Chrome first.
    *
-   * This is only ever a lower bound. The browser Messages opens is a Safari
-   * View Controller, which reports itself as plain Safari and cannot be told
-   * apart here — which is exactly the case a Magic Link arrives in. iOS
-   * therefore gets the "open in Safari" advice either way; proving it only
-   * lets us say it more firmly.
+   * This is only ever a lower bound: a Safari View Controller reports itself
+   * as plain Safari and cannot be told apart here. That is acceptable because
+   * iOS 17 gave it Add to Home Screen too, and a Magic Link tapped in Messages
+   * opens the default browser app rather than an embed in the first place.
    */
   embedded: boolean;
 }
