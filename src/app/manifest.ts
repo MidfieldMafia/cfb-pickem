@@ -12,8 +12,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Saturday Slate",
-    // What fits under a home screen icon before iOS starts truncating.
-    short_name: "Sat Slate",
+    // Also the name the home screen offers, so it matches the app's own name
+    // even though iOS may shorten it with an ellipsis under the icon.
+    short_name: "Saturday Slate",
     description: "Family college football pick'em.",
     start_url: "/",
     display: "standalone",

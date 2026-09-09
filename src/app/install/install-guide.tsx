@@ -11,12 +11,18 @@ interface Step {
   text: string;
 }
 
-/** The two platforms there are steps for. A desktop visitor is shown the iPhone ones. */
+/**
+ * The two platforms there are steps for. A desktop visitor is shown the iPhone ones.
+ *
+ * The iPhone steps name no browser: Safari and Chrome on iOS both add to the
+ * home screen from the same Share sheet, so the copy fits whichever one the
+ * link opened in.
+ */
 type Guided = Exclude<Phone, "other">;
 
 const STEPS: Record<Guided, Step[]> = {
   ios: [
-    { Icon: SquareArrowUp, text: "Tap the Share button at the bottom of Safari." },
+    { Icon: SquareArrowUp, text: "Tap the Share button in your browser’s toolbar." },
     { Icon: SquarePlus, text: "Scroll down and tap “Add to Home Screen”." },
     { Icon: Check, text: "Tap Add. Saturday Slate opens like an app, no browser bar." },
   ],
@@ -30,8 +36,8 @@ const STEPS: Record<Guided, Step[]> = {
 };
 
 const TABS: { phone: Guided; label: string }[] = [
-  { phone: "ios", label: "iPhone · Safari" },
-  { phone: "android", label: "Android · Chrome" },
+  { phone: "ios", label: "iPhone" },
+  { phone: "android", label: "Android" },
 ];
 
 /** Chrome's install prompt. Not in lib.dom — it has never shipped outside Chromium. */
@@ -167,7 +173,7 @@ export function InstallGuide() {
 
       {phone === "ios" ? (
         <p className="text-sm text-muted-foreground">
-          Add it from this same Safari window. The installed app copies your sign-in at the moment
+          Add it from this same browser window. The installed app copies your sign-in at the moment
           you add it, so a link opened somewhere else later would land you signed out.
         </p>
       ) : null}
