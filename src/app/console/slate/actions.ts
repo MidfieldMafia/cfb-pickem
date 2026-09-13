@@ -40,6 +40,6 @@ export async function voidGameAction(_prev: SlateActionState, formData: FormData
   return editVoidGame(consoleRoute(), formData);
 }
 
-export async function refreshAction(formData: FormData) {
-  await refreshSlate(consoleRoute(), formData, freshCfbd(), openMeteo());
+export async function refreshAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
+  return refreshSlate(consoleRoute(), formData, freshCfbd(), openMeteo());
 }

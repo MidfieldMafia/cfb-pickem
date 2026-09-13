@@ -55,6 +55,10 @@ export async function consoleEdit(
  * from a published Week. The screen disables those, so reaching them means
  * something is wrong and the error page is the honest answer — swallowing it
  * into a form that renders no message would hide it instead.
+ *
+ * An external fault — CollegeFootballData being down — is not one of these:
+ * nothing the screen disables prevents it, and it is not the commissioner's
+ * mistake. That belongs on `consoleEdit` instead, as `refreshSlate` does.
  */
 export async function consoleAction(
   route: ConsoleRoute,

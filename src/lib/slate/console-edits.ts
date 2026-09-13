@@ -90,14 +90,17 @@ export function chooseTiebreaker(route: ConsoleRoute, form: FormData): Promise<E
  * Re-reads the week from the feed. It writes game rows without an actor of its
  * own — see `refreshFromFeed` — so the commissioner check here is the only one
  * guarding it, which is why it runs through the route like every other edit.
+ *
+ * On `consoleEdit`, not `consoleAction`: a feed outage is nobody's mistake,
+ * screen or commissioner, so it answers a sentence rather than the error page.
  */
 export function refreshSlate(
   route: ConsoleRoute,
   form: FormData,
   client: CfbdClient,
   rain: RainChanceSource,
-): Promise<EditOutcome> {
-  return consoleAction(route, async ({ db }) => {
+): Promise<ActionState> {
+  return consoleEdit(route, async ({ db }) => {
     await refreshFromFeed(db, client, num(form, "weekId"), rain);
     return { revalidate: slateOnly };
   });

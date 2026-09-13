@@ -4,14 +4,17 @@
  *
  * The revalidate sets are the only thing these wrappers add over `slate.ts`,
  * so they are asserted on every edit. The other half of what is under test is
- * which wrapper each edit uses: the three on `consoleEdit` turn a refusal into
- * a sentence for the screen, and the four on `consoleAction` deliberately do
+ * which wrapper each edit uses: the four on `consoleEdit` turn a refusal into
+ * a sentence for the screen, and the three on `consoleAction` deliberately do
  * not — the console disables those buttons, so reaching one means something is
- * wrong and the error page is the honest answer.
+ * wrong and the error page is the honest answer. `refreshSlate` is one of the
+ * four for a different reason: a feed outage is nobody's mistake, screen or
+ * commissioner, so it gets a sentence too.
  */
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { games, weeks } from "@/db/schema";
+import { CfbdError } from "@/lib/cfbd/http";
 import { NotCommissioner } from "@/lib/members/members";
 import { form, routeFor } from "@/test/console";
 import {
@@ -127,7 +130,7 @@ describe("publishing", () => {
 });
 
 /**
- * The four edits on `consoleAction`. A refusal here is a fault, so it throws
+ * The three edits on `consoleAction`. A refusal here is a fault, so it throws
  * past the form rather than coming back as a message — the distinction the
  * screen's disabled buttons rest on.
  */
@@ -187,12 +190,15 @@ describe("the edits whose refusals are faults", () => {
     );
   });
 
+});
+
+describe("refreshing from the feed", () => {
   /**
    * `refreshSlate` writes game rows with no actor of its own, so the
    * commissioner check on the route is the only thing guarding it. That is why
    * it goes through the route at all, and it is what this asserts.
    */
-  test("refreshing re-reads the week, and the route's check is the only thing guarding it", async () => {
+  test("re-reads the week, and the route's check is the only thing guarding it", async () => {
     const { db, cfbd, rain, route, revalidated, week, michigan } = await draft();
 
     // Move a kickoff away from the feed so the refresh has something to put back.
@@ -200,7 +206,7 @@ describe("the edits whose refusals are faults", () => {
     await db.update(games).set({ kickoff: moved }).where(eq(games.id, michigan.id));
     const kickoffOf = async () => (await slateFor(db, week.id)).games.find((g) => g.id === michigan.id)!.kickoff;
 
-    expect(await refreshSlate(route, form({ weekId: week.id }), cfbd, rain)).toEqual({ revalidate: SLATE_ONLY });
+    expect(await refreshSlate(route, form({ weekId: week.id }), cfbd, rain)).toEqual({});
     expect(revalidated).toEqual(SLATE_ONLY);
     expect(await kickoffOf()).not.toEqual(moved);
 
@@ -217,5 +223,25 @@ describe("the edits whose refusals are faults", () => {
 
     await expect(refreshSlate(barred, form({ weekId: week.id }), cfbd, rain)).rejects.toThrow(NotCommissioner);
     expect(await kickoffOf()).toEqual(moved);
+  });
+
+  /**
+   * The reason `refreshSlate` is on `consoleEdit` rather than `consoleAction`:
+   * a feed outage is nobody's mistake, screen or commissioner, so it answers a
+   * sentence instead of throwing past the builder to the error page.
+   */
+  test("a feed outage is a sentence under the button, not the error page", async () => {
+    const { cfbd, rain, route, revalidated, week } = await draft();
+    const down: typeof cfbd = {
+      ...cfbd,
+      games: async () => {
+        throw new CfbdError(503, "/games");
+      },
+    };
+
+    expect(await refreshSlate(route, form({ weekId: week.id }), down, rain)).toEqual({
+      error: "CollegeFootballData returned 503 for /games.",
+    });
+    expect(revalidated).toEqual([]);
   });
 });

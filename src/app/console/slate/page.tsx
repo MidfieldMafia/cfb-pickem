@@ -20,17 +20,12 @@ import { pillClass } from "../pill";
 import { requestedWeekNumber } from "../week-param";
 import { fbsOnlyParam, filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
 import { dirParam, sortCandidates, sortParam, type SortDir, type SortKey } from "./candidate-sort";
-import {
-  addGameAction,
-  refreshAction,
-  removeGameAction,
-  setTiebreakerAction,
-  voidGameAction,
-} from "./actions";
+import { addGameAction, removeGameAction, setTiebreakerAction, voidGameAction } from "./actions";
 import { openMeteo } from "@/lib/weather/open-meteo";
 import { CandidateCheckbox } from "./candidate-checkbox";
 import { DeadlineForm } from "./deadline-form";
 import { PublishButton } from "./publish-button";
+import { RefreshButton } from "./refresh-button";
 
 export default async function SlateBuilder({
   searchParams,
@@ -156,12 +151,7 @@ export default async function SlateBuilder({
             <Link href={fbsOnlyHref()} className={pillClass(fbsOnly)}>
               FBS only
             </Link>
-            <form action={refreshAction} className="ml-auto">
-              <input type="hidden" name="weekId" value={week.id} />
-              <Button type="submit" variant="ghost" size="sm">
-                Refresh from feed
-              </Button>
-            </form>
+            <RefreshButton weekId={week.id} />
           </div>
           {feedError ? (
             <p role="alert" className="p-3 text-sm font-semibold text-destructive">
