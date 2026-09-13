@@ -10,10 +10,12 @@ export interface CandidateGame {
   homeTeam: string;
   homeRank: number | null;
   homeConference: string | null;
+  homeClassification: string | null;
   awayTeamId: number;
   awayTeam: string;
   awayRank: number | null;
   awayConference: string | null;
+  awayClassification: string | null;
   kickoff: Date;
   kickoffTbd: boolean;
   /** "Texas -1.5"; information only. Null when no sportsbook has posted a line. */
@@ -47,10 +49,12 @@ function toCandidate(game: CfbdGame, spreads: Map<number, string>, detail: GameD
     homeTeam: game.homeTeam,
     homeRank: detail.home.rank,
     homeConference: game.homeConference,
+    homeClassification: game.homeClassification,
     awayTeamId: game.awayId,
     awayTeam: game.awayTeam,
     awayRank: detail.away.rank,
     awayConference: game.awayConference,
+    awayClassification: game.awayClassification,
     kickoff: new Date(game.startDate),
     kickoffTbd: game.startTimeTBD,
     spread: spreads.get(game.id) ?? null,
