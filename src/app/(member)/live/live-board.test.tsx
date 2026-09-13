@@ -1,25 +1,25 @@
 // @vitest-environment jsdom
 /**
  * The Live Board's own states, driven from wire shapes rather than a database:
- * the pennant row at twelve members, and each state a Saturday passes through
+ * the picker sheet at twelve members, and each state a Saturday passes through
  * — before the Deadline, before kickoff, in progress, final and Void.
  *
  * Twelve is the point of it. `#33` recorded that the fixture carries five
- * members while the mockups are drawn around twelve, and the engine fixture
- * renders nothing, so nothing in the suite had ever put twelve pennants on one
- * row. Five fit; twelve do not, and the row that holds them is
- * `results/side.pennantRow`. The unit tests there hold the arithmetic; these
- * hold what a member actually sees.
+ * members while the mockups are drawn around twelve. The board itself only
+ * ever shows the viewer's own pick on the row now — the full picker list
+ * lives in the sheet a tap opens, so this is where twelve members on one side
+ * actually gets exercised, and there is no cap to hit: the sheet wraps.
  *
  * Assertions are plain DOM reads, as `picks/pick-flow.test.tsx` explains:
  * `@testing-library/jest-dom` is not a dependency here, and its matchers fail
  * as invalid Chai properties rather than as missing ones.
  *
- * No `fetch` stub and no timers: every fixture below is `complete`, which is
- * `nextPollMs`'s own "nothing left to learn" and leaves the polling effect
- * unarmed. The poll cadence is tested in `week/poll.test.ts`.
+ * No `fetch` stub and no timers outside the freshness-line block: every
+ * fixture below is `complete`, which is `nextPollMs`'s own "nothing left to
+ * learn" and leaves the polling effect unarmed. The poll cadence is tested in
+ * `week/poll.test.ts`.
  */
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { GameResult } from "@/lib/results/result";
 import type { RevealGame, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
@@ -91,9 +91,10 @@ function game(result: GameResult, picks: RevealPick[] = []): RevealGame {
   };
 }
 
-/** Every member in `ids` took `teamId`. */
-function picks(teamId: number, ids: number[]): RevealPick[] {
-  return ids.map((memberId) => ({ memberId, teamId, outcome: "correct" as const, lock: null }));
+/** Every member in `ids` took `teamId`, graded as `outcome` (a final game's word by default). */
+function picks(teamId: number, ids: number[], outcome: RevealPick["outcome"] = "correct"): RevealPick[] {
+  const points = outcome === "correct" ? 10 : 0;
+  return ids.map((memberId) => ({ memberId, teamId, outcome, lock: null, points }));
 }
 
 function score(who: ScoredMember, points: number): WeeklyScore {
@@ -126,72 +127,29 @@ function state(over: Partial<WeekStateJson> = {}): WeekStateJson {
     games: [game(FINAL)],
     scores: FAMILY.map((m) => score(m, 30)),
     weeklyWin: null,
-    season: { place: 4, of: 12, label: "4th of 12", points: 90 },
+    season: null,
     ...over,
   };
 }
 
-/**
- * How many pennants the row is showing, counted off the `title` only
- * `PickAvatar` carries. Not by member name: the header chip names the viewer
- * too, and not by `li` either, since the game card is one.
- */
-function pennants(): number {
-  return document.querySelectorAll("li[title]").length;
+/** Opens the one game on the board and returns the sheet's container (the whole document; vaul portals to `document.body`). */
+function openGame() {
+  fireEvent.click(screen.getByRole("button", { name: /Clemson at Georgia, details/ }));
 }
-
-describe("the pennant row at twelve members", () => {
-  test("shows every member when few enough took the side to fit", () => {
-    render(
-      <LiveBoard initial={state({ games: [game(FINAL, picks(GEORGIA, [1, 2, 3, 4, 5]))] })} viewer={VIEWER} />,
-    );
-
-    // Five fit, so nothing is counted and no chip appears.
-    expect(screen.queryByText(/^\+\d+$/)).toBeNull();
-    expect(pennants()).toBe(5);
-  });
-
-  test("counts the members it cannot fit rather than pushing the score off the row", () => {
-    const all = FAMILY.map((m) => m.id);
-    render(<LiveBoard initial={state({ games: [game(FINAL, picks(GEORGIA, all))] })} viewer={VIEWER} />);
-
-    // Four pennants and a "+8": twelve members on one side is the case the
-    // 390px row has to survive, and the score is what it must not lose.
-    expect(screen.getByText("+8")).not.toBeNull();
-    expect(pennants()).toBe(4);
-    expect(screen.getByText("34")).not.toBeNull();
-    expect(screen.getByText("21")).not.toBeNull();
-    // Said out loud too, for a member who cannot see the chip.
-    expect(screen.getByText("and 8 other members")).not.toBeNull();
-  });
-
-  test("keeps the viewer's own pennant on the row when the count would have hidden it", () => {
-    // Member 12 picked last, so the cap reaches them first.
-    const lastPicker: MemberJson = FAMILY[11];
-    const all = FAMILY.map((m) => m.id);
-    render(<LiveBoard initial={state({ games: [game(FINAL, picks(GEORGIA, all))] })} viewer={lastPicker} />);
-
-    // "You" is on the row, and still only four pennants beside the chip.
-    expect(screen.getByText("You")).not.toBeNull();
-    expect(screen.getByText("+8")).not.toBeNull();
-  });
-});
 
 describe("the states a Saturday passes through", () => {
   test("before the Deadline it shows no picks at all, and says when they lock", () => {
     // The server sends no picks before the Deadline; the screen must not imply
-    // any either — not a name, not a count.
+    // any either — not a name, not a rank.
     render(
       <LiveBoard
-        initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null, season: null })}
+        initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null })}
         viewer={VIEWER}
       />,
     );
 
     expect(screen.getByText(/Picks lock/)).not.toBeNull();
     expect(screen.getByText(/Everyone.s picks show here once they do/)).not.toBeNull();
-    expect(screen.queryByText(/^\+\d+$/)).toBeNull();
-    expect(screen.queryByText("Member 2")).toBeNull();
     expect(screen.queryByText(/of 12/)).toBeNull();
   });
 
@@ -211,71 +169,115 @@ describe("the states a Saturday passes through", () => {
     expect(screen.getByText(/Void/)).not.toBeNull();
     expect(screen.getByText(/Postponed to December/)).not.toBeNull();
   });
+
+  test("shows the spread on both sides before kickoff, from a plain ASCII hyphen line", () => {
+    // `spreadText` (cfbd/details.ts) writes "Georgia -6.5" with a plain
+    // hyphen, not the "−" a first draft of this parser assumed.
+    const scheduled = { ...game(PENDING), game: { ...game(PENDING).game, spread: "Georgia -6.5" } };
+    render(<LiveBoard initial={state({ complete: false, games: [scheduled] })} viewer={VIEWER} />);
+
+    expect(screen.getByText("-6.5")).not.toBeNull();
+    expect(screen.getByText("+6.5")).not.toBeNull();
+  });
+
+  test("orders live games first, then what hasn't kicked off, then finals and voids", () => {
+    const live = { ...game(LIVE), game: { ...game(LIVE).game, id: 1, awayTeam: "Live Away", homeTeam: "Live Home" } };
+    const scheduled = { ...game(PENDING), game: { ...game(PENDING).game, id: 2, awayTeam: "Sched Away", homeTeam: "Sched Home" } };
+    const final = { ...game(FINAL), game: { ...game(FINAL).game, id: 3, awayTeam: "Final Away", homeTeam: "Final Home" } };
+    const voided = { ...game(VOIDED), game: { ...game(VOIDED).game, id: 4, awayTeam: "Void Away", homeTeam: "Void Home" } };
+
+    render(<LiveBoard initial={state({ games: [voided, final, scheduled, live], complete: false })} viewer={VIEWER} />);
+
+    const order = screen.getAllByRole("button", { name: /details/ }).map((el) => el.getAttribute("aria-label"));
+    expect(order).toEqual([
+      "Live Away at Live Home, details",
+      "Sched Away at Sched Home, details",
+      "Final Away at Final Home, details",
+      "Void Away at Void Home, details",
+    ]);
+  });
 });
 
-describe("a mark only grades a final game (#98)", () => {
-  /** The ring span is the pennant's direct wrapper, per `PickAvatar`. */
-  function ringClasses(container: HTMLElement): string[] {
-    return Array.from(container.querySelectorAll("li[title] > span")).map((el) => el.className);
-  }
-
-  test("a game in progress marks neither side, home leading or away trailing", () => {
-    // Georgia (home) leads Clemson (away) 28-10, per LIVE. Both sides have a
-    // pick, so both a leading and a trailing pennant are on the row.
-    const { container } = render(
+describe("a pick's mark only grades once the game is final (#98)", () => {
+  test("a pick on a game still going shows a hollow mark, not a graded one", () => {
+    render(
       <LiveBoard
-        initial={state({
-          complete: false,
-          games: [game(LIVE, [...picks(GEORGIA, [2]), ...picks(CLEMSON, [3])])],
-        })}
+        initial={state({ complete: false, games: [game(LIVE, picks(GEORGIA, [VIEWER.id], "pending"))] })}
         viewer={VIEWER}
       />,
     );
 
-    // No graded word for a game still going — this is the bug: a member must
-    // not read "leading" as "won" off the same glyph.
-    expect(screen.queryByText("Won")).toBeNull();
-    expect(screen.queryByText("Lost")).toBeNull();
-    for (const cls of ringClasses(container)) {
-      expect(cls).not.toMatch(/ring-win|ring-loss/);
-    }
+    expect(screen.getByTitle("Your pick")).not.toBeNull();
+    expect(screen.queryByTitle(/won|lost/)).toBeNull();
   });
 
-  test("a final game marks and rings the winner and the loser", () => {
-    const { container } = render(
+  test("a correct pick on a final game shows it won", () => {
+    render(<LiveBoard initial={state({ games: [game(FINAL, picks(GEORGIA, [VIEWER.id], "correct"))] })} viewer={VIEWER} />);
+    expect(screen.getByTitle("Your pick won")).not.toBeNull();
+    expect(screen.getByText("+10")).not.toBeNull();
+  });
+
+  test("an incorrect pick on a final game shows it lost, and earns nothing", () => {
+    render(<LiveBoard initial={state({ games: [game(FINAL, picks(CLEMSON, [VIEWER.id], "incorrect"))] })} viewer={VIEWER} />);
+    expect(screen.getByTitle("Your pick lost")).not.toBeNull();
+    expect(screen.queryByText(/^\+\d+$/)).toBeNull();
+  });
+});
+
+describe("the sheet a tap opens", () => {
+  test("before the Deadline, says picks aren't visible yet rather than 0 of 0", () => {
+    render(
       <LiveBoard
-        initial={state({ games: [game(FINAL, [...picks(GEORGIA, [2]), ...picks(CLEMSON, [3])])] })}
+        initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null, members: [] })}
         viewer={VIEWER}
       />,
     );
 
-    expect(screen.getByText("Won")).not.toBeNull();
-    expect(screen.getByText("Lost")).not.toBeNull();
-    const rings = ringClasses(container);
-    expect(rings.some((cls) => cls.includes("ring-win"))).toBe(true);
-    expect(rings.some((cls) => cls.includes("ring-loss"))).toBe(true);
+    openGame();
+    expect(screen.getAllByText(/Picks aren.t visible yet/)).toHaveLength(2);
+    expect(screen.queryByText(/of 0/)).toBeNull();
+  });
+
+
+  test("lists every member who took a side, with no cap — twelve fit by wrapping, not by counting", () => {
+    const all = FAMILY.map((m) => m.id);
+    render(<LiveBoard initial={state({ games: [game(FINAL, picks(GEORGIA, all))] })} viewer={VIEWER} />);
+
+    openGame();
+
+    // Every member is named once the sheet is open, twelfth included — the
+    // old on-row cap ("+8") does not exist here to have hidden anyone.
+    expect(screen.getByText("You")).not.toBeNull();
+    for (let i = 2; i <= 12; i++) expect(screen.getByText(`Member ${i}`)).not.toBeNull();
+    expect(screen.queryByText(/^\+\d+ other/)).toBeNull();
+  });
+
+  test("shows a Lock of the Week, and a Dropped Lock once its game is void", () => {
+    const lockPick: RevealPick = { memberId: FAMILY[1].id, teamId: GEORGIA, outcome: "void", lock: "dropped", points: 0 };
+    render(<LiveBoard initial={state({ games: [game(VOIDED, [lockPick])] })} viewer={VIEWER} />);
+
+    openGame();
+    expect(screen.getByLabelText(/dropped/)).not.toBeNull();
   });
 });
 
-describe("the viewer's own card", () => {
-  test("reads the season, not the week, as mockup 05 draws it", () => {
-    // The week scored 30; the season total is 90. Mockup 06 puts the week in
-    // this slot on the results screen, and 05 puts the season here.
-    render(<LiveBoard initial={state()} viewer={VIEWER} />);
+describe("the viewer's own rank", () => {
+  test("reads the week, not the season — the stake on a Saturday is this week", () => {
+    render(<LiveBoard initial={state({ scores: [score(FAMILY[0], 30), ...FAMILY.slice(1).map((m) => score(m, 10))] })} viewer={VIEWER} />);
 
-    expect(screen.getByText("You · Season")).not.toBeNull();
-    expect(screen.getByText("4th of 12")).not.toBeNull();
-    expect(screen.getByText("90 pts")).not.toBeNull();
-    expect(screen.getByText("3–0 this week")).not.toBeNull();
+    expect(screen.getByText(/You · Week 2/)).not.toBeNull();
+    expect(screen.getByText("1st of 12")).not.toBeNull();
+    expect(screen.getByText("30 pts")).not.toBeNull();
+    expect(screen.getByText("3–0 so far")).not.toBeNull();
   });
 
   test("tells a member who joined after the Deadline that the week does not count", () => {
-    // On neither board: no weekly score and no season place.
+    // On neither board: no weekly score at all.
     const joiner: MemberJson = { id: 99, displayName: "Cousin Em", avatarId: null };
-    render(<LiveBoard initial={state({ season: null })} viewer={joiner} />);
+    render(<LiveBoard initial={state()} viewer={joiner} />);
 
     expect(screen.getByText(/joined after this week.s deadline/)).not.toBeNull();
-    expect(screen.queryByText("You · Season")).toBeNull();
+    expect(screen.queryByText(/You · Week/)).toBeNull();
   });
 });
 
@@ -291,7 +293,7 @@ describe("the freshness line (#95)", () => {
 
     render(
       <LiveBoard
-        initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null, season: null })}
+        initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null })}
         viewer={VIEWER}
       />,
     );

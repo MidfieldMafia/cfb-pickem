@@ -58,7 +58,7 @@ describe("where a side stands", () => {
 });
 
 /** One member's pick on a side; only the member id matters to the row. */
-const pick = (memberId: number): RevealPick => ({ memberId, teamId: 1, outcome: "pending", lock: null });
+const pick = (memberId: number): RevealPick => ({ memberId, teamId: 1, outcome: "pending", lock: null, points: 0 });
 
 /** `n` members took this side, ids 1..n in board order. */
 const took = (n: number): RevealPick[] => Array.from({ length: n }, (_, i) => pick(i + 1));

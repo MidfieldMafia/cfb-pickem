@@ -125,7 +125,7 @@ function score(who: ScoredMember, points: number, over: Partial<WeeklyScore> = {
 }
 
 function pick(who: ScoredMember, teamId: number, over: Partial<RevealPick> = {}): RevealPick {
-  return { memberId: who.id, teamId, outcome: "correct", lock: null, ...over };
+  return { memberId: who.id, teamId, outcome: "correct", lock: null, points: 10, ...over };
 }
 
 function reveal(games: RevealGame[], tiebreakerGameId: number | null = null): Reveal {
