@@ -558,7 +558,15 @@ function GameSheet({
   );
 }
 
-export function LiveBoard({ initial, viewer }: { initial: WeekStateJson; viewer: MemberJson }) {
+export function LiveBoard({
+  initial,
+  viewer,
+  commissioner,
+}: {
+  initial: WeekStateJson;
+  viewer: MemberJson;
+  commissioner?: boolean;
+}) {
   const { state, nextPollAt } = useWeekState(initial);
   const [openGameId, setOpenGameId] = useState<number | null>(null);
   const members = new Map(state.members.map((m) => [m.id, m]));
@@ -582,7 +590,7 @@ export function LiveBoard({ initial, viewer }: { initial: WeekStateJson; viewer:
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 pb-8">
-      <AppHeader title="Live Board" sub={sub} right={<MemberChip member={viewer} />} />
+      <AppHeader title="Live Board" sub={sub} commissioner={commissioner} right={<MemberChip member={viewer} />} />
 
       {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
       <div className="sticky top-0 z-10 space-y-3 border-b border-border bg-background px-4 pb-3">

@@ -80,6 +80,7 @@ export default async function Leaderboard() {
             ? `${season.season.year} season · after Week ${latest.week.weekNumber}`
             : `${season.season.year} season · before the first week`
         }
+        commissioner={member.isCommissioner}
         right={<MemberChip member={member} />}
       />
 

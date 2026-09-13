@@ -38,7 +38,11 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
   if (!review) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
-        <AppHeader title="Week results" right={<MemberChip member={member} />} />
+        <AppHeader
+          title="Week results"
+          commissioner={member.isCommissioner}
+          right={<MemberChip member={member} />}
+        />
         <div className="px-4">
           <BoardToggle active="results" weekNumber={null} />
         </div>
@@ -75,6 +79,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       <AppHeader
         title={`Week ${weekNumber} results`}
         sub={`${complete ? "Final" : "In progress"}${won ? ` · ${won}` : ""}`}
+        commissioner={member.isCommissioner}
         right={<MemberChip member={member} />}
       />
 

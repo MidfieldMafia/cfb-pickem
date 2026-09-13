@@ -13,11 +13,11 @@ import { requireMember } from "@/lib/members/current";
  * session once, not twice.
  */
 export default async function MemberLayout({ children }: { children: ReactNode }) {
-  const member = await requireMember();
+  await requireMember();
   return (
     <>
       {children}
-      <BottomNav commissioner={member.isCommissioner} />
+      <BottomNav />
     </>
   );
 }

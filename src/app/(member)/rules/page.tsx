@@ -19,7 +19,12 @@ export default async function Rules() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
-      <AppHeader title="Scoring rules" sub={`${season.year} season`} right={<MemberChip member={member} />} />
+      <AppHeader
+        title="Scoring rules"
+        sub={`${season.year} season`}
+        commissioner={member.isCommissioner}
+        right={<MemberChip member={member} />}
+      />
 
       <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">
         <p className={SECTION_LABEL}>

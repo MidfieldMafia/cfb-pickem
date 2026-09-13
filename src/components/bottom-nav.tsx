@@ -2,21 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, Radio, Shield, Trophy } from "lucide-react";
+import { ClipboardCheck, Radio, Trophy } from "lucide-react";
 
 const TABS = [
   { href: "/picks", label: "Picks", Icon: ClipboardCheck },
   { href: "/live", label: "Live Board", Icon: Radio },
   { href: "/leaderboard", label: "Leaderboard", Icon: Trophy },
-  { href: "/console", label: "Commissioner", Icon: Shield },
 ] as const;
 
 /**
- * The four tabs of the phone app — three for a member who is not a
- * commissioner, since the console answers everyone else with a 404 and a tab
- * that 404s is worse than no tab. Fixed to the visual viewport (not sticky),
- * so it stays under the thumb through an iOS pinch-zoom or URL-bar transition
- * instead of drifting with the layout viewport — see issue #99.
+ * The three tabs of the phone app, the same for every member — the Console
+ * lives behind a header icon (`AppHeader`) rather than a tab now, since it is
+ * only ever relevant to a commissioner. Fixed to the visual viewport (not
+ * sticky), so it stays under the thumb through an iOS pinch-zoom or URL-bar
+ * transition instead of drifting with the layout viewport — see issue #99.
  *
  * Rendered twice: once `invisible` in normal flow, to reserve exactly the
  * space the real nav occupies so `main`'s `flex-1` still ends above it, and
@@ -26,12 +25,10 @@ const TABS = [
  * copy out of the tab order and the accessibility tree, so only one `nav`
  * landmark is exposed.
  */
-export function BottomNav({ commissioner }: { commissioner: boolean }) {
+export function BottomNav() {
   const pathname = usePathname();
-  const tabs = commissioner ? TABS : TABS.filter((tab) => tab.href !== "/console");
-  const gridColsClassName = commissioner ? "grid-cols-4" : "grid-cols-3";
 
-  const tiles = tabs.map(({ href, label, Icon }) => {
+  const tiles = TABS.map(({ href, label, Icon }) => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
     return (
       <Link
@@ -56,13 +53,13 @@ export function BottomNav({ commissioner }: { commissioner: boolean }) {
     <>
       <div
         aria-hidden
-        className={`invisible grid border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))] ${gridColsClassName}`}
+        className="invisible grid grid-cols-3 border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
       >
         {tiles}
       </div>
       <nav
         aria-label="App"
-        className={`fixed inset-x-0 bottom-0 z-10 grid border-t border-border bg-card pb-[calc(0.5rem+env(safe-area-inset-bottom))] ${gridColsClassName}`}
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-3 border-t border-border bg-card pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
       >
         {tiles}
       </nav>
