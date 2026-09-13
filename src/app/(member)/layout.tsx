@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { db } from "@/db";
 import { BottomNav } from "@/components/bottom-nav";
 import { requireMember } from "@/lib/members/current";
+import { deadlinePassed, publishedSlate } from "@/lib/slate/slate";
 
 /**
  * The member screens — the Week, pick entry, the Live Board, the Leaderboard
@@ -14,10 +16,12 @@ import { requireMember } from "@/lib/members/current";
  */
 export default async function MemberLayout({ children }: { children: ReactNode }) {
   await requireMember();
+  const slate = await publishedSlate(db());
+  const locked = slate ? deadlinePassed(slate.week, new Date()) : false;
   return (
     <>
       {children}
-      <BottomNav />
+      <BottomNav locked={locked} />
     </>
   );
 }
