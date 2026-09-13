@@ -39,6 +39,17 @@ function slugify(school: string): string {
     .replace(/^-|-$/g, "");
 }
 
+/**
+ * CFBD's `/games` feed names a team differently than `Team.school` (and so
+ * differently than this file's slugs) for these schools. Slugifying the feed
+ * name straight through misses the asset even though it exists.
+ */
+const SLUG_ALIASES: Record<string, string> = {
+  "florida-international": "fiu",
+  "app-state": "appalachian-state",
+  "massachusetts": "umass",
+};
+
 /** Prefer this when a CFBD `team.id` is on hand: it is the numeric identity. */
 export function findLogoByEspnId(espnId: number): TeamLogo | undefined {
   return byEspnId.get(espnId);
@@ -50,7 +61,8 @@ export function findLogoByEspnId(espnId: number): TeamLogo | undefined {
  * only ever answer what this already answers.
  */
 export function findLogo(school: string): TeamLogo | undefined {
-  return bySlug.get(slugify(school));
+  const slug = slugify(school);
+  return bySlug.get(SLUG_ALIASES[slug] ?? slug);
 }
 
 export function logoSrc(school: string): string | undefined {
