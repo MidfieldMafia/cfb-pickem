@@ -18,15 +18,32 @@ import { bootstrapCommissioner, magicLinkFor } from "../src/lib/members/members"
 
 const db = drizzle({ client: neon(requireEnv("DATABASE_URL")), schema });
 
+const RULES_2026 = {
+  pointsPerCorrectPick: 10,
+  lockMultiplier: 2,
+  tiebreakOrder: "Total points, then weekly wins, then closest cumulative Tiebreaker Guess error.",
+};
+
 async function main() {
   const year = 2026;
   let season = await db.query.seasons.findFirst({ where: eq(schema.seasons.year, year) });
   if (!season) {
     [season] = await db
       .insert(schema.seasons)
-      .values({ year, rules: { pointsPerCorrectPick: 10, lockMultiplier: 2 }, active: true })
+      .values({ year, rules: RULES_2026, active: true })
       .returning();
     console.log(`Created the ${year} season.`);
+  } else if (!("tiebreakOrder" in season.rules)) {
+    // Backfills a season row created before `tiebreakOrder` joined Rules. The
+    // other two fields are the same values that row was created with, so this
+    // replaces the whole object rather than spreading a jsonb column the query
+    // builder types as unknown.
+    [season] = await db
+      .update(schema.seasons)
+      .set({ rules: RULES_2026 })
+      .where(eq(schema.seasons.id, season.id))
+      .returning();
+    console.log(`Backfilled tiebreakOrder onto the ${year} season's Rules.`);
   } else {
     console.log(`The ${year} season already exists.`);
   }

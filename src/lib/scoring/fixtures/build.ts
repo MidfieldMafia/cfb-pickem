@@ -6,7 +6,11 @@
 import type { Game, Rules, Week } from "../types";
 
 /** The 2026 season's Rules: 10 points a correct pick, a Lock worth double. */
-export const rules2026: Rules = { pointsPerCorrectPick: 10, lockMultiplier: 2 };
+export const rules2026: Rules = {
+  pointsPerCorrectPick: 10,
+  lockMultiplier: 2,
+  tiebreakOrder: "Total points, then weekly wins, then closest cumulative Tiebreaker Guess error.",
+};
 
 export function finalGame(
   id: string,

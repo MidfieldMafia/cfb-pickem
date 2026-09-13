@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useActionState } from "react";
 import { SECTION_LABEL } from "@/components/section-label";
 import { Button } from "@/components/ui/button";
@@ -70,11 +71,16 @@ export function WelcomeForm({
         </p>
       ) : null}
 
-      <div className="mt-auto pt-4">
+      <div className="mt-auto space-y-3 pt-4 text-center">
         <Button type="submit" size="lg" className="w-full" disabled={pending}>
           {pending ? "Saving…" : returning ? "Save" : "Continue"}
           {pending || returning ? null : <ArrowRight aria-hidden />}
         </Button>
+        {returning ? null : (
+          <Link href="/rules" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
+            See how scoring works
+          </Link>
+        )}
       </div>
     </form>
   );

@@ -35,6 +35,8 @@ export interface SheetJson {
   lockGameId: number | null;
   /** True when the Lock sits on a Void game: a Dropped Lock. Scores nothing; movable until the Deadline. */
   lockDropped: boolean;
+  /** The season's Lock of the Week multiplier, so a screen never states it as fixed copy. */
+  lockMultiplier: number;
   tiebreakerGuess: number | null;
   /**
    * What was left before the Deadline when the server built this sheet. A
@@ -57,6 +59,7 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
     lockGameId: sheet.lockGameId,
     lockDropped: sheet.lockDropped,
+    lockMultiplier: sheet.season.rules.lockMultiplier,
     tiebreakerGuess: sheet.tiebreakerGuess,
     progress: sheet.progress,
   };

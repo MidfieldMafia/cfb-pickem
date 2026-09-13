@@ -309,8 +309,8 @@ export function Review({ initial }: { initial: SheetJson }) {
             lockGame && lockPick
               ? sheet.lockDropped
                 ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
-                : `${teamName(lockGame, lockPick.teamId)} counts double`
-              : "One pick counts double"
+                : `${teamName(lockGame, lockPick.teamId)} counts ${sheet.lockMultiplier}×`
+              : `One pick counts ${sheet.lockMultiplier}×`
           }
           action={progress.lockSet ? "Change" : "Set"}
           disabled={locked}
@@ -362,7 +362,7 @@ export function Review({ initial }: { initial: SheetJson }) {
                     ? locked
                       ? "That game is void, so no Lock counts this week"
                       : "That game is void and scores zero; choose another Lock"
-                    : "Double points if they win"}{" "}
+                    : `${sheet.lockMultiplier}× points if they win`}{" "}
                   ·{" "}
                   {lockGame.awayTeam} at {lockGame.homeTeam}
                 </span>
@@ -370,7 +370,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             ) : (
               <>
                 <span className="font-semibold">{locked ? "No Lock this week" : "Choose your Lock"}</span>
-                <span className="text-xs text-muted-foreground">One pick counts double this week.</span>
+                <span className="text-xs text-muted-foreground">One pick counts {sheet.lockMultiplier}× this week.</span>
               </>
             )}
           </span>
@@ -383,6 +383,9 @@ export function Review({ initial }: { initial: SheetJson }) {
             {lockError}
           </p>
         ) : null}
+        <Link href="/rules" className="mt-1 inline-block text-sm font-semibold underline underline-offset-4">
+          See scoring rules
+        </Link>
       </section>
 
       <section>
@@ -429,7 +432,9 @@ export function Review({ initial }: { initial: SheetJson }) {
         <DrawerContent className="mx-auto max-w-md">
           <DrawerHeader>
             <DrawerTitle>Lock of the Week</DrawerTitle>
-            <DrawerDescription>One of your picks. It scores double if it wins; nothing extra if it loses.</DrawerDescription>
+            <DrawerDescription>
+              One of your picks. It scores {sheet.lockMultiplier}× if it wins; nothing extra if it loses.
+            </DrawerDescription>
           </DrawerHeader>
           <div className="grid max-h-80 gap-1.5 overflow-y-auto px-4">
             {progress.picksMade === 0 ? (
