@@ -42,16 +42,22 @@ function pointsByTeam(seasonGames: CfbdGame[]): Map<number, Tally> {
   return tallies;
 }
 
+/** A sportsbook's posted line: display text and the raw number, both home-team perspective. */
+interface BookSpread {
+  formatted: string;
+  spread: number;
+}
+
 /**
  * The line the first sportsbook posted for each game, preferring the feed's own
  * formatting. Comes back on `WeekFeed`, so the slate builder shows it without
  * a second read of `/lines`.
  */
-function bookLines(betting: CfbdBettingGame[]): Map<number, string> {
-  const lines = new Map<number, string>();
+function bookLines(betting: CfbdBettingGame[]): Map<number, BookSpread> {
+  const lines = new Map<number, BookSpread>();
   for (const b of betting) {
     const line = b.lines.find((l) => l.spread !== null);
-    if (line) lines.set(b.id, line.formattedSpread ?? `${line.spread}`);
+    if (line) lines.set(b.id, { formatted: line.formattedSpread ?? `${line.spread}`, spread: line.spread! });
   }
   return lines;
 }
@@ -104,14 +110,25 @@ function toWeather(
 /** "Oklahoma -1.5" from the sportsbooks, else from the win-probability model's spread, else "Pick". */
 function spreadText(
   game: CfbdGame,
-  lines: Map<number, string>,
+  lines: Map<number, BookSpread>,
   modelSpread: number | null | undefined,
 ): string {
   const line = lines.get(game.id);
-  if (line) return line;
+  if (line) return line.formatted;
   if (modelSpread === null || modelSpread === undefined || modelSpread === 0) return "Pick";
   const favorite = modelSpread < 0 ? game.homeTeam : game.awayTeam;
   return `${favorite} -${Math.abs(modelSpread)}`;
+}
+
+/**
+ * Home-team-perspective numeric spread: the sportsbook's if one has posted,
+ * else the win-probability model's. Null when neither exists — unlike
+ * `spreadText`, which still has "Pick" to fall back to, a sort needs to tell
+ * "even" (0) apart from "unknown".
+ */
+function spreadValue(line: BookSpread | undefined, modelSpread: number | null | undefined): number | null {
+  if (line) return line.spread;
+  return modelSpread ?? null;
 }
 
 function venueOf(game: CfbdGame, venueById: Map<number, CfbdVenue>): CfbdVenue | undefined {
@@ -150,6 +167,11 @@ export interface WeekFeed {
   games: CfbdGame[];
   /** The first posted spread per game, "Texas -1.5". */
   lines: Map<number, string>;
+  /**
+   * Home-team-perspective numeric spread per game: the sportsbook's if one
+   * has posted, else the win-probability model's. Absent when neither does.
+   */
+  spreads: Map<number, number>;
 }
 
 export async function weekDetails(
@@ -179,7 +201,8 @@ export async function weekDetails(
     ]);
 
   const ranks = rankLookup(pollWeeks, query.week);
-  const lines = bookLines(betting);
+  const bookSpreads = bookLines(betting);
+  const lines = new Map(Array.from(bookSpreads, ([id, line]) => [id, line.formatted]));
   const recordByTeam = new Map(records.map((r) => [r.teamId, r.total]));
   const statValue = new Map(stats.map((s) => [`${s.team}|${s.statName}`, s.statValue]));
   const stat = (team: string, name: string) => statValue.get(`${team}|${name}`);
@@ -204,6 +227,7 @@ export async function weekDetails(
   };
 
   const details = new Map<number, GameDetail>();
+  const spreads = new Map<number, number>();
   for (const game of games) {
     const venue = venueOf(game, venueById);
     const wp = wpByGame.get(game.id);
@@ -214,11 +238,13 @@ export async function weekDetails(
       city: venue?.city ? (venue.state ? `${venue.city}, ${venue.state}` : venue.city) : "",
       tv: tvByGame.get(game.id) ?? null,
       homeWp: wp?.homeWinProbability ?? null,
-      spread: spreadText(game, lines, wp?.spread),
+      spread: spreadText(game, bookSpreads, wp?.spread),
       weather: toWeather(weatherByGame.get(game.id), rainByGame.get(game.id) ?? null, kickoff, venue),
       home: form(game.homeId, game.homeTeam),
       away: form(game.awayId, game.awayTeam),
     });
+    const value = spreadValue(bookSpreads.get(game.id), wp?.spread);
+    if (value !== null) spreads.set(game.id, value);
   }
-  return { details, games, lines };
+  return { details, games, lines, spreads };
 }

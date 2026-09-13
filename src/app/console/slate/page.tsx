@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, X } from "lucide-react";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { ActionForm } from "../action-form";
 import { pillClass } from "../pill";
 import { requestedWeekNumber } from "../week-param";
 import { fbsOnlyParam, filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
+import { dirParam, sortCandidates, sortParam, type SortDir, type SortKey } from "./candidate-sort";
 import {
   addGameAction,
   refreshAction,
@@ -34,7 +35,7 @@ import { PublishButton } from "./publish-button";
 export default async function SlateBuilder({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; filter?: string; fbs?: string; q?: string }>;
+  searchParams: Promise<{ week?: string; filter?: string; fbs?: string; q?: string; sort?: string; dir?: string }>;
 }) {
   const commissioner = await requireConsole();
   const params = await searchParams;
@@ -45,6 +46,8 @@ export default async function SlateBuilder({
   const filter = filterParam(params.filter);
   const fbsOnly = fbsOnlyParam(params.fbs);
   const q = params.q?.trim() ?? "";
+  const sort = sortParam(params.sort);
+  const dir = dirParam(params.dir);
 
   // The feed is ten HTTP calls and does not depend on the week row, so it runs alongside it.
   const [{ week, slate }, feed] = await Promise.all([
@@ -64,15 +67,26 @@ export default async function SlateBuilder({
   const feedError = feed.error;
   const slateGames = slate.games.map(toGameView);
   const shown = toSlateCandidates(
-    candidates.filter((c) => matches(c, filter, fbsOnly, q)),
+    sortCandidates(
+      candidates.filter((c) => matches(c, filter, fbsOnly, q)),
+      sort,
+      dir,
+    ),
     slate.games,
   );
   const tiebreaker = slateGames.find((g) => g.game.id === slate.week.tiebreakerGameId)?.game ?? null;
+  const sortSearchParams = () => {
+    const p = new URLSearchParams();
+    if (sort !== "kickoff") p.set("sort", sort);
+    if (dir !== "asc") p.set("dir", dir);
+    return p;
+  };
   const filterHref = (f: Filter) => {
     const p = new URLSearchParams({ week: String(weekNumber) });
     if (f !== "all") p.set("filter", f);
     if (!fbsOnly) p.set("fbs", "0");
     if (q) p.set("q", q);
+    for (const [k, v] of sortSearchParams()) p.set(k, v);
     return `/console/slate?${p}`;
   };
   const fbsOnlyHref = () => {
@@ -80,6 +94,22 @@ export default async function SlateBuilder({
     if (filter !== "all") p.set("filter", filter);
     if (fbsOnly) p.set("fbs", "0");
     if (q) p.set("q", q);
+    for (const [k, v] of sortSearchParams()) p.set(k, v);
+    return `/console/slate?${p}`;
+  };
+  /**
+   * A repeat click flips direction; a first click on the other column starts
+   * at its natural ascending order. "asc" is each column's default and never
+   * shows up in the URL, matching `fbsOnlyParam`'s "absent means default".
+   */
+  const sortHref = (key: SortKey) => {
+    const p = new URLSearchParams({ week: String(weekNumber) });
+    if (filter !== "all") p.set("filter", filter);
+    if (!fbsOnly) p.set("fbs", "0");
+    if (q) p.set("q", q);
+    const nextDir: SortDir = sort === key && dir === "asc" ? "desc" : "asc";
+    if (key !== "kickoff") p.set("sort", key);
+    if (nextDir !== "asc") p.set("dir", nextDir);
     return `/console/slate?${p}`;
   };
 
@@ -109,6 +139,8 @@ export default async function SlateBuilder({
               <input type="hidden" name="week" value={weekNumber} />
               {filter !== "all" ? <input type="hidden" name="filter" value={filter} /> : null}
               {!fbsOnly ? <input type="hidden" name="fbs" value="0" /> : null}
+              {sort !== "kickoff" ? <input type="hidden" name="sort" value={sort} /> : null}
+              {dir !== "asc" ? <input type="hidden" name="dir" value={dir} /> : null}
               <Input name="q" defaultValue={q} placeholder="Find a team" aria-label="Find a team" className="w-44" />
               <Button type="submit" variant="outline">
                 Find
@@ -144,9 +176,9 @@ export default async function SlateBuilder({
                     <span className="sr-only">On the slate</span>
                   </th>
                   <th className="p-3">Game</th>
-                  <th className="px-2 py-3">Kickoff</th>
+                  <SortHeader label="Kickoff" active={sort === "kickoff"} dir={dir} href={sortHref("kickoff")} />
                   <th className="px-2 py-3">TV</th>
-                  <th className="px-2 py-3">Spread</th>
+                  <SortHeader label="Spread" active={sort === "spread"} dir={dir} href={sortHref("spread")} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -188,7 +220,10 @@ export default async function SlateBuilder({
                       <LocalTime at={c.kickoff} />
                     </td>
                     <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{c.detail.tv ?? "TBD"}</td>
-                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{c.spread ?? "No line yet"}</td>
+                    {/* detail.spread, not c.spread: it falls back to the
+                        win-probability model when no book has posted, which
+                        is also what the Spread sort orders by. */}
+                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{c.detail.spread}</td>
                   </tr>
                 ))}
                 {shown.length === 0 && !feedError ? (
@@ -257,6 +292,34 @@ export default async function SlateBuilder({
         </aside>
       </div>
     </div>
+  );
+}
+
+/** A Kickoff/Spread header: a link to sort by this column, with an arrow for the active one's direction. */
+function SortHeader({
+  label,
+  active,
+  dir,
+  href,
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  href: string;
+}) {
+  return (
+    <th className="px-2 py-3">
+      <Link href={href} className="flex items-center gap-1 no-underline hover:text-foreground" aria-label={`Sort by ${label}`}>
+        {label}
+        {active ? (
+          dir === "asc" ? (
+            <ArrowUp className="size-3" aria-hidden />
+          ) : (
+            <ArrowDown className="size-3" aria-hidden />
+          )
+        ) : null}
+      </Link>
+    </th>
   );
 }
 
