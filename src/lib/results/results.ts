@@ -481,6 +481,8 @@ export interface RevealPick {
    * board that promised it; here it cannot be expressed.
    */
   lock: "counts" | "dropped" | null;
+  /** What this pick scored: 0 unless the game is final and the pick is correct. Carries the Lock multiplier already applied. */
+  points: number;
 }
 
 /** The Game, its result, and who took which side: the shared pair plus the board's own column. */
@@ -639,6 +641,7 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult): Re
           // Dropped first: a Void game is the one case where the engine's
           // `locked` and the board's own column could otherwise both speak.
           lock: droppedGameId === gameId ? "dropped" : pick.locked ? "counts" : null,
+          points: pick.points,
         });
       }
       return { ...toGameView(game), picks };

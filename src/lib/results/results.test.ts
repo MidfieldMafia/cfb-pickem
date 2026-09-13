@@ -476,8 +476,8 @@ describe("the reveal", () => {
       feedFinal: null,
     });
     expect(michiganRow.picks).toEqual([
-      { memberId: jonah.id, teamId: michigan.awayTeamId, outcome: "incorrect", lock: null },
-      { memberId: grandma.id, teamId: michigan.homeTeamId, outcome: "correct", lock: "counts" },
+      { memberId: jonah.id, teamId: michigan.awayTeamId, outcome: "incorrect", lock: null, points: 0 },
+      { memberId: grandma.id, teamId: michigan.homeTeamId, outcome: "correct", lock: "counts", points: 20 },
     ]);
     // A pending game shows the picks without a grade.
     expect(texasRow.result.status).toBe("pending");
@@ -486,7 +486,7 @@ describe("the reveal", () => {
       [grandma.id, "pending"],
     ]);
     expect(miamiRow.picks).toEqual([
-      { memberId: jonah.id, teamId: miami.homeTeamId, outcome: "pending", lock: null },
+      { memberId: jonah.id, teamId: miami.homeTeamId, outcome: "pending", lock: null, points: 0 },
     ]);
   });
 
