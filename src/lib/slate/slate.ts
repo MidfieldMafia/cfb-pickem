@@ -14,6 +14,7 @@ import { requireCommissioner } from "@/lib/members/members";
 import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
 import { logResultChange } from "@/lib/results/audit";
+import { effectiveResult } from "@/lib/results/result";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 
 export class InvalidSlate extends Refusal {}
@@ -202,7 +203,7 @@ export async function addGame(
 export async function setTiebreaker(db: Db, actor: Member, weekId: number, gameId: number): Promise<Week> {
   requireCommissioner(actor);
   const game = await loadGame(db, gameId, weekId);
-  if (game.void) throw new InvalidSlate("A void game cannot be the Tiebreaker Game.");
+  if (effectiveResult(game).status === "void") throw new InvalidSlate("A void game cannot be the Tiebreaker Game.");
   const [updated] = await db.update(weeks).set({ tiebreakerGameId: gameId }).where(eq(weeks.id, weekId)).returning();
   return updated;
 }
