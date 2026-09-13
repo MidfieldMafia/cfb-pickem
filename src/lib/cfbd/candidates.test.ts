@@ -38,6 +38,30 @@ describe("week candidates from CollegeFootballData", () => {
     expect(candidates.filter((c) => c.spread === null)).toHaveLength(46);
   });
 
+  test("spreadValue carries the book's number, home-team perspective", async () => {
+    const candidates = await weekCandidates(recordedCfbd("2026-week-2"), WEEK_2, rain);
+    // Oklahoma -1.5 at Michigan: the favorite is away, so home-perspective is positive.
+    const oklahoma = candidates.find((c) => c.cfbdGameId === 401856679);
+    expect(oklahoma).toMatchObject({ spread: "Oklahoma -1.5", spreadValue: 1.5 });
+  });
+
+  test("spreadValue falls back to the win-probability model when no book has posted", async () => {
+    const candidates = await weekCandidates(recordedCfbd("2026-week-2"), WEEK_2, rain);
+    // Boston College at Rutgers: no sportsbook line, but the model has one.
+    const bc = candidates.find((c) => c.cfbdGameId === 401858214)!;
+
+    expect(bc.spread).toBeNull();
+    expect(bc.spreadValue).toBe(-3.5);
+  });
+
+  test("spreadValue is null only when neither a book nor the model has a number", async () => {
+    const candidates = await weekCandidates(recordedCfbd("2026-week-2"), WEEK_2, rain);
+    const noNumber = candidates.filter((c) => c.spreadValue === null);
+
+    expect(noNumber.length).toBeGreaterThan(0);
+    expect(noNumber.length).toBeLessThan(candidates.filter((c) => c.spread === null).length);
+  });
+
   test("a week costs one read per endpoint, not one per caller that wants it", async () => {
     const cfbd = recordedCfbd("2026-week-2");
 

@@ -20,6 +20,12 @@ export interface CandidateGame {
   kickoffTbd: boolean;
   /** "Texas -1.5"; information only. Null when no sportsbook has posted a line. */
   spread: string | null;
+  /**
+   * Home-team-perspective numeric spread, for sorting: the sportsbook's if
+   * one has posted, else the win-probability model's. Null when neither
+   * exists, so a sort can place these games rather than guess at them.
+   */
+  spreadValue: number | null;
   /** Pick-screen detail: venue, TV, line, win probability, forecast, each team's form. */
   detail: GameDetail;
 }
@@ -36,13 +42,18 @@ export async function weekCandidates(
   query: WeekQuery,
   rain: RainChanceSource,
 ): Promise<CandidateGame[]> {
-  const { details, games, lines } = await weekDetails(cfbd, rain, query);
+  const { details, games, lines, spreads } = await weekDetails(cfbd, rain, query);
   return games
-    .map((game) => toCandidate(game, lines, details.get(game.id)!))
+    .map((game) => toCandidate(game, lines, spreads, details.get(game.id)!))
     .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime() || a.cfbdGameId - b.cfbdGameId);
 }
 
-function toCandidate(game: CfbdGame, spreads: Map<number, string>, detail: GameDetail): CandidateGame {
+function toCandidate(
+  game: CfbdGame,
+  spreadText: Map<number, string>,
+  spreadValues: Map<number, number>,
+  detail: GameDetail,
+): CandidateGame {
   return {
     cfbdGameId: game.id,
     homeTeamId: game.homeId,
@@ -57,7 +68,8 @@ function toCandidate(game: CfbdGame, spreads: Map<number, string>, detail: GameD
     awayClassification: game.awayClassification,
     kickoff: new Date(game.startDate),
     kickoffTbd: game.startTimeTBD,
-    spread: spreads.get(game.id) ?? null,
+    spread: spreadText.get(game.id) ?? null,
+    spreadValue: spreadValues.get(game.id) ?? null,
     detail,
   };
 }

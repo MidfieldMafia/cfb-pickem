@@ -46,12 +46,27 @@ describe("game detail for the pick screen", () => {
 
   test("a team that has not played shows 0–0 with no averages, an unforecast game has no rain figure, and no line means Pick", async () => {
     const cfbd = recordedCfbd("2026-week-2", { records: [], teamStats: [], seasonGames: [], lines: [], pregameWinProbability: [] });
-    const { details } = await weekDetails(cfbd, noRainChance, WEEK_2);
+    const { details, spreads } = await weekDetails(cfbd, noRainChance, WEEK_2);
     const game = details.get(OKLAHOMA_AT_MICHIGAN)!;
     expect(game.home).toEqual({ rank: 16, record: "0–0", pointsFor: null, pointsAgainst: null, yardsFor: null, yardsAgainst: null });
     expect(game.spread).toBe("Pick");
     expect(game.homeWp).toBeNull();
     expect(game.weather?.precipitation).toBeNull();
+    // Neither a book nor the model has a number, so the game carries no entry at all.
+    expect(spreads.has(OKLAHOMA_AT_MICHIGAN)).toBe(false);
+  });
+
+  test("spreads prefers the book's number, home-team perspective, and falls back to the model", async () => {
+    const { spreads } = await weekDetails(recordedCfbd("2026-week-2"), recordedOpenMeteo("2026-week-2"), WEEK_2);
+    // Oklahoma -1.5 at Michigan: the favorite is away, so home perspective is positive.
+    expect(spreads.get(OKLAHOMA_AT_MICHIGAN)).toBe(1.5);
+
+    const cfbd = recordedCfbd("2026-week-2", { lines: [] });
+    const { spreads: modelOnly } = await weekDetails(cfbd, recordedOpenMeteo("2026-week-2"), WEEK_2);
+    // With every book line stripped, the same game falls back to the model's spread.
+    const modelSpread = (await cfbd.pregameWinProbability(WEEK_2)).find((w) => w.gameId === OKLAHOMA_AT_MICHIGAN)!.spread;
+    expect(modelSpread).not.toBeNull();
+    expect(modelOnly.get(OKLAHOMA_AT_MICHIGAN)).toBe(modelSpread);
   });
 
   test("the sky icon follows the feed's condition code, and a dome has no weather at all", async () => {
