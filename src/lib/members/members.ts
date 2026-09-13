@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { Refusal } from "@/lib/refusal";
+import type { Commissioner } from "./authority";
 import { cleanDisplayName, MAX_DISPLAY_NAME, MAX_PHONE } from "./limits";
 
 /** A URL-safe secret for a Magic Link token or a session id. */
@@ -35,12 +36,18 @@ export class NotCommissioner extends Error {
 export class InvalidMember extends Refusal {}
 
 /** A commissioner in good standing: the one definition, so no screen guesses. */
-export function isCommissioner(member: Member): boolean {
+export function isCommissioner(member: Member): member is Commissioner {
   return member.isCommissioner && member.active;
 }
 
-/** Every console operation starts here. Server actions must call it too. */
-export function requireCommissioner(actor: Member): void {
+/**
+ * The brand's one check: refuses anyone who is not a commissioner in good
+ * standing, and narrows `actor` to `Commissioner` for the rest of its
+ * caller's scope. `requireConsole` and `asCommissioner` are its only two
+ * callers — every other writer takes `Commissioner` as its parameter type
+ * instead of calling this again.
+ */
+export function requireCommissioner(actor: Member): asserts actor is Commissioner {
   if (!isCommissioner(actor)) throw new NotCommissioner();
 }
 
@@ -89,8 +96,7 @@ export function magicLinkFor(member: Pick<Member, "token">, appUrl: string): str
   return `${appUrl.replace(/\/+$/, "")}/m/${member.token}`;
 }
 
-export async function addMember(db: Db, actor: Member, input: NewMemberInput): Promise<Member> {
-  requireCommissioner(actor);
+export async function addMember(db: Db, actor: Commissioner, input: NewMemberInput): Promise<Member> {
   const [member] = await db
     .insert(members)
     .values({ ...cleanInput(input), token: newSecret() })
@@ -98,9 +104,12 @@ export async function addMember(db: Db, actor: Member, input: NewMemberInput): P
   return member;
 }
 
-/** Every member, commissioners and deactivated included, in the order they joined. */
-export async function listMembers(db: Db, actor: Member): Promise<Member[]> {
-  requireCommissioner(actor);
+/**
+ * Every member, commissioners and deactivated included, in the order they
+ * joined. `actor` is the guard, not a value this reads: nothing here needs
+ * it, only proof that a caller holds a `Commissioner`.
+ */
+export async function listMembers(db: Db, actor: Commissioner): Promise<Member[]> {
   return db.query.members.findMany({ orderBy: joinedOrder });
 }
 
@@ -111,11 +120,10 @@ export async function listMembers(db: Db, actor: Member): Promise<Member[]> {
  */
 export async function regenerateMagicLink(
   db: Db,
-  actor: Member,
+  actor: Commissioner,
   memberId: number,
   options: { keepSessionId?: string } = {},
 ): Promise<Member> {
-  requireCommissioner(actor);
   const keep = memberId === actor.id ? options.keepSessionId : undefined;
   // Neither write reads the other, so the commissioner waits for one round trip.
   const [, updated] = await Promise.all([
@@ -130,11 +138,10 @@ export async function regenerateMagicLink(
 /** Deactivating signs the member out everywhere and refuses their link until reactivated. */
 export async function setMemberActive(
   db: Db,
-  actor: Member,
+  actor: Commissioner,
   memberId: number,
   active: boolean,
 ): Promise<Member> {
-  requireCommissioner(actor);
   if (!active && memberId === actor.id) throw new InvalidMember("You cannot deactivate yourself.");
   if (!active) await db.delete(sessions).where(eq(sessions.memberId, memberId));
   return updateMember(db, memberId, { active });
@@ -144,9 +151,9 @@ export async function setMemberActive(
  * How many Picks each member has, keyed by member id; a member with none is
  * absent. The console reads it next to the Delete button, so the sentence
  * before the click says what goes with them rather than the one after.
+ * `actor` is the guard here too, as `listMembers`' is.
  */
-export async function pickCountByMember(db: Db, actor: Member): Promise<Map<number, number>> {
-  requireCommissioner(actor);
+export async function pickCountByMember(db: Db, actor: Commissioner): Promise<Map<number, number>> {
   const rows = await db.select({ memberId: picks.memberId, picks: count() }).from(picks).groupBy(picks.memberId);
   return new Map(rows.map((row) => [row.memberId, row.picks]));
 }
@@ -168,8 +175,7 @@ export async function pickCountByMember(db: Db, actor: Member): Promise<Map<numb
  * that leaves a retryable member behind if one fails midway: the row itself
  * goes last.
  */
-export async function removeMember(db: Db, actor: Member, memberId: number): Promise<Member> {
-  requireCommissioner(actor);
+export async function removeMember(db: Db, actor: Commissioner, memberId: number): Promise<Member> {
   if (memberId === actor.id) throw new InvalidMember("You cannot delete yourself.");
   const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
   if (!member) throw new InvalidMember("No such member.");

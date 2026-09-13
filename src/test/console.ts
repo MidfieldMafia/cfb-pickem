@@ -7,9 +7,9 @@
  * screens an edit invalidates is the only thing these wrappers add over the
  * seam beneath them, so it is the thing worth asserting.
  */
-import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { ConsoleRoute } from "@/lib/console/route";
+import type { Commissioner } from "@/lib/members/authority";
 
 export interface TestRoute {
   route: ConsoleRoute;
@@ -22,7 +22,7 @@ export interface TestRoute {
  * console edit that writes an audit row stamps it, and a suite leaning on the
  * wall clock there would drift out of the fixture's Week.
  */
-export function routeFor(db: Db, actor: Member, now: Date): TestRoute {
+export function routeFor(db: Db, actor: Commissioner, now: Date): TestRoute {
   const revalidated: string[] = [];
   return {
     route: {

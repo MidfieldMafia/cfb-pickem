@@ -1,10 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
-import { games, weeks, type Member } from "@/db/schema";
+import { games, weeks } from "@/db/schema";
 import { sharedFeed } from "@/lib/cfbd/cache";
 import { recordedCfbd } from "@/lib/cfbd/recorded";
 import type { CfbdClient } from "@/lib/cfbd/types";
-import { NotCommissioner } from "@/lib/members/members";
 import { PicksHidden } from "@/lib/picks/picks";
 import { slateFor, voidGame } from "@/lib/slate/slate";
 import {
@@ -60,8 +59,8 @@ async function setup() {
     ingest: async (feed: CfbdClient, at: Date) => ingestResults(db, feed, await slateFor(db, week.id), at),
     refresh: async (feed: CfbdClient, at: Date) =>
       (await refreshResultsIfStale(db, feed, await slateFor(db, week.id), at)).outcome,
-    gradeAt: async (actor: Member, at: Date) => weekResult(db, actor, await slateFor(db, week.id), at),
-    revealAt: async (actor: Member, at: Date) => (await weekResult(db, actor, await slateFor(db, week.id), at)).reveal,
+    gradeAt: async (at: Date) => weekResult(db, await slateFor(db, week.id), at),
+    revealAt: async (at: Date) => (await weekResult(db, await slateFor(db, week.id), at)).reveal,
   };
 }
 
@@ -334,13 +333,12 @@ describe("results ingest", () => {
 
 describe("result overrides", () => {
   test("a commissioner's override beats the feed, is logged, and can be cleared back to the feed", async () => {
-    const { db, jonah, grandma, week, michigan, texas, reload, ingest } = await setup();
+    const { db, jonah, week, michigan, texas, reload, ingest } = await setup();
     const feed = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] });
     await ingest(feed, SATURDAY_EVENING);
 
-    await expect(overrideResult(db, grandma, michigan.id, { awayScore: 30, homeScore: 27, note: "x" })).rejects.toThrow(
-      NotCommissioner,
-    );
+    // `overrideResult` takes a `Commissioner`, so a member calling it is a type
+    // error here rather than a rejection — see `authority.ts`.
     await expect(overrideResult(db, jonah, michigan.id, { awayScore: 30, homeScore: 27, note: "  " })).rejects.toThrow(
       InvalidResult,
     );
@@ -406,7 +404,6 @@ describe("result overrides", () => {
       [michigan.id, "clear_override", "Oklahoma 30, Michigan 27", "Oklahoma 24, Michigan 27", null],
     ]);
     expect(log.every((a) => a.changedBy === jonah.id)).toBe(true);
-    await expect(resultAuditsFor(db, grandma, week.id)).rejects.toThrow(NotCommissioner);
   });
 
   test("void and restore are logged, a void game cannot take a score, and a restore keeps the feed's score", async () => {
@@ -458,10 +455,10 @@ describe("the reveal", () => {
     const { jonah, grandma, miami, michigan, texas, deadline, ingest, revealAt } = await setup();
     await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SATURDAY_EVENING);
 
-    await expect(revealAt(grandma, new Date(deadline.getTime() - 1))).rejects.toThrow(PicksHidden);
-    await expect(revealAt(jonah, THURSDAY)).rejects.toThrow(PicksHidden);
+    await expect(revealAt(new Date(deadline.getTime() - 1))).rejects.toThrow(PicksHidden);
+    await expect(revealAt(THURSDAY)).rejects.toThrow(PicksHidden);
 
-    const reveal = await revealAt(grandma, SATURDAY_EVENING);
+    const reveal = await revealAt(SATURDAY_EVENING);
     expect(reveal.members.map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
     expect(reveal.games.map((g) => g.game.id)).toEqual([miami.id, michigan.id, texas.id]);
 
@@ -499,7 +496,7 @@ describe("the reveal", () => {
     await voidGame(db, jonah, texas.id, "Postponed to December");
     await overrideResult(db, jonah, michigan.id, { awayScore: 30, homeScore: 27, note: "Feed missed the late FG" });
 
-    const reveal = await revealAt(jonah, SUNDAY);
+    const reveal = await revealAt(SUNDAY);
     const michiganRow = reveal.games.find((g) => g.game.id === michigan.id)!;
     expect(michiganRow.result).toMatchObject({ awayScore: 30, source: "override" });
     expect(michiganRow.picks.map((p) => [p.memberId, p.outcome, p.lock])).toEqual([
@@ -517,7 +514,7 @@ describe("the reveal", () => {
     await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SATURDAY_EVENING);
     await voidGame(db, jonah, texas.id, "Postponed to December");
 
-    const reveal = await revealAt(jonah, SUNDAY);
+    const reveal = await revealAt(SUNDAY);
 
     // Jonah spent his Lock on the game that was voided. It scores nothing, but the board still shows he spent it.
     const texasRow = reveal.games.find((g) => g.game.id === texas.id)!;
@@ -553,7 +550,7 @@ describe("the week result", () => {
     const { jonah, grandma, michigan, ingest, gradeAt } = await setup();
     await ingest(feedWith(ALL_FINAL), SUNDAY);
 
-    const result = await gradeAt(grandma, SUNDAY);
+    const result = await gradeAt(SUNDAY);
 
     expect(result.complete).toBe(true);
     expect(result.week.weekNumber).toBe(2);
@@ -584,10 +581,10 @@ describe("the week result", () => {
   });
 
   test("a week with a game still to play is not complete, and says how much is still pending", async () => {
-    const { grandma, gradeAt, ingest } = await setup();
+    const { gradeAt, ingest } = await setup();
     await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SATURDAY_EVENING);
 
-    const result = await gradeAt(grandma, SATURDAY_EVENING);
+    const result = await gradeAt(SATURDAY_EVENING);
 
     expect(result.complete).toBe(false);
     expect(result.scores.map((s) => [s.member.displayName, s.points, s.pending])).toEqual([
@@ -604,7 +601,7 @@ describe("the week result", () => {
     await ingest(feedWith(ALL_FINAL), SUNDAY);
     await voidGame(db, jonah, texas.id, "Postponed to December");
 
-    const jonahScore = (await gradeAt(jonah, SUNDAY)).scores.find((s) => s.member.id === jonah.id)!;
+    const jonahScore = (await gradeAt(SUNDAY)).scores.find((s) => s.member.id === jonah.id)!;
 
     expect(jonahScore.lockGameId).toBe(texas.id);
     expect(jonahScore.lockDropped).toBe(true);
@@ -731,7 +728,7 @@ describe("the season leaderboard", () => {
 
 describe("the results console", () => {
   test("composes the week the screen renders: the chooser, the rows, the log, and when the feed was last read", async () => {
-    const { db, jonah, grandma, week, miami, michigan, texas, refresh } = await setup();
+    const { db, jonah, week, miami, michigan, texas, refresh } = await setup();
     const feed = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }, { [OHIO_STATE_AT_TEXAS]: [3, 0] });
     // Through the stale gate, the way member traffic does it: `feedCheckedAt`
     // is that gate's claim, and a commissioner's own feed check no longer
@@ -756,7 +753,8 @@ describe("the results console", () => {
     ]);
 
     expect(view.log.map((e) => [e.kind, e.awayTeam, e.note])).toEqual([["void", miami.awayTeam, "Hurricane"]]);
-    await expect(resultsConsole(db, grandma, 2, SATURDAY_EVENING)).rejects.toBeInstanceOf(NotCommissioner);
+    // `resultsConsole` takes a `Commissioner`, so a member calling it is a
+    // type error here rather than a rejection — see `authority.ts`.
   });
 
   test("opens the week asked for, creating it, and falls back to the default week when none is", async () => {

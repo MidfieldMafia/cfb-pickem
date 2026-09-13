@@ -194,9 +194,10 @@ describe("the edits whose refusals are faults", () => {
 
 describe("refreshing from the feed", () => {
   /**
-   * `refreshSlate` writes game rows with no actor of its own, so the
-   * commissioner check on the route is the only thing guarding it. That is why
-   * it goes through the route at all, and it is what this asserts.
+   * `refreshSlate` passes `refreshFromFeed` the `Commissioner` the route
+   * minted, but never one it logs — the write carries no actor to audit. The
+   * route's check is what makes calling it possible at all, which is what
+   * this asserts.
    */
   test("re-reads the week, and the route's check is the only thing guarding it", async () => {
     const { db, cfbd, rain, route, revalidated, week, michigan } = await draft();
@@ -210,8 +211,8 @@ describe("refreshing from the feed", () => {
     expect(revalidated).toEqual(SLATE_ONLY);
     expect(await kickoffOf()).not.toEqual(moved);
 
-    // `refreshFromFeed` writes game rows with no actor of its own, so nothing
-    // below the route would stop a non-commissioner. When the check refuses,
+    // `refreshFromFeed` can only be reached with a `Commissioner`, and the
+    // route is the only place one is minted here. When the check refuses,
     // the work must not have run: the row stays where the test put it.
     await db.update(games).set({ kickoff: moved }).where(eq(games.id, michigan.id));
     const barred: typeof route = {

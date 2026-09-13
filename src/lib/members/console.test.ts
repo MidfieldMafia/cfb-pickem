@@ -4,13 +4,12 @@ import { members, picks } from "@/db/schema";
 import { createTestDb } from "@/test/db";
 import { pickAs, publishWeek2, THURSDAY } from "@/test/week-2";
 import { applyEdit } from "@/lib/picks/edits";
-import { asCommissioner } from "./authority";
+import { asCommissioner, type Commissioner } from "./authority";
 import {
   addMember,
   bootstrapCommissioner,
   listMembers,
   magicLinkFor,
-  NotCommissioner,
   pickCountByMember,
   regenerateMagicLink,
   removeMember,
@@ -20,7 +19,7 @@ import { exchangeToken, getSession } from "./auth";
 
 async function setup() {
   const db = await createTestDb();
-  const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
+  const jonah = (await bootstrapCommissioner(db, { displayName: "Jonah" })) as Commissioner;
   const grandma = await addMember(db, jonah, { displayName: "Grandma", phone: "+12565550140" });
   return { db, jonah, grandma };
 }
@@ -79,16 +78,13 @@ describe("commissioner console", () => {
     expect((await exchangeToken(db, grandma.token))?.member.id).toBe(grandma.id);
   });
 
-  test("a member who is not a commissioner cannot use the console", async () => {
-    const { db, jonah, grandma } = await setup();
-
-    await expect(addMember(db, grandma, { displayName: "Uncle Rick" })).rejects.toBeInstanceOf(NotCommissioner);
-    await expect(listMembers(db, grandma)).rejects.toBeInstanceOf(NotCommissioner);
-    await expect(regenerateMagicLink(db, grandma, jonah.id)).rejects.toBeInstanceOf(NotCommissioner);
-    await expect(setMemberActive(db, grandma, jonah.id, false)).rejects.toBeInstanceOf(NotCommissioner);
-    await expect(removeMember(db, grandma, jonah.id)).rejects.toBeInstanceOf(NotCommissioner);
-    await expect(pickCountByMember(db, grandma)).rejects.toBeInstanceOf(NotCommissioner);
-  });
+  // A member who is not a commissioner cannot use the console is no longer
+  // this module's own runtime check: `addMember`, `listMembers`,
+  // `regenerateMagicLink`, `setMemberActive`, `removeMember`, and
+  // `pickCountByMember` all take a `Commissioner`, so passing `grandma` here
+  // is a type error, not a rejection to assert on. See `authority.ts` and
+  // `picks/edits.test.ts`'s `asCommissioner` coverage for where the check
+  // that mints one still lives.
 
   test("a commissioner cannot deactivate themselves", async () => {
     const { db, jonah } = await setup();

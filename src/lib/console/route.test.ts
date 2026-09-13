@@ -13,10 +13,10 @@
  * the wrapper need not stand either up.
  */
 import { describe, expect, test } from "vitest";
-import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { CfbdError } from "@/lib/cfbd/http";
 import { InvalidWelcome } from "@/lib/members/auth";
+import type { Commissioner } from "@/lib/members/authority";
 import { InvalidMember, NotCommissioner } from "@/lib/members/members";
 import { DeadlinePassed, InvalidPick, PicksHidden } from "@/lib/picks/picks";
 import { InvalidResult } from "@/lib/results/results";
@@ -24,7 +24,7 @@ import { InvalidSlate, SlatePublished } from "@/lib/slate/slate";
 import { consoleAction, consoleEdit, type ConsoleRoute } from "./route";
 
 /** The actor is never read by the work these tests hand in. */
-const ACTOR = {} as Member;
+const ACTOR = {} as Commissioner;
 
 function routeFor(): { route: ConsoleRoute; revalidated: string[] } {
   const revalidated: string[] = [];

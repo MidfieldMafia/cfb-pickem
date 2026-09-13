@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 import { asCommissioner } from "@/lib/members/authority";
-import { NotCommissioner, setMemberActive } from "@/lib/members/members";
+import { setMemberActive } from "@/lib/members/members";
 import { voidGame } from "@/lib/slate/slate";
 import { guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { memberSheet, pickAuditsFor, reminderText, whoHasntPicked } from "./console";
@@ -20,11 +20,12 @@ async function setup() {
 }
 
 describe("reading a member's sheet from the console", () => {
-  test("a commissioner reads and enters a member's picks before the deadline; a member cannot read another's", async () => {
+  test("a commissioner reads and enters a member's picks before the deadline", async () => {
     const { db, slate, jonah, grandma, week, michigan, texas } = await setup();
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
 
-    await expect(memberSheet(db, grandma, jonah.id, week.id, THURSDAY)).rejects.toBeInstanceOf(NotCommissioner);
+    // `memberSheet` takes a `Commissioner`, so a member reading another's is a
+    // type error here rather than a rejection — see `authority.ts`.
     await expect(memberSheet(db, jonah, 999999, week.id, THURSDAY)).rejects.toThrow(/no such member/i);
 
     await applyEdit(
@@ -64,8 +65,6 @@ describe("reading a member's sheet from the console", () => {
       newValue: "Oklahoma",
       changedAt: afterDeadline,
     });
-
-    await expect(pickAuditsFor(db, grandma, week.id)).rejects.toBeInstanceOf(NotCommissioner);
   });
 });
 
@@ -111,8 +110,6 @@ describe("who hasn't picked", () => {
     expect(reminderText(afterVoid)).toBe(
       "Saturday Slate Week 2 picks lock Thu, Sep 10 at 7:00 PM Central. Still need: Jonah (Lock of the Week), Grandma (Lock of the Week), Cousin Em (1 pick, Lock of the Week, Tiebreaker Guess).",
     );
-
-    await expect(whoHasntPicked(db, grandma, week.id, THURSDAY)).rejects.toBeInstanceOf(NotCommissioner);
   });
 
   test("a member who joins after the Deadline is not chased, and neither is one who picked and left", async () => {

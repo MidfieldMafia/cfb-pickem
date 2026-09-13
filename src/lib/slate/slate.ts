@@ -6,11 +6,11 @@
  */
 import "server-only";
 import { and, asc, desc, eq } from "drizzle-orm";
-import { games, seasons, weeks, type Game, type Member, type Season, type Week } from "@/db/schema";
+import { games, seasons, weeks, type Game, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
-import { requireCommissioner } from "@/lib/members/members";
+import type { Commissioner } from "@/lib/members/authority";
 import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
 import { logResultChange } from "@/lib/results/audit";
@@ -71,8 +71,7 @@ export async function activeSeason(db: Db): Promise<Season> {
  * The Week row for this number in the active season, created on first visit.
  * Callers that already hold the season pass it rather than paying for it again.
  */
-export async function openWeek(db: Db, actor: Member, weekNumber: number, inSeason?: Season): Promise<Week> {
-  requireCommissioner(actor);
+export async function openWeek(db: Db, actor: Commissioner, weekNumber: number, inSeason?: Season): Promise<Week> {
   if (!isWeekNumber(weekNumber)) {
     throw new InvalidSlate(`Week must be between 1 and ${MAX_WEEK_NUMBER}.`);
   }
@@ -168,12 +167,11 @@ export async function slateFor(db: Db, weekId: number): Promise<Slate> {
 
 export async function addGame(
   db: Db,
-  actor: Member,
+  actor: Commissioner,
   weekId: number,
   candidate: CandidateGame,
   inWeek?: Week,
 ): Promise<Game> {
-  requireCommissioner(actor);
   const week = inWeek ?? (await loadWeek(db, weekId));
   if (week.published) throw new SlatePublished();
   const [game] = await db
@@ -200,8 +198,7 @@ export async function addGame(
   return game;
 }
 
-export async function setTiebreaker(db: Db, actor: Member, weekId: number, gameId: number): Promise<Week> {
-  requireCommissioner(actor);
+export async function setTiebreaker(db: Db, actor: Commissioner, weekId: number, gameId: number): Promise<Week> {
   const game = await loadGame(db, gameId, weekId);
   if (effectiveResult(game).status === "void") throw new InvalidSlate("A void game cannot be the Tiebreaker Game.");
   const [updated] = await db.update(weeks).set({ tiebreakerGameId: gameId }).where(eq(weeks.id, weekId)).returning();
@@ -209,8 +206,7 @@ export async function setTiebreaker(db: Db, actor: Member, weekId: number, gameI
 }
 
 /** Publishing freezes the Deadline and makes the Slate visible to members. */
-export async function publishSlate(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<Slate> {
-  requireCommissioner(actor);
+export async function publishSlate(db: Db, actor: Commissioner, weekId: number, now: Date = new Date()): Promise<Slate> {
   const slate = await slateFor(db, weekId);
   if (slate.week.published) return slate;
   if (slate.games.length === 0) throw new InvalidSlate("Add at least one game before publishing.");
@@ -257,8 +253,7 @@ export function defaultWeekNumber(existing: Week[]): number {
  * Moves the Deadline earlier. Before publish it may sit anywhere at or before
  * the earliest kickoff; after publish it may only move earlier than it is.
  */
-export async function setDeadline(db: Db, actor: Member, weekId: number, at: Date): Promise<Slate> {
-  requireCommissioner(actor);
+export async function setDeadline(db: Db, actor: Commissioner, weekId: number, at: Date): Promise<Slate> {
   if (Number.isNaN(at.getTime())) throw new InvalidSlate("That is not a valid time.");
   const slate = await slateFor(db, weekId);
   const ceiling = slate.week.published ? slate.week.deadline : earliest(slate.games);
@@ -272,8 +267,7 @@ export async function setDeadline(db: Db, actor: Member, weekId: number, at: Dat
 }
 
 /** Unpublished slates are freely editable; a published game can only be voided. */
-export async function removeGame(db: Db, actor: Member, gameId: number): Promise<void> {
-  requireCommissioner(actor);
+export async function removeGame(db: Db, actor: Commissioner, gameId: number): Promise<void> {
   const game = await loadGame(db, gameId);
   if (game.week.published) throw new SlatePublished();
   if (game.week.tiebreakerGameId === gameId) {
@@ -291,8 +285,7 @@ export async function removeGame(db: Db, actor: Member, gameId: number): Promise
  * tell the member why. Deleting it here would be irreversible — `restoreGame`
  * could not put it back, and after the Deadline the member could not either.
  */
-export async function voidGame(db: Db, actor: Member, gameId: number, note: string, now: Date = new Date()): Promise<Game> {
-  requireCommissioner(actor);
+export async function voidGame(db: Db, actor: Commissioner, gameId: number, note: string, now: Date = new Date()): Promise<Game> {
   const game = await loadGame(db, gameId);
   if (!game.week.published) throw new InvalidSlate("The slate is not published; remove the game instead.");
   if (game.void) return game;
@@ -313,9 +306,16 @@ export async function voidGame(db: Db, actor: Member, gameId: number, note: stri
  * kickoff and pick-screen detail (and, while unpublished, its rank and
  * spread snapshot). Games stay on the slate whatever the feed says; the
  * Deadline is never touched here. Returns how many games changed.
+ *
+ * Takes a `Commissioner` it never reads: the write itself carries no actor
+ * to log (it patches columns from the feed, not a commissioner's decision),
+ * but the console button that reaches it is the only thing guarding it, so
+ * the brand is the guard now rather than a `requireConsole()` result
+ * `refreshSlate` used to discard.
  */
 export async function refreshFromFeed(
   db: Db,
+  actor: Commissioner,
   cfbd: CfbdClient,
   weekId: number,
   rain: RainChanceSource,
@@ -369,13 +369,12 @@ export async function applyGamePatches(
  */
 export async function addGameFromFeed(
   db: Db,
-  actor: Member,
+  actor: Commissioner,
   cfbd: CfbdClient,
   weekId: number,
   cfbdGameId: number,
   rain: RainChanceSource,
 ): Promise<Game> {
-  requireCommissioner(actor);
   const slate = await slateFor(db, weekId);
   const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const candidate = feed.find((c) => c.cfbdGameId === cfbdGameId);

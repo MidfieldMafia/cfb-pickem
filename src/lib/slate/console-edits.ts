@@ -87,9 +87,10 @@ export function chooseTiebreaker(route: ConsoleRoute, form: FormData): Promise<E
 }
 
 /**
- * Re-reads the week from the feed. It writes game rows without an actor of its
- * own — see `refreshFromFeed` — so the commissioner check here is the only one
- * guarding it, which is why it runs through the route like every other edit.
+ * Re-reads the week from the feed. `refreshFromFeed` takes a `Commissioner`
+ * it never logs — the write carries no actor to audit — so the route's
+ * `requireConsole` is the only check, and the brand is what makes that
+ * enforceable rather than a result the action used to discard.
  *
  * On `consoleEdit`, not `consoleAction`: a feed outage is nobody's mistake,
  * screen or commissioner, so it answers a sentence rather than the error page.
@@ -100,8 +101,8 @@ export function refreshSlate(
   client: CfbdClient,
   rain: RainChanceSource,
 ): Promise<ActionState> {
-  return consoleEdit(route, async ({ db }) => {
-    await refreshFromFeed(db, client, num(form, "weekId"), rain);
+  return consoleEdit(route, async ({ db, actor }) => {
+    await refreshFromFeed(db, actor, client, num(form, "weekId"), rain);
     return { revalidate: slateOnly };
   });
 }
