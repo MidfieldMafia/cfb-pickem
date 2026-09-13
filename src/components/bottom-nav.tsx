@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, Radio, Trophy } from "lucide-react";
+import { ClipboardCheck, History, Radio, Trophy } from "lucide-react";
 
 const TABS = [
   { href: "/picks", label: "Picks", Icon: ClipboardCheck },
   { href: "/live", label: "Live Board", Icon: Radio },
+  { href: "/history", label: "History", Icon: History },
   { href: "/leaderboard", label: "Leaderboard", Icon: Trophy },
 ] as const;
 
 /**
- * The three tabs of the phone app, the same for every member — the Console
+ * The four tabs of the phone app, the same for every member — the Console
  * lives behind a header icon (`AppHeader`) rather than a tab now, since it is
  * only ever relevant to a commissioner. Fixed to the visual viewport (not
  * sticky), so it stays under the thumb through an iOS pinch-zoom or URL-bar
@@ -69,13 +70,13 @@ export function BottomNav({ locked }: { locked: boolean }) {
     <>
       <div
         aria-hidden
-        className="invisible grid grid-cols-3 border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
+        className="invisible grid grid-cols-4 border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
       >
         {tiles}
       </div>
       <nav
         aria-label="App"
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-3 border-t border-border bg-card pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-card pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
       >
         {tiles}
       </nav>

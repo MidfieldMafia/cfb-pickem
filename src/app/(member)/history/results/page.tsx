@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
-import { BoardToggle } from "@/components/board-toggle";
 import { MemberChip } from "@/components/member-chip";
 import { RevealList } from "@/components/reveal";
 import { SECTION_LABEL } from "@/components/section-label";
@@ -43,9 +42,6 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
           commissioner={member.isCommissioner}
           right={<MemberChip member={member} />}
         />
-        <div className="px-4">
-          <BoardToggle active="results" weekNumber={null} />
-        </div>
         <section className="mx-4 space-y-2 rounded-md border border-border bg-card p-3">
           <p className={SECTION_LABEL}>Nothing to show yet</p>
           <p className="text-muted-foreground">
@@ -83,10 +79,6 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
         right={<MemberChip member={member} />}
       />
 
-      <div className="px-4">
-        <BoardToggle active="results" weekNumber={weekNumber} />
-      </div>
-
       {/* Past weeks are plain links: a GET per week, nothing to hydrate, and
           the one on screen is the one the URL names. */}
       <nav aria-label="Weeks" className="flex flex-wrap gap-2 px-4">
@@ -95,7 +87,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
           return (
             <Link
               key={number}
-              href={`/results?week=${number}`}
+              href={`/history/results?week=${number}`}
               aria-current={here ? "page" : undefined}
               className={`flex min-h-tap items-center rounded-full border px-3 text-sm font-bold no-underline ${
                 here ? "border-primary bg-primary text-primary-foreground" : "border-border text-foreground"

@@ -20,7 +20,15 @@ const id = (fields: Fields, name: string) =>
  * Every screen that lists members or counts their Picks. A deactivated
  * member with Picks was still on those boards, and now is not.
  */
-const SHOWN: string[] = [MEMBERS_PATH, "/console/picks", "/week", "/live", "/results", "/leaderboard"];
+const SHOWN: string[] = [
+  MEMBERS_PATH,
+  "/console/picks",
+  "/week",
+  "/live",
+  "/history",
+  "/history/results",
+  "/leaderboard",
+];
 
 export function deleteMember(route: ConsoleRoute, form: FormData): Promise<ActionState> {
   return consoleEdit(route, async ({ db, actor }) => {
