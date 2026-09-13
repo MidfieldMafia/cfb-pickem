@@ -103,7 +103,6 @@ export default async function Week() {
                     </div>
                     <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                       <LocalTime at={game.kickoff} />
-                      {game.spread ? <span>· {game.spread}</span> : null}
                       {game.id === slate.week.tiebreakerGameId ? (
                         <Badge variant="outline">Tiebreaker</Badge>
                       ) : null}
