@@ -25,11 +25,16 @@ const TABS = [
  * copy out of the tab order and the accessibility tree, so only one `nav`
  * landmark is exposed.
  */
-export function BottomNav() {
+export function BottomNav({ locked }: { locked: boolean }) {
   const pathname = usePathname();
 
   const tiles = TABS.map(({ href, label, Icon }) => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
+    // The Picks tab silently redirects to /picks/review once the week locks
+    // (src/app/(member)/picks/page.tsx) — the label stays "Picks" so the tab
+    // bar doesn't relabel mid-week, but a dot on the icon says a tap now lands
+    // somewhere other than pick entry. See #116.
+    const showLockedBadge = href === "/picks" && locked;
     return (
       <Link
         key={href}
@@ -38,13 +43,24 @@ export function BottomNav() {
         className="flex min-h-14 flex-col items-center justify-center gap-1 p-1.5 text-[11px] font-bold no-underline"
       >
         <span
-          className={`grid h-7 w-14 place-items-center rounded-full ${
+          className={`relative grid h-7 w-14 place-items-center rounded-full ${
             active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
           }`}
         >
           <Icon size={18} />
+          {showLockedBadge ? (
+            <span
+              aria-hidden
+              className={`absolute right-2.5 top-0 h-2 w-2 rounded-full ring-2 ${
+                active ? "bg-primary-foreground ring-primary" : "bg-primary ring-card"
+              }`}
+            />
+          ) : null}
         </span>
-        <span className={active ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+        <span className={active ? "text-foreground" : "text-muted-foreground"}>
+          {label}
+          {showLockedBadge ? <span className="sr-only"> — picks are locked, tap to review</span> : null}
+        </span>
       </Link>
     );
   });
