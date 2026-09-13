@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "@/db";
 import type { Member } from "@/db/schema";
+import type { Commissioner } from "./authority";
 import { getSession } from "./auth";
 import { isCommissioner } from "./members";
 import { SESSION_COOKIE } from "./cookie";
@@ -26,8 +27,15 @@ export async function requireMember(): Promise<Member> {
   return member;
 }
 
-/** For console pages and actions: the console does not exist for non-commissioners. */
-export async function requireConsole(): Promise<Member> {
+/**
+ * For console pages and actions: the console does not exist for
+ * non-commissioners. Mints the `Commissioner` brand — the other of its two
+ * mint points is `asCommissioner` — by checking and casting itself rather
+ * than calling `requireCommissioner`, because a non-commissioner here answers
+ * `notFound()`, not `NotCommissioner`: the console does not exist for them,
+ * it does not refuse them.
+ */
+export async function requireConsole(): Promise<Commissioner> {
   const member = await requireMember();
   if (!isCommissioner(member)) notFound();
   return member;

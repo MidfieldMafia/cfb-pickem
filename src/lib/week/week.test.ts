@@ -135,7 +135,7 @@ describe("the week in review", () => {
     const fixture = await publishWeek2();
     const three = await publishAlso(fixture, 3);
 
-    const review = (await weekInReview(fixture.db, fixture.grandma, undefined, SUNDAY))!;
+    const review = (await weekInReview(fixture.db, undefined, SUNDAY))!;
 
     expect(review.played).toEqual([2, 3]);
     expect(review.slate.week.id).toBe(three.week.id);
@@ -146,26 +146,26 @@ describe("the week in review", () => {
   test("looks back at an older week when asked, and falls back when asked for one the season has not played", async () => {
     const fixture = await publishWeek2();
     await publishAlso(fixture, 3);
-    const { db, grandma } = fixture;
+    const { db } = fixture;
 
-    expect((await weekInReview(db, grandma, 2, SUNDAY))!.slate.week.weekNumber).toBe(2);
+    expect((await weekInReview(db, 2, SUNDAY))!.slate.week.weekNumber).toBe(2);
     // Week 9 does not exist, and week 1 was never published: both land on the latest played.
-    expect((await weekInReview(db, grandma, 9, SUNDAY))!.slate.week.weekNumber).toBe(3);
-    expect((await weekInReview(db, grandma, 1, SUNDAY))!.slate.week.weekNumber).toBe(3);
+    expect((await weekInReview(db, 9, SUNDAY))!.slate.week.weekNumber).toBe(3);
+    expect((await weekInReview(db, 1, SUNDAY))!.slate.week.weekNumber).toBe(3);
   });
 
   test("there is nothing to review until a deadline has passed", async () => {
-    const { db, jonah, grandma } = await publishWeek2();
+    const { db, jonah } = await publishWeek2();
 
     // Thursday is inside Week 2: the Reveal is what the Deadline gates, so the
     // week is not reviewable yet — asked for by number or not.
-    expect(await weekInReview(db, grandma, undefined, THURSDAY)).toBeNull();
-    expect(await weekInReview(db, grandma, 2, THURSDAY)).toBeNull();
+    expect(await weekInReview(db, undefined, THURSDAY)).toBeNull();
+    expect(await weekInReview(db, 2, THURSDAY)).toBeNull();
 
     // An unpublished Week is not reviewable either, whatever the clock says:
     // asking for Week 4 lands on Week 2, the one the season has played.
     await openWeek(db, jonah, 4);
-    expect((await weekInReview(db, grandma, 4, SUNDAY))!.slate.week.weekNumber).toBe(2);
+    expect((await weekInReview(db, 4, SUNDAY))!.slate.week.weekNumber).toBe(2);
   });
 
   test("grades the week it lands on, with everyone's picks on the board", async () => {
@@ -175,7 +175,7 @@ describe("the week in review", () => {
     await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY); // Oklahoma
     await ingestResults(db, feedWithMichiganFinal(), await slateFor(db, week.id), SUNDAY);
 
-    const review = (await weekInReview(db, grandma, 2, SUNDAY))!;
+    const review = (await weekInReview(db, 2, SUNDAY))!;
 
     // Michigan won: Grandma's Lock doubles it, Jonah has nothing.
     expect(review.result.scores.map((s) => [s.member.displayName, s.points])).toEqual([
@@ -195,14 +195,14 @@ describe("the week in review", () => {
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
     const feed = feedWithMichiganFinal();
 
-    const review = (await weekInReview(db, grandma, 2, SUNDAY, { cfbd: () => feed }))!;
+    const review = (await weekInReview(db, 2, SUNDAY, { cfbd: () => feed }))!;
 
     expect(feed.calls).toBe(1);
     // Graded off the rows the pull left behind, not the ones the read started from.
     expect(review.result.reveal.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("final");
     expect(review.result.scores.find((s) => s.member.id === grandma.id)!.points).toBe(10);
 
-    await weekInReview(db, grandma, 2, SUNDAY, { cfbd: () => feed });
+    await weekInReview(db, 2, SUNDAY, { cfbd: () => feed });
     expect(feed.calls).toBe(1);
   });
 });

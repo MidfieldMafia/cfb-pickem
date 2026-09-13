@@ -11,7 +11,7 @@ import { recordedCfbd, recordings, scoreboardOf } from "@/lib/cfbd/recorded";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
 import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
-import { asMember } from "@/lib/members/authority";
+import { asMember, type Commissioner } from "@/lib/members/authority";
 import { addMember, bootstrapCommissioner } from "@/lib/members/members";
 import { applyEdit } from "@/lib/picks/edits";
 import { addGame, openWeek, publishSlate, setTiebreaker, type Slate } from "@/lib/slate/slate";
@@ -38,7 +38,13 @@ export const SUNDAY = new Date("2026-09-13T12:00:00Z");
 
 export interface Week2Fixture {
   db: Db;
-  jonah: Member;
+  /**
+   * Branded here rather than through `requireConsole`/`asCommissioner`: the
+   * fixture builds Jonah as a commissioner directly, so this cast is the one
+   * place a test's own `bootstrapCommissioner` row stands in for a check the
+   * production mint points would otherwise have to run.
+   */
+  jonah: Commissioner;
   grandma: Member;
   cfbd: CfbdClient;
   /**
@@ -56,7 +62,7 @@ export interface Week2Fixture {
  * on `joinedAt` against the Deadline, so a test that puts someone either side
  * of it says which side here rather than leaning on the wall clock.
  */
-export async function joinAt(db: Db, commissioner: Member, displayName: string, at: Date): Promise<Member> {
+export async function joinAt(db: Db, commissioner: Commissioner, displayName: string, at: Date): Promise<Member> {
   const member = await addMember(db, commissioner, { displayName });
   const [pinned] = await db.update(members).set({ joinedAt: at }).where(eq(members.id, member.id)).returning();
   return pinned;
@@ -74,7 +80,7 @@ export async function seedWeek2(): Promise<Week2Fixture> {
     },
     active: true,
   });
-  const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
+  const jonah = (await bootstrapCommissioner(db, { displayName: "Jonah" })) as Commissioner;
   const grandma = await addMember(db, jonah, { displayName: "Grandma" });
   // Pinned before any Week 2 Deadline, so no suite depends on the wall clock
   // for whether these two are on the board.
@@ -85,7 +91,7 @@ export async function seedWeek2(): Promise<Week2Fixture> {
   const candidate = (cfbdGameId: number) => candidates.find((c) => c.cfbdGameId === cfbdGameId)!;
   return {
     db,
-    jonah: { ...jonah, joinedAt: TUESDAY },
+    jonah: { ...jonah, joinedAt: TUESDAY } as Commissioner,
     grandma: { ...grandma, joinedAt: TUESDAY },
     cfbd,
     rain,

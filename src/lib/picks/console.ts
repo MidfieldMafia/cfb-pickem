@@ -25,7 +25,8 @@ import {
 } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
-import { InvalidMember, joinedOrder, requireCommissioner } from "@/lib/members/members";
+import type { Commissioner } from "@/lib/members/authority";
+import { InvalidMember, joinedOrder } from "@/lib/members/members";
 import { roster } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
 import { isDroppedLock } from "@/lib/results/result";
@@ -48,12 +49,11 @@ async function loadMember(db: Db, memberId: number): Promise<Member> {
  */
 export async function memberSheet(
   db: Db,
-  actor: Member,
+  actor: Commissioner,
   memberId: number,
   weekId: number,
   now: Date = new Date(),
 ): Promise<{ member: Member; sheet: PickSheet }> {
-  requireCommissioner(actor);
   const member = await loadMember(db, memberId);
   return { member, sheet: await pickSheet(db, member, await slateFor(db, weekId), now) };
 }
@@ -92,8 +92,7 @@ export interface PickReport {
  * week was never theirs to finish. No picks are passed, so the deactivated
  * stay off it — there is nothing to chase them about.
  */
-export async function whoHasntPicked(db: Db, actor: Member, weekId: number, now: Date = new Date()): Promise<PickReport> {
-  requireCommissioner(actor);
+export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number, now: Date = new Date()): Promise<PickReport> {
   const slate = await slateFor(db, weekId);
   const deadline = publishedDeadline(slate.week);
   const views = slate.games.map(toGameView);
@@ -185,8 +184,7 @@ export interface PickAudit extends PickAuditRow {
 }
 
 /** The week's commissioner edits, oldest first, for the console. */
-export async function pickAuditsFor(db: Db, actor: Member, weekId: number): Promise<PickAudit[]> {
-  requireCommissioner(actor);
+export async function pickAuditsFor(db: Db, actor: Commissioner, weekId: number): Promise<PickAudit[]> {
   // Neither read depends on the other, so the commissioner waits for one round trip.
   const [rows, everyone] = await Promise.all([
     db.query.pickAudits.findMany({

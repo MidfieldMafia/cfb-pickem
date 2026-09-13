@@ -15,14 +15,14 @@
  * `Refusal` now, and so imports no domain module at all.
  */
 import "server-only";
-import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
+import type { Commissioner } from "@/lib/members/authority";
 import { Refusal } from "@/lib/refusal";
 import type { ActionState, EditOutcome } from "./state";
 
 export interface ConsoleRoute {
   db: Db;
-  requireConsole: () => Promise<Member>;
+  requireConsole: () => Promise<Commissioner>;
   revalidate: (path: string) => void;
   /** The wall clock unless given; a test pins it to a moment inside the fixture's Week. */
   now?: () => Date;
@@ -39,7 +39,7 @@ export interface ConsoleRoute {
  */
 export async function consoleEdit(
   route: ConsoleRoute,
-  work: (ctx: { db: Db; actor: Member; now: Date }) => Promise<EditOutcome>,
+  work: (ctx: { db: Db; actor: Commissioner; now: Date }) => Promise<EditOutcome>,
 ): Promise<ActionState> {
   try {
     return await consoleAction(route, work).then(({ done }) => (done ? { done } : {}));
@@ -62,7 +62,7 @@ export async function consoleEdit(
  */
 export async function consoleAction(
   route: ConsoleRoute,
-  work: (ctx: { db: Db; actor: Member; now: Date }) => Promise<EditOutcome>,
+  work: (ctx: { db: Db; actor: Commissioner; now: Date }) => Promise<EditOutcome>,
 ): Promise<EditOutcome> {
   const actor = await route.requireConsole();
   const outcome = await work({ db: route.db, actor, now: route.now?.() ?? new Date() });

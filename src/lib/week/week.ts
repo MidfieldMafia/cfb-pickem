@@ -97,7 +97,7 @@ export async function currentWeek(
   const slate = locked && options.cfbd ? await refreshQuietly(db, options.cfbd, published, now) : published;
   const [sheet, result, season] = await Promise.all([
     pickSheet(db, actor, slate, now),
-    locked && options.graded ? weekResult(db, actor, slate, now) : null,
+    locked && options.graded ? weekResult(db, slate, now) : null,
     locked && options.season ? seasonResult(db, now) : null,
   ]);
   return {
@@ -139,7 +139,6 @@ export interface WeekReview {
  */
 export async function weekInReview(
   db: Db,
-  actor: Member,
   weekNumber: number | undefined,
   now: Date = new Date(),
   options: Pick<WeekOptions, "cfbd"> = {},
@@ -154,7 +153,7 @@ export async function weekInReview(
   const slate = options.cfbd ? await refreshQuietly(db, options.cfbd, loaded, now) : loaded;
   return {
     slate,
-    result: await weekResult(db, actor, slate, now),
+    result: await weekResult(db, slate, now),
     played: played.map((w) => w.weekNumber),
   };
 }

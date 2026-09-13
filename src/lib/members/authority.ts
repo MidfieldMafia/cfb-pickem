@@ -13,9 +13,17 @@ import "server-only";
 import type { Member } from "@/db/schema";
 import { requireCommissioner } from "./members";
 
+/**
+ * A `Member` known to be a commissioner in good standing. The only two ways
+ * to get one are `requireConsole` (the console's own gate) and
+ * `asCommissioner` below — every other writer that wants one takes it as a
+ * parameter type instead of re-checking the actor with `requireCommissioner`.
+ */
+export type Commissioner = Member & { readonly __commissioner: unique symbol };
+
 export type Authority =
   | { as: "member"; actor: Member }
-  | { as: "commissioner"; actor: Member; memberId: number };
+  | { as: "commissioner"; actor: Commissioner; memberId: number };
 
 /** A member acting on their own sheet: the phone. */
 export function asMember(actor: Member): Authority {

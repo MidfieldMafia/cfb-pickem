@@ -10,7 +10,8 @@ import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { games, members, resultAudits, weeks, type Game, type Member, type ResultAuditKind, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
-import { joinedOrder, requireCommissioner } from "@/lib/members/members";
+import type { Commissioner } from "@/lib/members/authority";
+import { joinedOrder } from "@/lib/members/members";
 import { noteError } from "@/lib/notes";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
@@ -181,6 +182,12 @@ function sameColumns(next: FeedColumns, game: Game): boolean {
  * member-scheduled pull for the next interval. It also wrote the column
  * twice in one request on the gated path, once for the claim and once here
  * inside the ingest that claim had just authorised.
+ *
+ * Takes no actor, unlike `refreshFromFeed`: `refreshResultsIfStale` runs it
+ * for member traffic through the stale gate, which has no commissioner to
+ * brand, and `refreshResults` runs it for a commissioner's own "Check the
+ * feed now" over the same call — one writer, reached by both, would refuse
+ * a `Commissioner` parameter it could not always supply.
  */
 export async function ingestResults(
   db: Db,
@@ -298,12 +305,11 @@ function cleanNote(note: string): string {
  */
 export async function overrideResult(
   db: Db,
-  actor: Member,
+  actor: Commissioner,
   gameId: number,
   input: OverrideInput,
   now: Date = new Date(),
 ): Promise<Game> {
-  requireCommissioner(actor);
   const game = await loadGame(db, gameId);
   if (!game.week.published) throw new InvalidResult("The slate is not published; there is nothing to correct yet.");
   if (game.void) throw new InvalidResult("That game is void; restore it before setting a score.");
@@ -318,8 +324,7 @@ export async function overrideResult(
 }
 
 /** Drops the Result Override so the feed's score counts again. Logged. */
-export async function clearOverride(db: Db, actor: Member, gameId: number, now: Date = new Date()): Promise<Game> {
-  requireCommissioner(actor);
+export async function clearOverride(db: Db, actor: Commissioner, gameId: number, now: Date = new Date()): Promise<Game> {
   const game = await loadGame(db, gameId);
   if (game.overrideHomeScore === null && game.overrideAwayScore === null) {
     throw new InvalidResult("That game has no override.");
@@ -339,8 +344,7 @@ export async function clearOverride(db: Db, actor: Member, gameId: number, now: 
  * row — except for a member who already moved their Lock elsewhere, since
  * there is one Lock per member per week and moving it overwrote this one.
  */
-export async function restoreGame(db: Db, actor: Member, gameId: number, now: Date = new Date()): Promise<Game> {
-  requireCommissioner(actor);
+export async function restoreGame(db: Db, actor: Commissioner, gameId: number, now: Date = new Date()): Promise<Game> {
   const game = await loadGame(db, gameId);
   if (!game.void) throw new InvalidResult("That game is not void.");
   const [updated] = await db
@@ -367,8 +371,7 @@ export interface ResultAudit {
 }
 
 /** The week's result changes, oldest first, for the console. */
-export async function resultAuditsFor(db: Db, actor: Member, weekId: number): Promise<ResultAudit[]> {
-  requireCommissioner(actor);
+export async function resultAuditsFor(db: Db, actor: Commissioner, weekId: number): Promise<ResultAudit[]> {
   return db
     .select({
       id: resultAudits.id,
@@ -431,11 +434,10 @@ export interface ResultsConsole {
  */
 export async function resultsConsole(
   db: Db,
-  actor: Member,
+  actor: Commissioner,
   weekNumber: number | undefined,
   now: Date = new Date(),
 ): Promise<ResultsConsole> {
-  requireCommissioner(actor);
   const season = await activeSeason(db);
   const existing = await seasonWeeks(db, season);
   const week = await openWeek(db, actor, weekNumber ?? defaultWeekNumber(existing), season);
@@ -655,14 +657,11 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult): Re
  * first, and the board must grade the rows that pull left behind, not a
  * third re-read of them.
  *
- * Refused before the Deadline (see `weekPicks`), for everyone.
+ * Refused before the Deadline (see `weekPicks`), for everyone — the grading
+ * itself takes no actor, because nothing here turns on who is asking:
+ * `weekPicks`' Deadline gate is not keyed to a caller, commissioner included.
  */
-export async function weekResult(
-  db: Db,
-  actor: Member,
-  slate: Slate,
-  now: Date = new Date(),
-): Promise<GradedWeekResult> {
+export async function weekResult(db: Db, slate: Slate, now: Date = new Date()): Promise<GradedWeekResult> {
   // The member rows do not depend on the picks, so they ride along rather than waiting on them.
   const [memberPicks, everyone] = await Promise.all([
     weekPicks(db, slate, now),

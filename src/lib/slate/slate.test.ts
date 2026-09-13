@@ -141,14 +141,12 @@ describe("slate builder", () => {
     await expect(removeGame(db, jonah, famu.id)).rejects.toBeInstanceOf(SlatePublished);
   });
 
-  test("only a commissioner can touch the slate", async () => {
-    const { db, jonah, grandma, candidate } = await setup();
-    const week = await openWeek(db, jonah, 2);
-
-    await expect(openWeek(db, grandma, 2)).rejects.toThrow(/commissioner/);
-    await expect(addGame(db, grandma, week.id, candidate(OHIO_STATE_AT_TEXAS))).rejects.toThrow(/commissioner/);
-    await expect(publishSlate(db, grandma, week.id)).rejects.toThrow(/commissioner/);
-  });
+  // Only a commissioner can touch the slate is no longer this module's own
+  // runtime check: `openWeek`, `addGame`, and `publishSlate` all take a
+  // `Commissioner`, so passing `grandma` here is a type error, not a
+  // rejection to assert on. See `members/authority.ts` and
+  // `picks/edits.test.ts`'s `asCommissioner` coverage for where the check
+  // that mints one still lives.
 
   test("a kickoff change in the feed updates the game but keeps it on the slate and leaves the deadline", async () => {
     const { db, jonah, candidate, rain } = await setup();
@@ -161,7 +159,7 @@ describe("slate builder", () => {
     const moved = recordings["2026-week-2"].games.map((g) =>
       g.id === OKLAHOMA_AT_MICHIGAN ? { ...g, startDate: "2026-09-13T00:00:00.000Z" } : g,
     );
-    const changed = await refreshFromFeed(db, recordedCfbd("2026-week-2", { games: moved }), week.id, rain);
+    const changed = await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { games: moved }), week.id, rain);
 
     expect(changed).toBe(1);
     const slate = await slateFor(db, week.id);
@@ -196,10 +194,10 @@ describe("slate builder", () => {
     const rainy = recordings["2026-week-2"].weather.map((w) =>
       w.id === OKLAHOMA_AT_MICHIGAN ? { ...w, temperature: 61.2, weatherConditionCode: 8, weatherCondition: "Rain" } : w,
     );
-    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(1);
+    expect(await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(1);
     const slate = await slateFor(db, week.id);
     expect(slate.games[0].detail?.weather).toMatchObject({ temperature: 61, icon: "cloud-rain" });
     // A second refresh with the same feed changes nothing.
-    expect(await refreshFromFeed(db, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(0);
+    expect(await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(0);
   });
 });

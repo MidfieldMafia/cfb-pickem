@@ -33,7 +33,7 @@ import { YourPicks } from "./your-week";
 export default async function WeekResults({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const member = await requireMember();
   const params = await searchParams;
-  const review = await weekInReview(db(), member, weekParam(params.week), new Date(), { cfbd });
+  const review = await weekInReview(db(), weekParam(params.week), new Date(), { cfbd });
 
   if (!review) {
     return (
