@@ -4,15 +4,20 @@
 # Push is the moment a bad diff reaches CI and the Vercel preview, so that is where
 # the gate sits -- commits stay instant, including throwaway WIP ones.
 #
-# Runs the two local checks that CLAUDE.md calls mandatory before work leaves the
-# machine, in this order:
-#   1. npx next build  -- the only local check that catches non-async "use server"
-#                         exports, a "use client" file reaching a server-only module,
-#                         and extra exports in a route.ts. Applies no migrations, so
-#                         it is safe here (unlike `npm run build`).
+# Runs the checks that CLAUDE.md calls mandatory before work leaves the machine,
+# in this order:
+#   1. npx next build   -- the only local check that catches non-async "use server"
+#                          exports, a "use client" file reaching a server-only module,
+#                          and extra exports in a route.ts. Applies no migrations, so
+#                          it is safe here (unlike `npm run build`).
 #   2. npm run typecheck
+#   3. npm run test
+#   4. npx eslint src
 # Build runs first on purpose: it writes .next/types, without which typecheck reports
 # a spurious `Cannot find name 'LayoutProps'` in a fresh worktree.
+#
+# A fifth, non-blocking check follows: Neon branch capacity (see below). It never
+# gates the push -- only 1-4 do.
 #
 # Exit 0 lets the git command through; exit 2 blocks it and hands the reason to Claude.
 
@@ -151,6 +156,62 @@ if ! npm run typecheck >"$log" 2>&1; then
   echo "BLOCKED: 'npm run typecheck' failed. Fix the type errors before pushing. Last 40 lines:" >&2
   tail -n 40 "$log" >&2
   exit 2
+fi
+
+if ! npm run test >"$log" 2>&1; then
+  echo "BLOCKED: 'npm run test' failed. Fix the failing tests before pushing. Last 40 lines:" >&2
+  tail -n 40 "$log" >&2
+  exit 2
+fi
+
+if ! npx eslint src >"$log" 2>&1; then
+  echo "BLOCKED: 'npx eslint src' failed. Fix the lint errors before pushing. Last 40 lines:" >&2
+  tail -n 40 "$log" >&2
+  exit 2
+fi
+
+# Neon branch capacity -- advisory only, never blocks the push.
+#
+# A full push can still be a good push while Neon has no room for another preview
+# branch: the cap isn't something this diff caused or can fix, so gating on it would
+# repeat the exact "preview red = my diff is broken" confusion the
+# neon-branch-limit-broke-previews memory documents. This just surfaces the number
+# before that confusion has a chance to start.
+#
+# Requires NEON_API_KEY and NEON_PROJECT_ID in .env.local; silently skipped if either
+# is missing (e.g. a machine without Neon web access) so it never breaks the gate.
+strip_quotes() {
+  local v="$1"
+  v="${v%\"}"; v="${v#\"}"
+  v="${v%\'}"; v="${v#\'}"
+  printf '%s' "$v"
+}
+
+if [ -f .env.local ]; then
+  neon_key=$(strip_quotes "$(grep -m1 '^NEON_API_KEY=' .env.local | cut -d= -f2-)")
+  neon_project=$(strip_quotes "$(grep -m1 '^NEON_PROJECT_ID=' .env.local | cut -d= -f2-)")
+  if [ -n "$neon_key" ] && [ -n "$neon_project" ]; then
+    neon_resp=$(curl -sS --max-time 10 \
+      -H "Authorization: Bearer $neon_key" \
+      -H "Accept: application/json" \
+      "https://console.neon.tech/api/v2/projects/$neon_project/branches" 2>/dev/null)
+    branch_count=$(printf '%s' "$neon_resp" | node -e '
+      let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
+        try { const j=JSON.parse(s); console.log(Array.isArray(j.branches)?j.branches.length:""); }
+        catch { console.log(""); }
+      });' 2>/dev/null)
+    # Free-tier cap per docs/research/vercel-neon-nextjs-constraints.md (SS3): 10
+    # branches per project. Not fetched from the API -- the project endpoint doesn't
+    # return the plan limit, so this is a documented constant, not a live figure.
+    neon_limit=10
+    if [ -n "$branch_count" ]; then
+      if [ "$branch_count" -ge "$neon_limit" ]; then
+        echo "NOTE: Neon is at its branch cap ($branch_count/$neon_limit). The next preview deployment may fail to provision a database for reasons unrelated to this diff -- see [[neon-branch-limit-broke-previews]] and ping Jonah to clear old branches." >&2
+      elif [ "$branch_count" -ge $((neon_limit - 2)) ]; then
+        echo "NOTE: Neon branch usage is $branch_count/$neon_limit -- close to the free-tier cap. A preview may fail to provision soon." >&2
+      fi
+    fi
+  fi
 fi
 
 exit 0

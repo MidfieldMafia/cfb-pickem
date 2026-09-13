@@ -23,7 +23,7 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/preflight.sh\"",
             "timeout": 900,
-            "statusMessage": "Preflight: next build + typecheck before push"
+            "statusMessage": "Preflight: build + typecheck + test + lint before push, Neon capacity check"
           }
         ]
       }
