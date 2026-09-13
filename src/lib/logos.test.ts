@@ -13,6 +13,12 @@ describe("logo index", () => {
     expect(findLogo("Texas A&M")?.slug).toBe("texas-aandm");
   });
 
+  it("resolves CFBD feed names that diverge from the asset slug", () => {
+    expect(findLogo("Florida International")?.slug).toBe("fiu");
+    expect(findLogo("App State")?.slug).toBe("appalachian-state");
+    expect(findLogo("Massachusetts")?.slug).toBe("umass");
+  });
+
   it("carries a color pair for every school", () => {
     expect(teamLogos.filter((t) => !t.colors).map((t) => t.slug)).toEqual([]);
   });
