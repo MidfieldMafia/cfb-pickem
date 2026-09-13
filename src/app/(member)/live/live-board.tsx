@@ -568,7 +568,17 @@ export function LiveBoard({ initial, viewer }: { initial: WeekStateJson; viewer:
       ? `Week ${weekNumber} · Final`
       : `Week ${weekNumber} · Reveal is on, everyone’s picks are visible`
     : `Week ${weekNumber} · Picks are still open`;
-  const ordered = [...state.games].sort((a, b) => orderKey(a.result) - orderKey(b.result));
+  // Ordered once, from the page's first paint, and never again: a poll that
+  // moves a game to final must not move it under a member mid-scan (#93). The
+  // boundary this waits for is a fresh mount — leaving the screen and coming
+  // back, not a background poll. Re-sorting on an explicit pull-to-refresh
+  // would be the natural trigger once one exists; there isn't one yet.
+  const gameOrder = useRef<number[] | null>(null);
+  if (gameOrder.current === null) {
+    gameOrder.current = [...initial.games].sort((a, b) => orderKey(a.result) - orderKey(b.result)).map((g) => g.game.id);
+  }
+  const byId = new Map(state.games.map((g) => [g.game.id, g]));
+  const ordered = gameOrder.current.map((id) => byId.get(id)).filter((g): g is RevealGame => g !== undefined);
   const openGame = state.games.find((g) => g.game.id === openGameId) ?? null;
 
   return (
