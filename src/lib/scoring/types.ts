@@ -17,6 +17,13 @@ export interface Rules {
   pointsPerCorrectPick: number;
   /** Multiplier applied to a correct Lock of the Week. 2 in 2026 (20 points). */
   lockMultiplier: number;
+  /**
+   * How season standings ties break, most significant first, as a sentence a
+   * member can read. Describes what `compareSeason` (score-season.ts) does; it
+   * is not read by the comparator, which stays fixed code, so a change to one
+   * must be carried to the other by hand.
+   */
+  tiebreakOrder: string;
 }
 
 export interface Member {

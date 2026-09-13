@@ -31,6 +31,7 @@ describe("toSheetJson", () => {
       serverNow: THURSDAY.toISOString(),
       locked: false,
       tiebreakerGameId: texas.id,
+      lockMultiplier: 2,
     });
     // Every date is a string on the wire; nothing reaches a screen as a Date.
     expect(typeof json.deadline).toBe("string");

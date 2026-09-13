@@ -86,6 +86,7 @@ export function sheet(over: Partial<SheetJson> = {}): SheetJson {
     picks: [],
     lockGameId: null,
     lockDropped: false,
+    lockMultiplier: 2,
     tiebreakerGuess: null,
     ...over,
   };

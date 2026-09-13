@@ -65,7 +65,15 @@ export async function joinAt(db: Db, commissioner: Member, displayName: string, 
 /** A fresh database with the 2026 season, two members, and the Week 2 candidates. */
 export async function seedWeek2(): Promise<Week2Fixture> {
   const db = await createTestDb();
-  await db.insert(seasons).values({ year: 2026, rules: { pointsPerCorrectPick: 10, lockMultiplier: 2 }, active: true });
+  await db.insert(seasons).values({
+    year: 2026,
+    rules: {
+      pointsPerCorrectPick: 10,
+      lockMultiplier: 2,
+      tiebreakOrder: "Total points, then weekly wins, then closest cumulative Tiebreaker Guess error.",
+    },
+    active: true,
+  });
   const jonah = await bootstrapCommissioner(db, { displayName: "Jonah" });
   const grandma = await addMember(db, jonah, { displayName: "Grandma" });
   // Pinned before any Week 2 Deadline, so no suite depends on the wall clock
