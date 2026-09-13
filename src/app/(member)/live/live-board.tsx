@@ -73,34 +73,41 @@ function useWeekState(initial: WeekStateJson): WeekStateJson {
   return state;
 }
 
-/** How each standing dresses a side: the ring on its pennants, and the mark beside them. */
+/**
+ * How each standing dresses a side: the ring on its pennants, and the mark
+ * beside them. Final-only — `leading`/`trailing` get neither a coloured ring
+ * nor a mark, so a game in progress cannot be misread as graded. The dimmed
+ * trailing team (`behind` in `SideRow`) is the only in-progress signal; the
+ * ring and the glyph both wait for `won`/`lost`.
+ */
 const RING: Record<SideStanding, string> = {
   won: "ring-win",
-  leading: "ring-win",
+  leading: "ring-border",
   lost: "ring-loss",
-  trailing: "ring-loss",
+  trailing: "ring-border",
   level: "ring-border",
   none: "ring-border",
 };
 
 function Mark({ standing }: { standing: SideStanding }) {
-  if (standing === "won" || standing === "leading") {
+  if (standing === "won") {
     return (
       <span className="grid size-5 shrink-0 place-items-center rounded-full bg-win text-win-foreground">
         <Check size={12} strokeWidth={3} aria-hidden />
-        <span className="sr-only">{standing === "won" ? "Won" : "Leading"}</span>
+        <span className="sr-only">Won</span>
       </span>
     );
   }
-  if (standing === "lost" || standing === "trailing") {
+  if (standing === "lost") {
     return (
       <span className="grid size-5 shrink-0 place-items-center rounded-full bg-loss text-loss-foreground">
         <X size={12} strokeWidth={3} aria-hidden />
-        <span className="sr-only">{standing === "lost" ? "Lost" : "Trailing"}</span>
+        <span className="sr-only">Lost</span>
       </span>
     );
   }
   // Holds the column so the scores line up whether or not a side has a mark yet.
+  // Also what a `leading`/`trailing` side gets: no mark until the game is final.
   return <span className="size-5 shrink-0" aria-hidden />;
 }
 
