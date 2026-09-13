@@ -424,7 +424,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         </form>
       </section>
 
-      <Link href="/week" className="pt-2 text-sm font-semibold underline underline-offset-4">
+      <Link href="/" className="pt-2 text-sm font-semibold underline underline-offset-4">
         Back to this week
       </Link>
 

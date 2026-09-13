@@ -11,7 +11,7 @@ export function NoSlate() {
         <p className={SECTION_LABEL}>This week</p>
         <h1>The slate isn&rsquo;t posted yet</h1>
         <p className="text-muted-foreground">Check back once a commissioner publishes this week&rsquo;s games.</p>
-        <Link href="/week" className="text-sm font-semibold underline underline-offset-4">
+        <Link href="/" className="text-sm font-semibold underline underline-offset-4">
           Back to this week
         </Link>
       </section>

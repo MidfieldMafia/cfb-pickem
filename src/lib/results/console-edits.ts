@@ -28,8 +28,8 @@ const num = (fields: Fields, name: string) =>
 const score = (fields: Fields, name: string) =>
   integerField(fields, name, () => new InvalidResult(`Scores are whole numbers, 0 to ${MAX_SCORE}.`), MAX_SCORE);
 
-/** A result change moves the Reveal as well as the console table. */
-const shown: string[] = [RESULTS_PATH, "/week"];
+/** A result change moves the Reveal as well as the console table — /live for the current week polls its own state, so only the settled-week screen needs revalidating here. */
+const shown: string[] = [RESULTS_PATH, "/history/results"];
 
 export function refreshResults(route: ConsoleRoute, form: FormData, client: CfbdClient): Promise<ActionState> {
   return consoleEdit(route, async ({ db }) => {
