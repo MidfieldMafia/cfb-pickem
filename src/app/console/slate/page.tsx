@@ -18,7 +18,7 @@ import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate
 import { ActionForm } from "../action-form";
 import { pillClass } from "../pill";
 import { requestedWeekNumber } from "../week-param";
-import { filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
+import { fbsOnlyParam, filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
 import {
   addGameAction,
   refreshAction,
@@ -34,7 +34,7 @@ import { PublishButton } from "./publish-button";
 export default async function SlateBuilder({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; filter?: string; q?: string }>;
+  searchParams: Promise<{ week?: string; filter?: string; fbs?: string; q?: string }>;
 }) {
   const commissioner = await requireConsole();
   const params = await searchParams;
@@ -43,6 +43,7 @@ export default async function SlateBuilder({
   const existing = await seasonWeeks(database, season);
   const weekNumber = requestedWeekNumber(existing, params.week);
   const filter = filterParam(params.filter);
+  const fbsOnly = fbsOnlyParam(params.fbs);
   const q = params.q?.trim() ?? "";
 
   // The feed is ten HTTP calls and does not depend on the week row, so it runs alongside it.
@@ -63,13 +64,21 @@ export default async function SlateBuilder({
   const feedError = feed.error;
   const slateGames = slate.games.map(toGameView);
   const shown = toSlateCandidates(
-    candidates.filter((c) => matches(c, filter, q)),
+    candidates.filter((c) => matches(c, filter, fbsOnly, q)),
     slate.games,
   );
   const tiebreaker = slateGames.find((g) => g.game.id === slate.week.tiebreakerGameId)?.game ?? null;
   const filterHref = (f: Filter) => {
     const p = new URLSearchParams({ week: String(weekNumber) });
     if (f !== "all") p.set("filter", f);
+    if (!fbsOnly) p.set("fbs", "0");
+    if (q) p.set("q", q);
+    return `/console/slate?${p}`;
+  };
+  const fbsOnlyHref = () => {
+    const p = new URLSearchParams({ week: String(weekNumber) });
+    if (filter !== "all") p.set("filter", filter);
+    if (fbsOnly) p.set("fbs", "0");
     if (q) p.set("q", q);
     return `/console/slate?${p}`;
   };
@@ -93,12 +102,13 @@ export default async function SlateBuilder({
             <div>
               <h2>Game candidates</h2>
               <p className="text-sm text-muted-foreground">
-                Week {weekNumber} from CollegeFootballData · {candidates.length} games · ranks from the latest poll
+                Week {weekNumber} from CollegeFootballData · {shown.length} games · ranks from the latest poll
               </p>
             </div>
             <form method="get" action="/console/slate" className="flex gap-2">
               <input type="hidden" name="week" value={weekNumber} />
               {filter !== "all" ? <input type="hidden" name="filter" value={filter} /> : null}
+              {!fbsOnly ? <input type="hidden" name="fbs" value="0" /> : null}
               <Input name="q" defaultValue={q} placeholder="Find a team" aria-label="Find a team" className="w-44" />
               <Button type="submit" variant="outline">
                 Find
@@ -111,6 +121,9 @@ export default async function SlateBuilder({
                 {f.label}
               </Link>
             ))}
+            <Link href={fbsOnlyHref()} className={pillClass(fbsOnly)}>
+              FBS only
+            </Link>
             <form action={refreshAction} className="ml-auto">
               <input type="hidden" name="weekId" value={week.id} />
               <Button type="submit" variant="ghost" size="sm">
