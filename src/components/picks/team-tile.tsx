@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Check } from "lucide-react";
-import { logoSrc, teamColor } from "@/lib/logos";
+import { logoSrc } from "@/lib/logos";
 
 /**
  * One side of the matchup, flexing to fill the height left below the panel so
@@ -11,9 +11,15 @@ import { logoSrc, teamColor } from "@/lib/logos";
  * Prop names match the tile PickFlow already renders, so it swaps in directly;
  * `record` and `side` are the additions. `record` is null until #32 wires
  * /records, and the tile simply omits the line.
+ *
+ * `color` comes from the caller's `matchupColors(away, home)` rather than a
+ * bare `teamColor(name)` lookup here, so the underline agrees with the split
+ * bars above when two primaries are too close and the panel falls back to a
+ * secondary — see `src/lib/matchup-colors.ts`.
  */
 export function TeamTile({
   name,
+  color,
   rank,
   record = null,
   side,
@@ -23,6 +29,7 @@ export function TeamTile({
   onPick,
 }: {
   name: string;
+  color: string;
   rank: number | null;
   record?: string | null;
   side: "home" | "away";
@@ -87,7 +94,7 @@ export function TeamTile({
           aria-hidden
           className={`block h-1.5 w-[70%] rounded-full ${dimmed ? "opacity-50" : ""}`}
           style={{
-            background: teamColor(name),
+            background: color,
             boxShadow: picked ? "0 0 0 2px var(--primary-foreground)" : undefined,
           }}
         />

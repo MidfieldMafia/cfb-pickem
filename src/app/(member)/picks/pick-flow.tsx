@@ -10,6 +10,7 @@ import { WeatherPill } from "@/components/picks/weather-pill";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
+import { matchupColors } from "@/lib/matchup-colors";
 import { put } from "@/lib/picks/client";
 import { useDeadlineClock } from "@/lib/picks/clock";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
@@ -205,6 +206,8 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
     }
   };
 
+  const [awayColor, homeColor] = matchupColors(game.awayTeam, game.homeTeam);
+
   return (
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
@@ -262,6 +265,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
         <div className="flex flex-1 items-stretch gap-1.5">
           <TeamTile
             name={game.awayTeam}
+            color={awayColor}
             rank={game.awayRank}
             record={detail?.away.record ?? null}
             side="away"
@@ -275,6 +279,7 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
           </div>
           <TeamTile
             name={game.homeTeam}
+            color={homeColor}
             rank={game.homeRank}
             record={detail?.home.record ?? null}
             side="home"
