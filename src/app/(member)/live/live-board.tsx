@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Lock, LockOpen, Radio, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, Lock, LockOpen, Radio, RefreshCw, X } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AppHeader } from "@/components/app-header";
 import { BoardToggle } from "@/components/board-toggle";
 import { LocalTime } from "@/components/local-time";
@@ -11,12 +11,14 @@ import { TeamLogo } from "@/components/team-logo";
 import { TeamName } from "@/components/team-name";
 import { Badge } from "@/components/ui/badge";
 import { YourSeason } from "@/components/standing-card";
+import { useDeadlineClock } from "@/lib/picks/clock";
 import { clockLabel, type GameResult } from "@/lib/results/result";
 import type { RevealGame, RevealPick, ScoredMember } from "@/lib/results/results";
 import { pennantRow, sideStanding, type Side, type SideStanding } from "@/lib/results/side";
 import { plural } from "@/lib/plural";
 import { isVoid, type MemberJson } from "@/lib/slate/json";
 import { fetchWeekState } from "@/lib/week/client";
+import { agoLabel, dueInLabel } from "@/lib/week/freshness";
 import type { WeekStateJson } from "@/lib/week/json";
 import { nextPollMs } from "@/lib/week/poll";
 
@@ -29,18 +31,27 @@ import { nextPollMs } from "@/lib/week/poll";
  * Re-armed on every state change rather than on a fixed timer, because the
  * cadence itself is a function of the state: a kickoff moves it from five
  * minutes to thirty seconds, and the last final stops it.
+ *
+ * `nextPollAt` is the phone's own clock plus that same delay, stamped every
+ * time a poll is scheduled — the freshness line's "next check" reads it
+ * straight off, rather than re-deriving the cadence a second time (#95).
  */
-function useWeekState(initial: WeekStateJson): WeekStateJson {
+function useWeekState(initial: WeekStateJson): { state: WeekStateJson; nextPollAt: number | null } {
   const [state, setState] = useState(initial);
+  const [nextPollAt, setNextPollAt] = useState<number | null>(null);
   const etag = useRef<string | null>(null);
 
   useEffect(() => {
     const delay = nextPollMs(state);
+    // Null only once `state.complete`, at which point `LiveBoard` stops
+    // rendering the freshness line altogether — a stale `nextPollAt` here is
+    // inert, so there is nothing to reset it to.
     if (delay === null) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const schedule = () => {
+      setNextPollAt(Date.now() + delay);
       timer = setTimeout(() => void poll(), delay);
     };
     const poll = async () => {
@@ -70,7 +81,7 @@ function useWeekState(initial: WeekStateJson): WeekStateJson {
     };
   }, [state]);
 
-  return state;
+  return { state, nextPollAt };
 }
 
 /**
@@ -275,8 +286,43 @@ function YourCard({ state, viewerId }: { state: WeekStateJson; viewerId: number 
   return <YourSeason season={state.season} score={mine} />;
 }
 
+/**
+ * The reassurance Norah asked pull-to-refresh for (#95): when the scores on
+ * screen were last confirmed current, and when the next check is due. Ticks
+ * on its own between polls rather than freezing at the render that set it —
+ * `useDeadlineClock` already does exactly that against the server's clock, so
+ * this reads it backwards: "remaining" to a `serverNow` already in the past
+ * is the negative of how long ago it was. `nextPollAt` is the phone's own
+ * clock, so it needs no such correction.
+ *
+ * Rendered only while there is still something to poll for; once the Week is
+ * complete there is nothing left to go stale, and the games' own "Final"
+ * already says so.
+ */
+const subscribeEverySecond = (onTick: () => void) => {
+  const timer = setInterval(onTick, 1000);
+  return () => clearInterval(timer);
+};
+
+function FreshnessLine({ serverNow, nextPollAt }: { serverNow: string; nextPollAt: number | null }) {
+  const { remainingMs } = useDeadlineClock(serverNow, serverNow);
+  const elapsedMs = Math.max(0, -remainingMs);
+  // `nextPollAt` is stamped on the phone's own clock, so ticking this against
+  // it needs no server-offset correction — just a re-render every second,
+  // read the sanctioned way rather than calling `Date.now()` in the render body.
+  const clientNow = useSyncExternalStore(subscribeEverySecond, () => Date.now(), () => 0);
+  const dueInMs = nextPollAt === null ? null : Math.max(0, nextPollAt - clientNow);
+  return (
+    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+      <RefreshCw size={11} aria-hidden />
+      Updated {agoLabel(elapsedMs)}
+      {dueInMs === null ? null : ` · next check ${dueInLabel(dueInMs)}`}
+    </p>
+  );
+}
+
 export function LiveBoard({ initial, viewer }: { initial: WeekStateJson; viewer: MemberJson }) {
-  const state = useWeekState(initial);
+  const { state, nextPollAt } = useWeekState(initial);
   const members = new Map(state.members.map((m) => [m.id, m]));
   const weekNumber = state.week.weekNumber;
   const sub = state.locked
@@ -292,6 +338,7 @@ export function LiveBoard({ initial, viewer }: { initial: WeekStateJson; viewer:
       {/* Stays put while the games scroll: the toggle and the viewer's own line are the header of every card below. */}
       <div className="sticky top-0 z-10 space-y-3 border-b border-border bg-background px-4 pb-3">
         <BoardToggle active="live" weekNumber={state.locked ? weekNumber : null} />
+        {state.complete ? null : <FreshnessLine serverNow={state.serverNow} nextPollAt={nextPollAt} />}
         <YourCard state={state} viewerId={viewer.id} />
       </div>
 

@@ -19,8 +19,8 @@
  * `nextPollMs`'s own "nothing left to learn" and leaves the polling effect
  * unarmed. The poll cadence is tested in `week/poll.test.ts`.
  */
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import type { GameResult } from "@/lib/results/result";
 import type { RevealGame, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import type { MemberJson } from "@/lib/slate/json";
@@ -276,5 +276,47 @@ describe("the viewer's own card", () => {
 
     expect(screen.getByText(/joined after this week.s deadline/)).not.toBeNull();
     expect(screen.queryByText("You · Season")).toBeNull();
+  });
+});
+
+describe("the freshness line (#95)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("says how long ago the scores were confirmed, and when the next check is due", () => {
+    // The phone's clock agrees with the server's, so "just now" is exact
+    // rather than a coincidence of real wall-clock time.
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+
+    render(
+      <LiveBoard
+        initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null, season: null })}
+        viewer={VIEWER}
+      />,
+    );
+
+    expect(screen.getByText(/Updated just now/)).not.toBeNull();
+    // Idle cadence: nothing is under way, so the next check is five minutes out.
+    expect(screen.getByText(/next check in 5m/)).not.toBeNull();
+  });
+
+  test("ticks forward on its own rather than freezing at the render that set it", () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
+    expect(screen.getByText(/Updated just now/)).not.toBeNull();
+
+    act(() => void vi.advanceTimersByTime(12_000));
+
+    expect(screen.getByText(/Updated 12s ago/)).not.toBeNull();
+    // Live cadence: a game is under way, so the next check is thirty seconds out.
+    expect(screen.getByText(/next check in 18s/)).not.toBeNull();
+  });
+
+  test("says nothing once the Week is complete — there is nothing left to go stale", () => {
+    render(<LiveBoard initial={state()} viewer={VIEWER} />);
+
+    expect(screen.queryByText(/Updated/)).toBeNull();
   });
 });
