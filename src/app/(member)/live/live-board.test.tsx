@@ -213,6 +213,50 @@ describe("the states a Saturday passes through", () => {
   });
 });
 
+describe("a mark only grades a final game (#98)", () => {
+  /** The ring span is the pennant's direct wrapper, per `PickAvatar`. */
+  function ringClasses(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll("li[title] > span")).map((el) => el.className);
+  }
+
+  test("a game in progress marks neither side, home leading or away trailing", () => {
+    // Georgia (home) leads Clemson (away) 28-10, per LIVE. Both sides have a
+    // pick, so both a leading and a trailing pennant are on the row.
+    const { container } = render(
+      <LiveBoard
+        initial={state({
+          complete: false,
+          games: [game(LIVE, [...picks(GEORGIA, [2]), ...picks(CLEMSON, [3])])],
+        })}
+        viewer={VIEWER}
+      />,
+    );
+
+    // No graded word for a game still going — this is the bug: a member must
+    // not read "leading" as "won" off the same glyph.
+    expect(screen.queryByText("Won")).toBeNull();
+    expect(screen.queryByText("Lost")).toBeNull();
+    for (const cls of ringClasses(container)) {
+      expect(cls).not.toMatch(/ring-win|ring-loss/);
+    }
+  });
+
+  test("a final game marks and rings the winner and the loser", () => {
+    const { container } = render(
+      <LiveBoard
+        initial={state({ games: [game(FINAL, [...picks(GEORGIA, [2]), ...picks(CLEMSON, [3])])] })}
+        viewer={VIEWER}
+      />,
+    );
+
+    expect(screen.getByText("Won")).not.toBeNull();
+    expect(screen.getByText("Lost")).not.toBeNull();
+    const rings = ringClasses(container);
+    expect(rings.some((cls) => cls.includes("ring-win"))).toBe(true);
+    expect(rings.some((cls) => cls.includes("ring-loss"))).toBe(true);
+  });
+});
+
 describe("the viewer's own card", () => {
   test("reads the season, not the week, as mockup 05 draws it", () => {
     // The week scored 30; the season total is 90. Mockup 06 puts the week in

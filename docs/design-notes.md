@@ -30,6 +30,7 @@ Use semantic tokens, never hex. Every token has a `-foreground` pair that passes
 Pick and game states (`bg-win text-win-foreground` etc.):
 
 - `win` light moss + dark text · `loss` deep oxblood + cream text. They differ in lightness and text polarity, not just hue, so red-green deficiency never hides a result. Always add the glyph: ✓ / ✕.
+- **`win`/`loss` are a graded result, not a leaderboard position.** While a game is still in progress, the leading and trailing sides get neither the ✓/✕ glyph nor the `win`/`loss` ring — a member must not read "currently ahead" as "won". The dimmed trailing name and score are the only in-progress signal; `win`/`loss` colour and glyph both wait for the game to go final. (Corrects `docs/mockups/05-live-board.png`, which draws the in-progress card with the same ring and glyph as the Final cards above it — see #98.)
 - `push` mid clay · `live` the one hot orange (never reuse it) · `locked` clay · `leader` brass (badge only, never behind long text).
 - `pending` is a fill token, but **render pending as an outline chip** (`border-border text-foreground`) — its lightness is nearly identical to `win`.
 
