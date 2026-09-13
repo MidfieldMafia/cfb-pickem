@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { completeWelcome, InvalidWelcome } from "@/lib/members/auth";
 import { requireMember } from "@/lib/members/current";
+import { currentWeek, landingRoute } from "@/lib/week/week";
 
 export interface WelcomeState {
   error?: string;
@@ -24,6 +25,7 @@ export async function saveWelcome(_prev: WelcomeState, formData: FormData): Prom
   // First time through, the install steps come next: this is the browser
   // session the Magic Link opened, and on iOS it is the only one whose
   // sign-in the home screen app will inherit. Afterwards this page is just
-  // where a member edits their name, so send them back to the week.
-  redirect(firstVisit ? "/install" : "/week");
+  // where a member edits their name, so send them back wherever the Week's
+  // state lands them (#91).
+  redirect(firstVisit ? "/install" : landingRoute(await currentWeek(db(), member, new Date(), { graded: true })));
 }

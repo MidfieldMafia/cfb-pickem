@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/wordmark";
+import { db } from "@/db";
 import { currentMember } from "@/lib/members/current";
+import { currentWeek, landingRoute } from "@/lib/week/week";
 
 export default async function Home() {
   const member = await currentMember();
-  if (member) redirect("/week");
+  if (member) redirect(landingRoute(await currentWeek(db(), member, new Date(), { graded: true })));
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-16 text-center">
