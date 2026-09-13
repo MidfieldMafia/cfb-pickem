@@ -573,12 +573,11 @@ export function LiveBoard({ initial, viewer }: { initial: WeekStateJson; viewer:
   // boundary this waits for is a fresh mount — leaving the screen and coming
   // back, not a background poll. Re-sorting on an explicit pull-to-refresh
   // would be the natural trigger once one exists; there isn't one yet.
-  const gameOrder = useRef<number[] | null>(null);
-  if (gameOrder.current === null) {
-    gameOrder.current = [...initial.games].sort((a, b) => orderKey(a.result) - orderKey(b.result)).map((g) => g.game.id);
-  }
+  const [gameOrder] = useState<number[]>(() =>
+    [...initial.games].sort((a, b) => orderKey(a.result) - orderKey(b.result)).map((g) => g.game.id),
+  );
   const byId = new Map(state.games.map((g) => [g.game.id, g]));
-  const ordered = gameOrder.current.map((id) => byId.get(id)).filter((g): g is RevealGame => g !== undefined);
+  const ordered = gameOrder.map((id) => byId.get(id)).filter((g): g is RevealGame => g !== undefined);
   const openGame = state.games.find((g) => g.game.id === openGameId) ?? null;
 
   return (
