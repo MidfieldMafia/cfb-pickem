@@ -256,7 +256,6 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
         <MatchupPanel
           awayTeam={game.awayTeam}
           homeTeam={game.homeTeam}
-          spread={detail?.spread ?? game.spread}
           detail={detail}
         />
 

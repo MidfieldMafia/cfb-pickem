@@ -1,6 +1,5 @@
 import { CAPS_LABEL as LABEL } from "@/components/section-label";
 import { matchupColors } from "@/lib/matchup-colors";
-import { spreadSides } from "./spread";
 import type { MatchupDetail } from "./types";
 
 const ROW = "grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 text-[13px] tabular-nums";
@@ -75,56 +74,36 @@ function StatBar({
  * card border, so it cannot be mistaken for a tap target.
  *
  * Takes primitives rather than a wire type so it drops into any caller holding
- * a slate: PickFlow passes `game.awayTeam`, `game.homeTeam`, `game.spread`.
+ * a slate: PickFlow passes `game.awayTeam`, `game.homeTeam`.
  */
 export function MatchupPanel({
   awayTeam,
   homeTeam,
-  spread,
   detail,
 }: {
   awayTeam: string;
   homeTeam: string;
-  spread: string | null;
   detail: MatchupDetail | null;
 }) {
-  const sides = spread ? spreadSides(spread, awayTeam) : null;
-  const favored = (side: string) => side.startsWith("−") || side.startsWith("-");
   const homeWin = detail?.homeWp == null ? null : Math.round(detail.homeWp * 100);
 
-  if (!sides && !detail) return null;
+  if (!detail) return null;
 
   return (
     <div className="grid gap-2 px-1 pt-1.5 pb-2.5">
-      {sides ? (
-        <div className={ROW}>
-          <span className={favored(sides[0]) ? "font-extrabold text-foreground" : "font-medium text-muted-foreground"}>
-            {sides[0]}
-          </span>
-          <span className={`${LABEL} text-center text-[10px] leading-3`}>Spread</span>
-          <span
-            className={`text-right ${favored(sides[1]) ? "font-extrabold text-foreground" : "font-medium text-muted-foreground"}`}
-          >
-            {sides[1]}
-          </span>
-        </div>
-      ) : null}
-
-      {detail ? (
-        <div className="grid gap-1.5">
-          {STATS.map(({ key, label, lowerBetter }) => (
-            <StatBar
-              key={key}
-              awayTeam={awayTeam}
-              homeTeam={homeTeam}
-              label={label}
-              away={detail.away[key]}
-              home={detail.home[key]}
-              lowerBetter={lowerBetter}
-            />
-          ))}
-        </div>
-      ) : null}
+      <div className="grid gap-1.5">
+        {STATS.map(({ key, label, lowerBetter }) => (
+          <StatBar
+            key={key}
+            awayTeam={awayTeam}
+            homeTeam={homeTeam}
+            label={label}
+            away={detail.away[key]}
+            home={detail.home[key]}
+            lowerBetter={lowerBetter}
+          />
+        ))}
+      </div>
 
       {homeWin === null ? null : (
         <div className="grid gap-1">
