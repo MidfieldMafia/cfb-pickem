@@ -62,7 +62,7 @@ export default async function Rules() {
         <p className="text-muted-foreground">{tiebreakOrder}</p>
       </section>
 
-      <Link href="/week" className="mx-4 text-sm font-semibold underline underline-offset-4">
+      <Link href="/" className="mx-4 text-sm font-semibold underline underline-offset-4">
         Back to this week
       </Link>
     </main>

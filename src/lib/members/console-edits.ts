@@ -23,7 +23,6 @@ const id = (fields: Fields, name: string) =>
 const SHOWN: string[] = [
   MEMBERS_PATH,
   "/console/picks",
-  "/week",
   "/live",
   "/history",
   "/history/results",

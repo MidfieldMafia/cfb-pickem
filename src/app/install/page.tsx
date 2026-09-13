@@ -32,9 +32,9 @@ export default async function Install() {
 
       <div className="mt-auto space-y-3 pt-4 text-center">
         <Button asChild size="lg" className="w-full">
-          <Link href="/week">Done, start picking</Link>
+          <Link href="/">Done, start picking</Link>
         </Button>
-        <Link href="/week" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
+        <Link href="/" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
           Skip for now
         </Link>
         {slate?.deadline ? (

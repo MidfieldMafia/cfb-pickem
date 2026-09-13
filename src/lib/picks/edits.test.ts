@@ -242,7 +242,7 @@ describe("what the Authority decides", () => {
  * the actions imported `db()`, `cookies()` and `revalidatePath` directly.
  */
 describe("a commissioner's edit from the console", () => {
-  test("a pick edit invalidates the console table, that member's page, and the three member screens", async () => {
+  test("a pick edit invalidates the console table, that member's page, and the member screens that read a sheet or a Reveal", async () => {
     const { db, jonah, grandma, week, michigan } = await publishWeek2();
     const { route, revalidated } = routeFor(db, jonah, SUNDAY);
 
@@ -255,9 +255,9 @@ describe("a commissioner's edit from the console", () => {
     expect(revalidated).toEqual([
       "/console/picks",
       `/console/picks/${grandma.id}`,
-      "/week",
       "/picks",
       "/picks/review",
+      "/history/results",
     ]);
   });
 
@@ -280,9 +280,9 @@ describe("a commissioner's edit from the console", () => {
     expect(revalidated).toEqual([
       "/console/picks",
       `/console/picks/${grandma.id}`,
-      "/week",
       "/picks",
       "/picks/review",
+      "/history/results",
     ]);
 
     // An empty field is the console's clear; a typo is a refusal, not a clear.

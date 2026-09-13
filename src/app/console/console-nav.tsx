@@ -37,7 +37,7 @@ export function ConsoleNav() {
           </Link>
         );
       })}
-      <Link href="/week" className={`${ITEM} text-muted-foreground hover:bg-accent md:mt-auto`}>
+      <Link href="/" className={`${ITEM} text-muted-foreground hover:bg-accent md:mt-auto`}>
         <Smartphone size={20} aria-hidden />
         Open the app
       </Link>

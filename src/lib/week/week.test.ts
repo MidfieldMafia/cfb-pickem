@@ -5,8 +5,10 @@ import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/
 import {
   FAMU_AT_MIAMI,
   feedWith,
+  type Finals,
   guessAs,
   lockAs,
+  OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   pickAs,
   publishWeek2,
@@ -16,7 +18,7 @@ import {
   TUESDAY,
   type Week2Fixture,
 } from "@/test/week-2";
-import { currentWeek, weekInReview } from "./week";
+import { currentWeek, landingRoute, weekInReview } from "./week";
 
 /** Michigan reported final. `calls` counts feed reads, so a test can prove the gate held. */
 const feedWithMichiganFinal = () => feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] });
@@ -204,5 +206,48 @@ describe("the week in review", () => {
 
     await weekInReview(db, 2, SUNDAY, { cfbd: () => feed });
     expect(feed.calls).toBe(1);
+  });
+});
+
+/** Every game on Week 2's slate final: Miami and Michigan win at home, Ohio State at Texas. */
+const ALL_FINAL: Finals = {
+  [FAMU_AT_MIAMI]: [7, 45],
+  [OKLAHOMA_AT_MICHIGAN]: [24, 27],
+  [OHIO_STATE_AT_TEXAS]: [31, 28],
+};
+
+describe("the landing route (#91's four states)", () => {
+  test("goes to the Leaderboard when no week is published", async () => {
+    const { db, grandma } = await seedWeek2();
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY))).toBe("/leaderboard");
+  });
+
+  test("goes to Picks before the deadline", async () => {
+    const { db, grandma } = await publishWeek2();
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY, { graded: true }))).toBe("/picks");
+  });
+
+  test("goes to the Live Board once locked but still grading", async () => {
+    const { db, week, slate, grandma, michigan } = await publishWeek2();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await ingestResults(db, feedWithMichiganFinal(), await slateFor(db, week.id), SUNDAY);
+
+    expect(landingRoute(await currentWeek(db, grandma, SUNDAY, { graded: true }))).toBe("/live");
+  });
+
+  test("goes to History once every non-void game is final", async () => {
+    const { db, week, grandma } = await publishWeek2();
+    await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
+
+    expect(landingRoute(await currentWeek(db, grandma, SUNDAY, { graded: true }))).toBe("/history");
+  });
+
+  test("an ungraded WeekContext reads as still live, never as History", async () => {
+    // Without { graded: true }, `result` is null whatever the games say — the
+    // one thing `landingRoute` must not mistake for a settled week.
+    const { db, week, grandma } = await publishWeek2();
+    await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
+
+    expect(landingRoute(await currentWeek(db, grandma, SUNDAY))).toBe("/live");
   });
 });

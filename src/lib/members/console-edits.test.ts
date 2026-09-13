@@ -23,7 +23,6 @@ describe("a commissioner's member edit from the console", () => {
     expect(revalidated).toEqual([
       "/console/members",
       "/console/picks",
-      "/week",
       "/live",
       "/history",
       "/history/results",

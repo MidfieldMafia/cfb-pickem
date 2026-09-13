@@ -108,6 +108,23 @@ export async function currentWeek(
   };
 }
 
+/**
+ * Where a member lands: #91's four states, in the order they resolve. No
+ * published Week is Leaderboard; short of the Deadline is Picks; past it and
+ * still grading is the Live Board; past it with every game final is History.
+ *
+ * `week` must have been asked to grade (`currentWeek(..., { graded: true })`)
+ * for the last two states to tell apart — an ungraded `WeekContext` carries a
+ * null `result` whether the Week is mid-Reveal or long settled, and this
+ * would read both as still live.
+ */
+export function landingRoute(week: WeekContext | null): "/leaderboard" | "/picks" | "/live" | "/history" {
+  if (!week) return "/leaderboard";
+  if (!week.sheet.locked) return "/picks";
+  if (!week.result?.complete) return "/live";
+  return "/history";
+}
+
 /** A Week the season has finished with, graded, with the Weeks a member may look at instead. */
 export interface WeekReview {
   slate: Slate;
