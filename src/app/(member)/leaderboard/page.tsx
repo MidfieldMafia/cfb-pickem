@@ -5,7 +5,6 @@ import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
 import { MemberChip } from "@/components/member-chip";
 import { Pennant } from "@/components/pennant";
-import { SECTION_LABEL } from "@/components/section-label";
 import {
   Table,
   TableBody,
@@ -152,36 +151,14 @@ export default async function Leaderboard() {
         </p>
       </section>
 
-      {played.length > 0 ? (
-        <section className="space-y-2 px-4">
-          <p className={SECTION_LABEL}>Week results</p>
-          <ul className="divide-y divide-border rounded-md border border-border bg-card">
-            {[...played].reverse().map((week) => {
-              const won = weeklyWinSentence(week.weeklyWin, week.complete);
-              return (
-                <li key={week.week.id}>
-                  <Link
-                    href={`/results?week=${week.week.weekNumber}`}
-                    className="flex min-h-tap items-center justify-between gap-3 p-3 no-underline"
-                  >
-                    <span className="font-semibold">Week {week.week.weekNumber}</span>
-                    <span className="truncate text-sm text-muted-foreground">
-                      {won ?? "Nobody played this week"}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : (
-        <section className="mx-4 space-y-2 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>The season is young</p>
-          <p className="text-muted-foreground">
-            Every member starts on zero. Points land here once the first week&rsquo;s deadline has passed.
-          </p>
-        </section>
-      )}
+      <div className="px-4">
+        <Link
+          href="/history"
+          className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
+        >
+          See week-by-week history
+        </Link>
+      </div>
     </main>
   );
 }

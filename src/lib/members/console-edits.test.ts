@@ -20,7 +20,15 @@ describe("a commissioner's member edit from the console", () => {
     const state = await deleteMember(route, form({ memberId: grandma.id }));
 
     expect(state).toEqual({ done: "Grandma is deleted." });
-    expect(revalidated).toEqual(["/console/members", "/console/picks", "/week", "/live", "/results", "/leaderboard"]);
+    expect(revalidated).toEqual([
+      "/console/members",
+      "/console/picks",
+      "/week",
+      "/live",
+      "/history",
+      "/history/results",
+      "/leaderboard",
+    ]);
     expect(await db.query.members.findMany()).toHaveLength(1);
   });
 
