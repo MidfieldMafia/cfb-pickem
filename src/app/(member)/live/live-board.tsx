@@ -227,7 +227,14 @@ function PickMark({ pick }: { pick: RevealPick }) {
   );
 }
 
-/** One compact line per side: logo, rank, name with your own pick marked, and the score or the spread. */
+/**
+ * One compact line per side: logo, rank, name with your own pick marked, and
+ * the score or the spread.
+ *
+ * `final` recedes the whole line once the game is decided — the score drops
+ * its bold weight and always reads muted, on top of (not instead of) `dim`,
+ * which still marks the losing side on its own (#93).
+ */
 function SideLine({
   team,
   rank,
@@ -235,6 +242,7 @@ function SideLine({
   score,
   spread,
   dim,
+  final,
   pick,
 }: {
   team: string;
@@ -243,16 +251,17 @@ function SideLine({
   score: number | null;
   spread: string | null;
   dim: boolean;
+  final: boolean;
   pick: RevealPick | undefined;
 }) {
   const mine = pick && pick.teamId === teamId && pick.outcome !== "void" && pick.outcome !== "unpicked" ? pick : undefined;
   const favored = spread !== null && spread !== "Pick" && spread.startsWith(team);
   return (
     <div className="grid min-h-8 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-      <TeamLogo team={team} size={22} className={dim ? "opacity-50" : ""} />
+      <TeamLogo team={team} size={22} className={dim || final ? "opacity-50" : ""} />
       <span className="flex min-w-0 items-center gap-1.5">
         {rank ? <span className="shrink-0 text-xs font-bold tabular-nums text-muted-foreground">#{rank}</span> : null}
-        <span className={`truncate font-display text-[17px] font-black ${dim ? "text-muted-foreground" : "text-foreground"}`}>
+        <span className={`truncate font-display text-[17px] font-black ${dim || final ? "text-muted-foreground" : "text-foreground"}`}>
           {team}
         </span>
         {mine ? <PickMark pick={mine} /> : null}
@@ -264,7 +273,11 @@ function SideLine({
           {spreadLabel(spread, team)}
         </span>
       ) : (
-        <span className={`min-w-8 text-right font-display text-2xl font-black tabular-nums ${dim ? "text-muted-foreground" : "text-foreground"}`}>
+        <span
+          className={`min-w-8 text-right font-display text-2xl tabular-nums ${
+            final ? "font-bold text-muted-foreground" : `font-black ${dim ? "text-muted-foreground" : "text-foreground"}`
+          }`}
+        >
           {score}
         </span>
       )}
@@ -272,14 +285,33 @@ function SideLine({
   );
 }
 
-/** The pick split across the two sides. Two design-system tones rather than school colors: the app has no per-team color data. */
-function SplitBar({ away, home, awayTeam, homeTeam }: { away: number; home: number; awayTeam: string; homeTeam: string }) {
+/**
+ * The pick split across the two sides. Two design-system tones rather than
+ * school colors: the app has no per-team color data.
+ *
+ * `muted` fades it for a final game — the split mattered while the outcome
+ * was open; once decided it is trivia, not a cue, and full-strength color
+ * here would fight the rest of the receded card.
+ */
+function SplitBar({
+  away,
+  home,
+  awayTeam,
+  homeTeam,
+  muted,
+}: {
+  away: number;
+  home: number;
+  awayTeam: string;
+  homeTeam: string;
+  muted: boolean;
+}) {
   const total = away + home || 1;
   return (
     <span
       role="img"
       aria-label={`${plural(away, "pick")} on ${awayTeam}, ${plural(home, "pick")} on ${homeTeam}`}
-      className="flex h-1 overflow-hidden rounded-full bg-border"
+      className={`flex h-1 overflow-hidden rounded-full bg-border ${muted ? "opacity-50" : ""}`}
     >
       <span className="bg-primary" style={{ width: `${(away / total) * 100}%` }} />
       <span className="flex-1 bg-secondary" />
@@ -287,7 +319,15 @@ function SplitBar({ away, home, awayTeam, homeTeam }: { away: number; home: numb
   );
 }
 
-/** One game on the board: tap it for the full picture in `GameSheet`. */
+/**
+ * One game on the board: tap it for the full picture in `GameSheet`.
+ *
+ * A final game recedes in place — muted card fill, faint border, quieter
+ * split bar — so it reads as done at a glance without a shape change that
+ * would reflow the list under a mid-scroll reader (#93). Void keeps its own,
+ * stronger recede (the whole card at reduced opacity); the two never overlap
+ * since a Void game's `result.status` is `"void"`, not `"final"`.
+ */
 function GameRow({
   row,
   viewerId,
@@ -304,6 +344,7 @@ function GameRow({
   const awaySide = sideStanding(result, "away");
   const homeSide = sideStanding(result, "home");
   const earned = mine?.outcome === "correct" ? mine.points : null;
+  const final = result.status === "final";
 
   return (
     <li className={isVoid(row) ? "opacity-70" : ""}>
@@ -311,7 +352,9 @@ function GameRow({
         type="button"
         onClick={onOpen}
         aria-label={`${game.awayTeam} at ${game.homeTeam}, details`}
-        className="grid w-full gap-1.5 rounded-md border border-border bg-card p-3 text-left"
+        className={`grid w-full gap-1.5 rounded-md border p-3 text-left ${
+          final ? "border-border/50 bg-muted/30" : "border-border bg-card"
+        }`}
       >
         <div className="flex min-h-5 items-center gap-2">
           <span className="flex-1 truncate text-xs text-muted-foreground">
@@ -342,6 +385,7 @@ function GameRow({
           score={result.shown?.awayScore ?? null}
           spread={game.spread}
           dim={awaySide === "lost"}
+          final={final}
           pick={mine}
         />
         <SideLine
@@ -351,9 +395,16 @@ function GameRow({
           score={result.shown?.homeScore ?? null}
           spread={game.spread}
           dim={homeSide === "lost"}
+          final={final}
           pick={mine}
         />
-        <SplitBar away={awayPicks} home={homePicks} awayTeam={game.awayTeam} homeTeam={game.homeTeam} />
+        <SplitBar
+          away={awayPicks}
+          home={homePicks}
+          awayTeam={game.awayTeam}
+          homeTeam={game.homeTeam}
+          muted={final}
+        />
       </button>
     </li>
   );
