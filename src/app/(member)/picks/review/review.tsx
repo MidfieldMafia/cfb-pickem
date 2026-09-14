@@ -250,20 +250,16 @@ export function Review({ initial, commissioner }: { initial: SheetJson; commissi
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8 pt-6">
       {/*
-        The header icons share the wordmark's row and the badge the title's, so
-        the deadline line keeps the full width — beside a commissioner's two
+        The header icons sit beside the badge on the title's row, so the
+        deadline line below keeps the full width — beside a commissioner's two
         icons and the badge it wrapped at phone width.
       */}
       <header className="space-y-1">
+        <Wordmark />
         <div className="flex items-center gap-1">
-          <div className="min-w-0 flex-1">
-            <Wordmark />
-          </div>
+          <h1 className="min-w-0 flex-1 font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
           <HeaderLinks commissioner={commissioner} />
-        </div>
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
-          <Badge variant={progress.remaining ? "outline" : "default"} className="mt-0.5">
+          <Badge variant={progress.remaining ? "outline" : "default"}>
             {stepsDone} of {steps}
           </Badge>
         </div>

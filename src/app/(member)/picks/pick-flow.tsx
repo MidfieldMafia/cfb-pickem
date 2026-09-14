@@ -221,10 +221,10 @@ export function PickFlow({
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
       {/*
-        Two rows beside the review button: the title shares its row with the
-        header icons and the progress line with the save chip, so the icons
-        take no width from the progress line — beside it they wrapped it once
-        a slate reached double digits, and the tiles jumped from game to game.
+        Beside the review button, the title shares its row with the header
+        icons and the save chip, and the progress line has the row below to
+        itself — next to the icons and chip it wrapped once a slate reached
+        double digits, and the tiles jumped from game to game.
       */}
       <header className="flex items-center gap-1 px-2 pb-1 pt-3">
         <Button asChild variant="ghost" size="icon" aria-label="Review picks">
@@ -233,18 +233,16 @@ export function PickFlow({
           </Link>
         </Button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <div className="font-display text-lg leading-6">Week {sheet.weekNumber}</div>
-            {/* `-my-1` sets the 32px icons in the title's 24px line without growing it. */}
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1 font-display text-lg leading-6">Week {sheet.weekNumber}</div>
+            {/* `-my-1` sets the 32px icons in the row without growing it past the chip. */}
             <div className="-my-1 flex items-center">
               <HeaderLinks commissioner={commissioner} />
             </div>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 text-sm text-muted-foreground">
-              Game {index + 1} of {games.length} · {progress.picksMade} of {progress.liveGames} picked
-            </div>
             <StatusChip pick={pick} />
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Game {index + 1} of {games.length} · {progress.picksMade} of {progress.liveGames} picked
           </div>
         </div>
       </header>
