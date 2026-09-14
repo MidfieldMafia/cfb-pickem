@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { HeaderLinks } from "@/components/header-links";
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +77,7 @@ function StepRow({
  * Guess. The countdown runs on the server clock, and at zero the screen
  * flips to its locked state without a reload.
  */
-export function Review({ initial }: { initial: SheetJson }) {
+export function Review({ initial, commissioner }: { initial: SheetJson; commissioner?: boolean }) {
   const router = useRouter();
   const [sheet, setSheet] = useState(initial);
   const { remainingMs, passed, sync } = useDeadlineClock(sheet.deadline, sheet.serverNow);
@@ -248,27 +249,33 @@ export function Review({ initial }: { initial: SheetJson }) {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8 pt-6">
-      <header className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <Wordmark />
-          <h1 className="font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
-          <p className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Clock size={14} />
-            {locked ? (
-              <span>
-                Locked <LocalTime at={sheet.deadline} style="deadline" />
-              </span>
-            ) : (
-              <span>
-                Deadline in{" "}
-                <span className="font-semibold tabular-nums text-foreground">{formatCountdown(remainingMs)}</span>
-              </span>
-            )}
-          </p>
+      {/*
+        The header icons sit beside the badge on the title's row, so the
+        deadline line below keeps the full width — beside a commissioner's two
+        icons and the badge it wrapped at phone width.
+      */}
+      <header className="space-y-1">
+        <Wordmark />
+        <div className="flex items-center gap-1">
+          <h1 className="min-w-0 flex-1 font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
+          <HeaderLinks commissioner={commissioner} />
+          <Badge variant={progress.remaining ? "outline" : "default"}>
+            {stepsDone} of {steps}
+          </Badge>
         </div>
-        <Badge variant={progress.remaining ? "outline" : "default"} className="mt-1">
-          {stepsDone} of {steps}
-        </Badge>
+        <p className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Clock size={14} />
+          {locked ? (
+            <span>
+              Locked <LocalTime at={sheet.deadline} style="deadline" />
+            </span>
+          ) : (
+            <span>
+              Deadline in{" "}
+              <span className="font-semibold tabular-nums text-foreground">{formatCountdown(remainingMs)}</span>
+            </span>
+          )}
+        </p>
       </header>
 
       <Progress

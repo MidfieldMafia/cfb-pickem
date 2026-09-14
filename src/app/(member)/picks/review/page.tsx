@@ -10,5 +10,5 @@ export default async function ReviewPage() {
   const member = await requireMember();
   const week = await currentWeek(db(), member);
   if (!week) return <NoSlate />;
-  return <Review initial={toSheetJson(week.sheet)} />;
+  return <Review initial={toSheetJson(week.sheet)} commissioner={member.isCommissioner} />;
 }

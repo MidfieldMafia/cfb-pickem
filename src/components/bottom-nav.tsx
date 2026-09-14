@@ -13,7 +13,7 @@ const TABS = [
 
 /**
  * The four tabs of the phone app, the same for every member — the Console
- * lives behind a header icon (`AppHeader`) rather than a tab now, since it is
+ * lives behind a header icon (`HeaderLinks`) rather than a tab now, since it is
  * only ever relevant to a commissioner. Fixed to the visual viewport (not
  * sticky), so it stays under the thumb through an iOS pinch-zoom or URL-bar
  * transition instead of drifting with the layout viewport — see issue #99.
