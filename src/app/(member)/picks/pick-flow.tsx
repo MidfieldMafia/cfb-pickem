@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleDashed, ListChecks, LoaderCircle, Lock, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { HeaderLinks } from "@/components/header-links";
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
@@ -112,7 +113,15 @@ function StatusChip({ pick }: { pick: LocalPick | undefined }) {
  * leaves the tile marked with a retry. Each game tracks its own in-flight
  * save, so jumping ahead mid-request never loses the earlier answer.
  */
-export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId?: number }) {
+export function PickFlow({
+  sheet,
+  startGameId,
+  commissioner,
+}: {
+  sheet: SheetJson;
+  startGameId?: number;
+  commissioner?: boolean;
+}) {
   const router = useRouter();
   const games = sheet.games;
   const [picks, setPicks] = useState<LocalPicks>(() =>
@@ -211,6 +220,12 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
   return (
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
+      {/*
+        Two rows beside the review button: the title shares its row with the
+        header icons and the progress line with the save chip, so the icons
+        take no width from the progress line — beside it they wrapped it once
+        a slate reached double digits, and the tiles jumped from game to game.
+      */}
       <header className="flex items-center gap-1 px-2 pb-1 pt-3">
         <Button asChild variant="ghost" size="icon" aria-label="Review picks">
           <Link href="/picks/review">
@@ -218,12 +233,20 @@ export function PickFlow({ sheet, startGameId }: { sheet: SheetJson; startGameId
           </Link>
         </Button>
         <div className="min-w-0 flex-1">
-          <div className="font-display text-lg leading-6">Week {sheet.weekNumber}</div>
-          <div className="text-sm text-muted-foreground">
-            Game {index + 1} of {games.length} · {progress.picksMade} of {progress.liveGames} picked
+          <div className="flex items-center justify-between gap-2">
+            <div className="font-display text-lg leading-6">Week {sheet.weekNumber}</div>
+            {/* `-my-1` sets the 32px icons in the title's 24px line without growing it. */}
+            <div className="-my-1 flex items-center">
+              <HeaderLinks commissioner={commissioner} />
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 text-sm text-muted-foreground">
+              Game {index + 1} of {games.length} · {progress.picksMade} of {progress.liveGames} picked
+            </div>
+            <StatusChip pick={pick} />
           </div>
         </div>
-        <StatusChip pick={pick} />
       </header>
 
       <ProgressStrip games={games} picks={picks} current={index} onJump={goTo} />

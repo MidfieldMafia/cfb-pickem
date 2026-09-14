@@ -18,5 +18,7 @@ export default async function Picks({ searchParams }: { searchParams: Promise<{ 
   if (week.sheet.locked) redirect("/picks/review");
   const { game } = await searchParams;
   const startGameId = typeof game === "string" ? Number(game) : undefined;
-  return <PickFlow sheet={toSheetJson(week.sheet)} startGameId={startGameId} />;
+  return (
+    <PickFlow sheet={toSheetJson(week.sheet)} startGameId={startGameId} commissioner={member.isCommissioner} />
+  );
 }
