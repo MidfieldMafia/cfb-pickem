@@ -68,7 +68,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
   const winners = new Set(weeklyWin?.winners.map((m) => m.id) ?? []);
   const mine = scores.find((s) => s.member.id === member.id) ?? null;
   const place = standing(scores, member.id);
-  const tiebreaker = tiebreakerSentence(tiebreakerOutcome(reveal, scores));
+  const tiebreaker = tiebreakerSentence(tiebreakerOutcome(reveal, scores, weeklyWin));
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
@@ -114,7 +114,12 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
 
       <section className="space-y-2 px-4">
         <p className={SECTION_LABEL}>Weekly score</p>
-        <WeeklyScoreList scores={scores} winners={winners} viewerId={member.id} />
+        <WeeklyScoreList
+          scores={scores}
+          winners={winners}
+          viewerId={member.id}
+          hasTiebreakerGame={reveal.week.tiebreakerGameId !== null}
+        />
         {tiebreaker ? <p className="text-sm text-muted-foreground">{tiebreaker}</p> : null}
       </section>
 
@@ -126,7 +131,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       ) : null}
 
       <div className="px-4">
-        <RevealList reveal={reveal} viewerId={member.id} />
+        <RevealList reveal={reveal} scores={scores} viewerId={member.id} />
       </div>
 
       <div className="px-4">
