@@ -74,8 +74,61 @@ describe("scoreSeason", () => {
 
     const row = (id: string) => leaderboard.find((r) => r.memberId === id)!;
     // Week 1 total is 48: Jonah is 2 off, Alex is 4 off. Week 2 is still live so it counts for nothing here.
-    expect(row("jonah")).toMatchObject({ weeklyWins: 1, cumulativeTiebreakerError: 2 });
-    expect(row("alex")).toMatchObject({ weeklyWins: 0, cumulativeTiebreakerError: 4 });
+    expect(row("jonah")).toMatchObject({ weeklyWins: 1, cumulativeTiebreakerError: 2, averageTiebreakerMiss: 2 });
+    expect(row("alex")).toMatchObject({ weeklyWins: 0, cumulativeTiebreakerError: 4, averageTiebreakerMiss: 4 });
+  });
+
+  it("averages a Tiebreaker Guess miss only over weeks actually guessed, excluding a skipped week and a Void Tiebreaker Game", () => {
+    const week1 = week({
+      weekNumber: 1,
+      deadline: "2026-09-05T16:00:00Z",
+      tiebreakerGameId: "w1g1",
+      games: [finalGame("w1g1", "Georgia", "Clemson", 31, 17)],
+      picks: [{ memberId: "jonah", gameId: "w1g1", team: "Georgia" }],
+      tiebreakerGuesses: [{ memberId: "jonah", guess: 50 }],
+    });
+    // Jonah skips the Guess this week: it still scores (missing counts as 0 for
+    // cumulativeTiebreakerError) but contributes no data point to the average.
+    const week2 = week({
+      weekNumber: 2,
+      deadline: "2026-09-12T16:00:00Z",
+      tiebreakerGameId: "w2g1",
+      games: [finalGame("w2g1", "Alabama", "LSU", 21, 28)],
+      picks: [{ memberId: "jonah", gameId: "w2g1", team: "LSU" }],
+      tiebreakerGuesses: [],
+    });
+    // A Void Tiebreaker Game leaves no combined score to have missed, even though
+    // Jonah guessed: `tiebreakerError` stays null for everyone this week.
+    const voidedTiebreaker: Game = { ...finalGame("w3g1", "Michigan", "Oregon", 10, 7), void: true };
+    const week3 = week({
+      weekNumber: 3,
+      deadline: "2026-09-19T16:00:00Z",
+      tiebreakerGameId: "w3g1",
+      games: [voidedTiebreaker],
+      picks: [],
+      tiebreakerGuesses: [{ memberId: "jonah", guess: 30 }],
+    });
+
+    const { leaderboard } = scoreSeason(rules2026, [week1, week2, week3], members.slice(0, 1));
+
+    // Only week 1's guess of 50 against a combined 48 (an error of 2) has a real
+    // combined score behind it, so it is the whole average — not 1 of 3 weeks played.
+    expect(leaderboard[0]).toMatchObject({ memberId: "jonah", averageTiebreakerMiss: 2 });
+  });
+
+  it("leaves the average null when no completed week was ever guessed", () => {
+    const week1 = week({
+      weekNumber: 1,
+      deadline: "2026-09-05T16:00:00Z",
+      tiebreakerGameId: "w1g1",
+      games: [finalGame("w1g1", "Georgia", "Clemson", 31, 17)],
+      picks: [{ memberId: "jonah", gameId: "w1g1", team: "Georgia" }],
+      tiebreakerGuesses: [],
+    });
+
+    const { leaderboard } = scoreSeason(rules2026, [week1], members.slice(0, 1));
+
+    expect(leaderboard[0]).toMatchObject({ memberId: "jonah", cumulativeTiebreakerError: 48, averageTiebreakerMiss: null });
   });
 
   it("orders by total points, then weekly wins, then lowest cumulative tiebreaker error, sharing ranks on full ties", () => {

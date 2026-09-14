@@ -51,6 +51,10 @@ function seasonScores(results: WeekResult[]): Map<MemberId, SeasonScore[]> {
 function leaderboardRow(member: Member, entries: SeasonScore[]): LeaderboardRow {
   const totalPoints = entries.reduce((sum, e) => sum + e.score.points, 0);
   const completed = entries.filter((e) => e.complete);
+  // A Guess actually submitted, scored against a real combined total. Excludes
+  // both a skipped Guess (tiebreakerGuess null) and a Void Tiebreaker Game
+  // (tiebreakerError stays null for everyone that week; see combinedFinalScore).
+  const guessed = completed.filter((e) => e.score.tiebreakerGuess !== null && e.score.tiebreakerError !== null);
   return {
     memberId: member.id,
     rank: 0,
@@ -62,6 +66,8 @@ function leaderboardRow(member: Member, entries: SeasonScore[]): LeaderboardRow 
     weeksPlayed: entries.length,
     averagePoints: entries.length === 0 ? null : totalPoints / entries.length,
     cumulativeTiebreakerError: completed.reduce((sum, e) => sum + (e.score.tiebreakerError ?? 0), 0),
+    averageTiebreakerMiss:
+      guessed.length === 0 ? null : guessed.reduce((sum, e) => sum + e.score.tiebreakerError!, 0) / guessed.length,
   };
 }
 

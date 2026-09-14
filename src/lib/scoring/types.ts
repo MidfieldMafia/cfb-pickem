@@ -161,6 +161,23 @@ export interface LeaderboardRow {
   averagePoints: number | null;
   /** Sum of tiebreaker errors over completed weeks played. */
   cumulativeTiebreakerError: number;
+  /**
+   * Mean absolute Tiebreaker Guess miss, over completed weeks the member
+   * actually submitted a Guess. Null until there is at least one such week.
+   *
+   * A skipped Guess is excluded rather than counted as a miss of the full
+   * combined score (the substitution `tiebreakerError` makes for scoring) or
+   * as a miss of zero — either would move this purely on whether a member
+   * bothered to guess, not on how good their guesses are. A Void Tiebreaker
+   * Game is excluded the same way it already is from `tiebreakerError`: no
+   * combined score exists to have missed.
+   *
+   * Display-only. Lower is better, the reverse of every other column here,
+   * and it does not enter `compareSeason` — `cumulativeTiebreakerError`
+   * already is the season tiebreak's closeness figure, and the two answer
+   * different questions from the same per-week numbers.
+   */
+  averageTiebreakerMiss: number | null;
 }
 
 export interface SeasonResult {

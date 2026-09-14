@@ -563,6 +563,8 @@ export interface LeaderboardRow {
   weeksPlayed: number;
   averagePoints: number | null;
   cumulativeTiebreakerError: number;
+  /** Mean absolute Tiebreaker Guess miss over weeks actually guessed. Display-only; lower is better. */
+  averageTiebreakerMiss: number | null;
 }
 
 /** The season graded: the Leaderboard, and every played Week behind it. */

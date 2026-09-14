@@ -19,6 +19,7 @@ import {
   averageLabel,
   movement,
   record,
+  tiebreakerMissLabel,
   weeklyWinSentence,
   weeksPlayedNote,
   type Movement,
@@ -99,6 +100,13 @@ export default async function Leaderboard() {
                 <TableHead className="text-right">W–L</TableHead>
                 <TableHead className="text-right">Wins</TableHead>
                 <TableHead className="text-right">Avg</TableHead>
+                {/* Lower is better here, the one column on the board that reads
+                    backwards from every other — the arrow says so at a glance,
+                    and the sr-only text says it outright for a screen reader. */}
+                <TableHead className="text-right">
+                  Miss <ArrowDown className="inline" size={10} strokeWidth={3} aria-hidden />
+                  <span className="sr-only"> (lower is better)</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -138,6 +146,9 @@ export default async function Leaderboard() {
                     <TableCell className="text-right tabular-nums">{record(row.correct, row.incorrect)}</TableCell>
                     <TableCell className="text-right tabular-nums">{row.weeklyWins}</TableCell>
                     <TableCell className="text-right tabular-nums">{averageLabel(row.averagePoints)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {tiebreakerMissLabel(row.averageTiebreakerMiss)}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -145,9 +156,10 @@ export default async function Leaderboard() {
           </Table>
         </div>
         <p className="pt-3 text-sm text-muted-foreground">
-          Ties break by Weekly Wins, then by Tiebreaker Guess closeness.
+          Ties break by Weekly Wins, then by Tiebreaker Guess closeness that week.
           {won ? ` ${won}.` : ""}
           {movedSince ? ` Arrows are places moved since Week ${movedSince}.` : ""}
+          {" "}Miss is each member&rsquo;s average Tiebreaker Guess miss across the season and plays no part in ties.
         </p>
       </section>
 

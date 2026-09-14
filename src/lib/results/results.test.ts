@@ -633,6 +633,8 @@ describe("the season leaderboard", () => {
         weeksPlayed: 1,
         averagePoints: 30,
         cumulativeTiebreakerError: 59,
+        // Nobody guessed this week, so there is no guess to average.
+        averageTiebreakerMiss: null,
       },
       {
         member: { id: jonah.id, displayName: "Jonah", avatarId: null },
@@ -645,6 +647,7 @@ describe("the season leaderboard", () => {
         weeksPlayed: 1,
         averagePoints: 10,
         cumulativeTiebreakerError: 59,
+        averageTiebreakerMiss: null,
       },
     ]);
   });
