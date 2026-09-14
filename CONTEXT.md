@@ -79,7 +79,7 @@ A member's points for one week, computed from picks, results, and rules on every
 Having the highest Weekly Score for a week. Ties break by Tiebreaker Guess closeness, then are shared.
 
 **Leaderboard**:
-The season standings: total points, record, weekly wins, and average points per week played, ordered by the season tiebreak rules.
+The season standings: total points, record, weekly wins, average points per week played, and average Tiebreaker Guess miss across weeks actually guessed, ordered by the season tiebreak rules. The miss average is display-only, reads lower-is-better, and does not itself decide a tie — the season tiebreak's own closeness figure is a sum over completed weeks played, not this average, and the two can rank members differently.
 _Avoid_: Standings, rankings, table
 
 **Live Board**:

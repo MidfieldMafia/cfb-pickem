@@ -106,6 +106,7 @@ function row(who: ScoredMember, rank: number, totalPoints: number): LeaderboardR
     weeksPlayed: 1,
     averagePoints: totalPoints,
     cumulativeTiebreakerError: 0,
+    averageTiebreakerMiss: null,
   };
 }
 

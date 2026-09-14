@@ -231,6 +231,16 @@ export function averageLabel(averagePoints: number | null): string {
   return String(Math.round(averagePoints * 10) / 10);
 }
 
+/**
+ * Average Tiebreaker Guess miss, to one decimal, same rounding as `averageLabel`.
+ * An em dash before a member has a completed week they actually guessed on —
+ * distinct from having simply played, since a skipped Guess leaves no miss to average.
+ */
+export function tiebreakerMissLabel(averageTiebreakerMiss: number | null): string {
+  if (averageTiebreakerMiss === null) return "—";
+  return String(Math.round(averageTiebreakerMiss * 10) / 10);
+}
+
 /** Which way a member's rank moved, and by how far. */
 export interface Movement {
   direction: "up" | "down";
