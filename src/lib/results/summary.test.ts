@@ -230,65 +230,99 @@ describe("how the weekly win is said", () => {
 describe("what the tiebreaker game settled", () => {
   const texas = view(1, "Ohio State", "Texas", final(31, 28));
 
-  test("measures the closest guess against the combined final score", () => {
+  test("names every member tied for the lead, each with their own guess and error, closest first", () => {
+    // Grandma and Jonah are tied at the top on points; Alex trails and is not
+    // part of the tie the Guess had to break, however close their own guess was.
     const board = reveal([{ ...texas, picks: [] }], texas.game.id);
     const scores = [
       score(GRANDMA, 30, { tiebreakerGuess: 55, tiebreakerError: 4 }),
-      score(JONAH, 20, { tiebreakerGuess: 70, tiebreakerError: 11 }),
+      score(JONAH, 30, { tiebreakerGuess: 70, tiebreakerError: 11 }),
+      score(ALEX, 20, { tiebreakerGuess: 59, tiebreakerError: 0 }),
     ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 30, decidedBy: "tiebreaker" };
 
-    const outcome = tiebreakerOutcome(board, scores)!;
+    const outcome = tiebreakerOutcome(board, scores, weeklyWin)!;
     expect(outcome.combined).toBe(59);
-    expect(outcome.closest.map((m) => m.displayName)).toEqual(["Grandma"]);
-    expect(outcome.guess).toBe(55);
+    expect(outcome.contenders.map((c) => c.member.displayName)).toEqual(["Grandma", "Jonah"]);
+    expect(outcome.winners.map((m) => m.displayName)).toEqual(["Grandma"]);
     expect(tiebreakerSentence(outcome)).toBe(
-      "Tiebreaker Guess: Ohio State at Texas finished 59. Grandma guessed 55, closest of the group.",
+      "Tiebreaker Guess: Ohio State at Texas finished 59. Grandma guessed 55 (off by 4) and Jonah guessed 70 (off by 11) — Grandma closest.",
     );
   });
 
-  test("a member who never guessed is not the closest guess of the group", () => {
+  test("a single leader by points needs no Guess to settle anything, so the sentence names nobody", () => {
     const board = reveal([{ ...texas, picks: [] }], texas.game.id);
-    // The engine counts a missing Guess as 0, which is right for scoring and
-    // would read as a guess of 0 here.
-    const scores = [score(GRANDMA, 30, { tiebreakerGuess: null, tiebreakerError: 59 })];
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerGuess: 55, tiebreakerError: 4 }),
+      score(JONAH, 20, { tiebreakerGuess: 59, tiebreakerError: 0 }),
+    ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 30, decidedBy: "points" };
 
-    const outcome = tiebreakerOutcome(board, scores)!;
-    expect(outcome.closest).toEqual([]);
-    expect(outcome.guess).toBeNull();
+    const outcome = tiebreakerOutcome(board, scores, weeklyWin)!;
+    expect(outcome.contenders).toEqual([]);
+    // Jonah's guess was the closer of the two, but nobody's placement turned
+    // on it — naming a "closest" here is exactly what made this sentence
+    // disagree with the Weekly Win line above it.
+    expect(tiebreakerSentence(outcome)).toBe("Tiebreaker Guess: Ohio State at Texas finished 59.");
+  });
+
+  test("a tied member who never guessed reads as such, not as the closest", () => {
+    const board = reveal([{ ...texas, picks: [] }], texas.game.id);
+    // The engine counts a missing Guess as 0 for scoring, but that is not a
+    // Guess of 0 to show here.
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerGuess: null, tiebreakerError: 59 }),
+      score(JONAH, 30, { tiebreakerGuess: 40, tiebreakerError: 19 }),
+    ];
+    const weeklyWin: WeeklyWin = { winners: [JONAH], points: 30, decidedBy: "tiebreaker" };
+
+    const outcome = tiebreakerOutcome(board, scores, weeklyWin)!;
     expect(tiebreakerSentence(outcome)).toBe(
-      "Tiebreaker Guess: Ohio State at Texas finished 59. Nobody guessed.",
+      "Tiebreaker Guess: Ohio State at Texas finished 59. Jonah guessed 40 (off by 19) and Grandma did not guess — Jonah closest.",
     );
   });
 
-  test("two guesses equally close share it", () => {
+  test("nobody in the tie guessed at all, so it's shared", () => {
+    const board = reveal([{ ...texas, picks: [] }], texas.game.id);
+    const scores = [score(GRANDMA, 30, { tiebreakerGuess: null }), score(JONAH, 30, { tiebreakerGuess: null })];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA, JONAH], points: 30, decidedBy: "shared" };
+
+    expect(tiebreakerSentence(tiebreakerOutcome(board, scores, weeklyWin))).toBe(
+      "Tiebreaker Guess: Ohio State at Texas finished 59. Grandma did not guess and Jonah did not guess — nobody in the tie guessed, so it's shared.",
+    );
+  });
+
+  test("two guesses equally close share it, each shown for what it actually was", () => {
     const board = reveal([{ ...texas, picks: [] }], texas.game.id);
     const scores = [
       score(GRANDMA, 30, { tiebreakerGuess: 55, tiebreakerError: 4 }),
       score(JONAH, 30, { tiebreakerGuess: 63, tiebreakerError: 4 }),
     ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA, JONAH], points: 30, decidedBy: "shared" };
 
-    expect(tiebreakerSentence(tiebreakerOutcome(board, scores))).toBe(
-      "Tiebreaker Guess: Ohio State at Texas finished 59. Grandma and Jonah guessed 55, level and closest of the group.",
+    expect(tiebreakerSentence(tiebreakerOutcome(board, scores, weeklyWin))).toBe(
+      "Tiebreaker Guess: Ohio State at Texas finished 59. Grandma guessed 55 (off by 4) and Jonah guessed 63 (off by 4) — Grandma and Jonah level, closest of the group.",
     );
   });
 
   test("says which of pending and void it is, and nothing at all without a tiebreaker game", () => {
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 0, decidedBy: "points" };
     const open = view(1, "Ohio State", "Texas");
     const openBoard = reveal([{ ...open, picks: [] }], open.game.id);
     const scores = [score(GRANDMA, 0, { tiebreakerGuess: 55 })];
-    expect(tiebreakerSentence(tiebreakerOutcome(openBoard, scores))).toBe(
+    expect(tiebreakerSentence(tiebreakerOutcome(openBoard, scores, weeklyWin))).toBe(
       "Tiebreaker Guess: Ohio State at Texas is not final yet.",
     );
 
     const voided = view(1, "Ohio State", "Texas", VOID);
     const voidBoard = reveal([{ ...voided, picks: [] }], voided.game.id);
-    expect(tiebreakerSentence(tiebreakerOutcome(voidBoard, scores))).toBe(
+    expect(tiebreakerSentence(tiebreakerOutcome(voidBoard, scores, weeklyWin))).toBe(
       "Tiebreaker Guess: Ohio State at Texas is void, so no Guess counts this week.",
     );
 
-    expect(tiebreakerOutcome(reveal([{ ...texas, picks: [] }], null), scores)).toBeNull();
+    expect(tiebreakerOutcome(reveal([{ ...texas, picks: [] }], null), scores, weeklyWin)).toBeNull();
     // A Week naming a Tiebreaker Game that is not on the board it was handed.
-    expect(tiebreakerOutcome(reveal([{ ...texas, picks: [] }], 999), scores)).toBeNull();
+    expect(tiebreakerOutcome(reveal([{ ...texas, picks: [] }], 999), scores, weeklyWin)).toBeNull();
     expect(tiebreakerSentence(null)).toBeNull();
   });
 });

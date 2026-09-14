@@ -2,22 +2,30 @@ import { Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Pennant } from "@/components/pennant";
 import type { WeeklyScore } from "@/lib/results/results";
-import { record, standing } from "@/lib/results/summary";
+import { guessLabel, record, standing } from "@/lib/results/summary";
 
 /**
  * Everyone's Weekly Score in finish order, as the engine sorted it: points,
  * then Tiebreaker Guess closeness. Members level on both share a place, which
  * is why the place comes from `standing` rather than from the row's index.
+ *
+ * Each row also carries its own Guess: the sort order above turns on
+ * Tiebreaker Guess closeness whenever points tie, at any place in the list —
+ * not only at the top — so a member reading their own placement needs their
+ * neighbor's Guess beside it, not only the Weekly Win's.
  */
 export function WeeklyScoreList({
   scores,
   winners,
   viewerId,
+  hasTiebreakerGame,
 }: {
   scores: WeeklyScore[];
   /** The member ids the Weekly Win went to; more than one when it was shared. */
   winners: Set<number>;
   viewerId: number;
+  /** False when the Week named no Tiebreaker Game: every Guess would be null, and a row of "No guess" would say nothing. */
+  hasTiebreakerGame: boolean;
 }) {
   return (
     <ul className="divide-y divide-border rounded-md border border-border bg-card">
@@ -40,6 +48,11 @@ export function WeeklyScoreList({
                 <Badge className="mt-0.5 bg-leader text-leader-foreground">
                   <Trophy size={12} aria-hidden /> Weekly Win
                 </Badge>
+              ) : null}
+              {hasTiebreakerGame ? (
+                <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
+                  {guessLabel(score)}
+                </span>
               ) : null}
             </span>
             <span className="text-sm text-muted-foreground tabular-nums">

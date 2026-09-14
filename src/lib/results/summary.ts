@@ -38,11 +38,26 @@ export function ordinal(place: number): string {
   return `${place}${suffix}`;
 }
 
+/**
+ * One member's Tiebreaker Guess, in the words a row can show beside a place
+ * that Guess may have decided: "No guess", "Guessed 49" while the Tiebreaker
+ * Game is still to finish, "Guessed 49 · off by 2" once it has.
+ */
+export function guessLabel(score: Pick<WeeklyScore, "tiebreakerGuess" | "tiebreakerError">): string {
+  if (score.tiebreakerGuess === null) return "No guess";
+  if (score.tiebreakerError === null) return `Guessed ${score.tiebreakerGuess}`;
+  return `Guessed ${score.tiebreakerGuess} · off by ${score.tiebreakerError}`;
+}
+
+/** "a", "a and b", "a, b and c". */
+function andJoin(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
 /** "Grandma", "Grandma and Jonah", "Grandma, Jonah and Alex". */
 function listNames(members: ScoredMember[]): string {
-  const names = members.map((m) => m.displayName);
-  if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return andJoin(members.map((m) => m.displayName));
 }
 
 /** Points descending, then Tiebreaker Guess closeness: the engine's own week order. */
@@ -132,52 +147,63 @@ export function weeklyWinSentence(win: WeeklyWin | null, complete: boolean): str
   }
 }
 
+/** One member tied for the week's lead by points: their Guess and its error, once the Tiebreaker Game is final. */
+export interface TiebreakerContender {
+  member: ScoredMember;
+  guess: number | null;
+  /** Absolute error against the combined final score; null until the game is final, or if they never guessed. */
+  error: number | null;
+}
+
 /** The Tiebreaker Game and what it settled. */
 export interface TiebreakerOutcome {
   game: GameView;
   /** Combined final score of the two teams. Null until the game is final, and for a Void. */
   combined: number | null;
   /**
-   * The members whose Guess came closest, once there is a combined score to
-   * measure against. Only members who actually guessed: the engine counts a
-   * missing Guess as 0, which is right for scoring and would be wrong to
-   * call the closest guess of the group.
+   * Everyone tied for the week's lead by points, closest Guess first. Empty
+   * when a single member led outright: nobody's placement turned on the
+   * Guess, so there is no group for this sentence to name. This is the same
+   * points-tied group `decideWeeklyWin` (score-week.ts) resolves — recomputed
+   * here from `weeklyWin.points` rather than threaded through, since a Week's
+   * screens already hold both.
    */
-  closest: ScoredMember[];
-  /** The closest Guess itself, null when nobody guessed. */
-  guess: number | null;
+  contenders: TiebreakerContender[];
+  /** The contenders who actually won the week: more than one only when the Guess also tied, or nobody in the group guessed. */
+  winners: ScoredMember[];
 }
 
 /**
  * The Tiebreaker Game's outcome, from the board and the scores of one graded
- * pass. Null when the Week has no Tiebreaker Game, or when the one it names is
- * not on the Slate.
+ * pass. Null when the Week has no Tiebreaker Game, when the one it names is
+ * not on the Slate, or when nobody played the Week.
  */
-export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[]): TiebreakerOutcome | null {
+export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[], weeklyWin: WeeklyWin | null): TiebreakerOutcome | null {
   const { tiebreakerGameId } = reveal.week;
   if (tiebreakerGameId === null) return null;
   const game = reveal.games.find((g) => g.game.id === tiebreakerGameId);
   if (!game) return null;
   const { shown, status } = game.result;
   const combined = status === "final" && shown ? shown.homeScore + shown.awayScore : null;
-  const guessed = scores.filter((s) => s.tiebreakerGuess !== null && s.tiebreakerError !== null);
-  const best = guessed.reduce<number | null>(
-    (low, s) => (low === null ? s.tiebreakerError! : Math.min(low, s.tiebreakerError!)),
-    null,
-  );
-  const closest = combined === null || best === null ? [] : guessed.filter((s) => s.tiebreakerError === best);
-  return {
-    game,
-    combined,
-    closest: closest.map((s) => s.member),
-    guess: closest.length === 0 ? null : closest[0].tiebreakerGuess,
-  };
+  const tied = weeklyWin === null ? [] : scores.filter((s) => s.points === weeklyWin.points);
+  if (tied.length < 2) return { game, combined, contenders: [], winners: [] };
+  const contenders = [...tied]
+    .sort((a, b) => (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity))
+    .map((s) => ({ member: s.member, guess: s.tiebreakerGuess, error: s.tiebreakerError }));
+  return { game, combined, contenders, winners: weeklyWin!.winners };
 }
 
 /**
  * What the Tiebreaker Game settled, in words: the matchup, its combined
- * score, and who came closest to it. Null when the Week named no Tiebreaker
- * Game, so the line is one condition on the screen.
+ * score, and — only when a points tie actually needed the Guess to settle it
+ * — every tied member's Guess and how far off it was. Null when the Week
+ * named no Tiebreaker Game, so the line is one condition on the screen.
+ *
+ * A single leader by points (`contenders` empty) gets no claim about a
+ * closest Guess: nobody's placement depended on one, and naming a "closest"
+ * anyway is what made this sentence disagree with the Weekly Win line above
+ * it in the first place — the two must always agree, because they are
+ * describing the same tiebreak.
  *
  * A Void, or a game still to finish, has no combined score to measure a Guess
  * against — the engine leaves every Tiebreaker error null until it does — so
@@ -186,7 +212,7 @@ export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[]): Tiebre
  */
 export function tiebreakerSentence(outcome: TiebreakerOutcome | null): string | null {
   if (outcome === null) return null;
-  const { game, combined, closest, guess } = outcome;
+  const { game, combined, contenders, winners } = outcome;
   const matchup = `${game.game.awayTeam} at ${game.game.homeTeam}`;
   if (combined === null) {
     return game.result.status === "void"
@@ -194,9 +220,18 @@ export function tiebreakerSentence(outcome: TiebreakerOutcome | null): string | 
       : `Tiebreaker Guess: ${matchup} is not final yet.`;
   }
   const finished = `Tiebreaker Guess: ${matchup} finished ${combined}.`;
-  if (closest.length === 0) return `${finished} Nobody guessed.`;
-  const how = closest.length > 1 ? "level and closest of the group" : "closest of the group";
-  return `${finished} ${listNames(closest)} guessed ${guess}, ${how}.`;
+  if (contenders.length === 0) return finished;
+  const said = contenders.map((c) =>
+    c.guess === null ? `${c.member.displayName} did not guess` : `${c.member.displayName} guessed ${c.guess} (off by ${c.error})`,
+  );
+  const guessed = contenders.filter((c) => c.guess !== null);
+  const decided =
+    guessed.length === 0
+      ? "nobody in the tie guessed, so it's shared"
+      : winners.length === 1
+        ? `${winners[0].displayName} closest`
+        : `${listNames(winners)} level, closest of the group`;
+  return `${finished} ${andJoin(said)} — ${decided}.`;
 }
 
 /** One Game as one member played it: the pick-history row. */

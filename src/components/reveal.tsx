@@ -5,7 +5,8 @@ import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL as LABEL } from "@/components/section-label";
 import { TeamLogo } from "@/components/team-logo";
 import { clockLabel } from "@/lib/results/result";
-import type { Reveal, RevealPick, ScoredMember } from "@/lib/results/results";
+import type { Reveal, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import { guessLabel } from "@/lib/results/summary";
 import { isVoid } from "@/lib/slate/json";
 
 /** The chip that sums up one side: "✓ 4 picks" once the game is final, "4 picks" before. */
@@ -89,8 +90,35 @@ function Side({
   );
 }
 
+/** Everyone's Tiebreaker Guess, closest first once the Tiebreaker Game is final. */
+function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewerId: number }) {
+  const sorted = [...scores].sort((a, b) => (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity));
+  return (
+    <div className="space-y-1 rounded-md border border-secondary bg-card p-2.5">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">Tiebreaker Guesses</p>
+      <ul className="space-y-0.5">
+        {sorted.map((s) => {
+          const you = s.member.id === viewerId;
+          return (
+            <li
+              key={s.member.id}
+              className={`flex items-center gap-2 rounded-md px-1.5 py-1 ${you ? "bg-accent" : ""}`}
+            >
+              <Pennant avatarId={s.member.avatarId} size={20} />
+              <span className={`min-w-0 flex-1 truncate text-sm ${you ? "font-extrabold" : "font-semibold"}`}>
+                {you ? "You" : s.member.displayName}
+              </span>
+              <span className="text-xs text-muted-foreground tabular-nums">{guessLabel(s)}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 /** Every member's pick per game, graded once the game is final. Rendered on /week after the Deadline. */
-export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: number }) {
+export function RevealList({ reveal, scores, viewerId }: { reveal: Reveal; scores: WeeklyScore[]; viewerId: number }) {
   const members = new Map(reveal.members.map((m) => [m.id, m]));
   return (
     <section className="space-y-3">
@@ -102,6 +130,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
           const clock = result.live ? clockLabel(result.live) : null;
           const away = row.picks.filter((p) => p.teamId === game.awayTeamId);
           const home = row.picks.filter((p) => p.teamId === game.homeTeamId);
+          const tiebreaker = game.id === reveal.week.tiebreakerGameId;
           return (
             <li key={game.id} className={`space-y-2 ${isVoid(row) ? "opacity-70" : ""}`}>
               <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
@@ -112,7 +141,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
                 </span>
                 <span>·</span>
                 <LocalTime at={game.kickoff} style="slot" />
-                {game.id === reveal.week.tiebreakerGameId ? <Badge variant="outline">Tiebreaker</Badge> : null}
+                {tiebreaker ? <Badge variant="outline">Tiebreaker</Badge> : null}
               </p>
               <div className="flex gap-2">
                 <Side
@@ -134,6 +163,7 @@ export function RevealList({ reveal, viewerId }: { reveal: Reveal; viewerId: num
                   viewerId={viewerId}
                 />
               </div>
+              {tiebreaker ? <TiebreakerGuesses scores={scores} viewerId={viewerId} /> : null}
             </li>
           );
         })}
