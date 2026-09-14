@@ -35,6 +35,10 @@ export default async function Rules() {
           <span className="font-display text-2xl">{pointsPerCorrectPick}</span>{" "}
           <span className="text-muted-foreground">points for every correct pick.</span>
         </p>
+        <p className="text-muted-foreground">
+          Picks are straight up, not against the spread: a pick is correct when that team wins the game. The spread on
+          the pick screen is there to help you choose and never changes the score.
+        </p>
       </section>
 
       <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">

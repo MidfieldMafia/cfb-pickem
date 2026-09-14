@@ -280,6 +280,7 @@ export function PickFlow({
         <MatchupPanel
           awayTeam={game.awayTeam}
           homeTeam={game.homeTeam}
+          spread={detail?.spread ?? game.spread}
           detail={detail}
         />
 
