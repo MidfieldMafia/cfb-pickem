@@ -4,7 +4,7 @@
  * is one edit and the names cannot drift from the games they point at.
  */
 import { eq } from "drizzle-orm";
-import { members, seasons } from "@/db/schema";
+import { members, memberships, seasons } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { recordedCfbd, recordings, scoreboardOf } from "@/lib/cfbd/recorded";
@@ -65,6 +65,7 @@ export interface Week2Fixture {
 export async function joinAt(db: Db, commissioner: Commissioner, displayName: string, at: Date): Promise<Member> {
   const member = await addMember(db, commissioner, { displayName });
   const [pinned] = await db.update(members).set({ joinedAt: at }).where(eq(members.id, member.id)).returning();
+  await db.update(memberships).set({ joinedAt: at }).where(eq(memberships.memberId, member.id));
   return pinned;
 }
 
@@ -85,6 +86,7 @@ export async function seedWeek2(): Promise<Week2Fixture> {
   // Pinned before any Week 2 Deadline, so no suite depends on the wall clock
   // for whether these two are on the board.
   await db.update(members).set({ joinedAt: TUESDAY });
+  await db.update(memberships).set({ joinedAt: TUESDAY });
   const cfbd = recordedCfbd("2026-week-2");
   const rain = recordedOpenMeteo("2026-week-2");
   const candidates = await weekCandidates(cfbd, WEEK_2, rain);
