@@ -26,7 +26,7 @@ Nothing in the test suite covers rendering, and every screen needs a Magic Link 
 
 ### Issue tracker
 
-Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; the roadmap is the `wayfinder:map` issue and every ticket is a sub-issue of it with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; each roadmap is a `wayfinder:map` issue (v1 and v2 so far) and every ticket is a sub-issue of one with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
