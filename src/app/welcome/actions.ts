@@ -22,10 +22,10 @@ export async function saveWelcome(_prev: WelcomeState, formData: FormData): Prom
     if (error instanceof InvalidWelcome) return { error: error.message };
     throw error;
   }
-  // First time through, the install steps come next: this is the browser
-  // session the Magic Link opened, and on iOS it is the only one whose
-  // sign-in the home screen app will inherit. Afterwards this page is just
-  // where a member edits their name, so send them back wherever the Week's
-  // state lands them (#91).
-  redirect(firstVisit ? "/install" : landingRoute(await currentWeek(db(), member, new Date(), { graded: true })));
+  // First time through, How to play comes next, then the install steps: this
+  // is the browser session the Magic Link opened, and on iOS it is the only
+  // one whose sign-in the home screen app will inherit. Afterwards this page
+  // is just where a member edits their name, so send them back wherever the
+  // Week's state lands them (#91).
+  redirect(firstVisit ? "/rules?setup=1" : landingRoute(await currentWeek(db(), member, new Date(), { graded: true })));
 }

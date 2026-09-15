@@ -128,15 +128,15 @@ describe("a tap on a team", () => {
 /**
  * Pick entry draws its own header rather than `AppHeader`, so it has to carry
  * the header icons itself — it once shipped without them, leaving the Picks
- * tab the one place a member couldn't reach the Rules.
+ * tab the one place a member couldn't reach How to play.
  */
 describe("the header", () => {
   const link = (name: string) => screen.queryByRole("link", { name });
 
-  test("links every member to the Rules, and no one but a commissioner to the Console", () => {
+  test("links every member to How to play, and no one but a commissioner to the Console", () => {
     render(<PickFlow sheet={sheet()} />);
 
-    expect(link("Scoring rules")?.getAttribute("href")).toBe("/rules");
+    expect(link("How to play")?.getAttribute("href")).toBe("/rules");
     expect(link("Commissioner console")).toBeNull();
   });
 
