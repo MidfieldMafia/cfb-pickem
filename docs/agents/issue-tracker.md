@@ -20,7 +20,7 @@ Every ticket names its owner two ways: a GitHub assignee and a label.
 
 ## Roadmap (wayfinder)
 
-- **Map**: the single issue labelled `wayfinder:map` titled "Saturday Slate roadmap". Every roadmap item is a GitHub **sub-issue** of it.
+- **Maps**: issues labelled `wayfinder:map`, one per effort: "Saturday Slate roadmap" (v1, #1) and "Saturday Slate v2 roadmap" (groups, #129). Every roadmap item is a GitHub **sub-issue** of exactly one map.
 - **Child ticket**: added with the sub-issues API (`gh api --method POST repos/MidfieldMafia/cfb-pickem/issues/<map>/sub_issues -F sub_issue_id=<child-db-id>`). Labels: `wayfinder:<type>` for research/prototype/grilling/task tickets, `ready-for-agent` for build tickets.
 - **Blocking**: GitHub native issue dependencies. `gh api --method POST repos/MidfieldMafia/cfb-pickem/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>` where the id is the blocker's numeric database id (`gh api repos/.../issues/<n> --jq .id`).
 - **Frontier**: open sub-issues of the map with no open blocker and no assignee-in-progress. Each ticket's body also lists "Blocked by" for readability.
