@@ -1,0 +1,166 @@
+"use client";
+
+import { useState } from "react";
+import { ArrowDown, ArrowUp, Trophy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Pennant } from "@/components/pennant";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { LeaderboardRow } from "@/lib/results/results";
+import { averageLabel, movement, record, tiebreakerMissLabel, weeksPlayedNote, type Movement } from "@/lib/results/summary";
+import { sortLeaderboard, type SortColumn, type SortDirection } from "./leaderboard-sort";
+
+/**
+ * How far a member's rank moved since the board before the latest played week,
+ * beside the rank it moved to. Movers only: a member who held their place
+ * shows nothing, so the eye goes straight to what changed.
+ */
+function Move({ move }: { move: Movement }) {
+  const Arrow = move.direction === "up" ? ArrowUp : ArrowDown;
+  return (
+    <span className="inline-flex items-center text-xs font-bold text-foreground">
+      <Arrow size={12} strokeWidth={3} aria-hidden />
+      {move.places}
+      <span className="sr-only">{move.label}</span>
+    </span>
+  );
+}
+
+interface Sort {
+  column: SortColumn;
+  direction: SortDirection;
+}
+
+const SORTABLE_COLUMNS: { column: SortColumn; label: React.ReactNode }[] = [
+  { column: "points", label: "Pts" },
+  { column: "record", label: "W–L" },
+  { column: "wins", label: "Wins" },
+  { column: "average", label: "Avg" },
+  {
+    column: "miss",
+    label: (
+      <>
+        Miss <ArrowDown className="inline" size={10} strokeWidth={3} aria-hidden />
+        <span className="sr-only"> (lower is better)</span>
+      </>
+    ),
+  },
+];
+
+/**
+ * A sortable column header: a real button so a tap anywhere in the cell
+ * toggles the sort (44px min-height comes free from the app-wide `button`
+ * rule in globals.css), with `aria-sort` on the `<th>` itself per the ARIA
+ * table-sorting pattern — a screen reader is told the column's state, not
+ * the button's.
+ */
+function SortableHead({
+  column,
+  label,
+  sort,
+  onSort,
+}: {
+  column: SortColumn;
+  label: React.ReactNode;
+  sort: Sort | null;
+  onSort: (column: SortColumn) => void;
+}) {
+  const active = sort?.column === column;
+  const ariaSort = active ? (sort!.direction === "asc" ? "ascending" : "descending") : "none";
+  return (
+    <TableHead className="text-right" aria-sort={ariaSort}>
+      {/* p-0/border-0/bg-transparent strip the UA button chrome that would
+          otherwise widen every numeric column past its plain-text size — the
+          table already sits 1px from its 390px container (page.tsx's own
+          note on the # column), so any added width reintroduces a scrollbar. */}
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className={`-my-2 inline-flex items-center gap-0.5 border-0 bg-transparent px-0 py-2 ${active ? "font-bold text-foreground" : ""}`}
+      >
+        {label}
+      </button>
+    </TableHead>
+  );
+}
+
+export function LeaderboardTable({
+  rows,
+  viewerId,
+  weeksInSeason,
+  showTrophy,
+}: {
+  rows: LeaderboardRow[];
+  viewerId: number;
+  weeksInSeason: number;
+  showTrophy: boolean;
+}) {
+  // Reinitialized on every mount, so leaving the screen and coming back — a
+  // reload — always starts from the default order (#134).
+  const [sort, setSort] = useState<Sort | null>(null);
+
+  function toggleSort(column: SortColumn) {
+    setSort((prev) => {
+      if (!prev || prev.column !== column) return { column, direction: "asc" };
+      return { column, direction: prev.direction === "asc" ? "desc" : "asc" };
+    });
+  }
+
+  const displayed = sort ? sortLeaderboard(rows, sort.column, sort.direction) : rows;
+
+  return (
+    <div className="rounded-md border border-border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12 pr-0">#</TableHead>
+            <TableHead>Member</TableHead>
+            {SORTABLE_COLUMNS.map(({ column, label }) => (
+              <SortableHead key={column} column={column} label={label} sort={sort} onSort={toggleSort} />
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {displayed.map((row) => {
+            const you = row.member.id === viewerId;
+            const weeks = weeksPlayedNote(row, weeksInSeason);
+            const move = movement(row);
+            return (
+              <TableRow key={row.member.id} data-member-id={row.member.id} className={you ? "bg-muted" : undefined}>
+                <TableCell className="pr-0 text-muted-foreground tabular-nums">
+                  <span className="flex items-center gap-0.5">
+                    {row.rank}
+                    {move ? <Move move={move} /> : null}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="flex items-center gap-2">
+                    <Pennant avatarId={row.member.avatarId} size={28} />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate font-semibold">{row.member.displayName}</span>
+                        {you ? <span className="text-xs text-muted-foreground">you</span> : null}
+                        {row.rank === 1 && showTrophy ? (
+                          <Badge className="bg-leader text-leader-foreground">
+                            <Trophy size={12} aria-hidden /> <span className="sr-only">Leading the season</span>
+                          </Badge>
+                        ) : null}
+                      </span>
+                      {weeks ? <span className="block text-xs text-muted-foreground">{weeks}</span> : null}
+                    </span>
+                  </span>
+                </TableCell>
+                <TableCell className="text-right font-display text-lg font-black tabular-nums">
+                  {row.totalPoints}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{record(row.correct, row.incorrect)}</TableCell>
+                <TableCell className="text-right tabular-nums">{row.weeklyWins}</TableCell>
+                <TableCell className="text-right tabular-nums">{averageLabel(row.averagePoints)}</TableCell>
+                <TableCell className="text-right tabular-nums">{tiebreakerMissLabel(row.averageTiebreakerMiss)}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
