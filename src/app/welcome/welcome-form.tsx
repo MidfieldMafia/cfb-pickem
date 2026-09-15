@@ -78,7 +78,7 @@ export function WelcomeForm({
         </Button>
         {returning ? null : (
           <Link href="/rules" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
-            See how scoring works
+            See how to play
           </Link>
         )}
       </div>

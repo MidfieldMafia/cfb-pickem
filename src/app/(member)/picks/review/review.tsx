@@ -391,7 +391,7 @@ export function Review({ initial, commissioner }: { initial: SheetJson; commissi
           </p>
         ) : null}
         <Link href="/rules" className="mt-1 inline-block text-sm font-semibold underline underline-offset-4">
-          See scoring rules
+          See how to play
         </Link>
       </section>
 

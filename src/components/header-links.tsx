@@ -4,7 +4,7 @@ import { CircleHelp, Shield } from "lucide-react";
 const ICON_LINK = "grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground";
 
 /**
- * The header icons every member screen carries: a link to the Rules, and a
+ * The header icons every member screen carries: a link to How to play, and a
  * commissioner-only link to the Console. `AppHeader` renders them, and so do
  * the two pick screens, which draw headers of their own — without this they
  * were the one place a member couldn't reach either.
@@ -19,7 +19,7 @@ export function HeaderLinks({ commissioner }: { commissioner?: boolean }) {
           <Shield size={20} />
         </Link>
       ) : null}
-      <Link href="/rules" aria-label="Scoring rules" className={ICON_LINK}>
+      <Link href="/rules" aria-label="How to play" className={ICON_LINK}>
         <CircleHelp size={20} />
       </Link>
     </>
