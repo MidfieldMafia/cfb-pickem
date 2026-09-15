@@ -156,6 +156,11 @@ export function PickFlow({
     tiebreakerGuess: sheet.tiebreakerGuess,
   });
   const last = index + 1 >= games.length;
+  // What the end of the slate still owes, counting this game as picked: `advance`
+  // runs from the post-save timeout, whose closure caught `picks` before the save
+  // landed, so without that the game just saved reads as open and sends the flow
+  // back to itself.
+  const openAfterThis = firstOpenGame(games, (gameId) => gameId === game.id || isSaved(picks[gameId]));
 
   const goTo = (i: number) => {
     clearTimeout(advanceTimer.current);
@@ -163,9 +168,13 @@ export function PickFlow({
     setIndex(i);
   };
 
+  // Mid-slate the flow walks in order, so a game skipped on purpose stays skipped
+  // rather than yanking the member back. Only the end of the slate looks for what
+  // is left: review is for a finished sheet, not for one with holes in it.
   const advance = () => {
-    if (last) router.push("/picks/review");
-    else goTo(index + 1);
+    if (!last) return goTo(index + 1);
+    if (openAfterThis) return goTo(games.indexOf(openAfterThis));
+    router.push("/picks/review");
   };
 
   const choose = async (teamId: number) => {
@@ -332,7 +341,7 @@ export function PickFlow({
         <div className="flex min-h-tap items-center gap-2 pt-1">
           <span className="flex-1 text-sm text-muted-foreground">
             {flash
-              ? last
+              ? last && !openAfterThis
                 ? "Saved. On to review…"
                 : "Saved. Next game…"
               : locked

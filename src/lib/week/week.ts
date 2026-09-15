@@ -16,6 +16,7 @@ import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
+import { picksComplete } from "@/lib/picks/progress";
 import {
   playedWeeks,
   refreshResultsIfStale,
@@ -109,18 +110,26 @@ export async function currentWeek(
 }
 
 /**
- * Where a member lands: #91's four states, in the order they resolve. No
- * published Week is Leaderboard; short of the Deadline is Picks; past it and
- * still grading is the Live Board; past it with every game final is History.
+ * Where a member lands, in the order the states resolve. No published Week is
+ * Leaderboard; past the Deadline and still grading is the Live Board; past it
+ * with every game final is History.
+ *
+ * Short of the Deadline is #91's Picks split in two. Entry while Picks are
+ * still open, review once they are all in: the entry flow has no control for
+ * the Lock of the Week or the Tiebreaker Guess, so a member who has finished
+ * picking is sent to the screen that does rather than back to the top of a
+ * slate they have already decided.
  *
  * `week` must have been asked to grade (`currentWeek(..., { graded: true })`)
  * for the last two states to tell apart — an ungraded `WeekContext` carries a
  * null `result` whether the Week is mid-Reveal or long settled, and this
  * would read both as still live.
  */
-export function landingRoute(week: WeekContext | null): "/leaderboard" | "/picks" | "/live" | "/history" {
+export function landingRoute(
+  week: WeekContext | null,
+): "/leaderboard" | "/picks" | "/picks/review" | "/live" | "/history" {
   if (!week) return "/leaderboard";
-  if (!week.sheet.locked) return "/picks";
+  if (!week.sheet.locked) return picksComplete(week.sheet.progress) ? "/picks/review" : "/picks";
   if (!week.result?.complete) return "/live";
   return "/history";
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { ingestResults } from "@/lib/results/results";
-import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
+import { addGame, openWeek, publishSlate, setTiebreaker, slateFor, voidGame } from "@/lib/slate/slate";
 import {
   FAMU_AT_MIAMI,
   feedWith,
@@ -216,7 +216,7 @@ const ALL_FINAL: Finals = {
   [OHIO_STATE_AT_TEXAS]: [31, 28],
 };
 
-describe("the landing route (#91's four states)", () => {
+describe("the landing route (#91's states)", () => {
   test("goes to the Leaderboard when no week is published", async () => {
     const { db, grandma } = await seedWeek2();
     expect(landingRoute(await currentWeek(db, grandma, THURSDAY))).toBe("/leaderboard");
@@ -225,6 +225,34 @@ describe("the landing route (#91's four states)", () => {
   test("goes to Picks before the deadline", async () => {
     const { db, grandma } = await publishWeek2();
     expect(landingRoute(await currentWeek(db, grandma, THURSDAY, { graded: true }))).toBe("/picks");
+  });
+
+  test("goes to review once every Pick is in, Lock and Guess still to set", async () => {
+    // The flow has no control for either, so a finished sheet lands on the
+    // screen that does rather than at the top of a slate already decided.
+    const { db, slate, grandma, miami, michigan, texas } = await publishWeek2();
+    for (const game of [miami, michigan, texas]) {
+      await pickAs(db, grandma, slate, game, game.homeTeamId, THURSDAY);
+    }
+
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY, { graded: true }))).toBe("/picks/review");
+  });
+
+  test("one game still open keeps the member in the flow", async () => {
+    const { db, slate, grandma, miami, michigan } = await publishWeek2();
+    await pickAs(db, grandma, slate, miami, miami.homeTeamId, THURSDAY);
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY, { graded: true }))).toBe("/picks");
+  });
+
+  test("a Void game the member never picked does not hold them in the flow", async () => {
+    const { db, jonah, slate, grandma, miami, michigan, texas } = await publishWeek2();
+    await pickAs(db, grandma, slate, miami, miami.homeTeamId, THURSDAY);
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await voidGame(db, jonah, texas.id, "Hurricane");
+
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY, { graded: true }))).toBe("/picks/review");
   });
 
   test("goes to the Live Board once locked but still grading", async () => {
