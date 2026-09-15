@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
-import { members, picks } from "@/db/schema";
+import { groups, membershipRemovals, members, memberships, picks } from "@/db/schema";
 import { createTestDb } from "@/test/db";
 import { pickAs, publishWeek2, THURSDAY } from "@/test/week-2";
 import { applyEdit } from "@/lib/picks/edits";
@@ -8,6 +8,7 @@ import { asCommissioner, type Commissioner } from "./authority";
 import {
   addMember,
   bootstrapCommissioner,
+  InvalidMember,
   listMembers,
   magicLinkFor,
   pickCountByMember,
@@ -109,6 +110,32 @@ describe("commissioner console", () => {
     expect(await getSession(db, session!.sessionId)).toBeNull();
     expect(await exchangeToken(db, grandma.token)).toBeNull();
     await expect(removeMember(db, jonah, grandma.id)).rejects.toThrow(/no such member/i);
+  });
+
+  test("deleting a member takes their group memberships and removal periods with them", async () => {
+    const { db, jonah, grandma } = await setup();
+    const [family] = await db.select().from(groups);
+    await db
+      .insert(membershipRemovals)
+      .values({ groupId: family.id, memberId: grandma.id, removedAt: new Date("2026-09-09T00:00:00Z") });
+    await setMemberActive(db, jonah, grandma.id, false);
+
+    await removeMember(db, jonah, grandma.id);
+
+    expect((await db.select().from(memberships)).map((m) => m.memberId)).toEqual([jonah.id]);
+    expect(await db.select().from(membershipRemovals)).toEqual([]);
+  });
+
+  test("a phone number already in the app is refused, not a database error", async () => {
+    const { db, jonah } = await setup();
+
+    await expect(addMember(db, jonah, { displayName: "Impostor", phone: " +12565550140 " })).rejects.toThrow(
+      InvalidMember,
+    );
+    await expect(addMember(db, jonah, { displayName: "Impostor", phone: "+12565550140" })).rejects.toThrow(
+      /already belongs to Grandma/,
+    );
+    expect((await listMembers(db, jonah)).map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
   });
 
   test("an active member is deactivated first, and a commissioner is never deleted by themselves", async () => {

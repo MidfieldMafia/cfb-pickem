@@ -3,7 +3,9 @@ import { randomBytes } from "node:crypto";
 import { and, asc, count, eq, ne } from "drizzle-orm";
 import {
   locks,
+  membershipRemovals,
   members,
+  memberships,
   pickAudits,
   picks,
   resultAudits,
@@ -12,6 +14,7 @@ import {
   type Member,
 } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { joinFamily } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import type { Commissioner } from "./authority";
 import { cleanDisplayName, MAX_DISPLAY_NAME, MAX_PHONE } from "./limits";
@@ -84,11 +87,27 @@ function cleanInput(input: NewMemberInput): { displayName: string; phone: string
  * token. Console additions go through `addMember`, which checks the actor.
  */
 export async function bootstrapCommissioner(db: Db, input: NewMemberInput): Promise<Member> {
+  const clean = await freshInput(db, input);
   const [member] = await db
     .insert(members)
-    .values({ ...cleanInput(input), isCommissioner: true, token: newSecret() })
+    .values({ ...clean, isCommissioner: true, token: newSecret() })
     .returning();
+  await joinFamily(db, member, "organizer");
   return member;
+}
+
+/**
+ * `cleanInput`, plus the refusal a phone number already in the app earns.
+ * The unique constraint would refuse it too, but as a database error rather
+ * than a sentence the console can show.
+ */
+async function freshInput(db: Db, input: NewMemberInput): Promise<ReturnType<typeof cleanInput>> {
+  const clean = cleanInput(input);
+  if (clean.phone) {
+    const holder = await db.query.members.findFirst({ where: eq(members.phone, clean.phone) });
+    if (holder) throw new InvalidMember(`That phone number already belongs to ${holder.displayName}.`);
+  }
+  return clean;
 }
 
 /** The Magic Link: the app URL plus the member's secret token. */
@@ -97,10 +116,12 @@ export function magicLinkFor(member: Pick<Member, "token">, appUrl: string): str
 }
 
 export async function addMember(db: Db, actor: Commissioner, input: NewMemberInput): Promise<Member> {
+  const clean = await freshInput(db, input);
   const [member] = await db
     .insert(members)
-    .values({ ...cleanInput(input), token: newSecret() })
+    .values({ ...clean, token: newSecret() })
     .returning();
+  await joinFamily(db, member, "member");
   return member;
 }
 
@@ -159,8 +180,9 @@ export async function pickCountByMember(db: Db, actor: Commissioner): Promise<Ma
 }
 
 /**
- * Deletes a member outright: the row, their sessions, and every Pick, Lock,
- * Tiebreaker Guess and change-log entry about them. Deactivating keeps a
+ * Deletes a member outright: the row, their sessions, their group
+ * memberships, and every Pick, Lock, Tiebreaker Guess and change-log entry
+ * about them. Deactivating keeps a
  * member on the boards they played (`roster.ts` says why); deleting is the
  * commissioner's decision to take them off, so the Leaderboard changes for
  * any Week they picked in. Two refusals:
@@ -190,6 +212,8 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
   await db.delete(tiebreakerGuesses).where(eq(tiebreakerGuesses.memberId, memberId));
   await db.delete(locks).where(eq(locks.memberId, memberId));
   await db.delete(picks).where(eq(picks.memberId, memberId));
+  await db.delete(membershipRemovals).where(eq(membershipRemovals.memberId, memberId));
+  await db.delete(memberships).where(eq(memberships.memberId, memberId));
   const [deleted] = await db.delete(members).where(eq(members.id, memberId)).returning();
   return deleted;
 }
