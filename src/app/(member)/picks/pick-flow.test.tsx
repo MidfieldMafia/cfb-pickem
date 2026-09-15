@@ -17,8 +17,16 @@
  */
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { MICHIGAN, TEXAS, sheet } from "@/test/sheet";
+import type { SheetGameJson } from "@/lib/picks/json";
+import { MIAMI, MICHIGAN, SERVER_NOW, TEXAS, sheet } from "@/test/sheet";
 import { PickFlow } from "./pick-flow";
+
+/** A pick the server has already taken, as the wire carries it. */
+const pickOf = (view: SheetGameJson) => ({
+  gameId: view.game.id,
+  teamId: view.game.homeTeamId,
+  updatedAt: SERVER_NOW,
+});
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -57,12 +65,13 @@ const pressed = (name: string) => tile(name).getAttribute("aria-pressed");
 
 describe("a tap on a team", () => {
   /**
-   * Opened on the last game, so the advance that follows a save lands on the
-   * review screen rather than swapping the tiles out from under the assertion.
+   * Opened on the last game with the rest of the slate already in, so the save
+   * completes the sheet and the advance lands on review rather than swapping
+   * the tiles out from under the assertion.
    */
   test("saves the pick, marks the tile, and moves on when the slate is done", async () => {
     const sent = answering(ok());
-    render(<PickFlow sheet={sheet()} startGameId={TEXAS.game.id} />);
+    render(<PickFlow sheet={sheet({ picks: [pickOf(MIAMI), pickOf(MICHIGAN)] })} startGameId={TEXAS.game.id} />);
 
     tile("Texas").click();
 
@@ -70,6 +79,21 @@ describe("a tap on a team", () => {
     expect(sent).toEqual([{ gameId: TEXAS.game.id, teamId: TEXAS.game.homeTeamId }]);
     expect(pressed("Ohio State")).toBe("false");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/picks/review"));
+  });
+
+  /**
+   * The same tap on the same last game, with one earlier game still open.
+   * Review is for a finished sheet: the flow doubles back to the gap instead,
+   * which is the only way a member reaches review with holes in it.
+   */
+  test("the end of the slate goes back to a game still open, not to review", async () => {
+    answering(ok());
+    render(<PickFlow sheet={sheet({ picks: [pickOf(MICHIGAN)] })} startGameId={TEXAS.game.id} />);
+
+    tile("Texas").click();
+
+    await waitFor(() => expect(tile("Miami")).toBeTruthy());
+    expect(push).not.toHaveBeenCalled();
   });
 
   /**
