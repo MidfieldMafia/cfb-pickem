@@ -1,4 +1,4 @@
-import { Check, Lock, LockOpen, X } from "lucide-react";
+import { Lock, LockOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
@@ -14,18 +14,10 @@ function SideChip({ picks, outcome }: { picks: RevealPick[]; outcome: RevealPick
   const count = picks.length;
   const label = `${count} pick${count === 1 ? "" : "s"}`;
   if (outcome === "correct") {
-    return (
-      <Badge className="bg-win text-win-foreground">
-        <Check strokeWidth={3} /> {label}
-      </Badge>
-    );
+    return <Badge variant="win">{label}</Badge>;
   }
   if (outcome === "incorrect") {
-    return (
-      <Badge className="bg-loss text-loss-foreground">
-        <X strokeWidth={3} /> {label}
-      </Badge>
-    );
+    return <Badge variant="loss">{label}</Badge>;
   }
   return <Badge variant="outline">{label}</Badge>;
 }

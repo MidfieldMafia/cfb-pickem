@@ -1,6 +1,7 @@
 import { Ban, Pencil, Radio } from "lucide-react";
+import type { VariantProps } from "class-variance-authority";
 import { db } from "@/db";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
 import { TeamLogo } from "@/components/team-logo";
@@ -36,12 +37,12 @@ function Team({ name, rank }: { name: string; rank: number | null }) {
 }
 
 /** How each of the result's five words is dressed. The words themselves come from the result. */
-const TONES: Record<ResultLabel, { variant?: "outline"; className?: string }> = {
+const TONES: Record<ResultLabel, { variant?: VariantProps<typeof badgeVariants>["variant"] }> = {
   Scheduled: { variant: "outline" },
-  "In progress": { className: "bg-live text-live-foreground" },
+  "In progress": { variant: "live" },
   Final: {},
-  "Final · override": { className: "bg-secondary text-secondary-foreground" },
-  Void: { variant: "outline" },
+  "Final · override": { variant: "secondary" },
+  Void: { variant: "void" },
 };
 
 /**

@@ -140,7 +140,7 @@ export function LeaderboardTable({
                         <span className="truncate font-semibold">{row.member.displayName}</span>
                         {you ? <span className="text-xs text-muted-foreground">you</span> : null}
                         {row.rank === 1 && showTrophy ? (
-                          <Badge className="bg-leader text-leader-foreground">
+                          <Badge variant="leader">
                             <Trophy size={12} aria-hidden /> <span className="sr-only">Leading the season</span>
                           </Badge>
                         ) : null}

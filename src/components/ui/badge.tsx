@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Check, X } from "lucide-react"
 import { cn } from "cn"
 import { Slot } from "radix-ui"
 
@@ -17,6 +18,19 @@ const badgeVariants = cva(
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
+        // Game/pick states. A result is never color alone: `win` and `loss`
+        // carry their own leading glyph (below), structural rather than a
+        // habit a call site can forget.
+        win: "bg-win text-win-foreground",
+        loss: "bg-loss text-loss-foreground",
+        live: "bg-live text-live-foreground",
+        locked: "bg-locked text-locked-foreground",
+        leader: "bg-leader text-leader-foreground",
+        // `pending`'s fill sits nearly identical to `win` in lightness, so it
+        // renders as an outline chip instead, same as `void`: neither is a
+        // graded result.
+        pending: "border-border text-foreground",
+        void: "border-border text-foreground",
       },
     },
     defaultVariants: {
@@ -29,10 +43,13 @@ function Badge({
   className,
   variant = "default",
   asChild = false,
+  children,
   ...props
 }: React.ComponentProps<"span"> &
   VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot.Root : "span"
+  const glyph =
+    asChild ? null : variant === "win" ? <Check strokeWidth={3} /> : variant === "loss" ? <X strokeWidth={3} /> : null
 
   return (
     <Comp
@@ -40,7 +57,10 @@ function Badge({
       data-variant={variant}
       className={cn(badgeVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {glyph}
+      {children}
+    </Comp>
   )
 }
 

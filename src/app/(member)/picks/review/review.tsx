@@ -235,7 +235,7 @@ export function Review({ initial, commissioner }: { initial: SheetJson; commissi
       </>
     );
     return (
-      <li key={game.id} className={voided ? "opacity-60" : ""}>
+      <li key={game.id} className={voided ? "opacity-70" : ""}>
         {locked || voided ? (
           <div className="flex min-h-14 items-center gap-2.5 px-3 py-1.5">{body}</div>
         ) : (
