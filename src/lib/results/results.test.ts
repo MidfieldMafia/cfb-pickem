@@ -10,6 +10,7 @@ import {
   FAMU_AT_MIAMI,
   feedWith,
   type Finals,
+  joinAt,
   lockAs,
   pickAs,
   OHIO_STATE_AT_TEXAS,
@@ -18,6 +19,7 @@ import {
   SATURDAY_EVENING,
   SUNDAY,
   THURSDAY,
+  TUESDAY,
 } from "@/test/week-2";
 import {
   clearOverride,
@@ -726,6 +728,38 @@ describe("the season leaderboard", () => {
       ["Grandma", 1, 0, 0],
     ]);
     expect(season.leaderboard.every((r) => r.averagePoints === null)).toBe(true);
+  });
+
+  test("a member who picked nothing sits the week out and keeps a Leaderboard row of dashes", async () => {
+    const { db, jonah, ingest } = await setup();
+    // Quiet joined well before the Deadline and never picked: on the roster all
+    // week, and on none of the week's own screens.
+    const quiet = await joinAt(db, jonah, "Quiet", TUESDAY);
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+
+    const season = await seasonResult(db, SUNDAY);
+
+    // The week is the two who played it, which is also the "of" that a place is
+    // read against on the week results screen. (That Quiet is off the Reveal
+    // board too is pinned at its own seam, in `picks.test.ts`.)
+    expect(season.weeks[0].scores.map((s) => s.member.displayName)).toEqual(["Grandma", "Jonah"]);
+
+    // Still on the Leaderboard: sitting a week out is not being dropped from the
+    // season, which is the whole difference between this and a deactivation.
+    expect(season.leaderboard.map((r) => r.member.displayName)).toEqual(["Grandma", "Jonah", "Quiet"]);
+    expect(season.leaderboard.find((r) => r.member.id === quiet.id)).toMatchObject({
+      rank: 3,
+      totalPoints: 0,
+      correct: 0,
+      incorrect: 0,
+      weeklyWins: 0,
+      weeksPlayed: 0,
+      // Null is what the board renders as an em dash. A 0 average would read as
+      // a member who played and scored nothing, which is a different story.
+      averagePoints: null,
+      averageTiebreakerMiss: null,
+      cumulativeTiebreakerError: 0,
+    });
   });
 });
 

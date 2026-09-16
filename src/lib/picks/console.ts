@@ -27,7 +27,7 @@ import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
 import type { Commissioner } from "@/lib/members/authority";
 import { InvalidMember, joinedOrder } from "@/lib/members/members";
-import { roster } from "@/lib/members/roster";
+import { expected } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
 import { isDroppedLock } from "@/lib/results/result";
 import { teamName, toGameView } from "@/lib/slate/json";
@@ -87,10 +87,13 @@ export interface PickReport {
 }
 
 /**
- * Who hasn't picked. The table is `roster`'s answer, the same one the Reveal
- * and the scoring path read: nobody who joined after the Deadline, because the
- * week was never theirs to finish. No picks are passed, so the deactivated
- * stay off it — there is nothing to chase them about.
+ * Who hasn't picked. `expected`'s answer rather than `roster`'s, and this is
+ * the one caller that wants the difference: the members holding no Picks are
+ * exactly who a reminder is for, and `roster` — which now counts a Week only
+ * for members who picked in it — leaves every one of them out.
+ *
+ * Nobody who joined after the Deadline, because the week was never theirs to
+ * finish, and nobody deactivated, because there is nothing to chase them about.
  */
 export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number, now: Date = new Date()): Promise<PickReport> {
   const slate = await slateFor(db, weekId);
@@ -105,7 +108,7 @@ export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
   ]);
-  const board = roster(everyone, slate.week);
+  const board = expected(everyone, slate.week);
   const pickedBy = new Map<number, Map<number, number>>();
   for (const p of pickRows) {
     let own = pickedBy.get(p.memberId);

@@ -28,7 +28,10 @@ export interface Rules {
 
 export interface Member {
   id: MemberId;
-  /** When the member was added. A week counts as played only if its Deadline fell after this. */
+  /**
+   * When the member was added. A week counts as played only if its Deadline
+   * fell after this — and only if the member also made at least one Pick on it.
+   */
   joinedAt: string;
 }
 
@@ -131,7 +134,12 @@ export interface WeekResult {
   weekNumber: number;
   /** Every non-void game is final. Weekly Wins count toward the season only when true. */
   complete: boolean;
-  /** Members who played the week (joined before the Deadline), sorted by points then tiebreaker error. */
+  /**
+   * Members who played the week — joined before the Deadline and made at least
+   * one Pick — sorted by points then tiebreaker error. A member who sat the
+   * week out is absent rather than present at zero, which is what keeps the
+   * week off their season averages.
+   */
   scores: WeeklyScore[];
   /** Null when nobody played the week. */
   weeklyWin: WeeklyWin | null;
@@ -155,7 +163,7 @@ export interface LeaderboardRow {
   correct: number;
   incorrect: number;
   weeklyWins: number;
-  /** Published weeks whose Deadline fell after the member joined. */
+  /** Published weeks whose Deadline fell after the member joined and that they made a Pick in. */
   weeksPlayed: number;
   /** Total points divided by weeks played; null before the first week played. */
   averagePoints: number | null;

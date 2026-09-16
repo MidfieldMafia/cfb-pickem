@@ -57,6 +57,13 @@ function scorePick(rules: Rules, game: Game, team: TeamId | undefined, locked: b
  */
 interface WeekIndex {
   picks: Map<string, TeamId>;
+  /**
+   * Members holding at least one Pick on the Week: the second half of
+   * `playedWeek`. Built from the Pick rows whatever their Game's state, so a
+   * Pick on a Void game still counts as having turned up — the Void is the
+   * commissioner's doing, not a week the member sat out.
+   */
+  pickers: Set<MemberId>;
   locks: Map<MemberId, GameId>;
   guesses: Map<MemberId, number>;
   voidGameIds: Set<GameId>;
@@ -65,6 +72,7 @@ interface WeekIndex {
 function indexWeek(week: Week): WeekIndex {
   return {
     picks: new Map(week.picks.map((p) => [`${p.memberId}:${p.gameId}`, p.team])),
+    pickers: new Set(week.picks.map((p) => p.memberId)),
     locks: new Map(week.locks.map((l) => [l.memberId, l.gameId])),
     guesses: new Map(week.tiebreakerGuesses.map((t) => [t.memberId, t.guess])),
     voidGameIds: new Set(week.games.filter((g) => g.void).map((g) => g.id)),
@@ -131,16 +139,33 @@ function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
   };
 }
 
-/** A member played a week when its Deadline fell after they joined. */
-function playedWeek(member: Member, week: Week): boolean {
-  return Date.parse(member.joinedAt) < Date.parse(week.deadline);
+/**
+ * A member played a week when its Deadline fell after they joined *and* they
+ * made at least one Pick on it.
+ *
+ * Both halves keep a week off someone's record entirely rather than scoring it
+ * zero: a member who is not in `scores` has no entry for `scoreSeason` to count,
+ * so the week touches nothing — not weeks played, not average points, not the
+ * average Tiebreaker miss, not the season tiebreak's closeness sum.
+ *
+ * A Tiebreaker Guess is deliberately not enough. It is one field, submitted
+ * without reading the slate, and a week decided by it would be a week the
+ * member never picked a game in. A Lock cannot stand alone either — the writer
+ * refuses one that has no Pick beneath it — so Picks are the whole test.
+ *
+ * `members/roster.ts` states this same rule for the read path; see its comment
+ * for why one rule is deliberately written twice and must never be written a
+ * third time.
+ */
+function playedWeek(member: Member, week: Week, pickers: ReadonlySet<MemberId>): boolean {
+  return Date.parse(member.joinedAt) < Date.parse(week.deadline) && pickers.has(member.id);
 }
 
 export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResult {
   const tiebreakerTotal = combinedFinalScore(week.games.find((g) => g.id === week.tiebreakerGameId));
   const index = indexWeek(week);
   const scores = members
-    .filter((member) => playedWeek(member, week))
+    .filter((member) => playedWeek(member, week, index.pickers))
     .map((member) => scoreMember(rules, week, index, member, tiebreakerTotal))
     .sort(compareWeekly);
   const complete = week.games.every((g) => g.void || g.status === "final");

@@ -81,8 +81,8 @@ export interface Standing {
  * place instead of one of them being told they lost on read order.
  *
  * Null when the member did not play the Week — they joined after its Deadline,
- * and a place in a week they never had a chance at is not a fair thing to show
- * them.
+ * or made no Pick in it — and a place in a week they did not play is not a fair
+ * thing to show them.
  */
 export function standing(scores: WeeklyScore[], memberId: number): Standing | null {
   const mine = scores.find((s) => s.member.id === memberId);
@@ -108,8 +108,10 @@ export interface SeasonStanding extends Standing {
  * `scoreSeason`'s to apply, and applying them a second time in a helper is how
  * the board and this card would come to disagree.
  *
- * Null for a member the board does not carry — they have played no Week yet —
- * which is the same "no place to show them" `standing` answers with.
+ * Null for a member the board does not carry at all — one deactivated with no
+ * Picks anywhere in the season. A member who has simply played no Week yet is
+ * on the board at zero and gets their place like anyone else, which is what
+ * keeps them from vanishing the moment they skip a week.
  */
 export function seasonStanding(leaderboard: LeaderboardRow[], memberId: number): SeasonStanding | null {
   const mine = leaderboard.find((row) => row.member.id === memberId);
@@ -313,11 +315,12 @@ export function movement(row: Pick<LeaderboardRow, "rank" | "previousRank">): Mo
  * How much of the season a member has actually played, said out loud only
  * when it is less than the season has run: "2 of 3 weeks".
  *
- * A member who joined in Week 3 sits out Weeks 1 and 2 (`roster`, and the
- * engine's `playedWeek`), so their total is over fewer weeks than the member
- * above them. Their average already accounts for it; this is the note that
- * stops the total looking like a losing one. Null when they have played every
- * week the season has.
+ * A member who joined in Week 3 sits out Weeks 1 and 2, and a member who picked
+ * nothing in Week 4 sits that one out too (`roster`, and the engine's
+ * `playedWeek`), so their total is over fewer weeks than the member above them.
+ * Their average already accounts for it; this is the note that stops the total
+ * looking like a losing one. Null when they have played every week the season
+ * has.
  */
 export function weeksPlayedNote(
   row: Pick<LeaderboardRow, "weeksPlayed">,

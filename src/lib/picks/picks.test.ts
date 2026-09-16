@@ -193,19 +193,15 @@ describe("pick entry", () => {
     // The member's own sheet is never hidden from them.
     expect((await sheet(grandma, justBefore)).picks).toHaveLength(2);
 
-    // The Reveal: at the deadline every member's picks are readable by every member,
-    // including a member who entered nothing, but not a deactivated one.
+    // The Reveal: at the deadline every member who played the week is readable
+    // by every member. Alex entered nothing, so it is not a week they played,
+    // and the board leaves them off rather than showing an empty column.
     const alex = await joinAt(db, jonah, "Alex", TUESDAY);
     const gone = await joinAt(db, jonah, "Gone", TUESDAY);
     await setMemberActive(db, jonah, gone.id, false);
     const board = await revealed(deadline);
-    expect(board.map((m) => m.memberId).sort()).toEqual([jonah.id, grandma.id, alex.id].sort());
-    expect(board.find((m) => m.memberId === alex.id)).toEqual({
-      memberId: alex.id,
-      picks: [],
-      lockGameId: null,
-      tiebreakerGuess: null,
-    });
+    expect(board.map((m) => m.memberId).sort()).toEqual([jonah.id, grandma.id].sort());
+    expect(board.find((m) => m.memberId === alex.id)).toBeUndefined();
     expect(board.find((m) => m.memberId === grandma.id)).toMatchObject({
       picks: [
         { gameId: michigan.id, teamId: michigan.homeTeamId },
@@ -221,8 +217,9 @@ describe("pick entry", () => {
     });
   });
 
-  test("the Reveal board is the roster: nobody who joined late, and the deactivated only if they picked", async () => {
+  test("the Reveal board is the Played Week: nobody who joined late, nobody who picked nothing, the deactivated only if they picked", async () => {
     const { db, slate, jonah, grandma, michigan, deadline, revealed } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
 
     // Late joins the Monday after the Deadline: there was never a week for
     // them to miss, and a name with no picks on the board is the bug.
@@ -234,12 +231,15 @@ describe("pick entry", () => {
     // Quiet was deactivated without ever picking: nothing of theirs to show.
     const quiet = await joinAt(db, jonah, "Quiet", TUESDAY);
     await setMemberActive(db, jonah, quiet.id, false);
+    // Jonah is here, active, and simply never picked — the half of the rule
+    // neither deactivated case can demonstrate on its own.
 
     const board = await revealed(deadline);
 
-    expect(board.map((m) => m.memberId).sort()).toEqual([jonah.id, grandma.id, gone.id].sort());
+    expect(board.map((m) => m.memberId).sort()).toEqual([grandma.id, gone.id].sort());
     expect(board.find((m) => m.memberId === late.id)).toBeUndefined();
     expect(board.find((m) => m.memberId === quiet.id)).toBeUndefined();
+    expect(board.find((m) => m.memberId === jonah.id)).toBeUndefined();
     expect(board.find((m) => m.memberId === gone.id)).toMatchObject({
       picks: [{ gameId: michigan.id, teamId: michigan.homeTeamId }],
     });

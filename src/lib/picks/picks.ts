@@ -188,13 +188,20 @@ function groupPicks(
   return [...byMember.values()].sort((a, b) => a.memberId - b.memberId);
 }
 
-/** The members with a Pick, a Lock, or a Guess on a Week: `roster`'s widening for anyone since deactivated. */
-function pickers(rows: PickTable[], lockRows: LockTable[], guessRows: GuessTable[]): Set<number> {
-  const ids = new Set<number>();
-  for (const r of rows) ids.add(r.memberId);
-  for (const l of lockRows) ids.add(l.memberId);
-  for (const g of guessRows) ids.add(g.memberId);
-  return ids;
+/**
+ * The members holding at least one Pick on the Week: the second half of a
+ * Played Week, for `roster`.
+ *
+ * Picks only. A Lock or a Tiebreaker Guess used to widen this set, back when it
+ * existed to keep a since-deactivated member on the board and any trace of them
+ * would do. The set now decides who played the week, and a Guess is not playing.
+ *
+ * Counts a Pick on a Void game, because the rows are not filtered by their
+ * Game's state: the Void is the commissioner's doing, not a week the member sat
+ * out. `score-week.ts` counts the same way.
+ */
+function pickers(rows: PickTable[]): Set<number> {
+  return new Set(rows.map((r) => r.memberId));
 }
 
 /**
@@ -216,7 +223,7 @@ export async function weekPicks(db: Db, slate: Slate, now: Date = new Date()): P
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
   ]);
-  const board = roster(everyone, slate.week, pickers(rows, lockRows, guessRows));
+  const board = roster(everyone, slate.week, pickers(rows));
   return groupPicks(board, gameIds, rows, lockRows, guessRows);
 }
 
@@ -264,8 +271,9 @@ export async function seasonPicks(
       const weekLocks = locksOf.get(week.id)!;
       const weekGuesses = guessesOf.get(week.id)!;
       // The board is decided a Week at a time: joining in Week 4 keeps a member
-      // off Weeks 1 to 3, exactly as `score-week.ts` already had it.
-      const board = roster(everyone, week, pickers(weekPickRows, weekLocks, weekGuesses));
+      // off Weeks 1 to 3, and picking nothing in Week 5 keeps them off that one,
+      // exactly as `score-week.ts` already had it.
+      const board = roster(everyone, week, pickers(weekPickRows));
       return [
         week.id,
         groupPicks(
