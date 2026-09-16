@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import Link from "next/link";
 import { useActionState } from "react";
 import { PennantPicker } from "@/components/pennant-picker";
 import { SECTION_LABEL } from "@/components/section-label";
@@ -54,11 +53,6 @@ export function WelcomeForm({
           {pending ? "Saving…" : returning ? "Save" : "Continue"}
           {pending || returning ? null : <ArrowRight aria-hidden />}
         </Button>
-        {returning ? null : (
-          <Link href="/rules" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
-            See how to play
-          </Link>
-        )}
       </div>
     </form>
   );
