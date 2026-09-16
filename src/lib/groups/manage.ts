@@ -32,7 +32,7 @@ import { publishedDeadline } from "@/lib/picks/picks";
 import { Refusal } from "@/lib/refusal";
 import { deadlinePassed, publishedSlate } from "@/lib/slate/slate";
 import { cleanGroupName, MAX_GROUP_NAME } from "./limits";
-import { groupRoster, memberGroups, type RosterEntry } from "./memberships";
+import { groupRoster, memberGroups, type Absence, type RosterEntry } from "./memberships";
 
 /**
  * Deliberately not a `Refusal`, for the reason `NotCommissioner` is not: the
@@ -63,6 +63,11 @@ const mint = (manager: Omit<Manager, "__manager">) => manager as Manager;
 /** Out of the group right now: a removal nobody has undone. */
 function stillOut(entry: RosterEntry): boolean {
   return entry.removals.some((period) => period.restoredAt === null);
+}
+
+/** The period they are out for now, if they are: a removal, or having left. */
+export function openAbsence(entry: RosterEntry): Absence | undefined {
+  return entry.removals.find((period) => period.restoredAt === null);
 }
 
 /**
@@ -139,7 +144,8 @@ export async function manageView(db: Db, manager: Manager, now: Date = new Date(
     publishedSlate(db),
     manager.commissioner ? db.query.members.findMany({ where: eq(members.active, true), orderBy: joinedOrder }) : [],
   ]);
-  const inGroup = new Set(entries.map((entry) => entry.member.id));
+  // Someone who left can be added back; someone removed is restored from the Removed list.
+  const inGroup = new Set(entries.filter((entry) => openAbsence(entry)?.kind !== "left").map((entry) => entry.member.id));
   const current = entries.filter((entry) => !stillOut(entry));
   const players = current.filter((entry) => entry.member.active).map((entry) => entry.member);
   const progress = slate ? await weekProgress(db, slate, players) : [];
@@ -179,9 +185,12 @@ export async function manageView(db: Db, manager: Manager, now: Date = new Date(
         }
       : null,
     members: rows,
-    removed: entries.flatMap(({ member, removals }) => {
-      const open = removals.find((period) => period.restoredAt === null);
-      return open
+    // Only removals: someone who left rejoins through the Join Link, so there is
+    // nothing here for an organizer to restore (#136).
+    removed: entries.flatMap((entry) => {
+      const { member } = entry;
+      const open = openAbsence(entry);
+      return open?.kind === "removed"
         ? [{ id: member.id, displayName: member.displayName, avatarId: member.avatarId, removedAt: open.removedAt }]
         : [];
     }),
@@ -230,8 +239,14 @@ export async function addExistingToGroup(db: Db, manager: Manager, memberId: num
   const person = await db.query.members.findFirst({ where: eq(members.id, memberId) });
   if (!person) throw new InvalidMember("No such member.");
   const entry = (await groupRoster(db, manager.group.id)).find((e) => e.member.id === memberId);
-  if (entry && stillOut(entry)) {
+  const absence = entry && openAbsence(entry);
+  if (absence?.kind === "removed") {
     throw new InvalidGroup(`${person.displayName} was removed from ${manager.group.name}; restore them instead.`);
+  }
+  // Left on their own: back with their original joined-at, as the Join Link would do.
+  if (absence) {
+    await endAbsence(db, manager.group.id, memberId, now);
+    return person;
   }
   if (entry) throw new InvalidGroup(`${person.displayName} is already in ${manager.group.name}.`);
   await db.insert(memberships).values({ groupId: manager.group.id, memberId, role: "member", joinedAt: now });
@@ -274,17 +289,25 @@ export async function removeFromGroup(db: Db, manager: Manager, memberId: number
 export async function restoreToGroup(db: Db, manager: Manager, memberId: number, now: Date = new Date()): Promise<Member> {
   const entry = await membershipIn(db, manager, memberId);
   if (!entry.out) throw new InvalidGroup(`${entry.member.displayName} is not removed.`);
+  if (openAbsence(entry)?.kind === "left") {
+    throw new InvalidGroup(`${entry.member.displayName} left on their own; they rejoin through the Join Link.`);
+  }
+  await endAbsence(db, manager.group.id, memberId, now);
+  return entry.member;
+}
+
+/** Closes the member's open absence from the group, however it began. */
+export async function endAbsence(db: Db, groupId: number, memberId: number, now: Date): Promise<void> {
   await db
     .update(membershipRemovals)
     .set({ restoredAt: now })
     .where(
       and(
-        eq(membershipRemovals.groupId, manager.group.id),
+        eq(membershipRemovals.groupId, groupId),
         eq(membershipRemovals.memberId, memberId),
         isNull(membershipRemovals.restoredAt),
       ),
     );
-  return entry.member;
 }
 
 async function setRole(db: Db, manager: Manager, memberId: number, role: MembershipRole): Promise<void> {
@@ -362,6 +385,19 @@ export async function regenerateInGroup(
     }
   }
   return renewToken(db, memberId, memberId === manager.actor.id ? options.keepSessionId : undefined);
+}
+
+/**
+ * A new Join Link token: the old link stops working and lands on the "this link
+ * was reset" page. Nobody already in the group is touched.
+ */
+export async function resetJoinLink(db: Db, manager: Manager): Promise<Group> {
+  const [reset] = await db
+    .update(groups)
+    .set({ joinToken: newSecret() })
+    .where(eq(groups.id, manager.group.id))
+    .returning();
+  return reset;
 }
 
 /** Renames the group. Names need not be unique. */

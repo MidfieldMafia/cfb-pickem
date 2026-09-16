@@ -189,6 +189,10 @@ export const memberships = pgTable(
   (t) => [primaryKey({ columns: [t.groupId, t.memberId] }), index("memberships_member_idx").on(t.memberId)],
 );
 
+export const absenceKinds = ["removed", "left"] as const;
+/** Why a member was out: taken out by an organizer or commissioner, or left on their own. */
+export type AbsenceKind = (typeof absenceKinds)[number];
+
 /**
  * One row per period a membership was removed. Nothing about the membership
  * is deleted on removal, so restoring it brings back everything the member had
@@ -203,6 +207,11 @@ export const membershipRemovals = pgTable(
     memberId: integer("member_id").notNull(),
     removedAt: utc("removed_at").notNull(),
     restoredAt: utc("restored_at"),
+    /**
+     * A removal is undone only by an organizer or commissioner; someone who left
+     * rejoins through the Join Link (#136). Rows from before leaving existed are removals.
+     */
+    kind: text("kind", { enum: absenceKinds }).notNull().default("removed"),
   },
   (t) => [
     foreignKey({ columns: [t.groupId, t.memberId], foreignColumns: [memberships.groupId, memberships.memberId] }),

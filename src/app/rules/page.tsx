@@ -9,6 +9,7 @@ import { MemberChip } from "@/components/member-chip";
 import { SECTION_LABEL } from "@/components/section-label";
 import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
+import { safeInteger } from "@/lib/parse";
 import { activeSeason, deadlinePassed, publishedSlate } from "@/lib/slate/slate";
 
 /**
@@ -20,13 +21,22 @@ import { activeSeason, deadlinePassed, publishedSlate } from "@/lib/slate/slate"
  * name and pennant and adding the app to the home screen, so it stays outside
  * the `(member)` group and draws its own `BottomNav` — like welcome and
  * install, a first-time visit has nowhere else to go yet, and the setup
- * variant omits the nav entirely. A returning member reaches the same page
+ * variant omits the nav entirely. A founder who just started a group
+ * (`&group=<id>`) goes on to its organizer screen rather than straight to install. A returning member reaches the same page
  * from the header's Rules icon, nav included.
  */
-export default async function HowToPlay({ searchParams }: { searchParams: Promise<{ setup?: string }> }) {
+export default async function HowToPlay({
+  searchParams,
+}: {
+  searchParams: Promise<{ setup?: string; group?: string }>;
+}) {
   const member = await requireMember();
-  const { setup } = await searchParams;
+  const { setup, group } = await searchParams;
   const inSetup = setup === "1";
+  // Someone who just started a group sees the organizer screen before the
+  // install steps; that screen checks they run the group, so the id is not trusted here.
+  const started = group ? safeInteger(group) : null;
+  const next = started === null ? "/install" : `/start/${started}?setup=1`;
   const database = db();
   const season = await activeSeason(database);
   const { pointsPerCorrectPick, lockMultiplier, tiebreakOrder } = season.rules;
@@ -155,7 +165,7 @@ export default async function HowToPlay({ searchParams }: { searchParams: Promis
         {inSetup ? (
           <div className="mt-auto px-4 pt-4">
             <Button asChild size="lg" className="w-full">
-              <Link href="/install">Next</Link>
+              <Link href={next}>Next</Link>
             </Button>
           </div>
         ) : (

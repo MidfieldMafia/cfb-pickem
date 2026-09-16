@@ -1,0 +1,1 @@
+ALTER TABLE "membership_removals" ADD COLUMN "kind" text DEFAULT 'removed' NOT NULL;
