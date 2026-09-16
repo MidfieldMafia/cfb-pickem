@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, ListPlus, Pencil, Smartphone, Users } from "lucide-react";
+import { ClipboardCheck, ListPlus, Pencil, Smartphone, Users, UsersRound } from "lucide-react";
 
 const LINKS = [
   { href: "/console/slate", label: "Slate builder", Icon: ListPlus },
+  { href: "/console/groups", label: "Groups", Icon: UsersRound },
   { href: "/console/members", label: "Members", Icon: Users },
   { href: "/console/picks", label: "Who hasn't picked", Icon: ClipboardCheck },
   { href: "/console/results", label: "Result overrides", Icon: Pencil },

@@ -17,7 +17,16 @@ import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { groups, membershipRemovals, members, memberships, type Group, type Member, type MembershipRole } from "@/db/schema";
 import type { Db } from "@/db/types";
-import { cleanInput, InvalidMember, isCommissioner, newSecret, renewToken, type NewMemberInput } from "@/lib/members/members";
+import {
+  cleanInput,
+  InvalidMember,
+  isCommissioner,
+  joinedOrder,
+  newSecret,
+  refuseTakenPhone,
+  renewToken,
+  type NewMemberInput,
+} from "@/lib/members/members";
 import { owed, weekProgress } from "@/lib/picks/console";
 import { publishedDeadline } from "@/lib/picks/picks";
 import { Refusal } from "@/lib/refusal";
@@ -104,6 +113,12 @@ export interface ManageView {
   members: ManagedMember[];
   /** Removed and not restored, for the Restore buttons. */
   removed: RemovedMember[];
+  /**
+   * Everyone a commissioner could add who has never been in the group, in the
+   * order they joined the app. Always empty for an organizer, who never reaches
+   * people outside their group: theirs come in through the Join Link.
+   */
+  addable: { id: number; displayName: string }[];
 }
 
 export interface RemovedMember {
@@ -119,7 +134,12 @@ export interface RemovedMember {
  * reaches an organizer only by someone writing it in here.
  */
 export async function manageView(db: Db, manager: Manager, now: Date = new Date()): Promise<ManageView> {
-  const [entries, slate] = await Promise.all([groupRoster(db, manager.group.id), publishedSlate(db)]);
+  const [entries, slate, everyone] = await Promise.all([
+    groupRoster(db, manager.group.id),
+    publishedSlate(db),
+    manager.commissioner ? db.query.members.findMany({ where: eq(members.active, true), orderBy: joinedOrder }) : [],
+  ]);
+  const inGroup = new Set(entries.map((entry) => entry.member.id));
   const current = entries.filter((entry) => !stillOut(entry));
   const players = current.filter((entry) => entry.member.active).map((entry) => entry.member);
   const progress = slate ? await weekProgress(db, slate, players) : [];
@@ -165,6 +185,9 @@ export async function manageView(db: Db, manager: Manager, now: Date = new Date(
         ? [{ id: member.id, displayName: member.displayName, avatarId: member.avatarId, removedAt: open.removedAt }]
         : [];
     }),
+    addable: everyone
+      .filter((person) => !inGroup.has(person.id))
+      .map((person) => ({ id: person.id, displayName: person.displayName })),
   };
 }
 
@@ -175,19 +198,44 @@ export async function manageView(db: Db, manager: Manager, now: Date = new Date(
  *
  * A phone number already in the app is refused without naming whose it is: the
  * person behind it may play only in groups this organizer cannot see, and
- * connecting to them is the Join Link's job, which they open themselves.
+ * connecting to them is the Join Link's job, which they open themselves. A
+ * commissioner sees everyone, so theirs is told the name and can add that
+ * person with `addExistingToGroup` instead.
  */
 export async function addToGroup(db: Db, manager: Manager, input: NewMemberInput, now: Date = new Date()): Promise<Member> {
   if (!input.phone?.trim()) throw new InvalidMember("Enter their phone number.");
   const clean = cleanInput(input);
-  const holder = await db.query.members.findFirst({ where: eq(members.phone, clean.phone!) });
-  if (holder) throw new InvalidMember("They already play in another group; send them your Join Link.");
+  if (manager.commissioner) {
+    await refuseTakenPhone(db, clean.phone);
+  } else if (await db.query.members.findFirst({ where: eq(members.phone, clean.phone!) })) {
+    throw new InvalidMember("They already play in another group; send them your Join Link.");
+  }
   const [member] = await db
     .insert(members)
     .values({ ...clean, token: newSecret(), joinedAt: now })
     .returning();
   await db.insert(memberships).values({ groupId: manager.group.id, memberId: member.id, role: "member", joinedAt: now });
   return member;
+}
+
+/**
+ * Puts someone already in the app into the group, joined now, so no Week before
+ * today counts for them here. A commissioner's power only: an organizer never
+ * reaches a person outside their group, so reaching this as one is a fault, as
+ * reaching the screen is. Someone removed from the group is restored instead,
+ * which keeps their original joined-at and so everything they had.
+ */
+export async function addExistingToGroup(db: Db, manager: Manager, memberId: number, now: Date = new Date()): Promise<Member> {
+  if (!manager.commissioner) throw new NotOrganizer();
+  const person = await db.query.members.findFirst({ where: eq(members.id, memberId) });
+  if (!person) throw new InvalidMember("No such member.");
+  const entry = (await groupRoster(db, manager.group.id)).find((e) => e.member.id === memberId);
+  if (entry && stillOut(entry)) {
+    throw new InvalidGroup(`${person.displayName} was removed from ${manager.group.name}; restore them instead.`);
+  }
+  if (entry) throw new InvalidGroup(`${person.displayName} is already in ${manager.group.name}.`);
+  await db.insert(memberships).values({ groupId: manager.group.id, memberId, role: "member", joinedAt: now });
+  return person;
 }
 
 /** The target's membership in the manager's group, refused when there is none. */

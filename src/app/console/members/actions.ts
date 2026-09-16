@@ -6,32 +6,17 @@ import { db } from "@/db";
 import { SESSION_COOKIE } from "@/lib/members/cookie";
 import { requireConsole } from "@/lib/members/current";
 import type { ActionState } from "@/lib/console/state";
-import { deleteMember } from "@/lib/members/console-edits";
-import { addMember, InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
+import { addPersonToGroup } from "@/lib/groups/console-edits";
+import { deleteMember, editPhone } from "@/lib/members/console-edits";
+import { InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
 import { integerField } from "@/lib/parse";
 import { consoleRoute } from "../context";
-
-export interface AddMemberState {
-  error?: string;
-  added?: string;
-}
 
 const memberId = (formData: FormData) =>
   integerField(formData, "memberId", (name) => new InvalidMember(`Missing ${name}.`));
 
-export async function addMemberAction(_prev: AddMemberState, formData: FormData): Promise<AddMemberState> {
-  const actor = await requireConsole();
-  try {
-    const member = await addMember(db(), actor, {
-      displayName: String(formData.get("displayName") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
-    });
-    revalidatePath("/console/members");
-    return { added: member.displayName };
-  } catch (error) {
-    if (error instanceof InvalidMember) return { error: error.message };
-    throw error;
-  }
+export async function addMemberAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return addPersonToGroup(consoleRoute(), formData);
 }
 
 export async function regenerateAction(formData: FormData) {
@@ -49,4 +34,8 @@ export async function setActiveAction(formData: FormData) {
 
 export async function deleteMemberAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return deleteMember(consoleRoute(), formData);
+}
+
+export async function editPhoneAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return editPhone(consoleRoute(), formData);
 }

@@ -9,7 +9,9 @@ import { consoleEdit, type ConsoleRoute } from "@/lib/console/route";
 import type { ActionState } from "@/lib/console/state";
 import { integerField, type Fields } from "@/lib/parse";
 import { plural } from "@/lib/plural";
-import { InvalidMember, removeMember } from "./members";
+import { managePath } from "@/lib/groups/manage-state";
+import { memberGroups } from "@/lib/groups/memberships";
+import { InvalidMember, removeMember, setPhone } from "./members";
 
 export const MEMBERS_PATH = "/console/members";
 
@@ -41,4 +43,16 @@ export function deleteWarning(pickCount: number): string {
   return pickCount === 0
     ? "They have no Picks, so nothing else goes."
     : `Also deletes their ${plural(pickCount, "Pick")} and takes them off every board they were on.`;
+}
+
+/** Fills in, changes, or clears a phone number; it shows on each of their groups' Manage screens. */
+export function editPhone(route: ConsoleRoute, form: FormData): Promise<ActionState> {
+  return consoleEdit(route, async ({ db, actor }) => {
+    const updated = await setPhone(db, actor, id(form, "memberId"), String(form.get("phone") ?? ""));
+    const theirs = await memberGroups(db, updated.id);
+    return {
+      done: `${updated.displayName}'s phone number is ${updated.phone ? "saved" : "cleared"}.`,
+      revalidate: [MEMBERS_PATH, ...theirs.map((g) => managePath(g.group.id))],
+    };
+  });
 }
