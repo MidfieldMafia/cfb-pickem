@@ -31,8 +31,9 @@ Pick and game states (`bg-win text-win-foreground` etc.):
 
 - `win` light moss + dark text · `loss` deep oxblood + cream text. They differ in lightness and text polarity, not just hue, so red-green deficiency never hides a result. Always add the glyph: ✓ / ✕.
 - **`win`/`loss` are a graded result, not a leaderboard position.** While a game is still in progress, the leading and trailing sides get neither the ✓/✕ glyph nor the `win`/`loss` ring — a member must not read "currently ahead" as "won". The dimmed trailing name and score are the only in-progress signal; `win`/`loss` colour and glyph both wait for the game to go final. (Corrects `docs/mockups/05-live-board.png`, which draws the in-progress card with the same ring and glyph as the Final cards above it — see #98.)
-- `push` mid clay · `live` the one hot orange (never reuse it) · `locked` clay · `leader` brass (badge only, never behind long text).
+- `live` the one hot orange (never reuse it) · `locked` clay · `leader` brass (badge only, never behind long text).
 - `pending` is a fill token, but **render pending as an outline chip** (`border-border text-foreground`) — its lightness is nearly identical to `win`.
+- `settled` / `settled-foreground` is the surface a decided game sits on — one step below the card — with `settled-border` as the quieter rule that goes with it. `loss-border` is the ring on a side that lost: the only place a loss is a line rather than a fill.
 
 Charts: `chart-1…5` = pine, rust, brass, moss, clay.
 
@@ -59,6 +60,8 @@ Light is default (the app is read outdoors). Dark is class-based: add `dark` to 
 
 4px scale (Tailwind default). Cards `p-3`, page gutter `px-4`, section gap `gap-3`. **Minimum tap target 44px**: `h-tap` / `size-tap` are defined; the base layer also forces `min-height: 44px` on buttons and inputs so shadcn's 36px defaults never ship. Team rows in a pick are 52px.
 
+List rows carrying a logo, two lines of text or a trailing badge are **56px**. 44px stays the floor, for a row that is only a tap target.
+
 ## Brand assets
 
 - `public/brand/mark.svg` — the monogram: Chivo Black "S" on pine with a rust rule beneath.
@@ -67,4 +70,4 @@ Light is default (the app is read outdoors). Dark is class-based: add `dark` to 
 
 ## Avatars
 
-`public/avatars/pennants/01.svg … 12.svg`, indexed in `avatars.json` (id, name, file, color). One pennant shape, twelve palette colors, twelve flag patterns — so two members never differ by hue alone. Show them at 96px on the first-visit picker, 44px in lists, 28px inline. Store the id on the member; never let a member upload a photo.
+`public/avatars/pennants/01.svg … 12.svg`, indexed in `avatars.json` (id, name, file, color). One pennant shape, twelve palette colors, twelve flag patterns — so two members never differ by hue alone. Show them at 72px on the first-visit picker, 44px in console rows, 28px inline, 20px on chips. Store the id on the member; never let a member upload a photo.
