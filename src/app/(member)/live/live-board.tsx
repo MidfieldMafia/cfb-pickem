@@ -365,12 +365,12 @@ function GameRow({
             ) : null}
           </span>
           {result.live ? (
-            <Badge className="bg-live text-live-foreground">
+            <Badge variant="live">
               <Radio size={12} aria-hidden />
               {clockLabel(result.live) ?? result.label}
             </Badge>
           ) : null}
-          {isVoid(row) ? <Badge variant="outline">Void{voidNote(row) ? `: ${voidNote(row)}` : ""}</Badge> : null}
+          {isVoid(row) ? <Badge variant="void">Void{voidNote(row) ? `: ${voidNote(row)}` : ""}</Badge> : null}
           {earned !== null ? (
             <span className="rounded-full bg-win px-2 py-0.5 font-display text-xs font-black text-win-foreground">
               +{earned}
@@ -445,8 +445,8 @@ function SidePanel({
         <TeamLogo team={team} size={24} />
         {rank ? <span className="text-xs font-bold tabular-nums text-muted-foreground">#{rank}</span> : null}
         <span className="min-w-0 flex-1 truncate font-display text-[17px] font-black">{team}</span>
-        {standingWord === "won" ? <Badge className="bg-win text-win-foreground">Won</Badge> : null}
-        {standingWord === "lost" ? <Badge className="bg-loss text-loss-foreground">Lost</Badge> : null}
+        {standingWord === "won" ? <Badge variant="win">Won</Badge> : null}
+        {standingWord === "lost" ? <Badge variant="loss">Lost</Badge> : null}
         {standingWord === "leading" ? <Badge variant="outline">Leading</Badge> : null}
         {standingWord === "trailing" ? <Badge variant="outline">Trailing</Badge> : null}
         {total > 0 ? (

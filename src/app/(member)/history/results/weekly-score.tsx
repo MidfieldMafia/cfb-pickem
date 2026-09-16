@@ -45,7 +45,7 @@ export function WeeklyScoreList({
                 {you ? <span className="text-xs text-muted-foreground">you</span> : null}
               </span>
               {winners.has(score.member.id) ? (
-                <Badge className="mt-0.5 bg-leader text-leader-foreground">
+                <Badge variant="leader" className="mt-0.5">
                   <Trophy size={12} aria-hidden /> Weekly Win
                 </Badge>
               ) : null}

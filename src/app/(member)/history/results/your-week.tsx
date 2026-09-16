@@ -1,4 +1,4 @@
-import { Check, Lock, LockOpen, X } from "lucide-react";
+import { Lock, LockOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/local-time";
 import type { RevealPick } from "@/lib/results/results";
@@ -17,15 +17,15 @@ function PickChip({ view, pick }: { view: GameView; pick: RevealPick | null }) {
     ) : null;
   if (pick.outcome === "correct") {
     return (
-      <Badge className="bg-win text-win-foreground">
-        <Check strokeWidth={3} /> {team} {lock}
+      <Badge variant="win">
+        {team} {lock}
       </Badge>
     );
   }
   if (pick.outcome === "incorrect") {
     return (
-      <Badge className="bg-loss text-loss-foreground">
-        <X strokeWidth={3} /> {team} {lock}
+      <Badge variant="loss">
+        {team} {lock}
       </Badge>
     );
   }

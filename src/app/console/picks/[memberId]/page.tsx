@@ -89,14 +89,14 @@ export default async function MemberPicks({
           const voided = isVoid(view);
           const why = voidNote(view);
           return (
-            <li key={game.id} className={`p-3 ${voided ? "opacity-60" : ""}`}>
+            <li key={game.id} className={`p-3 ${voided ? "opacity-70" : ""}`}>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>
                   <LocalTime at={game.kickoff} style="slot" />
                   {game.id === sheet.tiebreakerGameId ? " · Tiebreaker Game" : ""}
                   {sheet.lockGameId === game.id ? (sheet.lockDropped ? " · Dropped Lock" : " · Lock of the Week") : ""}
                 </span>
-                {voided ? <Badge variant="outline">Void{why ? `: ${why}` : ""}</Badge> : null}
+                {voided ? <Badge variant="void">Void{why ? `: ${why}` : ""}</Badge> : null}
               </div>
               {voided ? (
                 <p className="text-sm">

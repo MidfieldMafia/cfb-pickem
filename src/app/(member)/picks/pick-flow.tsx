@@ -282,7 +282,7 @@ export function PickFlow({
             ) : null}
           </span>
           {game.id === sheet.tiebreakerGameId ? <Badge variant="secondary">Tiebreaker</Badge> : null}
-          {voided ? <Badge variant="outline">Void{why ? `: ${why}` : ""}</Badge> : null}
+          {voided ? <Badge variant="void">Void{why ? `: ${why}` : ""}</Badge> : null}
           {detail?.weather ? <WeatherPill weather={detail.weather} /> : null}
         </div>
 

@@ -61,7 +61,7 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
           require so the state does not rest on hue alone. */}
       <td className="p-3">
         {row.complete ? (
-          <Badge className="bg-win text-win-foreground">✓ Done</Badge>
+          <Badge variant="win">Done</Badge>
         ) : (
           <span className="text-sm text-muted-foreground">Missing {missing.join(", ")}</span>
         )}

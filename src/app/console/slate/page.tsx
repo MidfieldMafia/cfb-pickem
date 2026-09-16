@@ -329,7 +329,7 @@ function SlateRow({
   const why = voidNote(view);
   const matchup = `${game.awayTeam} at ${game.homeTeam}`;
   return (
-    <li className={`space-y-2 p-3 ${voided ? "opacity-60" : ""}`}>
+    <li className={`space-y-2 p-3 ${voided ? "opacity-70" : ""}`}>
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -338,7 +338,7 @@ function SlateRow({
             <span className="text-sm text-muted-foreground">at</span>
             <TeamLogo team={game.homeTeam} size={18} />
             <TeamName name={game.homeTeam} rank={game.homeRank} className="text-sm" />
-            {voided ? <Badge variant="outline">Void</Badge> : null}
+            {voided ? <Badge variant="void">Void</Badge> : null}
           </div>
           <p className="text-xs text-muted-foreground">
             <LocalTime at={game.kickoff} />
