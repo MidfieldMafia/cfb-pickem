@@ -1,5 +1,6 @@
 import { Lock, LockOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { LocalTime } from "@/components/local-time";
 import type { RevealPick } from "@/lib/results/results";
 import type { BreakdownRow } from "@/lib/results/summary";
@@ -51,7 +52,8 @@ export function YourPicks({
   tiebreakerGuess: number | null;
 }) {
   return (
-    <ul className="divide-y divide-border rounded-md border border-border bg-card">
+    <Card asChild className="gap-0 overflow-hidden p-0">
+      <ul className="divide-y divide-border">
       {rows.map(({ game, pick, tiebreaker }) => {
         const { result } = game;
         const why = voidNote(game);
@@ -90,6 +92,7 @@ export function YourPicks({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </Card>
   );
 }

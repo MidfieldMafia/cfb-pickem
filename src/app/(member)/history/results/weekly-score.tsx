@@ -1,5 +1,6 @@
 import { Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Pennant } from "@/components/pennant";
 import type { WeeklyScore } from "@/lib/results/results";
 import { guessLabel, record, standing } from "@/lib/results/summary";
@@ -28,7 +29,8 @@ export function WeeklyScoreList({
   hasTiebreakerGame: boolean;
 }) {
   return (
-    <ul className="divide-y divide-border rounded-md border border-border bg-card">
+    <Card asChild className="gap-0 overflow-hidden p-0">
+      <ul className="divide-y divide-border">
       {scores.map((score) => {
         const you = score.member.id === viewerId;
         const place = standing(scores, score.member.id)!.place;
@@ -64,6 +66,7 @@ export function WeeklyScoreList({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </Card>
   );
 }

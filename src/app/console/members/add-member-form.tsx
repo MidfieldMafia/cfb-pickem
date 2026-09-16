@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { UserPlus } from "lucide-react";
 import { SECTION_LABEL } from "@/components/section-label";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MAX_DISPLAY_NAME, MAX_PHONE } from "@/lib/members/limits";
 import { addMemberAction, type AddMemberState } from "./actions";
@@ -12,11 +13,8 @@ export function AddMemberForm() {
   const [state, action, pending] = useActionState<AddMemberState, FormData>(addMemberAction, {});
 
   return (
-    <form
-      action={action}
-      key={state.added}
-      className="rounded-md border border-border bg-card p-3 space-y-3"
-    >
+    <Card asChild className="rounded-md">
+      <form action={action} key={state.added}>
       <p className={SECTION_LABEL}>Add a member</p>
       <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
         <label className="space-y-1 text-sm font-semibold">
@@ -42,6 +40,7 @@ export function AddMemberForm() {
           {state.added} is in. Copy their link below and send it to them.
         </p>
       ) : null}
-    </form>
+      </form>
+    </Card>
   );
 }

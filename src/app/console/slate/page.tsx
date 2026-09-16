@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Check, X } from "lucide-react";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
 import { SECTION_LABEL } from "@/components/section-label";
@@ -122,7 +123,8 @@ export default async function SlateBuilder({
           table gets the rest, because Spread is what a choice turns on and it
           was scrolling out of sight. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section className="rounded-md border border-border bg-card">
+        <Card asChild className="gap-0 rounded-md p-0">
+          <section>
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-3">
             <div>
               <h2>Game candidates</h2>
@@ -226,10 +228,12 @@ export default async function SlateBuilder({
               </tbody>
             </table>
           </div>
-        </section>
+          </section>
+        </Card>
 
         <aside className="space-y-6">
-          <section className="rounded-md border border-border bg-card">
+          <Card asChild className="gap-0 rounded-md p-0">
+            <section>
             <div className="flex items-start justify-between gap-3 border-b border-border p-3">
               <div>
                 <h2>Week {weekNumber} slate</h2>
@@ -258,9 +262,11 @@ export default async function SlateBuilder({
                 <li className="p-3 text-sm text-muted-foreground">Add games from the candidates list.</li>
               ) : null}
             </ul>
-          </section>
+            </section>
+          </Card>
 
-          <section className="space-y-3 rounded-md border border-border bg-card p-3">
+          <Card asChild className="gap-3 rounded-md">
+            <section>
             <p className={SECTION_LABEL}>Deadline</p>
             {slate.deadline ? (
               <>
@@ -278,7 +284,8 @@ export default async function SlateBuilder({
               <p className="text-sm text-muted-foreground">Set once the slate has a game.</p>
             )}
             {slate.week.published ? null : <PublishButton weekId={week.id} gameCount={slateGames.length} />}
-          </section>
+            </section>
+          </Card>
         </aside>
       </div>
     </div>

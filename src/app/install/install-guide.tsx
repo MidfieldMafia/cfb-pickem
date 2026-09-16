@@ -4,6 +4,7 @@ import { Check, Compass, Download, EllipsisVertical, SquareArrowUp, SquarePlus }
 import type { ComponentType } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { isInstalled, readBrowser, type Browser, type Phone } from "@/lib/install/install";
 
 interface Step {
@@ -108,10 +109,12 @@ export function InstallGuide() {
 
   if (installed) {
     return (
-      <p className="flex items-center gap-3 rounded-lg border border-primary bg-card p-3 text-base">
-        <Check className="size-5 shrink-0 text-primary" aria-hidden />
-        You&rsquo;re running the installed app. Nothing left to do.
-      </p>
+      <Card asChild className="flex-row items-center border-primary text-base">
+        <p>
+          <Check className="size-5 shrink-0 text-primary" aria-hidden />
+          You&rsquo;re running the installed app. Nothing left to do.
+        </p>
+      </Card>
     );
   }
 
@@ -141,10 +144,12 @@ export function InstallGuide() {
       </div>
 
       {reopenIn ? (
-        <p className="flex items-start gap-3 rounded-lg border border-secondary bg-card p-3 text-base">
-          <Compass className="mt-1 size-5 shrink-0 text-secondary" aria-hidden />
-          <span>{reopenIn}</span>
-        </p>
+        <Card asChild className="flex-row items-start border-secondary text-base">
+          <p>
+            <Compass className="mt-1 size-5 shrink-0 text-secondary" aria-hidden />
+            <span>{reopenIn}</span>
+          </p>
+        </Card>
       ) : null}
 
       {phone === "android" && chromePrompt ? (
@@ -155,13 +160,15 @@ export function InstallGuide() {
 
       <ol className="space-y-3">
         {STEPS[phone].map((step, index) => (
-          <li key={step.text} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-            <span className="font-display text-lg font-black text-secondary">{index + 1}</span>
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-              <step.Icon className="size-5" aria-hidden />
-            </span>
-            <span className="text-base">{step.text}</span>
-          </li>
+          <Card asChild key={step.text} className="flex-row items-center">
+            <li>
+              <span className="font-display text-lg font-black text-secondary">{index + 1}</span>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                <step.Icon className="size-5" aria-hidden />
+              </span>
+              <span className="text-base">{step.text}</span>
+            </li>
+          </Card>
         ))}
       </ol>
 

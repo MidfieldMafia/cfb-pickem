@@ -9,6 +9,7 @@ import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   Drawer,
   DrawerContent,
@@ -135,12 +136,12 @@ function FreshnessLine({ serverNow, nextPollAt }: { serverNow: string; nextPollA
 function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson }) {
   if (!state.locked) {
     return (
-      <div className="rounded-md border border-border bg-card p-3">
+      <Card className="gap-0">
         <p className="text-sm font-semibold">
           Picks lock <LocalTime at={state.deadline} style="deadline" />
         </p>
         <p className="text-sm text-muted-foreground">Everyone&rsquo;s picks show here once they do.</p>
-      </div>
+      </Card>
     );
   }
   const scores = state.scores ?? [];
@@ -150,15 +151,15 @@ function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson 
   // this Deadline and so is on neither board.
   if (!mine || !place) {
     return (
-      <div className="rounded-md border border-border bg-card p-3">
+      <Card>
         <p className="text-sm text-muted-foreground">
           You joined after this week&rsquo;s deadline, so Week {state.week.weekNumber} is not counted for or against you.
         </p>
-      </div>
+      </Card>
     );
   }
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-primary p-3 text-primary-foreground">
+    <Card className="flex-row items-center border-transparent bg-primary text-primary-foreground">
       <Pennant avatarId={viewer.avatarId} name={viewer.displayName} size={40} />
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5">
         <span className="text-xs font-bold uppercase tracking-[0.08em] opacity-85">You · Week {state.week.weekNumber}</span>
@@ -168,7 +169,7 @@ function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson 
         <span className="font-display text-2xl font-black">{place.label}</span>
         <span className="text-right font-display text-2xl font-black tabular-nums">{mine.points} pts</span>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -440,7 +441,7 @@ function SidePanel({
   total: number;
 }) {
   return (
-    <div className={`grid gap-2 rounded-md border bg-card p-2.5 ${STANDING_BORDER[standingWord]}`}>
+    <Card className={`grid gap-2 p-2.5 ${STANDING_BORDER[standingWord]}`}>
       <div className="flex items-center gap-2">
         <TeamLogo team={team} size={24} />
         {rank ? <span className="text-xs font-bold tabular-nums text-muted-foreground">#{rank}</span> : null}
@@ -491,7 +492,7 @@ function SidePanel({
             );
           })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -505,7 +506,7 @@ function TiebreakerSection({ game, scores, viewerId }: { game: RevealGame; score
   );
   const missing = scores.length - guessed.length;
   return (
-    <div className="grid gap-2 rounded-md border border-secondary bg-card p-2.5">
+    <Card className="grid gap-2 border-secondary p-2.5">
       <div className="flex items-baseline gap-2">
         <span className="flex-1 text-xs font-bold uppercase tracking-[0.08em] text-secondary">Tiebreaker Guesses</span>
         <span className="text-xs text-muted-foreground">{combined !== null ? `Finished ${combined}` : "Combined final score"}</span>
@@ -529,7 +530,7 @@ function TiebreakerSection({ game, scores, viewerId }: { game: RevealGame; score
         Closest guess breaks a tie on points.{" "}
         {missing > 0 ? `${plural(missing, "member")} ${missing === 1 ? "has" : "have"} not guessed yet.` : "Everyone has guessed."}
       </p>
-    </div>
+    </Card>
   );
 }
 

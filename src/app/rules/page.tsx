@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { MemberChip } from "@/components/member-chip";
 import { SECTION_LABEL } from "@/components/section-label";
 import { requireMember } from "@/lib/members/current";
@@ -41,85 +42,99 @@ export default async function HowToPlay({ searchParams }: { searchParams: Promis
           right={<MemberChip member={member} />}
         />
 
-        <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>
-            <ListChecks size={12} className="mr-1 inline" aria-hidden />
-            Making picks
-          </p>
-          <p className="text-muted-foreground">
-            One game at a time. Tap a team &mdash; straight up, not against the spread &mdash; and the pick is saved
-            the moment you tap it; there&rsquo;s no submit step.
-          </p>
-        </section>
+        <Card asChild className="mx-4 gap-1">
+          <section>
+            <p className={SECTION_LABEL}>
+              <ListChecks size={12} className="mr-1 inline" aria-hidden />
+              Making picks
+            </p>
+            <p className="text-muted-foreground">
+              One game at a time. Tap a team &mdash; straight up, not against the spread &mdash; and the pick is saved
+              the moment you tap it; there&rsquo;s no submit step.
+            </p>
+          </section>
+        </Card>
 
-        <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>
-            <Lock size={12} className="mr-1 inline" aria-hidden />
-            Lock of the Week
-          </p>
-          <p>
-            <span className="font-display text-2xl">{lockMultiplier}×</span>{" "}
-            <span className="text-muted-foreground">
-              points on the one pick a member marks each week. Nothing extra if it loses.
-            </span>
-          </p>
-        </section>
+        <Card asChild className="mx-4 gap-1">
+          <section>
+            <p className={SECTION_LABEL}>
+              <Lock size={12} className="mr-1 inline" aria-hidden />
+              Lock of the Week
+            </p>
+            <p>
+              <span className="font-display text-2xl">{lockMultiplier}×</span>{" "}
+              <span className="text-muted-foreground">
+                points on the one pick a member marks each week. Nothing extra if it loses.
+              </span>
+            </p>
+          </section>
+        </Card>
 
-        <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>
-            <Scale size={12} className="mr-1 inline" aria-hidden />
-            Tiebreaker Guess
-          </p>
-          <p className="text-muted-foreground">
-            Predict the combined final score of the week&rsquo;s flagged Tiebreaker Game. If a Weekly Win ties,
-            whoever&rsquo;s guess lands closest breaks it; a tie that survives that is shared.
-          </p>
-        </section>
+        <Card asChild className="mx-4 gap-1">
+          <section>
+            <p className={SECTION_LABEL}>
+              <Scale size={12} className="mr-1 inline" aria-hidden />
+              Tiebreaker Guess
+            </p>
+            <p className="text-muted-foreground">
+              Predict the combined final score of the week&rsquo;s flagged Tiebreaker Game. If a Weekly Win ties,
+              whoever&rsquo;s guess lands closest breaks it; a tie that survives that is shared.
+            </p>
+          </section>
+        </Card>
 
-        <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>
-            <Clock size={12} className="mr-1 inline" aria-hidden />
-            Deadline
-          </p>
-          <p className="text-muted-foreground">
-            Picks lock at the Deadline, usually the earliest kickoff on the week&rsquo;s Slate. Make your Lock and
-            Tiebreaker Guess before then too &mdash; nothing entered after counts.
-          </p>
-        </section>
+        <Card asChild className="mx-4 gap-1">
+          <section>
+            <p className={SECTION_LABEL}>
+              <Clock size={12} className="mr-1 inline" aria-hidden />
+              Deadline
+            </p>
+            <p className="text-muted-foreground">
+              Picks lock at the Deadline, usually the earliest kickoff on the week&rsquo;s Slate. Make your Lock and
+              Tiebreaker Guess before then too &mdash; nothing entered after counts.
+            </p>
+          </section>
+        </Card>
 
-        <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>
-            <Eye size={12} className="mr-1 inline" aria-hidden />
-            Reveal
-          </p>
-          <p className="text-muted-foreground">
-            Once the Deadline passes, every pick becomes visible &mdash; yours and everyone else&rsquo;s. Before that,
-            no one can see what you&rsquo;ve chosen.
-          </p>
-        </section>
+        <Card asChild className="mx-4 gap-1">
+          <section>
+            <p className={SECTION_LABEL}>
+              <Eye size={12} className="mr-1 inline" aria-hidden />
+              Reveal
+            </p>
+            <p className="text-muted-foreground">
+              Once the Deadline passes, every pick becomes visible &mdash; yours and everyone else&rsquo;s. Before that,
+              no one can see what you&rsquo;ve chosen.
+            </p>
+          </section>
+        </Card>
 
-        <section className="mx-4 space-y-2 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>
-            <Trophy size={12} className="mr-1 inline" aria-hidden />
-            Scoring
-          </p>
-          <p>
-            <span className="font-display text-2xl">{pointsPerCorrectPick}</span>{" "}
-            <span className="text-muted-foreground">points for every correct pick.</span>
-          </p>
-          <p className="text-muted-foreground">{tiebreakOrder}</p>
-        </section>
+        <Card asChild className="mx-4 gap-2">
+          <section>
+            <p className={SECTION_LABEL}>
+              <Trophy size={12} className="mr-1 inline" aria-hidden />
+              Scoring
+            </p>
+            <p>
+              <span className="font-display text-2xl">{pointsPerCorrectPick}</span>{" "}
+              <span className="text-muted-foreground">points for every correct pick.</span>
+            </p>
+            <p className="text-muted-foreground">{tiebreakOrder}</p>
+          </section>
+        </Card>
 
-        <section className="mx-4 space-y-1 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>
-            <Radio size={12} className="mr-1 inline" aria-hidden />
-            Live Board
-          </p>
-          <p className="text-muted-foreground">
-            The Saturday view of the Slate: live scores and everyone&rsquo;s picks, colored by whether they&rsquo;re
-            currently winning.
-          </p>
-        </section>
+        <Card asChild className="mx-4 gap-1">
+          <section>
+            <p className={SECTION_LABEL}>
+              <Radio size={12} className="mr-1 inline" aria-hidden />
+              Live Board
+            </p>
+            <p className="text-muted-foreground">
+              The Saturday view of the Slate: live scores and everyone&rsquo;s picks, colored by whether they&rsquo;re
+              currently winning.
+            </p>
+          </section>
+        </Card>
 
         {inSetup ? (
           <div className="mt-auto px-4 pt-4">

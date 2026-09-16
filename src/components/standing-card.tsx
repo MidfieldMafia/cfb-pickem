@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import type { WeeklyScore } from "@/lib/results/results";
 import { record, type SeasonStanding, type Standing } from "@/lib/results/summary";
 
@@ -21,8 +22,12 @@ function StandingCard({
   figure: string;
   note: string;
 }) {
+  // Pine, so it overrides Card's paper fill and ink. `border-transparent`
+  // rather than `border-0`: the card keeps the same 1px box as every other
+  // surface, so a pine card and a paper one sitting in one column measure the
+  // same width.
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md bg-primary p-3 text-primary-foreground">
+    <Card className="flex-row items-center justify-between border-transparent bg-primary text-primary-foreground">
       <div className="min-w-0">
         {/* The caps label from the type scale, in the card's own ink: the rust
             section label is for the paper, not for pine. */}
@@ -33,7 +38,7 @@ function StandingCard({
         <p className="font-display text-2xl font-black tabular-nums">{figure}</p>
         <p className="text-sm opacity-80">{note}</p>
       </div>
-    </div>
+    </Card>
   );
 }
 
