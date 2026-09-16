@@ -49,6 +49,16 @@ export function firstOpenGame<G extends GameView>(
 }
 
 /**
+ * True once every live Game has a Pick: the Week's entry half is done, and what
+ * is left — the Lock of the Week, the Tiebreaker Guess — is review's business.
+ *
+ * A wholly Void slate has nothing to pick and counts as complete.
+ */
+export function picksComplete(progress: SheetProgress): boolean {
+  return progress.picksMade === progress.liveGames;
+}
+
+/**
  * The counts behind every "how much is left" line in the app.
  *
  * A Pick counts only once the server has it: `pickSheet` counts the rows the

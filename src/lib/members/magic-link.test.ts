@@ -35,11 +35,11 @@ describe("magic link sign-in", () => {
     const first = await exchangeToken(db, jonah.token);
     expect(first?.member.welcomedAt).toBeNull();
 
-    await completeWelcome(db, first!.member, { displayName: "Jonah M", avatarId: "pennants-01" });
+    await completeWelcome(db, first!.member, { displayName: "Jonah M", avatarId: "pennants-04" });
 
     const second = await exchangeToken(db, jonah.token);
     expect(second?.member.welcomedAt).not.toBeNull();
     expect(second?.member.displayName).toBe("Jonah M");
-    expect(second?.member.avatarId).toBe("pennants-01");
+    expect(second?.member.avatarId).toBe("pennants-04");
   });
 });

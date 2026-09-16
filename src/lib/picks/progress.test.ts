@@ -1,6 +1,13 @@
 import { describe, expect, test } from "vitest";
 import type { GameView } from "@/lib/slate/json";
-import { firstOpenGame, liveGames, remainingLabel, sheetProgress, type SheetProgress } from "./progress";
+import {
+  firstOpenGame,
+  liveGames,
+  picksComplete,
+  remainingLabel,
+  sheetProgress,
+  type SheetProgress,
+} from "./progress";
 
 /** The least of a `GameView` the counts read: the id, and whether the result says Void. */
 function view(id: number, voided = false): GameView {
@@ -76,6 +83,30 @@ describe("what is left before the deadline", () => {
     );
     // Past the Deadline nothing is left to do, whatever the counts say.
     expect(remainingLabel(countFor([]), 2, true)).toBe("Week 2 is in the books");
+  });
+});
+
+describe("whether the entry half of the week is done", () => {
+  test("every live game picked is complete, whatever the Lock and the Guess say", () => {
+    expect(picksComplete(countFor([]))).toBe(false);
+    expect(picksComplete(countFor([1]))).toBe(false);
+    // No Lock, no Guess: still complete. Both are set on review, not in the flow.
+    expect(picksComplete(countFor([1, 3]))).toBe(true);
+  });
+
+  test("a pick on a Void game does not complete the slate", () => {
+    expect(picksComplete(countFor([1, 2]))).toBe(false);
+  });
+
+  test("a wholly voided slate has nothing to pick and counts as complete", () => {
+    const progress = sheetProgress({
+      games: [view(1, true)],
+      picked: () => false,
+      lockGameId: null,
+      lockDropped: false,
+      tiebreakerGuess: null,
+    });
+    expect(picksComplete(progress)).toBe(true);
   });
 });
 

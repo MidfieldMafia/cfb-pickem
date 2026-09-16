@@ -1,23 +1,5 @@
 [
   {
-    "id": "pennants-01",
-    "name": "Pine Wedge",
-    "file": "/avatars/pennants/01.svg",
-    "color": "#1F4034"
-  },
-  {
-    "id": "pennants-02",
-    "name": "Rust Band",
-    "file": "/avatars/pennants/02.svg",
-    "color": "#A94B17"
-  },
-  {
-    "id": "pennants-03",
-    "name": "Brass Stripe",
-    "file": "/avatars/pennants/03.svg",
-    "color": "#856717"
-  },
-  {
     "id": "pennants-04",
     "name": "Moss Dot",
     "file": "/avatars/pennants/04.svg",
@@ -42,33 +24,51 @@
     "color": "#241F1A"
   },
   {
-    "id": "pennants-08",
-    "name": "Clay Split",
-    "file": "/avatars/pennants/08.svg",
-    "color": "#7A6C5A"
+    "id": "pennants-13",
+    "name": "Sage Twin Bands",
+    "file": "/avatars/pennants/13.svg",
+    "color": "#5C9A74"
   },
   {
-    "id": "pennants-09",
-    "name": "Ember Arrow",
-    "file": "/avatars/pennants/09.svg",
-    "color": "#D26A12"
+    "id": "pennants-14",
+    "name": "Copper Tip",
+    "file": "/avatars/pennants/14.svg",
+    "color": "#D2712E"
   },
   {
-    "id": "pennants-10",
-    "name": "Ochre Lines",
-    "file": "/avatars/pennants/10.svg",
-    "color": "#A48746"
+    "id": "pennants-15",
+    "name": "Gold Diamond",
+    "file": "/avatars/pennants/15.svg",
+    "color": "#B08D2E"
   },
   {
-    "id": "pennants-11",
-    "name": "Fern Field",
-    "file": "/avatars/pennants/11.svg",
-    "color": "#2F6A4F"
+    "id": "pennants-16",
+    "name": "Pine Sash",
+    "file": "/avatars/pennants/16.svg",
+    "color": "#1F4034"
   },
   {
-    "id": "pennants-12",
-    "name": "Tan Tri",
-    "file": "/avatars/pennants/12.svg",
-    "color": "#9C845F"
+    "id": "pennants-17",
+    "name": "Slate Cross",
+    "file": "/avatars/pennants/17.svg",
+    "color": "#2B4A5E"
+  },
+  {
+    "id": "pennants-18",
+    "name": "Stone Pips",
+    "file": "/avatars/pennants/18.svg",
+    "color": "#6F6152"
+  },
+  {
+    "id": "pennants-19",
+    "name": "Teal Rails",
+    "file": "/avatars/pennants/19.svg",
+    "color": "#1E6F73"
+  },
+  {
+    "id": "pennants-20",
+    "name": "Plum Chevron",
+    "file": "/avatars/pennants/20.svg",
+    "color": "#4A2B45"
   }
 ]
