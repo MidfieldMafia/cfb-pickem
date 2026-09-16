@@ -9,6 +9,7 @@ import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   Drawer,
   DrawerContent,
@@ -341,50 +342,57 @@ export function Review({ initial, commissioner }: { initial: SheetJson; commissi
               <LocalTime at={group.kickoff} />
             </span>
           </div>
-          <ul className="divide-y divide-border rounded-xl border border-border bg-card">{group.games.map(pickRow)}</ul>
+          <Card asChild className="gap-0 overflow-hidden p-0">
+            <ul className="divide-y divide-border">{group.games.map(pickRow)}</ul>
+          </Card>
         </section>
       ))}
 
       <section>
         <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
-        <button
-          type="button"
-          disabled={locked}
-          onClick={() => setLockOpen(true)}
-          className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 text-left disabled:opacity-70"
-        >
-          <span
-            className={`grid size-9 place-items-center rounded-full ${
-              progress.lockSet ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
-            }`}
+        {/* A control, but the same surface: `asChild` keeps the button element
+            and its semantics while the radius and border come from Card, so
+            this stops being a hand-copy of the card recipe that can drift. */}
+        <Card asChild className="min-h-14 w-full flex-row items-center px-3 py-2 text-left">
+          <button
+            type="button"
+            disabled={locked}
+            onClick={() => setLockOpen(true)}
+            className="disabled:opacity-70"
           >
-            <Lock size={18} />
-          </span>
-          <span className="grid flex-1 gap-0.5">
-            {lockGame && lockPick ? (
-              <>
-                <span className="font-display text-lg leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
-                <span className="text-xs text-muted-foreground">
-                  {sheet.lockDropped
-                    ? locked
-                      ? "That game is void, so no Lock counts this week"
-                      : "That game is void and scores zero; choose another Lock"
-                    : `${sheet.lockMultiplier}× points if they win`}{" "}
-                  ·{" "}
-                  {lockGame.awayTeam} at {lockGame.homeTeam}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">{locked ? "No Lock this week" : "Choose your Lock"}</span>
-                <span className="text-xs text-muted-foreground">One pick counts {sheet.lockMultiplier}× this week.</span>
-              </>
+            <span
+              className={`grid size-9 place-items-center rounded-full ${
+                progress.lockSet ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+              }`}
+            >
+              <Lock size={18} />
+            </span>
+            <span className="grid flex-1 gap-0.5">
+              {lockGame && lockPick ? (
+                <>
+                  <span className="font-display text-lg leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {sheet.lockDropped
+                      ? locked
+                        ? "That game is void, so no Lock counts this week"
+                        : "That game is void and scores zero; choose another Lock"
+                      : `${sheet.lockMultiplier}× points if they win`}{" "}
+                    ·{" "}
+                    {lockGame.awayTeam} at {lockGame.homeTeam}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold">{locked ? "No Lock this week" : "Choose your Lock"}</span>
+                  <span className="text-xs text-muted-foreground">One pick counts {sheet.lockMultiplier}× this week.</span>
+                </>
+              )}
+            </span>
+            {locked ? null : (
+              <span className="text-sm font-semibold text-secondary">{progress.lockSet ? "Change" : "Choose"}</span>
             )}
-          </span>
-          {locked ? null : (
-            <span className="text-sm font-semibold text-secondary">{progress.lockSet ? "Change" : "Choose"}</span>
-          )}
-        </button>
+          </button>
+        </Card>
         {lockError ? (
           <p role="alert" className="pt-1 text-sm font-semibold text-destructive">
             {lockError}

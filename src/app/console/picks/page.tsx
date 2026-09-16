@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CopyButton } from "@/components/copy-button";
 import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
@@ -109,13 +110,15 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
       </div>
 
       {!report ? (
-        <p role="status" className="rounded-md border border-border bg-card p-3 text-sm">
-          Week {weekNumber} is not published. Members can pick, and you can enter picks for them, once the slate is out.
-        </p>
+        <Card asChild className="rounded-md text-sm">
+          <p role="status">
+            Week {weekNumber} is not published. Members can pick, and you can enter picks for them, once the slate is out.
+          </p>
+        </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
           <div className="space-y-6">
-            <div className="overflow-x-auto rounded-md border border-border bg-card">
+            <Card className="gap-0 overflow-x-auto rounded-md p-0">
               <table className="w-full text-sm">
                 <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
                   <tr>
@@ -140,16 +143,19 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
                   ) : null}
                 </tbody>
               </table>
-            </div>
+            </Card>
 
-            <section className="rounded-md border border-border bg-card">
-              <div className="border-b border-border p-3">
-                <h2>Change log</h2>
-                <p className="text-sm text-muted-foreground">
-                  Every pick, Lock, and Tiebreaker Guess a commissioner entered or changed for this week.
-                </p>
-              </div>
-              <ul className="divide-y divide-border">
+            <Card asChild className="gap-0 rounded-md p-0">
+              <section>
+                <CardHeader className="border-b border-border p-3">
+                  <CardTitle asChild>
+                    <h2>Change log</h2>
+                  </CardTitle>
+                  <CardDescription>
+                    Every pick, Lock, and Tiebreaker Guess a commissioner entered or changed for this week.
+                  </CardDescription>
+                </CardHeader>
+                <ul className="divide-y divide-border">
                 {log.map((entry) => (
                   <li key={entry.id} className="p-3 text-sm">
                     <p>
@@ -164,33 +170,40 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
                   </li>
                 ))}
                 {log.length === 0 ? <li className="p-3 text-sm text-muted-foreground">No changes yet.</li> : null}
-              </ul>
-            </section>
+                </ul>
+              </section>
+            </Card>
           </div>
 
           <aside className="space-y-4">
-            <section className="rounded-md border border-border bg-card p-4">
-              <p className={SECTION_LABEL}>Week {weekNumber} deadline</p>
-              <p className="font-display text-2xl font-black">
-                <LocalTime at={report.deadline} style="slot" />
-              </p>
-              <DeadlineCountdown deadline={report.deadline.toISOString()} serverNow={report.serverNow.toISOString()} />
-            </section>
-            <section className="rounded-md border border-border bg-card p-4">
-              <p className={SECTION_LABEL}>Ready</p>
-              <p className="font-display text-2xl font-black tabular-nums">
-                {report.ready} of {report.members.length}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Members with every pick, a Lock of the Week, and a Tiebreaker Guess.
-              </p>
-            </section>
-            <section className="space-y-2 rounded-md border border-border bg-card p-4">
-              <p className={SECTION_LABEL}>Reminder</p>
-              <p className="text-sm">{reminderText(report)}</p>
-              <CopyButton text={reminderText(report)} label="Copy reminder" size="default" className="w-full" />
-              <p className="text-xs text-muted-foreground">Paste it into the group chat. Automated texts come later.</p>
-            </section>
+            <Card asChild className="gap-0 rounded-md p-4">
+              <section>
+                <p className={SECTION_LABEL}>Week {weekNumber} deadline</p>
+                <p className="font-display text-2xl font-black">
+                  <LocalTime at={report.deadline} style="slot" />
+                </p>
+                <DeadlineCountdown deadline={report.deadline.toISOString()} serverNow={report.serverNow.toISOString()} />
+              </section>
+            </Card>
+            <Card asChild className="gap-0 rounded-md p-4">
+              <section>
+                <p className={SECTION_LABEL}>Ready</p>
+                <p className="font-display text-2xl font-black tabular-nums">
+                  {report.ready} of {report.members.length}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Members with every pick, a Lock of the Week, and a Tiebreaker Guess.
+                </p>
+              </section>
+            </Card>
+            <Card asChild className="gap-2 rounded-md p-4">
+              <section>
+                <p className={SECTION_LABEL}>Reminder</p>
+                <p className="text-sm">{reminderText(report)}</p>
+                <CopyButton text={reminderText(report)} label="Copy reminder" size="default" className="w-full" />
+                <p className="text-xs text-muted-foreground">Paste it into the group chat. Automated texts come later.</p>
+              </section>
+            </Card>
           </aside>
         </div>
       )}

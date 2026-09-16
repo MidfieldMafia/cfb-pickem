@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
+import { Card } from "@/components/ui/card";
 import { MemberChip } from "@/components/member-chip";
 import { SECTION_LABEL } from "@/components/section-label";
 import { requireMember } from "@/lib/members/current";
@@ -33,7 +34,8 @@ export default async function History() {
       {played.length > 0 ? (
         <section className="space-y-2 px-4">
           <p className={SECTION_LABEL}>Settled weeks</p>
-          <ul className="divide-y divide-border rounded-md border border-border bg-card">
+          <Card asChild className="gap-0 overflow-hidden p-0">
+            <ul className="divide-y divide-border">
             {[...played].reverse().map((week) => {
               const won = weeklyWinSentence(week.weeklyWin, week.complete);
               return (
@@ -50,15 +52,18 @@ export default async function History() {
                 </li>
               );
             })}
-          </ul>
+            </ul>
+          </Card>
         </section>
       ) : (
-        <section className="mx-4 space-y-2 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>Nothing settled yet</p>
-          <p className="text-muted-foreground">
-            A week lands here once its deadline has passed and every one of its games is final.
-          </p>
-        </section>
+        <Card asChild className="mx-4 gap-2">
+          <section>
+            <p className={SECTION_LABEL}>Nothing settled yet</p>
+            <p className="text-muted-foreground">
+              A week lands here once its deadline has passed and every one of its games is final.
+            </p>
+          </section>
+        </Card>
       )}
     </main>
   );

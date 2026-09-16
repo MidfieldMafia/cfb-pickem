@@ -1,5 +1,6 @@
 import { Lock, LockOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL as LABEL } from "@/components/section-label";
@@ -43,7 +44,7 @@ function Side({
   const tone =
     outcome === "correct" ? "border-win" : outcome === "incorrect" ? "border-loss/40 text-muted-foreground" : "border-border";
   return (
-    <div className={`flex min-w-0 flex-1 flex-col gap-2 rounded-md border bg-card p-3 ${tone}`}>
+    <Card className={`min-w-0 flex-1 gap-2 ${tone}`}>
       <div className="flex items-start justify-between gap-2">
         <TeamLogo team={team} size={36} />
         {score !== null ? <span className="font-display text-2xl font-black tabular-nums">{score}</span> : null}
@@ -78,7 +79,7 @@ function Side({
           );
         })}
       </ul>
-    </div>
+    </Card>
   );
 }
 
@@ -86,7 +87,7 @@ function Side({
 function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewerId: number }) {
   const sorted = [...scores].sort((a, b) => (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity));
   return (
-    <div className="space-y-1 rounded-md border border-secondary bg-card p-2.5">
+    <Card className="gap-1 border-secondary p-2.5">
       <p className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">Tiebreaker Guesses</p>
       <ul className="space-y-0.5">
         {sorted.map((s) => {
@@ -105,7 +106,7 @@ function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewer
           );
         })}
       </ul>
-    </div>
+    </Card>
   );
 }
 

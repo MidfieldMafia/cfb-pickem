@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
 import { Pennant } from "@/components/pennant";
@@ -46,9 +47,11 @@ export default async function MemberPicks({
       return (
         <div className="mx-auto max-w-3xl space-y-4">
           <BackLink weekNumber={weekNumber} />
-          <p role="status" className="rounded-md border border-border bg-card p-3 text-sm">
-            Week {weekNumber} is not published, so there are no picks to enter yet.
-          </p>
+          <Card asChild className="rounded-md text-sm">
+            <p role="status">
+              Week {weekNumber} is not published, so there are no picks to enter yet.
+            </p>
+          </Card>
         </div>
       );
     }
@@ -83,7 +86,8 @@ export default async function MemberPicks({
         name, whether or not the deadline has passed.
       </p>
 
-      <ul className="divide-y divide-border rounded-md border border-border bg-card">
+      <Card asChild className="gap-0 overflow-hidden rounded-md p-0">
+        <ul className="divide-y divide-border">
         {sheet.games.map((view) => {
           const { game } = view;
           const voided = isVoid(view);
@@ -113,9 +117,11 @@ export default async function MemberPicks({
             </li>
           );
         })}
-      </ul>
+        </ul>
+      </Card>
 
-      <section className="space-y-3 rounded-md border border-border bg-card p-4">
+      <Card asChild className="gap-3 rounded-md p-4">
+        <section>
         <h2>Lock of the Week</h2>
         <ActionForm action={overrideLockAction} hidden={hidden} submit="Save Lock" pendingLabel="Saving…">
           <select
@@ -138,9 +144,11 @@ export default async function MemberPicks({
             : ""}
           Only picked games can carry the Lock. Save with “No Lock” to clear it.
         </p>
-      </section>
+        </section>
+      </Card>
 
-      <section className="space-y-3 rounded-md border border-border bg-card p-4">
+      <Card asChild className="gap-3 rounded-md p-4">
+        <section>
         <h2>Tiebreaker Guess</h2>
         <ActionForm action={overrideTiebreakerAction} hidden={hidden} submit="Save guess" pendingLabel="Saving…">
           <Input
@@ -156,7 +164,8 @@ export default async function MemberPicks({
           />
         </ActionForm>
         <p className="text-xs text-muted-foreground">The combined final score of the Tiebreaker Game. Leave it empty to clear.</p>
-      </section>
+        </section>
+      </Card>
     </div>
   );
 }

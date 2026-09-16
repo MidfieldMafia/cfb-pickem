@@ -2,6 +2,7 @@ import { MoreHorizontal, RefreshCw, Shield } from "lucide-react";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Pennant } from "@/components/pennant";
 import { appUrl } from "@/lib/app-url";
 import { requireConsole } from "@/lib/members/current";
@@ -39,7 +40,7 @@ export default async function Members() {
 
       <AddMemberForm />
 
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
+      <Card className="gap-0 overflow-x-auto rounded-md p-0">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
             <tr>
@@ -145,7 +146,7 @@ export default async function Members() {
             })}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   );
 }

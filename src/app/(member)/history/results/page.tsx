@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
+import { Card } from "@/components/ui/card";
 import { MemberChip } from "@/components/member-chip";
 import { RevealList } from "@/components/reveal";
 import { SECTION_LABEL } from "@/components/section-label";
@@ -42,21 +43,23 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
           commissioner={member.isCommissioner}
           right={<MemberChip member={member} />}
         />
-        <section className="mx-4 space-y-2 rounded-md border border-border bg-card p-3">
-          <p className={SECTION_LABEL}>Nothing to show yet</p>
-          <p className="text-muted-foreground">
-            Results land here once a week&rsquo;s deadline has passed and the games are under way.
-          </p>
-          {/* `tap` for the 44px floor, as on the link at the foot of a week that
-              has results: this branch renders only before the first Deadline,
-              which is why a 19px target sat here unmeasured. */}
-          <Link
-            href="/leaderboard"
-            className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
-          >
-            See the leaderboard
-          </Link>
-        </section>
+        <Card asChild className="mx-4 gap-2">
+          <section>
+            <p className={SECTION_LABEL}>Nothing to show yet</p>
+            <p className="text-muted-foreground">
+              Results land here once a week&rsquo;s deadline has passed and the games are under way.
+            </p>
+            {/* `tap` for the 44px floor, as on the link at the foot of a week that
+                has results: this branch renders only before the first Deadline,
+                which is why a 19px target sat here unmeasured. */}
+            <Link
+              href="/leaderboard"
+              className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
+            >
+              See the leaderboard
+            </Link>
+          </section>
+        </Card>
       </main>
     );
   }
@@ -103,12 +106,12 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
         {mine && place ? (
           <YourWeek weekNumber={weekNumber} score={mine} place={place} />
         ) : (
-          <div className="rounded-md border border-border bg-card p-3">
+          <Card>
             <p className="text-muted-foreground">
               You joined after this week&rsquo;s deadline, so Week {weekNumber} is not counted for or
               against you.
             </p>
-          </div>
+          </Card>
         )}
       </section>
 

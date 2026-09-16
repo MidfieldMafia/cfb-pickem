@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Pennant } from "@/components/pennant";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { LeaderboardRow } from "@/lib/results/results";
@@ -108,7 +109,7 @@ export function LeaderboardTable({
   const displayed = sort ? sortLeaderboard(rows, sort.column, sort.direction) : rows;
 
   return (
-    <div className="rounded-md border border-border bg-card">
+    <Card className="gap-0 overflow-hidden p-0">
       <Table>
         <TableHeader>
           <TableRow>
@@ -161,6 +162,6 @@ export function LeaderboardTable({
           })}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }

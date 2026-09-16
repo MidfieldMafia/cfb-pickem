@@ -2,6 +2,7 @@ import { Ban, Pencil, Radio } from "lucide-react";
 import type { VariantProps } from "class-variance-authority";
 import { db } from "@/db";
 import { Badge, badgeVariants } from "@/components/ui/badge";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/local-time";
 import { TeamLogo } from "@/components/team-logo";
@@ -94,9 +95,11 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
       </p>
 
       {!week.published ? (
-        <p role="status" className="rounded-md border border-border bg-card p-3 text-sm">
-          Week {week.weekNumber} is not published. Results and overrides start once the slate is out.
-        </p>
+        <Card asChild className="rounded-md text-sm">
+          <p role="status">
+            Week {week.weekNumber} is not published. Results and overrides start once the slate is out.
+          </p>
+        </Card>
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -126,14 +129,16 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
           </div>
 
           {review ? (
-            <p role="alert" className="rounded-md border border-destructive bg-card p-3 text-sm font-semibold">
-              {review.subject} still not final {review.hours} hours after kickoff. The feed has no postponed or
-              canceled status, so it stays pending until you act: set the score if it finished, or void it if it will
-              not be played.
-            </p>
+            <Card asChild className="rounded-md border-destructive text-sm font-semibold">
+              <p role="alert">
+                {review.subject} still not final {review.hours} hours after kickoff. The feed has no postponed or
+                canceled status, so it stays pending until you act: set the score if it finished, or void it if it will
+                not be played.
+              </p>
+            </Card>
           ) : null}
 
-          <div className="overflow-x-auto rounded-md border border-border bg-card">
+          <Card className="gap-0 overflow-x-auto rounded-md p-0">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
@@ -208,14 +213,17 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </Card>
 
-          <section className="rounded-md border border-border bg-card">
-            <div className="border-b border-border p-3">
-              <h2>Change log</h2>
-              <p className="text-sm text-muted-foreground">Every override, clear, void, and restore for this week.</p>
-            </div>
-            <ul className="divide-y divide-border">
+          <Card asChild className="gap-0 rounded-md p-0">
+            <section>
+              <CardHeader className="border-b border-border p-3">
+                <CardTitle asChild>
+                  <h2>Change log</h2>
+                </CardTitle>
+                <CardDescription>Every override, clear, void, and restore for this week.</CardDescription>
+              </CardHeader>
+              <ul className="divide-y divide-border">
               {log.map((entry) => (
                 <li key={entry.id} className="p-3 text-sm">
                   <p>
@@ -232,8 +240,9 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                 </li>
               ))}
               {log.length === 0 ? <li className="p-3 text-sm text-muted-foreground">No changes yet.</li> : null}
-            </ul>
-          </section>
+              </ul>
+            </section>
+          </Card>
         </>
       )}
     </div>
