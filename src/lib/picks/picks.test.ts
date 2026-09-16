@@ -3,7 +3,8 @@ import type { Member } from "@/db/schema";
 import { setMemberActive } from "@/lib/members/members";
 import { restoreGame } from "@/lib/results/results";
 import { openWeek, slateFor, voidGame } from "@/lib/slate/slate";
-import { guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
+import { groupBoard } from "@/lib/groups/memberships";
+import { familyGroup, guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { DeadlinePassed, pickSheet, PicksHidden, weekPicks } from "./picks";
 
 /**
@@ -14,11 +15,16 @@ import { DeadlinePassed, pickSheet, PicksHidden, weekPicks } from "./picks";
 async function setup() {
   const fixture = await publishWeek2();
   const { db, week } = fixture;
+  // Every member the fixture seeds is in Mabry Family, so the family's board is
+  // the same set of people this suite read before boards were group-scoped.
+  const family = await familyGroup(db);
   return {
     ...fixture,
+    family,
     fresh: () => slateFor(db, week.id),
     sheet: async (actor: Member, at: Date) => pickSheet(db, actor, await slateFor(db, week.id), at),
-    revealed: async (at: Date) => weekPicks(db, await slateFor(db, week.id), at),
+    revealed: async (at: Date) =>
+      weekPicks(db, await groupBoard(db, family.id), await slateFor(db, week.id), at),
   };
 }
 

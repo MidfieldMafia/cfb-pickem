@@ -5,7 +5,8 @@
  * asks. Every screen that grades picks (the Reveal, week results, the
  * Leaderboard, the Live Board) builds its input here.
  */
-import type { Game, Member, Week } from "@/db/schema";
+import type { Game, Week } from "@/db/schema";
+import type { RemovalPeriod } from "@/lib/groups/memberships";
 import type { MemberPicks } from "@/lib/picks/picks";
 import type * as engine from "@/lib/scoring/types";
 import { effectiveResult } from "./result";
@@ -44,6 +45,31 @@ export function toEngineWeek(week: Week, games: Game[], memberPicks: MemberPicks
   };
 }
 
-export function toEngineMember(member: Pick<Member, "id" | "joinedAt">): engine.Member {
-  return { id: String(member.id), joinedAt: member.joinedAt.toISOString() };
+/**
+ * A member's standing in the group being scored: the *membership*, not the
+ * person's row. `joinedAt` is when they joined this group, which is why a
+ * `Member` row cannot be the parameter type any more — one person in two groups
+ * crosses this bridge twice, same id, with a different date each time.
+ *
+ * A database `Member` still satisfies it structurally, which is deliberate: the
+ * screens that have not been group-scoped yet keep compiling while they are
+ * migrated one at a time.
+ */
+export interface GroupMember {
+  id: number;
+  /** The membership's joined-at for this group. */
+  joinedAt: Date;
+  /** Every period they were out of it. Absent for a member never removed. */
+  removals?: readonly RemovalPeriod[];
+}
+
+export function toEngineMember(member: GroupMember): engine.Member {
+  const crossing: engine.Member = { id: String(member.id), joinedAt: member.joinedAt.toISOString() };
+  const absences = (member.removals ?? []).map(({ removedAt, restoredAt }) => ({
+    from: removedAt.toISOString(),
+    to: restoredAt === null ? null : restoredAt.toISOString(),
+  }));
+  // Omitted rather than empty, so `absences ?? []` inside the engine is the one
+  // place the absence of one is spelled out.
+  return absences.length === 0 ? crossing : { ...crossing, absences };
 }

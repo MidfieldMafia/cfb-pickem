@@ -149,9 +149,16 @@ function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
 }
 
 /**
- * On the Week's board: its Deadline fell after the member joined. A member
- * added mid-week never had a chance to pick, so the week is not theirs to have
- * missed and they get no row at all.
+ * On the Week's board: its Deadline fell after the member joined the group, and
+ * did not fall while they were out of it. A member added mid-week never had a
+ * chance to pick, so the week is not theirs to have missed and they get no row
+ * at all; a week that ran while they were removed is not theirs either, and for
+ * the same reason.
+ *
+ * Both halves use a strict "after", so the two boundaries read alike: joining
+ * at the very instant picks lock is too late, and so is being restored at it.
+ * Being removed at that instant is not — they were in the group for every
+ * moment the week was open to them.
  *
  * `members/roster.ts` states this same rule for the read path, and
  * deliberately: the scoring engine imports nothing outside `@/lib/scoring` and
@@ -160,7 +167,11 @@ function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
  * `Date | string`. Two statements of one rule is the price of that boundary.
  */
 function onBoard(member: Member, week: Week): boolean {
-  return Date.parse(member.joinedAt) < Date.parse(week.deadline);
+  const deadline = Date.parse(week.deadline);
+  if (deadline <= Date.parse(member.joinedAt)) return false;
+  return !(member.absences ?? []).some(
+    (away) => deadline > Date.parse(away.from) && (away.to === null || deadline <= Date.parse(away.to)),
+  );
 }
 
 /**

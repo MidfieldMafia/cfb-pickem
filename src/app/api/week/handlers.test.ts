@@ -15,14 +15,18 @@ import { slateFor } from "@/lib/slate/slate";
 import type { WeekStateJson } from "@/lib/week/json";
 import { createTestDb } from "@/test/db";
 import {
+  addGroup,
   FAMU_AT_MIAMI,
+  familyGroup,
   feedWith,
+  joinGroup,
   OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   pickAs,
   publishWeek2,
   SUNDAY,
   THURSDAY,
+  TUESDAY,
 } from "@/test/week-2";
 import { getSheet, getWeekState, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
 
@@ -42,12 +46,16 @@ async function json<T>(response: Response): Promise<T> {
 /** The published Week, plus a `PickRoute` signed in as Grandma at a given moment. */
 async function setup() {
   const fixture = await publishWeek2();
-  const route = (actor: Member | null, now = THURSDAY): PickRoute => ({
+  // Every seeded member is in Mabry Family, so that is the board these routes
+  // answer for unless a test names another group.
+  const family = await familyGroup(fixture.db);
+  const route = (actor: Member | null, now = THURSDAY, group: number | null = family.id): PickRoute => ({
     db: fixture.db,
     currentMember: async () => actor,
+    currentGroup: async () => group,
     now: () => now,
   });
-  return { ...fixture, route, asGrandma: (now?: Date) => route(fixture.grandma, now) };
+  return { ...fixture, family, route, asGrandma: (now?: Date) => route(fixture.grandma, now) };
 }
 
 /** The three write routes, each as its own body parser over the one handler. */
@@ -330,6 +338,27 @@ describe("the week state", () => {
     expect(moved.headers.get("etag")).not.toBe(etag);
     const state = await json<WeekStateJson>(moved);
     expect(state.games[0].result).toMatchObject({ status: "final", awayScore: 7, homeScore: 45 });
+  });
+
+  test("the ETag varies by group, so one group's board is never served from another's cache", async () => {
+    const { db, slate, grandma, jonah, michigan, family, route } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY);
+    // Grandma plays in both; Jonah only in the family, so the two boards differ.
+    const friends = await addGroup(db, "Friends");
+    await joinGroup(db, friends, grandma, TUESDAY);
+
+    const inFamily = await getWeekState(poll(), route(grandma, SUNDAY, family.id));
+    const inFriends = await getWeekState(poll(), route(grandma, SUNDAY, friends.id));
+
+    expect(inFamily.headers.get("etag")).not.toBe(inFriends.headers.get("etag"));
+    expect((await json<WeekStateJson>(inFamily)).members.map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
+    expect((await json<WeekStateJson>(inFriends)).members.map((m) => m.displayName)).toEqual(["Grandma"]);
+
+    // The poll carries the ETag it last saw. Switching group must answer a
+    // fresh body rather than a 304 that would leave the old board on screen.
+    const switched = await getWeekState(poll(inFamily.headers.get("etag")!), route(grandma, SUNDAY, friends.id));
+    expect(switched.status).toBe(200);
   });
 
   test("a feed that will not answer leaves the state readable with the scores it had", async () => {

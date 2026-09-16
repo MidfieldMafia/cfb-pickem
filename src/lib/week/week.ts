@@ -48,6 +48,19 @@ export interface WeekContext {
 
 export interface WeekOptions {
   /**
+   * The group whose board to grade against, and the reason `graded` and
+   * `season` below are not enough on their own: a Weekly Score, a place and a
+   * Weekly Win only mean anything inside a group, so there is no such thing as
+   * grading this Week in general.
+   *
+   * Null — or absent — for a member who is in no group. There is no board to
+   * grade, so `result` and `season` come back null however the flags are set,
+   * and the member lands on the "not in a group yet" screen rather than on an
+   * empty Leaderboard. Pick entry passes no group at all, deliberately: a
+   * Pick is one person's and counts in every group they play in.
+   */
+  group?: number | null;
+  /**
    * Grade the Week too, once the Deadline has passed: the board and the
    * scores arrive together from one pass, so asking for either is this flag.
    */
@@ -96,10 +109,14 @@ export async function currentWeek(
   const locked = deadlinePassed(published.week, now);
   // Any feed pull happens before the reads, so the sheet and the Reveal see the same rows.
   const slate = locked && options.cfbd ? await refreshQuietly(db, options.cfbd, published, now) : published;
+  // No group is no board: the flags ask for a grading that has nobody to be
+  // graded against, so both come back null rather than the read inventing a
+  // site-wide board that no longer exists.
+  const group = options.group ?? null;
   const [sheet, result, season] = await Promise.all([
     pickSheet(db, actor, slate, now),
-    locked && options.graded ? weekResult(db, slate, now) : null,
-    locked && options.season ? seasonResult(db, now) : null,
+    locked && options.graded && group !== null ? weekResult(db, group, slate, now) : null,
+    locked && options.season && group !== null ? seasonResult(db, group, now) : null,
   ]);
   return {
     slate,
@@ -167,8 +184,12 @@ export async function weekInReview(
   db: Db,
   weekNumber: number | undefined,
   now: Date = new Date(),
-  options: Pick<WeekOptions, "cfbd"> = {},
+  options: Pick<WeekOptions, "cfbd" | "group"> = {},
 ): Promise<WeekReview | null> {
+  // A member in no group has no week to look back at, which is the same "there
+  // is nothing here yet" this screen already had a shape for.
+  const group = options.group ?? null;
+  if (group === null) return null;
   const season = await activeSeason(db);
   const played = await playedWeeks(db, season, now);
   const chosen = played.find((w) => w.weekNumber === weekNumber) ?? played[played.length - 1];
@@ -179,7 +200,7 @@ export async function weekInReview(
   const slate = options.cfbd ? await refreshQuietly(db, options.cfbd, loaded, now) : loaded;
   return {
     slate,
-    result: await weekResult(db, slate, now),
+    result: await weekResult(db, group, slate, now),
     played: played.map((w) => w.weekNumber),
   };
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Eye, ListChecks, Lock, Radio, Scale, Trophy } from "lucide-react";
+import { Clock, Eye, ListChecks, Lock, Radio, Scale, Trophy, Users } from "lucide-react";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
 import { BottomNav } from "@/components/bottom-nav";
@@ -132,6 +132,21 @@ export default async function HowToPlay({ searchParams }: { searchParams: Promis
             <p className="text-muted-foreground">
               The Saturday view of the Slate: live scores and everyone&rsquo;s picks, colored by whether they&rsquo;re
               currently winning.
+            </p>
+          </section>
+        </Card>
+
+        <Card asChild className="mx-4 gap-1">
+          <section>
+            <p className={SECTION_LABEL}>
+              <Users size={12} className="mr-1 inline" aria-hidden />
+              Who you see
+            </p>
+            <p className="text-muted-foreground">
+              Every screen shows one group: its leaderboard, its weekly winner, its board on
+              Saturday. You only ever see the people in the group you&rsquo;re looking at, and they
+              only ever see you. Your picks are your own &mdash; make them once and they count in
+              every group you&rsquo;re in.
             </p>
           </section>
         </Card>

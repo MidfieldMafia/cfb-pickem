@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/wordmark";
 import { db } from "@/db";
+import { currentGroup } from "@/lib/groups/current";
 import { currentMember } from "@/lib/members/current";
 import { currentWeek, landingRoute } from "@/lib/week/week";
 
 export default async function Home() {
   const member = await currentMember();
-  if (member) redirect(landingRoute(await currentWeek(db(), member, new Date(), { graded: true })));
+  if (member) {
+    // Without the group the Week grades to nothing, and `landingRoute` would
+    // read a settled Week as still live and send them to the Live Board.
+    const week = await currentWeek(db(), member, new Date(), { graded: true, group: await currentGroup() });
+    redirect(landingRoute(week));
+  }
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-16 text-center">

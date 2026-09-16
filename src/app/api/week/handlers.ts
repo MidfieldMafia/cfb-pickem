@@ -63,10 +63,17 @@ export const guessEdit: ToEdit = (body) => ({ kind: "guess", guess: integer(body
  * clock, which moves on every request and would otherwise make every poll a
  * change. Weak, because two bodies that differ only in `serverNow` are the
  * same Week and are meant to match.
+ *
+ * The group is digested alongside the body rather than left to show through it.
+ * Two groups usually differ in their members and scores, so their states differ
+ * anyway — but two groups with the same roster would digest identically, and a
+ * phone switching between them would be handed a 304 and keep the board it was
+ * already showing. The group is what the answer is *for*, so it belongs in the
+ * key for that answer.
  */
-function weekStateEtag(state: WeekStateJson): string {
+function weekStateEtag(state: WeekStateJson, group: number | null): string {
   const digest = createHash("sha1")
-    .update(JSON.stringify({ ...state, serverNow: null }))
+    .update(JSON.stringify({ ...state, serverNow: null, group }))
     .digest("hex");
   return `W/"${digest.slice(0, 20)}"`;
 }
@@ -89,10 +96,16 @@ function weekStateEtag(state: WeekStateJson): string {
 export async function getWeekState(request: Request, route: PickRoute): Promise<Response> {
   const actor = await route.currentMember();
   if (!actor) return Response.json({ error: "Open your Magic Link to sign in." } satisfies ApiError, { status: 401 });
-  const week = await currentWeek(route.db, actor, route.now?.() ?? new Date(), { graded: true, season: true, cfbd: route.cfbd });
+  const group = (await route.currentGroup?.()) ?? null;
+  const week = await currentWeek(route.db, actor, route.now?.() ?? new Date(), {
+    graded: true,
+    season: true,
+    cfbd: route.cfbd,
+    group,
+  });
   if (!week) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
   const state = toWeekStateJson(week);
-  const etag = weekStateEtag(state);
+  const etag = weekStateEtag(state, group);
   // `no-store`: the browser must not answer a later poll from its own cache, and the 304 must reach the script.
   const headers = { etag, "cache-control": "no-store" };
   if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });

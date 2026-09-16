@@ -91,6 +91,65 @@ export async function groupRoster(db: Db, groupId: number): Promise<RosterEntry[
 }
 
 /**
+ * A group's member as every board reads them: the person's row, with the
+ * *membership's* joined-at and removals lifted onto the fields the two rules
+ * look for. It satisfies `members/roster.ts`'s `RosterMember` and
+ * `results/engine.ts`'s `GroupMember` at once, which is the point — the roster
+ * is read once and the same rows reach the read path's rule and the engine's,
+ * so the two cannot be handed different dates for the same person.
+ *
+ * `joinedAt` deliberately shadows `member.joinedAt`, the site-wide one. Nothing
+ * downstream should ever reach past this to the row's own date: that is the
+ * date that would give a member points in a group they had just joined.
+ */
+export interface BoardMember {
+  id: number;
+  active: boolean;
+  /** The membership's joined-at, not `member.joinedAt`. */
+  joinedAt: Date;
+  removals: RemovalPeriod[];
+  /** The person, for the name and pennant a board renders. */
+  member: Member;
+}
+
+function toBoardMember(entry: RosterEntry): BoardMember {
+  return {
+    id: entry.member.id,
+    active: entry.member.active,
+    joinedAt: entry.joinedAt,
+    removals: entry.removals,
+    member: entry.member,
+  };
+}
+
+/** Out of the group right now: a removal nobody has undone. */
+function stillOut(entry: RosterEntry): boolean {
+  return entry.removals.some((period) => period.restoredAt === null);
+}
+
+/**
+ * The group's roster in the shape the boards read. One round trip, handed down
+ * to the picks reader and the engine adapter alike rather than each asking.
+ *
+ * A member who is out right now is dropped here, and that is a *different* rule
+ * from the one `roster` applies per Week. Removing someone hides them from
+ * every screen of the group, past weeks included — a Weekly Win they hold can
+ * move to somebody else — so it is not enough to excuse the weeks that ran
+ * while they were away: the weeks *before* the removal have to go too, and only
+ * dropping them from the board itself does that.
+ *
+ * Restoring puts them back here, whole, because nothing was deleted. From that
+ * point `roster`'s per-Week rule takes over and excuses exactly the Weeks whose
+ * Deadline fell inside a gap. The two rules meet here and nowhere else:
+ * `groupRoster` deliberately keeps every membership the group has ever had,
+ * because it is the data and this is the board.
+ */
+export async function groupBoard(db: Db, groupId: number): Promise<BoardMember[]> {
+  const entries = await groupRoster(db, groupId);
+  return entries.filter((entry) => !stillOut(entry)).map(toBoardMember);
+}
+
+/**
  * Puts a newly created member in Mabry Family, the oldest group. Until the
  * Manage screen and the console's Groups list choose a group for a new person,
  * the console and the seed only ever add family, and a member left out of

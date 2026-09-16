@@ -267,6 +267,33 @@ describe("scoreWeek", () => {
     expect(result.scores.map((s) => s.memberId)).toEqual(["jonah", "alex"]);
   });
 
+  it("leaves out a member who was out of the group when the Deadline fell", () => {
+    // Removed on 1 September and not brought back until the 10th, so the Week 1
+    // Deadline on the 5th fell while they were out of the group.
+    const removed: Member = {
+      id: "grandma",
+      joinedAt: "2026-08-01T00:00:00Z",
+      absences: [{ from: "2026-09-01T00:00:00Z", to: "2026-09-10T00:00:00Z" }],
+    };
+    const result = scoreWeek(
+      rules2026,
+      week({
+        deadline: "2026-09-05T16:00:00Z",
+        games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
+        picks: [
+          { memberId: "jonah", gameId: "g1", team: "Georgia" },
+          { memberId: "alex", gameId: "g2", team: "Ohio State" },
+          // Their Pick is still on the row — Picks belong to the person, not the
+          // group. Being out of the group at the Deadline is what takes the week.
+          { memberId: "grandma", gameId: "g1", team: "Georgia" },
+        ],
+      }),
+      [...members, removed],
+    );
+
+    expect(result.scores.map((s) => s.memberId)).toEqual(["jonah", "alex"]);
+  });
+
   /**
    * The second half of a Played Week: joining in time is not enough, the member
    * has to have picked.

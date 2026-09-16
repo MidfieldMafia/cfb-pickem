@@ -3,10 +3,12 @@ import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
 import { Card } from "@/components/ui/card";
 import { MemberChip } from "@/components/member-chip";
+import { NoGroup } from "@/components/no-group";
 import { RevealList } from "@/components/reveal";
 import { SECTION_LABEL } from "@/components/section-label";
 import { YourWeek } from "@/components/standing-card";
 import { cfbd } from "@/lib/cfbd";
+import { currentGroup } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import {
   pickBreakdown,
@@ -32,8 +34,10 @@ import { YourPicks } from "./your-week";
  */
 export default async function WeekResults({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const member = await requireMember();
+  const group = await currentGroup();
+  if (group === null) return <NoGroup member={member} />;
   const params = await searchParams;
-  const review = await weekInReview(db(), weekParam(params.week), new Date(), { cfbd });
+  const review = await weekInReview(db(), weekParam(params.week), new Date(), { cfbd, group });
 
   if (!review) {
     return (

@@ -26,6 +26,17 @@ export type { ApiError };
 export interface PickRoute {
   db: Db;
   currentMember: () => Promise<Member | null>;
+  /**
+   * The group whose board this request is about, for the one route that reads
+   * one (`getWeekState`). Injected for the same reason `currentMember` is: the
+   * real one reads a cookie, and a test needs to answer for two different
+   * groups against the same Week.
+   *
+   * Absent, or null, means a member in no group — the board is empty rather
+   * than site-wide. Pick entry never asks: a Pick is one person's and counts in
+   * every group they play in.
+   */
+  currentGroup?: () => Promise<number | null>;
   /** The wall clock unless given; a test pins it to a moment inside the fixture's Week. */
   now?: () => Date;
   /**

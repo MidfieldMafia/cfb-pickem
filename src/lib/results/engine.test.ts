@@ -178,6 +178,48 @@ describe("a week on its way to the engine", () => {
       joinedAt: DEADLINE.toISOString(),
     });
   });
+
+  test("the join date that crosses is the membership's, so a group gives no head start from another", () => {
+    // The person joined the app in August and this group in September. It is the
+    // group's date the engine scores against, or points earned elsewhere would
+    // count here.
+    const joined = new Date("2026-09-08T00:00:00Z");
+
+    expect(toEngineMember({ id: 4, joinedAt: joined })).toEqual({
+      id: "4",
+      joinedAt: joined.toISOString(),
+    });
+  });
+
+  test("removal periods cross with the member, so a week that ran while they were out does not count", () => {
+    const out = new Date("2026-09-01T00:00:00Z");
+
+    expect(
+      toEngineMember({
+        id: 4,
+        joinedAt: new Date("2026-08-01T00:00:00Z"),
+        removals: [{ removedAt: out, restoredAt: DEADLINE }],
+      }),
+    ).toEqual({
+      id: "4",
+      joinedAt: "2026-08-01T00:00:00.000Z",
+      absences: [{ from: out.toISOString(), to: DEADLINE.toISOString() }],
+    });
+  });
+
+  test("a member still out of the group carries an absence with no end", () => {
+    const out = new Date("2026-09-01T00:00:00Z");
+
+    expect(
+      toEngineMember({ id: 4, joinedAt: new Date("2026-08-01T00:00:00Z"), removals: [{ removedAt: out, restoredAt: null }] }),
+    ).toMatchObject({ absences: [{ from: out.toISOString(), to: null }] });
+  });
+
+  test("a member who has never been removed carries no absences at all, rather than an empty list", () => {
+    // The overwhelming majority. Omitted rather than empty so the engine's own
+    // `absences ?? []` is the only place the absence of one is spelled out.
+    expect(toEngineMember({ id: 4, joinedAt: DEADLINE, removals: [] })).not.toHaveProperty("absences");
+  });
 });
 
 describe("the bridge under the engine", () => {

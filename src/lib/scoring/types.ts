@@ -26,13 +26,36 @@ export interface Rules {
   tiebreakOrder: string;
 }
 
+/** A period a member was out of the group: a removal, and the restore that ended it. */
+export interface Absence {
+  /** ISO 8601 UTC instant the member was removed from the group. */
+  from: string;
+  /** ISO 8601 UTC instant they were brought back, or null while they are still out. */
+  to: string | null;
+}
+
 export interface Member {
   id: MemberId;
   /**
-   * When the member was added. A week counts as played only if its Deadline
-   * fell after this — and only if the member also made at least one Pick on it.
+   * When the member joined the group being scored — the membership's joined-at,
+   * not the site-wide one. One person scored in two groups is two `Member`s
+   * here, same id, each with that group's own join date, which is what stops
+   * points earned in one group giving them a head start in the other.
+   *
+   * A week counts as played only if its Deadline fell after this — and only if
+   * the member was in the group at the Deadline and made at least one Pick.
    */
   joinedAt: string;
+  /**
+   * Every period the member was out of this group, oldest first. Omitted for a
+   * member who has never been removed, which is nearly all of them.
+   *
+   * `joinedAt` alone cannot say this. It is a single cutoff, and a removal
+   * followed by a restore leaves a *gap* in the middle of a season that no
+   * cutoff can express: the weeks either side of the gap still count, and only
+   * the ones inside it do not.
+   */
+  absences?: Absence[];
 }
 
 export type GameStatus = "scheduled" | "in_progress" | "final";
