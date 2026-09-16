@@ -68,7 +68,7 @@ function Side({
                 pick.lock === "dropped" ? " · Lock of the Week, dropped: the game is void" : ""
               }`}
             >
-              <Pennant avatarId={member.avatarId} size={20} />
+              <Pennant avatarId={member.avatarId} name={member.displayName} size={20} />
               <span className="max-w-24 truncate">{you ? "You" : member.displayName}</span>
               {pick.lock === "counts" ? <Lock size={12} aria-label="Lock of the Week" /> : null}
               {pick.lock === "dropped" ? (
@@ -96,7 +96,7 @@ function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewer
               key={s.member.id}
               className={`flex items-center gap-2 rounded-md px-1.5 py-1 ${you ? "bg-accent" : ""}`}
             >
-              <Pennant avatarId={s.member.avatarId} size={20} />
+              <Pennant avatarId={s.member.avatarId} name={s.member.displayName} size={20} />
               <span className={`min-w-0 flex-1 truncate text-sm ${you ? "font-extrabold" : "font-semibold"}`}>
                 {you ? "You" : s.member.displayName}
               </span>

@@ -57,7 +57,7 @@ export default async function Members() {
                 <tr key={member.id} className={member.active ? "" : "opacity-60"}>
                   <td className="p-3">
                     <div className="flex items-center gap-3">
-                      <Pennant avatarId={member.avatarId} size={36} />
+                      <Pennant avatarId={member.avatarId} name={member.displayName} size={36} />
                       <div>
                         <p className="font-semibold">{member.displayName}</p>
                         <p className="text-xs text-muted-foreground">{member.phone ?? "No phone yet"}</p>

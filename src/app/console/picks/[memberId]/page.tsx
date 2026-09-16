@@ -67,7 +67,7 @@ export default async function MemberPicks({
       <BackLink weekNumber={weekNumber} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Pennant avatarId={member.avatarId} size={44} />
+          <Pennant avatarId={member.avatarId} name={member.displayName} size={44} />
           <div>
             <h1>{member.displayName}&apos;s picks</h1>
             <p className="text-sm text-muted-foreground">
