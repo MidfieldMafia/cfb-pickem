@@ -43,6 +43,18 @@ describe("who is on a Week's board", () => {
     expect(roster([member(2, AFTER)], week, new Set([2]))).toEqual([]);
   });
 
+  test("a member out of the group when the Deadline fell is off the board, past weeks included", () => {
+    // Removed two days before the Deadline and not yet brought back.
+    const removed: RosterMember = {
+      id: 2,
+      active: true,
+      joinedAt: BEFORE,
+      removals: [{ removedAt: new Date("2026-09-09T00:00:00Z"), restoredAt: null }],
+    };
+
+    expect(roster([member(1, BEFORE), removed], week).map((m) => m.id)).toEqual([1]);
+  });
+
   test("a Week with no Deadline is not published, so nobody is on its board", () => {
     expect(roster([member(1, BEFORE)], { deadline: null })).toEqual([]);
   });

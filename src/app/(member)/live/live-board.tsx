@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, Scale, X } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AppHeader } from "@/components/app-header";
 import { LocalTime } from "@/components/local-time";
 import { MemberChip } from "@/components/member-chip";
@@ -614,10 +614,17 @@ export function LiveBoard({
   initial,
   viewer,
   commissioner,
+  switcher,
 }: {
   initial: WeekStateJson;
   viewer: MemberJson;
   commissioner?: boolean;
+  /**
+   * The group name, rendered on the server and handed down. This file is
+   * `"use client"`, so it cannot build the switcher itself: `groups/current.ts`
+   * is `server-only` and importing it here would put it in the browser bundle.
+   */
+  switcher?: ReactNode;
 }) {
   const { state, nextPollAt } = useWeekState(initial);
   const [openGameId, setOpenGameId] = useState<number | null>(null);
@@ -642,7 +649,13 @@ export function LiveBoard({
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 pb-8">
-      <AppHeader title="Live Board" sub={sub} commissioner={commissioner} right={<MemberChip member={viewer} />} />
+      <AppHeader
+        title="Live Board"
+        group={switcher}
+        sub={sub}
+        commissioner={commissioner}
+        right={<MemberChip member={viewer} />}
+      />
 
       {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
       <div className="sticky top-0 z-10 space-y-3 border-b border-border bg-background px-4 pb-3">

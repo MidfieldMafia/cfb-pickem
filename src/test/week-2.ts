@@ -3,8 +3,8 @@
  * game ids live here rather than in each test file, so re-recording the fixture
  * is one edit and the names cannot drift from the games they point at.
  */
-import { eq } from "drizzle-orm";
-import { members, memberships, seasons } from "@/db/schema";
+import { asc, eq } from "drizzle-orm";
+import { groups, members, memberships, seasons, type Group, type MembershipRole } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { recordedCfbd, recordings, scoreboardOf } from "@/lib/cfbd/recorded";
@@ -67,6 +67,40 @@ export async function joinAt(db: Db, commissioner: Commissioner, displayName: st
   const [pinned] = await db.update(members).set({ joinedAt: at }).where(eq(members.id, member.id)).returning();
   await db.update(memberships).set({ joinedAt: at }).where(eq(memberships.memberId, member.id));
   return pinned;
+}
+
+/**
+ * Mabry Family: the group every seeded member is already in, because
+ * `bootstrapCommissioner` and `addMember` both put them there. The oldest
+ * group, the same way `joinFamily` finds it.
+ */
+export async function familyGroup(db: Db): Promise<Group> {
+  const [family] = await db.select().from(groups).orderBy(asc(groups.id)).limit(1);
+  return family;
+}
+
+/** A second group, so a suite can prove a board belongs to one group and not the app. */
+export async function addGroup(db: Db, name: string): Promise<Group> {
+  const [group] = await db
+    .insert(groups)
+    .values({ name, joinToken: `${name.toLowerCase()}-token` })
+    .returning();
+  return group;
+}
+
+/**
+ * Puts a member who already exists into another group. `at` is the membership's
+ * own joined-at, which is what decides the weeks that count *there* — the whole
+ * point of a second group being that it starts its own clock.
+ */
+export async function joinGroup(
+  db: Db,
+  group: Group,
+  member: Member,
+  at: Date,
+  role: MembershipRole = "member",
+): Promise<void> {
+  await db.insert(memberships).values({ groupId: group.id, memberId: member.id, role, joinedAt: at });
 }
 
 /** A fresh database with the 2026 season, two members, and the Week 2 candidates. */

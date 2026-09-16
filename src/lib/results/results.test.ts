@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { games, weeks } from "@/db/schema";
+import type { Db } from "@/db/types";
 import { sharedFeed } from "@/lib/cfbd/cache";
 import { recordedCfbd } from "@/lib/cfbd/recorded";
 import type { CfbdClient } from "@/lib/cfbd/types";
@@ -8,6 +9,7 @@ import { PicksHidden } from "@/lib/picks/picks";
 import { slateFor, voidGame } from "@/lib/slate/slate";
 import {
   FAMU_AT_MIAMI,
+  familyGroup,
   feedWith,
   type Finals,
   joinAt,
@@ -44,9 +46,20 @@ import {
  * re-reads the Slate: a void, an override, or an ingest in the middle of a
  * test moves it.
  */
+/**
+ * The season as Mabry Family reads it. Every member the fixture seeds is in
+ * that group, so the family's board is the same set of people this suite read
+ * before boards were group-scoped — which is what keeps the numbers below the
+ * hand-verified ones they have always been.
+ */
+async function seasonForFamily(db: Db, at: Date) {
+  return seasonResult(db, (await familyGroup(db)).id, at);
+}
+
 async function setup() {
   const fixture = await publishWeek2();
   const { db, slate, jonah, grandma, week, miami, michigan, texas } = fixture;
+  const family = await familyGroup(db);
 
   await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY); // Michigan
   await pickAs(db, grandma, slate, texas, texas.awayTeamId, THURSDAY); // Ohio State
@@ -61,8 +74,9 @@ async function setup() {
     ingest: async (feed: CfbdClient, at: Date) => ingestResults(db, feed, await slateFor(db, week.id), at),
     refresh: async (feed: CfbdClient, at: Date) =>
       (await refreshResultsIfStale(db, feed, await slateFor(db, week.id), at)).outcome,
-    gradeAt: async (at: Date) => weekResult(db, await slateFor(db, week.id), at),
-    revealAt: async (at: Date) => (await weekResult(db, await slateFor(db, week.id), at)).reveal,
+    family,
+    gradeAt: async (at: Date) => weekResult(db, family.id, await slateFor(db, week.id), at),
+    revealAt: async (at: Date) => (await weekResult(db, family.id, await slateFor(db, week.id), at)).reveal,
   };
 }
 
@@ -617,7 +631,7 @@ describe("the season leaderboard", () => {
     const { db, jonah, grandma, ingest } = await setup();
     await ingest(feedWith(ALL_FINAL), SUNDAY);
 
-    const season = await seasonResult(db, SUNDAY);
+    const season = await seasonForFamily(db, SUNDAY);
 
     expect(season.season.year).toBe(2026);
     expect(season.weeks.map((w) => [w.week.weekNumber, w.complete])).toEqual([[2, true]]);
@@ -658,7 +672,7 @@ describe("the season leaderboard", () => {
     const { db, jonah, michigan, ingest } = await setup();
     await ingest(feedWith(ALL_FINAL), SUNDAY);
 
-    expect((await seasonResult(db, SUNDAY)).leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints])).toEqual([
+    expect((await seasonForFamily(db, SUNDAY)).leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints])).toEqual([
       ["Grandma", 1, 30],
       ["Jonah", 2, 10],
     ]);
@@ -673,7 +687,7 @@ describe("the season leaderboard", () => {
       SUNDAY,
     );
 
-    const after = await seasonResult(db, SUNDAY);
+    const after = await seasonForFamily(db, SUNDAY);
     // Grandma loses a doubled 20 and keeps Ohio State; Jonah's Oklahoma is now right.
     expect(after.leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints, r.correct, r.incorrect])).toEqual([
       ["Jonah", 1, 20, 2, 1],
@@ -689,7 +703,7 @@ describe("the season leaderboard", () => {
     // Clearing the override hands the week back to the feed, and the standings with it:
     // proof that nothing was written down on the way through.
     await clearOverride(db, jonah, michigan.id, SUNDAY);
-    expect((await seasonResult(db, SUNDAY)).leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints])).toEqual([
+    expect((await seasonForFamily(db, SUNDAY)).leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints])).toEqual([
       ["Grandma", 1, 30],
       ["Jonah", 2, 10],
     ]);
@@ -701,7 +715,7 @@ describe("the season leaderboard", () => {
 
     await voidGame(db, jonah, michigan.id, "Called at halftime, lightning");
 
-    const after = await seasonResult(db, SUNDAY);
+    const after = await seasonForFamily(db, SUNDAY);
     // Grandma's 20 was a Dropped Lock's worth: the game scores zero for everyone,
     // so she is left with Ohio State and Jonah with Miami — level, and level on
     // tiebreaker error too, since neither of them guessed.
@@ -719,7 +733,7 @@ describe("the season leaderboard", () => {
 
     // Week 2 is published, but Thursday is inside it: counting it would score every member zero
     // for a week nobody has picked yet, and drag every average down with it.
-    const season = await seasonResult(db, THURSDAY);
+    const season = await seasonForFamily(db, THURSDAY);
 
     expect(season.weeks).toEqual([]);
     // Everyone is still on the board at zero: an empty season is a table of zeroes, not an empty screen.
@@ -737,7 +751,7 @@ describe("the season leaderboard", () => {
     const quiet = await joinAt(db, jonah, "Quiet", TUESDAY);
     await ingest(feedWith(ALL_FINAL), SUNDAY);
 
-    const season = await seasonResult(db, SUNDAY);
+    const season = await seasonForFamily(db, SUNDAY);
 
     // Everyone who joined in time is on the week's board, Quiet included: a
     // 0-0 row at zero points, sorted last, and marked as not a Played Week.

@@ -10,11 +10,30 @@
  * spelling the filter into its own `where`.
  */
 
+// Type-only, so this module stays a rule rather than a query: the import is
+// erased at compile time and `memberships.ts`'s `server-only` never comes with
+// it. One shape for a removal period, rather than a second spelling here.
+import type { RemovalPeriod } from "@/lib/groups/memberships";
+
 /** The least of a Member the rule needs. */
 export interface RosterMember {
   id: number;
   active: boolean;
+  /** The membership's joined-at for the group whose board this is, not the site-wide one. */
   joinedAt: Date;
+  /**
+   * Every period they were out of that group, in any order. Absent for a member
+   * who has never been removed, which is nearly all of them.
+   */
+  removals?: readonly RemovalPeriod[];
+}
+
+/** Out of the group at that instant: removed before it, and not yet brought back by it. */
+function awayAt(member: RosterMember, deadline: Date): boolean {
+  const at = deadline.getTime();
+  return (member.removals ?? []).some(
+    ({ removedAt, restoredAt }) => at > removedAt.getTime() && (restoredAt === null || at <= restoredAt.getTime()),
+  );
 }
 
 /** The least of a Week the rule needs: the Deadline that decides who was here in time. */
@@ -42,6 +61,18 @@ export interface RosterWeek {
  *    adding up. Callers that are *chasing* members rather than counting them —
  *    the reminder table — pass no picks and get the active members alone,
  *    because there is nothing to chase a deactivated member about.
+ * 3. **In the group when the Deadline fell.** Removing someone hides them from
+ *    every screen of that group, past weeks included, so a week that ran while
+ *    they were out is not one they were ever on the board for. Unlike
+ *    deactivation, Picks do not buy them back in: rule 2 is about a person who
+ *    left the app, and this one about a person who left *this group* — their
+ *    Picks still count everywhere else they play. Restoring them undoes it,
+ *    because nothing was deleted.
+ *
+ * Rule 3 is the half `joinedAt` cannot state: a removal and a restore leave a
+ * gap mid-season, and a single cutoff has no way to say the weeks either side
+ * of it still count. `score-week.ts`'s `onBoard` states rules 1 and 3 a second
+ * time for the engine, on the same two strict boundaries — see the note there.
  *
  * A Week with no Deadline is not published, so nobody is on its board yet.
  */
@@ -53,6 +84,9 @@ export function roster<M extends RosterMember>(
   const { deadline } = week;
   if (deadline === null) return [];
   return members.filter(
-    (member) => member.joinedAt.getTime() < deadline.getTime() && (member.active || picked.has(member.id)),
+    (member) =>
+      member.joinedAt.getTime() < deadline.getTime() &&
+      (member.active || picked.has(member.id)) &&
+      !awayAt(member, deadline),
   );
 }

@@ -7,11 +7,11 @@
  */
 import "server-only";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
-import { games, members, resultAudits, weeks, type Game, type Member, type ResultAuditKind, type Season, type Week } from "@/db/schema";
+import { games, members, resultAudits, weeks, type Game, type ResultAuditKind, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
+import { groupBoard, type BoardMember } from "@/lib/groups/memberships";
 import type { Commissioner } from "@/lib/members/authority";
-import { joinedOrder } from "@/lib/members/members";
 import { noteError } from "@/lib/notes";
 import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
@@ -587,8 +587,8 @@ export interface SeasonResult {
 }
 
 /** The member rows a graded read joins against, keyed the way the engine names them. */
-function memberIndex(rows: Member[]): Map<string, ScoredMember> {
-  return new Map(rows.map((m) => [String(m.id), toMemberJson(m)]));
+function memberIndex(rows: readonly BoardMember[]): Map<string, ScoredMember> {
+  return new Map(rows.map((m) => [String(m.id), toMemberJson(m.member)]));
 }
 
 function toWeeklyScore(score: engine.WeeklyScore, byId: Map<string, ScoredMember>): WeeklyScore {
@@ -627,7 +627,7 @@ function toWeeklyWin(win: engine.WeeklyWin | null, byId: Map<string, ScoredMembe
  * are indexed once, so a game's row is a lookup per member rather than a scan
  * of that member's whole week.
  */
-function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult): Reveal {
+function revealFrom(slate: Slate, rows: readonly BoardMember[], graded: engine.WeekResult): Reveal {
   const scoreOf = new Map(graded.scores.map((s) => [s.memberId, s]));
   const board = rows.map((member) => {
     const score = scoreOf.get(String(member.id));
@@ -641,7 +641,7 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult): Re
   return {
     week: toWeekJson(slate.week),
     year: slate.season.year,
-    members: rows.map(toMemberJson),
+    members: rows.map((row) => toMemberJson(row.member)),
     games: slate.games.map((game) => {
       const gameId = String(game.id);
       const picks: RevealPick[] = [];
@@ -678,14 +678,20 @@ function revealFrom(slate: Slate, rows: Member[], graded: engine.WeekResult): Re
  * itself takes no actor, because nothing here turns on who is asking:
  * `weekPicks`' Deadline gate is not keyed to a caller, commissioner included.
  */
-export async function weekResult(db: Db, slate: Slate, now: Date = new Date()): Promise<GradedWeekResult> {
-  // The member rows do not depend on the picks, so they ride along rather than waiting on them.
-  const [memberPicks, everyone] = await Promise.all([
-    weekPicks(db, slate, now),
-    db.query.members.findMany({ orderBy: joinedOrder }),
-  ]);
+export async function weekResult(
+  db: Db,
+  groupId: number,
+  slate: Slate,
+  now: Date = new Date(),
+): Promise<GradedWeekResult> {
+  // The group's roster is read once and handed to both the picks reader and the
+  // engine adapter, so the read path's rule and the engine's cannot be given
+  // different dates for the same person. It replaces the `joinedOrder` read
+  // this used to do over every member in the app.
+  const group = await groupBoard(db, groupId);
+  const memberPicks = await weekPicks(db, group, slate, now);
   const ids = new Set(memberPicks.map((m) => m.memberId));
-  const rows = everyone.filter((m) => ids.has(m.id));
+  const rows = group.filter((m) => ids.has(m.id));
   const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, memberPicks), rows.map(toEngineMember));
   const byId = memberIndex(rows);
   return { ...toGradedWeek(slate.week, graded, byId), reveal: revealFrom(slate, rows, graded) };
@@ -724,8 +730,9 @@ export async function playedWeeks(db: Db, season: Season, now: Date = new Date()
   return published.filter((w) => w.deadline !== null && w.deadline.getTime() <= now.getTime());
 }
 
-export async function seasonResult(db: Db, now: Date = new Date()): Promise<SeasonResult> {
-  const season = await activeSeason(db);
+export async function seasonResult(db: Db, groupId: number, now: Date = new Date()): Promise<SeasonResult> {
+  // Neither read depends on the other, so the board waits for one round trip.
+  const [season, group] = await Promise.all([activeSeason(db), groupBoard(db, groupId)]);
   const played = await playedWeeks(db, season, now);
   const weekIds = played.map((w) => w.id);
   const gameRows = weekIds.length ? await db.query.games.findMany({ where: inArray(games.weekId, weekIds) }) : [];
@@ -734,18 +741,14 @@ export async function seasonResult(db: Db, now: Date = new Date()): Promise<Seas
     games: slateOrder(gameRows.filter((g) => g.weekId === week.id)),
   }));
 
-  // The member rows do not depend on the picks, so they ride along rather than waiting.
-  const [picksOf, everyone] = await Promise.all([
-    seasonPicks(db, weekGames, now),
-    db.query.members.findMany({ orderBy: joinedOrder }),
-  ]);
+  const picksOf = await seasonPicks(db, group, weekGames, now);
   // `seasonPicks` has already applied `roster` a Week at a time, so this is not a
   // fourth answer to who is on the board — it is the season-wide superset of those
-  // boards: active members plus anyone since deactivated who still has Picks, so
-  // the grading has a name for every id it hands back, and an empty season is a
-  // table of zeroes rather than an empty screen.
+  // boards, within this group: its active members plus anyone since deactivated
+  // who still has Picks, so the grading has a name for every id it hands back,
+  // and an empty season is a table of zeroes rather than an empty screen.
   const onABoard = new Set(weekGames.flatMap(({ week }) => picksOf.get(week.id)!.map((m) => m.memberId)));
-  const rows = everyone.filter((m) => m.active || onABoard.has(m.id));
+  const rows = group.filter((m) => m.active || onABoard.has(m.id));
 
   const graded = scoreSeason(
     season.rules,

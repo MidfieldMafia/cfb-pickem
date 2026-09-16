@@ -122,30 +122,81 @@ async function familyBeforeGroups() {
   return { client, db, weekId: week.id, family: [jonah, alex, grandma, cousin, latecomer] };
 }
 
-/** Everything a family member sees that the migration could move, read the way the screens read it. */
-async function boards(db: Db, weekId: number) {
-  const season = await seasonResult(db, SUNDAY);
-  const week = await weekResult(db, await slateFor(db, weekId), SUNDAY);
-  const rows = {
+/**
+ * Every row the migration could touch, read straight from the tables.
+ *
+ * This used to snapshot the boards too, before and after. It cannot any more:
+ * a board is one group's, and the database as it stood before the migration has
+ * no `groups` table for a group-scoped read to use. The rows are what can still
+ * be compared across the migration — and they are the literal form of the
+ * promise that it only adds rows and never rewrites a Pick.
+ */
+async function rowsOf(db: Db) {
+  return {
     members: await db.select().from(members).orderBy(asc(members.id)),
     picks: await db.select().from(picks).orderBy(asc(picks.id)),
     locks: await db.select().from(locks).orderBy(asc(locks.memberId)),
     guesses: await db.select().from(tiebreakerGuesses).orderBy(asc(tiebreakerGuesses.memberId)),
   };
-  return { leaderboard: season.leaderboard, weeks: season.weeks, reveal: week.reveal, scores: week.scores, rows };
 }
 
 describe("moving the family into Mabry Family", () => {
-  test("the Leaderboard, the Reveal, and every Pick read the same after the migration as before it", async () => {
-    const { client, db, weekId } = await familyBeforeGroups();
-    const before = await boards(db, weekId);
-    // The fixture has something to lose: a graded week with a winner and a deactivated member on it.
-    expect(before.leaderboard.map((row) => row.member.displayName)).toContain("Cousin");
-    expect(before.scores.length).toBe(4);
+  test("the migration rewrites no member, Pick, Lock or Tiebreaker Guess", async () => {
+    const { client, db } = await familyBeforeGroups();
+    const before = await rowsOf(db);
+    // The fixture has something to lose: every family member's Picks, a Lock and a Guess each.
+    expect(before.picks).toHaveLength(12);
 
     await migrate(drizzle({ client, schema }), { migrationsFolder: "drizzle" });
 
-    expect(await boards(db, weekId)).toEqual(before);
+    expect(await rowsOf(db)).toEqual(before);
+  });
+
+  /**
+   * The boards the family sees after the move, against Week 2 as the fixture
+   * played it, worked by hand rather than read back from a run. Finals are
+   * `[away, home]`: Miami and Michigan win at home, Ohio State wins at Texas
+   * 28–24, so the Tiebreaker Game totals 52. Every Lock is on Michigan.
+   *
+   * | member    | Miami | Michigan (Lock) | Texas | points | W–L | guess | miss |
+   * |-----------|-------|-----------------|-------|--------|-----|-------|------|
+   * | Jonah     | ✓ 10  | ✓ 20            | ✓ 10  | 40     | 3–0 | 51    | 1    |
+   * | Cousin    | ✓ 10  | ✓ 20            | ✗     | 30     | 2–1 | 47    | 5    |
+   * | Alex      | ✗     | ✓ 20            | ✗     | 20     | 1–2 | 44    | 8    |
+   * | Grandma   | ✓ 10  | ✗ 0             | ✓ 10  | 20     | 2–1 | 60    | 8    |
+   *
+   * Cousin is deactivated but picked, so stays on the board. Latecomer joined
+   * after the Deadline: off the week, on the Leaderboard at zero. Alex and
+   * Grandma tie on points, Weekly Wins and closeness, so they share 3rd.
+   */
+  test("Mabry Family's boards after the migration are Week 2 as the family played it", async () => {
+    const { client, db, weekId } = await familyBeforeGroups();
+    await migrate(drizzle({ client, schema }), { migrationsFolder: "drizzle" });
+    const [family] = await db.select().from(groups);
+
+    const week = await weekResult(db, family.id, await slateFor(db, weekId), SUNDAY);
+    const season = await seasonResult(db, family.id, SUNDAY);
+
+    expect(
+      week.scores.map((s) => [s.member.displayName, s.played, s.points, s.correct, s.incorrect, s.tiebreakerError]),
+    ).toEqual([
+      ["Jonah", true, 40, 3, 0, 1],
+      ["Cousin", true, 30, 2, 1, 5],
+      ["Alex", true, 20, 1, 2, 8],
+      ["Grandma", true, 20, 2, 1, 8],
+    ]);
+    expect(week.weeklyWin).toMatchObject({ points: 40, decidedBy: "points" });
+    expect(week.weeklyWin!.winners.map((m) => m.displayName)).toEqual(["Jonah"]);
+
+    expect(
+      season.leaderboard.map((r) => [r.member.displayName, r.rank, r.totalPoints, r.weeklyWins, r.weeksPlayed]),
+    ).toEqual([
+      ["Jonah", 1, 40, 1, 1],
+      ["Cousin", 2, 30, 0, 1],
+      ["Alex", 3, 20, 0, 1],
+      ["Grandma", 3, 20, 0, 1],
+      ["Latecomer", 5, 0, 0, 0],
+    ]);
   });
 
   test("every member, deactivated included, is in Mabry Family from the day they joined, and the commissioners organize it", async () => {

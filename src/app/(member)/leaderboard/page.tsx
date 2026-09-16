@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
+import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberChip } from "@/components/member-chip";
+import { NoGroup } from "@/components/no-group";
+import { currentGroupChoice } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { seasonResult } from "@/lib/results/results";
 import { weeklyWinSentence } from "@/lib/results/summary";
@@ -17,7 +20,9 @@ import { LeaderboardTable } from "./leaderboard-table";
  */
 export default async function Leaderboard() {
   const member = await requireMember();
-  const season = await seasonResult(db(), new Date());
+  const choice = await currentGroupChoice();
+  if (choice === null) return <NoGroup member={member} />;
+  const season = await seasonResult(db(), choice.current.id, new Date());
   const played = season.weeks;
   const latest = played[played.length - 1];
   // Null when nobody played the latest Week, which is not the same as an empty
@@ -31,6 +36,7 @@ export default async function Leaderboard() {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title="Leaderboard"
+        group={<GroupSwitcher choice={choice} />}
         sub={
           latest
             ? `${season.season.year} season · after Week ${latest.week.weekNumber}`

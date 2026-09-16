@@ -2,8 +2,11 @@ import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader } from "@/components/app-header";
 import { Card } from "@/components/ui/card";
+import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberChip } from "@/components/member-chip";
+import { NoGroup } from "@/components/no-group";
 import { SECTION_LABEL } from "@/components/section-label";
+import { currentGroupChoice } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { seasonResult } from "@/lib/results/results";
 import { weeklyWinSentence } from "@/lib/results/summary";
@@ -19,13 +22,16 @@ import { weeklyWinSentence } from "@/lib/results/summary";
  */
 export default async function History() {
   const member = await requireMember();
-  const season = await seasonResult(db(), new Date());
+  const choice = await currentGroupChoice();
+  if (choice === null) return <NoGroup member={member} />;
+  const season = await seasonResult(db(), choice.current.id, new Date());
   const played = season.weeks.filter((week) => week.complete);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title="History"
+        group={<GroupSwitcher choice={choice} />}
         sub={`${season.season.year} season`}
         commissioner={member.isCommissioner}
         right={<MemberChip member={member} />}

@@ -1,5 +1,8 @@
 import { db } from "@/db";
+import { GroupSwitcher } from "@/components/group-switcher";
+import { NoGroup } from "@/components/no-group";
 import { cfbd } from "@/lib/cfbd";
+import { currentGroupChoice } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { toMemberJson } from "@/lib/slate/json";
 import { toWeekStateJson } from "@/lib/week/json";
@@ -15,13 +18,21 @@ import { LiveBoard } from "./live-board";
  */
 export default async function Live() {
   const member = await requireMember();
-  const week = await currentWeek(db(), member, new Date(), { graded: true, season: true, cfbd });
+  const choice = await currentGroupChoice();
+  if (choice === null) return <NoGroup member={member} />;
+  const week = await currentWeek(db(), member, new Date(), {
+    graded: true,
+    season: true,
+    cfbd,
+    group: choice.current.id,
+  });
   if (!week) return <NoSlate />;
   return (
     <LiveBoard
       initial={toWeekStateJson(week)}
       viewer={toMemberJson(member)}
       commissioner={member.isCommissioner}
+      switcher={<GroupSwitcher choice={choice} />}
     />
   );
 }

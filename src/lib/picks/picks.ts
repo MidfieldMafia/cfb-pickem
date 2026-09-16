@@ -12,6 +12,7 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { locks, picks, tiebreakerGuesses, type Game, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
+import type { BoardMember } from "@/lib/groups/memberships";
 import { roster } from "@/lib/members/roster";
 import { Refusal } from "@/lib/refusal";
 import { isDroppedLock } from "@/lib/results/result";
@@ -205,18 +206,26 @@ function pickers(rows: PickTable[], lockRows: LockTable[], guessRows: GuessTable
  * Who is on the board is `roster`'s answer, the same one the console table and
  * the scoring path read.
  */
-export async function weekPicks(db: Db, slate: Slate, now: Date = new Date()): Promise<MemberPicks[]> {
+export async function weekPicks(
+  db: Db,
+  group: readonly BoardMember[],
+  slate: Slate,
+  now: Date = new Date(),
+): Promise<MemberPicks[]> {
   publishedDeadline(slate.week);
   if (!deadlinePassed(slate.week, now)) throw new PicksHidden();
   const weekId = slate.week.id;
   const gameIds = slate.games.map((g) => g.id);
-  const [everyone, rows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany(),
+  const [rows, lockRows, guessRows] = await Promise.all([
     gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
   ]);
-  const board = roster(everyone, slate.week, pickers(rows, lockRows, guessRows));
+  // The group is the candidate list now, where this used to read every member
+  // in the app. A Pick row belonging to someone outside the group is dropped by
+  // `groupPicks`, which is what keeps one person's single set of Picks from
+  // reaching a board they do not play on.
+  const board = roster(group, slate.week, pickers(rows, lockRows, guessRows));
   return groupPicks(board, gameIds, rows, lockRows, guessRows);
 }
 
@@ -235,6 +244,7 @@ export interface WeekGames {
  */
 export async function seasonPicks(
   db: Db,
+  group: readonly BoardMember[],
   weekGames: WeekGames[],
   now: Date = new Date(),
 ): Promise<Map<number, MemberPicks[]>> {
@@ -244,8 +254,7 @@ export async function seasonPicks(
   }
   const weekIds = weekGames.map((w) => w.week.id);
   const gameIds = weekGames.flatMap((w) => w.games.map((g) => g.id));
-  const [everyone, rows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany(),
+  const [rows, lockRows, guessRows] = await Promise.all([
     gameIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, gameIds) }) : [],
     weekIds.length ? db.query.locks.findMany({ where: inArray(locks.weekId, weekIds) }) : [],
     weekIds.length ? db.query.tiebreakerGuesses.findMany({ where: inArray(tiebreakerGuesses.weekId, weekIds) }) : [],
@@ -263,9 +272,10 @@ export async function seasonPicks(
       const weekPickRows = pickRows.get(week.id)!;
       const weekLocks = locksOf.get(week.id)!;
       const weekGuesses = guessesOf.get(week.id)!;
-      // The board is decided a Week at a time: joining in Week 4 keeps a member
-      // off Weeks 1 to 3, exactly as `score-week.ts` already had it.
-      const board = roster(everyone, week, pickers(weekPickRows, weekLocks, weekGuesses));
+      // The board is decided a Week at a time: joining the *group* in Week 4
+      // keeps a member off Weeks 1 to 3 of it, and a week that ran while they
+      // were removed is theirs on neither — exactly as `score-week.ts` has it.
+      const board = roster(group, week, pickers(weekPickRows, weekLocks, weekGuesses));
       return [
         week.id,
         groupPicks(
