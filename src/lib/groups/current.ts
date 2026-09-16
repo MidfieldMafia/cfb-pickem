@@ -13,9 +13,11 @@ import "server-only";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "@/db";
-import type { Group } from "@/db/schema";
+import type { Group, Member, MembershipRole } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { currentMember } from "@/lib/members/current";
+import { isCommissioner } from "@/lib/members/members";
+import { managePath } from "./manage-state";
 import { memberGroups } from "./memberships";
 
 /** The device's remembered group. Distinct from `slate_session`, which is who they are. */
@@ -43,6 +45,8 @@ export interface GroupChoice {
    * header is a name and not a control: there is nowhere to switch to.
    */
   groups: Group[];
+  /** The member's role in `current`. */
+  role: MembershipRole;
 }
 
 /**
@@ -69,8 +73,8 @@ export async function groupChoice(
   // Parsed, not trusted: a hand-edited cookie naming someone else's group finds
   // no match here and falls through to a board that is genuinely theirs.
   const wanted = Number(remembered);
-  const still = entries.find((entry) => entry.group.id === wanted);
-  return { current: (still ?? first).group, groups: entries.map((entry) => entry.group) };
+  const current = entries.find((entry) => entry.group.id === wanted) ?? first;
+  return { current: current.group, groups: entries.map((entry) => entry.group), role: current.role };
 }
 
 /**
@@ -102,4 +106,21 @@ export const currentGroupChoice = cache(async (): Promise<GroupChoice | null> =>
 /** The current group's id for a screen, or null for a member in no group. */
 export const currentGroup = cache(async (): Promise<number | null> => {
   return (await currentGroupChoice())?.current.id ?? null;
+});
+
+/**
+ * Where the header's Manage icon goes, or null for no icon. A commissioner's
+ * opens the console, as it always has; anyone else's appears only while they
+ * organize the group on screen, and opens that group's Manage screen. So it
+ * follows the switcher: organizing one group of two shows it on one board only.
+ */
+export function manageHref(member: Member, choice: GroupChoice | null): string | null {
+  if (isCommissioner(member)) return "/console";
+  return choice?.role === "organizer" ? managePath(choice.current.id) : null;
+}
+
+/** The same answer for a screen's header, from the request's session and cookie. */
+export const currentManageHref = cache(async (): Promise<string | null> => {
+  const member = await currentMember();
+  return member ? manageHref(member, await currentGroupChoice()) : null;
 });

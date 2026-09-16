@@ -12,7 +12,7 @@
  * marker each module's error extends and one `instanceof` for the whole set.
  *
  * Extended by `InvalidPick`, `InvalidMember`, `InvalidResult`, `InvalidSlate`,
- * `InvalidWelcome` and `CfbdError`. Two errors deliberately stay off it, and
+ * `InvalidWelcome`, `InvalidGroup` and `CfbdError`. Two errors deliberately stay off it, and
  * both are refusals a screen must answer some other way than a sentence:
  *
  * - `NotCommissioner` — the console answers a non-commissioner with

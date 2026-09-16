@@ -4,18 +4,19 @@ import { CircleHelp, Shield } from "lucide-react";
 const ICON_LINK = "grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground";
 
 /**
- * The header icons every member screen carries: a link to How to play, and a
- * commissioner-only link to the Console. `AppHeader` renders them, and so do
+ * The header icons every member screen carries: a link to How to play, and the
+ * Manage link — the console for a commissioner, the group's Manage screen for
+ * its organizer, absent for everyone else (`currentManageHref` decides). `AppHeader` renders them, and so do
  * the two pick screens, which draw headers of their own — without this they
  * were the one place a member couldn't reach either.
  *
  * A fragment, so the icons sit in whatever flex row the header already lays out.
  */
-export function HeaderLinks({ commissioner }: { commissioner?: boolean }) {
+export function HeaderLinks({ manage }: { manage?: string | null }) {
   return (
     <>
-      {commissioner ? (
-        <Link href="/console" aria-label="Commissioner console" className={ICON_LINK}>
+      {manage ? (
+        <Link href={manage} aria-label="Manage" className={ICON_LINK}>
           <Shield size={20} />
         </Link>
       ) : null}

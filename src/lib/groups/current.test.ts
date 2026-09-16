@@ -6,7 +6,7 @@
 import { describe, expect, test } from "vitest";
 import { membershipRemovals } from "@/db/schema";
 import { addGroup, familyGroup, joinGroup, seedWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
-import { currentGroupId, groupChoice } from "./current";
+import { currentGroupId, groupChoice, manageHref } from "./current";
 import { MABRY_FAMILY } from "./memberships";
 
 describe("the group a member is looking at", () => {
@@ -52,5 +52,20 @@ describe("what the switcher offers", () => {
 
     expect(choice.groups.map((g) => g.id)).toEqual([family.id]);
     expect(choice.current.id).toBe(family.id);
+  });
+});
+
+describe("where the header's Manage icon goes", () => {
+  test("a commissioner's opens the console; an organizer's their current group; a member has none", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const friends = await addGroup(db, "Friends");
+    await joinGroup(db, friends, grandma, TUESDAY, "organizer");
+
+    expect(manageHref(jonah, await groupChoice(db, jonah.id, undefined))).toBe("/console");
+    // Grandma organizes Friends, not Mabry Family: the icon follows the board on screen.
+    expect(manageHref(grandma, await groupChoice(db, grandma.id, String(friends.id)))).toBe(`/manage/${friends.id}`);
+    expect(manageHref(grandma, await groupChoice(db, grandma.id, String(family.id)))).toBeNull();
+    expect(manageHref(grandma, null)).toBeNull();
   });
 });

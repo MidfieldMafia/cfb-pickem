@@ -72,7 +72,8 @@ export interface NewMemberInput {
   phone?: string | null;
 }
 
-function cleanInput(input: NewMemberInput): { displayName: string; phone: string | null } {
+/** The name and phone rules every way of adding a person shares. */
+export function cleanInput(input: NewMemberInput): { displayName: string; phone: string | null } {
   const displayName = cleanDisplayName(input.displayName);
   if (displayName === null) {
     throw new InvalidMember(`Name must be between 1 and ${MAX_DISPLAY_NAME} characters.`);
@@ -145,8 +146,16 @@ export async function regenerateMagicLink(
   memberId: number,
   options: { keepSessionId?: string } = {},
 ): Promise<Member> {
-  const keep = memberId === actor.id ? options.keepSessionId : undefined;
-  // Neither write reads the other, so the commissioner waits for one round trip.
+  return renewToken(db, memberId, memberId === actor.id ? options.keepSessionId : undefined);
+}
+
+/**
+ * The regenerate itself, with no check: `regenerateMagicLink` checks for the
+ * console and `regenerateInGroup` for the Manage screen. `keepSessionId` is a
+ * device of the actor's own that stays signed in.
+ */
+export async function renewToken(db: Db, memberId: number, keep?: string): Promise<Member> {
+  // Neither write reads the other, so the caller waits for one round trip.
   const [, updated] = await Promise.all([
     db
       .delete(sessions)

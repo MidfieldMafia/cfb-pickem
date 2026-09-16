@@ -31,7 +31,7 @@ import { roster } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
 import { isDroppedLock } from "@/lib/results/result";
 import { teamName, toGameView } from "@/lib/slate/json";
-import { slateFor } from "@/lib/slate/slate";
+import { slateFor, type Slate } from "@/lib/slate/slate";
 import { pickSheet, publishedDeadline, type PickSheet } from "./picks";
 import { liveGames, sheetProgress, type SheetProgress } from "./progress";
 
@@ -95,17 +95,35 @@ export interface PickReport {
 export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number, now: Date = new Date()): Promise<PickReport> {
   const slate = await slateFor(db, weekId);
   const deadline = publishedDeadline(slate.week);
+  const everyone = await db.query.members.findMany({ orderBy: joinedOrder });
+  const progress = await weekProgress(db, slate, roster(everyone, slate.week));
+  return {
+    week: slate.week,
+    season: slate.season,
+    deadline,
+    needed: liveGames(slate.games.map(toGameView)).length,
+    members: progress,
+    ready: progress.filter((m) => m.complete).length,
+    serverNow: now,
+  };
+}
+
+/**
+ * Where each of `people` stands on one Week's sheet, in the order given. The
+ * one count behind the console's table and a group's Manage screen, so the two
+ * can never disagree about who still owes a pick. It reads teams and guesses,
+ * so it answers only to a caller that decides what of them to pass on.
+ */
+export async function weekProgress<M extends Member>(db: Db, slate: Slate, people: M[]): Promise<(MemberProgress & { member: M })[]> {
   const views = slate.games.map(toGameView);
-  const live = liveGames(views);
-  const liveIds = live.map((v) => v.game.id);
+  const liveIds = liveGames(views).map((v) => v.game.id);
   const byGame = new Map(slate.games.map((g) => [g.id, g]));
-  const [everyone, pickRows, lockRows, guessRows] = await Promise.all([
-    db.query.members.findMany({ orderBy: joinedOrder }),
+  const weekId = slate.week.id;
+  const [pickRows, lockRows, guessRows] = await Promise.all([
     liveIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, liveIds) }) : [],
     db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
     db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
   ]);
-  const board = roster(everyone, slate.week);
   const pickedBy = new Map<number, Map<number, number>>();
   for (const p of pickRows) {
     let own = pickedBy.get(p.memberId);
@@ -114,7 +132,7 @@ export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number
   }
   const lockOf = new Map(lockRows.map((l) => [l.memberId, l.gameId]));
   const guessOf = new Map(guessRows.map((g) => [g.memberId, g.guess]));
-  const progress = board.map((member): MemberProgress => {
+  return people.map((member) => {
     const own = pickedBy.get(member.id) ?? new Map<number, number>();
     const lockGameId = lockOf.get(member.id) ?? null;
     const lockGame = lockGameId === null ? undefined : byGame.get(lockGameId);
@@ -138,15 +156,6 @@ export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number
       complete: progress.remaining === 0,
     };
   });
-  return {
-    week: slate.week,
-    season: slate.season,
-    deadline,
-    needed: live.length,
-    members: progress,
-    ready: progress.filter((m) => m.complete).length,
-    serverNow: now,
-  };
 }
 
 /** "Thu, Sep 10 at 7:00 PM Central": the group chat is in one time zone, so the reminder names it. */
