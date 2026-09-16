@@ -131,9 +131,16 @@ describe("Week 2 on the Week 1 fixture: a week with no Picks is not a Played Wee
     ]);
   });
 
-  it("gives Week 2 to the only member who played it", () => {
+  it("gives Week 2 to the only member who played it, with the rest on the board at zero", () => {
     const [, second] = scoreSeason(rules2026, [week1, week2], members).weeks;
-    expect(second.scores.map((s) => s.memberId)).toEqual(["jonah"]);
+
+    // All five are still on the week's board — nobody vanishes for skipping it.
+    expect(second.scores).toHaveLength(members.length);
+    expect(second.scores.filter((s) => s.played).map((s) => s.memberId)).toEqual(["jonah"]);
+    expect(second.scores.filter((s) => !s.played).every((s) => s.points === 0 && s.correct === 0 && s.incorrect === 0)).toBe(
+      true,
+    );
+    // Jonah is the only one in the running, so the week is his outright.
     expect(second.weeklyWin).toEqual({ winners: ["jonah"], points: 10, decidedBy: "points" });
   });
 });

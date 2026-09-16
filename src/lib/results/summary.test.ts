@@ -113,6 +113,8 @@ function row(who: ScoredMember, rank: number, totalPoints: number): LeaderboardR
 function score(who: ScoredMember, points: number, over: Partial<WeeklyScore> = {}): WeeklyScore {
   return {
     member: who,
+    // Played by default; `over` is how a test says a member sat the week out.
+    played: true,
     points,
     correct: points / 10,
     incorrect: 0,
@@ -170,13 +172,32 @@ describe("a member's record and place", () => {
     expect(standing(scores, ALEX.id)).toEqual({ place: 3, of: 3, label: "3rd of 3" });
   });
 
-  test("breaks a level score by tiebreaker closeness, and has no place for a member who sat the week out", () => {
+  test("breaks a level score by tiebreaker closeness, and has no place for a member who was never on the board", () => {
     const scores = [score(GRANDMA, 30, { tiebreakerError: 2 }), score(JONAH, 30, { tiebreakerError: 9 })];
 
     expect(standing(scores, GRANDMA.id)!.place).toBe(1);
     expect(standing(scores, JONAH.id)!.place).toBe(2);
-    // A member who joined after the Deadline is not in the scores at all.
+    // A member who joined after the Deadline is not in the scores at all. This
+    // is the only way to have no place: a member who was here and picked
+    // nothing is on the board, and the next test gives them a place.
     expect(standing(scores, ALEX.id)).toBeNull();
+  });
+
+  test("places a member who picked nothing last, and still counts them in the of", () => {
+    // Jonah picked and scored nothing; Alex never picked. Both rows read zero,
+    // so only `played` separates them — and it has to, or they would share a
+    // place while being listed one above the other.
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerError: 2 }),
+      score(JONAH, 0, { correct: 0, incorrect: 3 }),
+      score(ALEX, 0, { correct: 0, played: false }),
+    ];
+
+    expect(standing(scores, GRANDMA.id)).toEqual({ place: 1, of: 3, label: "1st of 3" });
+    expect(standing(scores, JONAH.id)).toEqual({ place: 2, of: 3, label: "2nd of 3" });
+    // Counted in the "of", and last: the week is still one they turned up for
+    // on the board, just not one they played.
+    expect(standing(scores, ALEX.id)).toEqual({ place: 3, of: 3, label: "3rd of 3" });
   });
 
   test("a season place is the rank the engine gave, with the season total beside it", () => {

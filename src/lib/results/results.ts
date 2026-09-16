@@ -514,6 +514,12 @@ export interface Reveal {
  */
 export interface WeeklyScore {
   member: ScoredMember;
+  /**
+   * Whether the Week counts for this member: a Played Week. False for someone
+   * who was on the board and made no Pick — they show here at zero so the week
+   * says they sat it out, and the season ignores the row entirely.
+   */
+  played: boolean;
   points: number;
   correct: number;
   incorrect: number;
@@ -539,9 +545,14 @@ export interface GradedWeek {
   week: Week;
   /** Every non-void game is final. A Weekly Win counts toward the season only when true. */
   complete: boolean;
-  /** Members who played the week, in finish order: points, then Tiebreaker Guess closeness. */
+  /**
+   * Everyone on the Week's board, in finish order: Played Weeks first, then
+   * points, then Tiebreaker Guess closeness. A member who made no Pick is here
+   * at zero with `played` false rather than missing, so the week shows who sat
+   * it out; the season counts only the played rows.
+   */
   scores: WeeklyScore[];
-  /** Null when nobody played the week. */
+  /** Null when nobody *played* the week. */
   weeklyWin: WeeklyWin | null;
 }
 
@@ -584,6 +595,7 @@ function toWeeklyScore(score: engine.WeeklyScore, byId: Map<string, ScoredMember
   const { lock } = score;
   return {
     member: byId.get(score.memberId)!,
+    played: score.played,
     points: score.points,
     correct: score.correct,
     incorrect: score.incorrect,

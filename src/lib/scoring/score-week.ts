@@ -85,6 +85,7 @@ function scoreMember(
   index: WeekIndex,
   member: Member,
   tiebreakerTotal: number | null,
+  played: boolean,
 ): WeeklyScore {
   const lockGameId = index.locks.get(member.id);
   const picks: PickResult[] = week.games.map((game) => {
@@ -104,6 +105,7 @@ function scoreMember(
   const tiebreakerError = tiebreakerTotal === null ? null : Math.abs((tiebreakerGuess ?? 0) - tiebreakerTotal);
   return {
     memberId: member.id,
+    played,
     points: picks.reduce((sum, p) => sum + p.points, 0),
     correct: picks.filter((p) => p.outcome === "correct").length,
     incorrect: picks.filter((p) => p.outcome === "incorrect").length,
@@ -115,8 +117,15 @@ function scoreMember(
   };
 }
 
-/** Points descending, then tiebreaker error ascending; unknown error sorts last. */
+/**
+ * Played Weeks first, then points descending, then tiebreaker error ascending;
+ * unknown error sorts last.
+ *
+ * `played` leads so that a member who sat the week out lands below one who
+ * picked and scored nothing. Both show zero, and only one of them turned up.
+ */
 function compareWeekly(a: WeeklyScore, b: WeeklyScore): number {
+  if (a.played !== b.played) return a.played ? -1 : 1;
   if (a.points !== b.points) return b.points - a.points;
   return (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity);
 }
@@ -140,34 +149,53 @@ function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
 }
 
 /**
- * A member played a week when its Deadline fell after they joined *and* they
- * made at least one Pick on it.
+ * On the Week's board: its Deadline fell after the member joined. A member
+ * added mid-week never had a chance to pick, so the week is not theirs to have
+ * missed and they get no row at all.
  *
- * Both halves keep a week off someone's record entirely rather than scoring it
- * zero: a member who is not in `scores` has no entry for `scoreSeason` to count,
- * so the week touches nothing — not weeks played, not average points, not the
- * average Tiebreaker miss, not the season tiebreak's closeness sum.
+ * `members/roster.ts` states this same rule for the read path, and
+ * deliberately: the scoring engine imports nothing outside `@/lib/scoring` and
+ * speaks in ISO strings and string ids, so sharing the function would either
+ * drag the engine onto the read path's types or loosen those into
+ * `Date | string`. Two statements of one rule is the price of that boundary.
+ */
+function onBoard(member: Member, week: Week): boolean {
+  return Date.parse(member.joinedAt) < Date.parse(week.deadline);
+}
+
+/**
+ * A Played Week: on the board, *and* holding at least one Pick.
+ *
+ * This second half lives only here. It decides whether a week counts, not who
+ * appears on it — a member who picked nothing keeps their row, at zero, and is
+ * simply not counted. So there is nothing for the read path to restate: being
+ * on the board is `roster`'s question, and this one is the engine's alone.
  *
  * A Tiebreaker Guess is deliberately not enough. It is one field, submitted
  * without reading the slate, and a week decided by it would be a week the
  * member never picked a game in. A Lock cannot stand alone either — the writer
  * refuses one that has no Pick beneath it — so Picks are the whole test.
- *
- * `members/roster.ts` states this same rule for the read path; see its comment
- * for why one rule is deliberately written twice and must never be written a
- * third time.
  */
 function playedWeek(member: Member, week: Week, pickers: ReadonlySet<MemberId>): boolean {
-  return Date.parse(member.joinedAt) < Date.parse(week.deadline) && pickers.has(member.id);
+  return onBoard(member, week) && pickers.has(member.id);
 }
 
 export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResult {
   const tiebreakerTotal = combinedFinalScore(week.games.find((g) => g.id === week.tiebreakerGameId));
   const index = indexWeek(week);
   const scores = members
-    .filter((member) => playedWeek(member, week, index.pickers))
-    .map((member) => scoreMember(rules, week, index, member, tiebreakerTotal))
+    .filter((member) => onBoard(member, week))
+    .map((member) =>
+      scoreMember(rules, week, index, member, tiebreakerTotal, playedWeek(member, week, index.pickers)),
+    )
     .sort(compareWeekly);
   const complete = week.games.every((g) => g.void || g.status === "final");
-  return { weekNumber: week.weekNumber, complete, scores, weeklyWin: decideWeeklyWin(scores) };
+  // Only the members who played are in the running: a week nobody picked has no
+  // winner, rather than being shared between everyone who was on the board.
+  return {
+    weekNumber: week.weekNumber,
+    complete,
+    scores,
+    weeklyWin: decideWeeklyWin(scores.filter((s) => s.played)),
+  };
 }

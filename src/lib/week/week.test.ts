@@ -93,10 +93,11 @@ describe("the current week", () => {
       feedFinal: null,
     });
     expect(michiganRow.picks.map((p) => p.outcome)).toEqual(["correct"]);
-    // The board and the Weekly Score come out of the same pass, over the same
-    // refreshed rows. Jonah picked nothing, so this is not a week he played and
-    // he is not on the board to be scored zero on.
-    expect(graded.result!.scores.map((s) => [s.member.displayName, s.points])).toEqual([["Grandma", 10]]);
+    // The board and the Weekly Score come out of the same pass, over the same refreshed rows.
+    expect(graded.result!.scores.map((s) => [s.member.displayName, s.points])).toEqual([
+      ["Grandma", 10],
+      ["Jonah", 0],
+    ]);
     // The Slate handed back is the refreshed one, not the rows the read started from.
     expect(graded.slate.games.find((g) => g.id === michigan.id)).toMatchObject({ status: "final", homeScore: 27 });
 

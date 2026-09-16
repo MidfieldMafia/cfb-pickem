@@ -100,6 +100,7 @@ function picks(teamId: number, ids: number[], outcome: RevealPick["outcome"] = "
 function score(who: ScoredMember, points: number): WeeklyScore {
   return {
     member: who,
+    played: true,
     points,
     correct: points / 10,
     incorrect: 0,

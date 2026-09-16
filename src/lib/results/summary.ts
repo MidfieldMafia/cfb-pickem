@@ -60,16 +60,31 @@ function listNames(members: ScoredMember[]): string {
   return andJoin(members.map((m) => m.displayName));
 }
 
-/** Points descending, then Tiebreaker Guess closeness: the engine's own week order. */
+/**
+ * Played Weeks first, then points descending, then Tiebreaker Guess closeness:
+ * the engine's own week order, from `compareWeekly` in `score-week.ts`.
+ *
+ * The first clause is what keeps a place number agreeing with the row it sits
+ * on. Without it, a member who sat the week out would *share* a place with one
+ * who picked and scored nothing — the two are level on points and on a
+ * Tiebreaker error neither has — while the engine still sorted them below, so
+ * the list would read in an order its own numbers did not explain.
+ */
 function finishedAhead(a: WeeklyScore, b: WeeklyScore): boolean {
+  if (a.played !== b.played) return a.played;
   if (a.points !== b.points) return a.points > b.points;
   return (a.tiebreakerError ?? Infinity) < (b.tiebreakerError ?? Infinity);
 }
 
-/** Where a member came in a Week, and how many played it. */
+/** Where a member came in a Week, and how many were on its board. */
 export interface Standing {
   /** 1-based. Members level on points and on Tiebreaker Guess closeness share a place. */
   place: number;
+  /**
+   * Everyone the Week put on the board, including members who made no Pick and
+   * so did not play it. They are shown on the week's screens at zero, so the
+   * count a place is read against is the rows on screen.
+   */
   of: number;
   /** "4th of 5". */
   label: string;
@@ -80,9 +95,10 @@ export interface Standing {
  * plus one" rather than as a row index, so two members who are level share a
  * place instead of one of them being told they lost on read order.
  *
- * Null when the member did not play the Week — they joined after its Deadline,
- * or made no Pick in it — and a place in a week they did not play is not a fair
- * thing to show them.
+ * Null when the member was not on the Week's board at all — they joined after
+ * its Deadline, and a place in a week they never had a chance at is not a fair
+ * thing to show them. A member who was here and picked nothing *is* on the
+ * board, so they get a place, at the bottom.
  */
 export function standing(scores: WeeklyScore[], memberId: number): Standing | null {
   const mine = scores.find((s) => s.member.id === memberId);
@@ -187,7 +203,10 @@ export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[], weeklyW
   if (!game) return null;
   const { shown, status } = game.result;
   const combined = status === "final" && shown ? shown.homeScore + shown.awayScore : null;
-  const tied = weeklyWin === null ? [] : scores.filter((s) => s.points === weeklyWin.points);
+  // Played only. A member who made no Pick sits at zero, so a week won on zero
+  // points would otherwise sweep them into the tie and name them as a
+  // contender in a tiebreak they were never in.
+  const tied = weeklyWin === null ? [] : scores.filter((s) => s.played && s.points === weeklyWin.points);
   if (tied.length < 2) return { game, combined, contenders: [], winners: [] };
   const contenders = [...tied]
     .sort((a, b) => (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity))
@@ -315,9 +334,10 @@ export function movement(row: Pick<LeaderboardRow, "rank" | "previousRank">): Mo
  * How much of the season a member has actually played, said out loud only
  * when it is less than the season has run: "2 of 3 weeks".
  *
- * A member who joined in Week 3 sits out Weeks 1 and 2, and a member who picked
- * nothing in Week 4 sits that one out too (`roster`, and the engine's
- * `playedWeek`), so their total is over fewer weeks than the member above them.
+ * A member who joined in Week 3 sits out Weeks 1 and 2 (`roster`, and the
+ * engine's `onBoard`), and one who picked nothing in Week 4 sits that one out
+ * too (the engine's `playedWeek`), so their total is over fewer weeks than the
+ * member above them.
  * Their average already accounts for it; this is the note that stops the total
  * looking like a losing one. Null when they have played every week the season
  * has.

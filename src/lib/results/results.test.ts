@@ -739,10 +739,16 @@ describe("the season leaderboard", () => {
 
     const season = await seasonResult(db, SUNDAY);
 
-    // The week is the two who played it, which is also the "of" that a place is
-    // read against on the week results screen. (That Quiet is off the Reveal
-    // board too is pinned at its own seam, in `picks.test.ts`.)
-    expect(season.weeks[0].scores.map((s) => s.member.displayName)).toEqual(["Grandma", "Jonah"]);
+    // Everyone who joined in time is on the week's board, Quiet included: a
+    // 0-0 row at zero points, sorted last, and marked as not a Played Week.
+    // That count is also the "of" a place is read against on the week screen.
+    expect(season.weeks[0].scores.map((s) => [s.member.displayName, s.played, s.points, s.correct, s.incorrect])).toEqual([
+      ["Grandma", true, 30, 2, 0],
+      ["Jonah", true, 10, 1, 2],
+      ["Quiet", false, 0, 0, 0],
+    ]);
+    // Sitting the week out is not a share of it.
+    expect(season.weeks[0].weeklyWin!.winners.map((m) => m.displayName)).toEqual(["Grandma"]);
 
     // Still on the Leaderboard: sitting a week out is not being dropped from the
     // season, which is the whole difference between this and a deactivation.
