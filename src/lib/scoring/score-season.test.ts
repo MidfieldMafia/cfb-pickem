@@ -206,7 +206,94 @@ describe("scoreSeason", () => {
     const { weeks, leaderboard } = scoreSeason(rules2026, [published, draft], members.slice(0, 2));
 
     expect(weeks.map((w) => w.weekNumber)).toEqual([1]);
-    expect(leaderboard.find((r) => r.memberId === "alex")).toMatchObject({ totalPoints: 0, weeksPlayed: 1, averagePoints: 0 });
+    // Alex's only Pick is in the draft week, and a Week nobody counts cannot be
+    // a Played Week. So the published week leaves them with no played week at
+    // all rather than zero-over-one: an unpublished week is worth nothing, and
+    // it cannot make the published one count either.
+    expect(leaderboard.find((r) => r.memberId === "alex")).toMatchObject({
+      totalPoints: 0,
+      weeksPlayed: 0,
+      averagePoints: null,
+    });
+  });
+
+  /**
+   * The season half of the Played Week rule. `scoreWeek` emits no entry for a
+   * member who picked nothing, and every season figure is built from a member's
+   * entries, so the skipped week is absent from all of them at once rather than
+   * being subtracted from each by hand.
+   */
+  describe("a week with no Picks is not a Played Week", () => {
+    // Week 1 combined 48: Jonah is 2 off, Alex is 4 off. Both pick and score 10.
+    const first = week({
+      weekNumber: 1,
+      deadline: "2026-09-05T16:00:00Z",
+      tiebreakerGameId: "w1g1",
+      games: [finalGame("w1g1", "Georgia", "Clemson", 31, 17)],
+      picks: [
+        { memberId: "jonah", gameId: "w1g1", team: "Georgia" },
+        { memberId: "alex", gameId: "w1g1", team: "Georgia" },
+      ],
+      tiebreakerGuesses: [
+        { memberId: "jonah", guess: 50 },
+        { memberId: "alex", guess: 44 },
+      ],
+    });
+    // Week 2 combined 49, LSU win it. Jonah picks and guesses exactly; Alex
+    // sends a Guess and no Picks, which is the case the rule turns on.
+    const second = week({
+      weekNumber: 2,
+      deadline: "2026-09-12T16:00:00Z",
+      tiebreakerGameId: "w2g1",
+      games: [finalGame("w2g1", "Alabama", "LSU", 21, 28)],
+      picks: [{ memberId: "jonah", gameId: "w2g1", team: "LSU" }],
+      tiebreakerGuesses: [
+        { memberId: "jonah", guess: 49 },
+        { memberId: "alex", guess: 40 },
+      ],
+    });
+
+    it("leaves weeks played, both averages and the closeness sum as the skipped week found them", () => {
+      const { leaderboard } = scoreSeason(rules2026, [first, second], members.slice(0, 2));
+
+      const row = (id: string) => leaderboard.find((r) => r.memberId === id)!;
+      // Jonah played both: 20 points over 2 weeks, errors 2 and 0.
+      expect(row("jonah")).toMatchObject({
+        totalPoints: 20,
+        weeksPlayed: 2,
+        averagePoints: 10,
+        cumulativeTiebreakerError: 2,
+        averageTiebreakerMiss: 1,
+      });
+      // Alex guessed in Week 2 and picked nothing, so Week 1 is still their
+      // whole season — the Week 2 Guess is not even in the closeness sum.
+      expect(row("alex")).toMatchObject({
+        totalPoints: 10,
+        weeksPlayed: 1,
+        averagePoints: 10,
+        cumulativeTiebreakerError: 4,
+        averageTiebreakerMiss: 4,
+      });
+    });
+
+    it("keeps a member who has picked in no week on the Leaderboard, with dashes rather than no row", () => {
+      const quiet: Member = { id: "quiet", joinedAt: "2026-08-01T00:00:00Z" };
+
+      const { leaderboard } = scoreSeason(rules2026, [first, second], [...members.slice(0, 2), quiet]);
+
+      // A null average and a null miss are what the board renders as an em dash.
+      expect(leaderboard.find((r) => r.memberId === "quiet")).toMatchObject({
+        rank: 3,
+        weeksPlayed: 0,
+        totalPoints: 0,
+        correct: 0,
+        incorrect: 0,
+        weeklyWins: 0,
+        averagePoints: null,
+        averageTiebreakerMiss: null,
+        cumulativeTiebreakerError: 0,
+      });
+    });
   });
 });
 

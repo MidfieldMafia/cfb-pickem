@@ -31,6 +31,11 @@ function seasonScores(results: WeekResult[]): Map<MemberId, SeasonScore[]> {
   for (const result of results) {
     const winners = new Set(result.weeklyWin?.winners);
     for (const score of result.scores) {
+      // The one place the Played Week rule reaches the season. `scoreWeek` hands
+      // back everyone on the board so the week's own screens can show a member
+      // who sat it out at zero; the season must not count that row, or the week
+      // would land in weeks played and drag both averages down with it.
+      if (!score.played) continue;
       const entry: SeasonScore = {
         score,
         complete: result.complete,
@@ -45,8 +50,10 @@ function seasonScores(results: WeekResult[]): Map<MemberId, SeasonScore[]> {
 }
 
 /**
- * `scoreWeek` emits one score per member per week they played, so the member's
- * own entries are the weeks they played — the rule is not re-applied here.
+ * `seasonScores` has already dropped the weeks a member did not play, so their
+ * entries *are* their Played Weeks and the rule is not re-applied here. Every
+ * figure below counts entries, which is why one filter upstream is enough to
+ * keep a skipped week out of all of them at once.
  */
 function leaderboardRow(member: Member, entries: SeasonScore[]): LeaderboardRow {
   const totalPoints = entries.reduce((sum, e) => sum + e.score.points, 0);

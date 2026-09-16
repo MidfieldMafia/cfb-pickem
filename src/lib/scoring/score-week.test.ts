@@ -253,12 +253,146 @@ describe("scoreWeek", () => {
       rules2026,
       week({
         deadline: "2026-09-05T16:00:00Z",
-        games: [finalGame("g1", "Georgia", "Clemson", 31, 17)],
-        picks: [{ memberId: "jonah", gameId: "g1", team: "Georgia" }],
+        games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
+        picks: [
+          { memberId: "jonah", gameId: "g1", team: "Georgia" },
+          // Alex needs a Pick to be on the board at all now, and a wrong one
+          // keeps the two of them off a points tie this test does not care about.
+          { memberId: "alex", gameId: "g2", team: "Ohio State" },
+        ],
       }),
       [...members, lateJoiner],
     );
 
     expect(result.scores.map((s) => s.memberId)).toEqual(["jonah", "alex"]);
+  });
+
+  /**
+   * The second half of a Played Week: joining in time is not enough, the member
+   * has to have picked.
+   *
+   * A member who sat the week out keeps their row, at zero, so the week's own
+   * screens can show that they did not pick rather than making them disappear.
+   * What marks the week as not theirs is `played`, which `scoreSeason` filters
+   * on and `decideWeeklyWin` never sees.
+   */
+  describe("a week with no Picks is not a Played Week", () => {
+    it("keeps a member who made no Pick on the board at zero, with the week not counted", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [finalGame("g1", "Georgia", "Clemson", 31, 17)],
+          picks: [{ memberId: "jonah", gameId: "g1", team: "Georgia" }],
+        }),
+        members,
+      );
+
+      expect(result.scores.map((s) => [s.memberId, s.played, s.points, s.correct, s.incorrect])).toEqual([
+        ["jonah", true, 10, 1, 0],
+        // On the board, 0-0, nothing scored, and the week is not one they played.
+        ["alex", false, 0, 0, 0],
+      ]);
+    });
+
+    it("counts the week on a single Pick, right or wrong", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
+          picks: [
+            { memberId: "jonah", gameId: "g1", team: "Georgia" },
+            // Wrong, and the only one they made: still a week they turned up for.
+            { memberId: "alex", gameId: "g2", team: "Ohio State" },
+          ],
+        }),
+        members,
+      );
+
+      expect(result.scores.map((s) => [s.memberId, s.played, s.points])).toEqual([
+        ["jonah", true, 10],
+        ["alex", true, 0],
+      ]);
+    });
+
+    it("sorts a member who sat out below one who picked and scored nothing", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [finalGame("g1", "Georgia", "Clemson", 31, 17)],
+          // Wrong, so Alex scores nothing either. Both rows read zero; only one
+          // of them turned up, and that is the one that sorts higher.
+          picks: [{ memberId: "alex", gameId: "g1", team: "Clemson" }],
+        }),
+        members,
+      );
+
+      expect(result.scores.map((s) => [s.memberId, s.played, s.points])).toEqual([
+        ["alex", true, 0],
+        ["jonah", false, 0],
+      ]);
+    });
+
+    it("does not count a week on a Tiebreaker Guess alone, though the Guess still shows", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [finalGame("g1", "Georgia", "Clemson", 31, 17)],
+          tiebreakerGameId: "g1",
+          picks: [{ memberId: "jonah", gameId: "g1", team: "Georgia" }],
+          tiebreakerGuesses: [{ memberId: "alex", guess: 48 }],
+        }),
+        members,
+      );
+
+      const alex = result.scores.find((s) => s.memberId === "alex")!;
+      expect(alex.played).toBe(false);
+      // The Guess is theirs and is shown; it just buys them no week.
+      expect(alex.tiebreakerGuess).toBe(48);
+    });
+
+    it("counts a Pick on a Void game: the Void is the commissioner's doing, not a week the member sat out", () => {
+      const voided: Game = { ...finalGame("g1", "Georgia", "Clemson", 31, 17), void: true };
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [voided, finalGame("g2", "Ohio State", "Texas", 14, 24)],
+          picks: [
+            { memberId: "jonah", gameId: "g2", team: "Texas" },
+            { memberId: "alex", gameId: "g1", team: "Georgia" },
+          ],
+        }),
+        members,
+      );
+
+      expect(result.scores.map((s) => [s.memberId, s.played, s.points])).toEqual([
+        ["jonah", true, 10],
+        ["alex", true, 0],
+      ]);
+    });
+
+    it("keeps a member who sat out from sharing a Weekly Win nobody scored in", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [finalGame("g1", "Georgia", "Clemson", 31, 17)],
+          picks: [{ memberId: "alex", gameId: "g1", team: "Clemson" }],
+        }),
+        members,
+      );
+
+      // Alex scored nothing, but Alex is the only one in the running: a member
+      // who never picked cannot tie their way into a share of the week.
+      expect(result.weeklyWin).toEqual({ winners: ["alex"], points: 0, decidedBy: "points" });
+    });
+
+    it("has no Weekly Win in a week nobody picked, though everyone is still on the board", () => {
+      const result = scoreWeek(rules2026, week({ games: [finalGame("g1", "Georgia", "Clemson", 31, 17)] }), members);
+
+      // Both sit on zero and neither played, so nothing separates them and the
+      // order between them is not something this test should depend on.
+      expect(result.scores.map((s) => s.memberId).sort()).toEqual(["alex", "jonah"]);
+      expect(result.scores.every((s) => !s.played)).toBe(true);
+      expect(result.weeklyWin).toBeNull();
+    });
   });
 });

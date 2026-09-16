@@ -28,7 +28,10 @@ export interface Rules {
 
 export interface Member {
   id: MemberId;
-  /** When the member was added. A week counts as played only if its Deadline fell after this. */
+  /**
+   * When the member was added. A week counts as played only if its Deadline
+   * fell after this — and only if the member also made at least one Pick on it.
+   */
   joinedAt: string;
 }
 
@@ -104,6 +107,20 @@ export interface LockResult {
 
 export interface WeeklyScore {
   memberId: MemberId;
+  /**
+   * Whether this Week counts for the member: a Played Week.
+   *
+   * False for a member who was on the board — they joined before the Deadline —
+   * but made no Pick. They keep a row here, at zero, so the Week's own screens
+   * can show that they sat it out rather than making them vanish; `scoreSeason`
+   * skips those rows, so the week touches no total, average or tiebreak of
+   * theirs, and `decideWeeklyWin` never hands them a share of the week.
+   *
+   * The two halves are deliberately different questions: who is *on* a Week's
+   * board, and which of them the Week *counts*. `members/roster.ts` answers the
+   * first for the read path; only the engine answers the second.
+   */
+  played: boolean;
   points: number;
   correct: number;
   incorrect: number;
@@ -131,9 +148,14 @@ export interface WeekResult {
   weekNumber: number;
   /** Every non-void game is final. Weekly Wins count toward the season only when true. */
   complete: boolean;
-  /** Members who played the week (joined before the Deadline), sorted by points then tiebreaker error. */
+  /**
+   * Everyone on the Week's board — anyone who joined before the Deadline —
+   * sorted Played Weeks first, then by points, then by tiebreaker error. A
+   * member who made no Pick is here at zero with `played` false, so a screen
+   * shows them sitting the week out and `scoreSeason` still ignores them.
+   */
   scores: WeeklyScore[];
-  /** Null when nobody played the week. */
+  /** Null when nobody *played* the week; a board of members who all sat out has no winner. */
   weeklyWin: WeeklyWin | null;
 }
 
@@ -155,7 +177,7 @@ export interface LeaderboardRow {
   correct: number;
   incorrect: number;
   weeklyWins: number;
-  /** Published weeks whose Deadline fell after the member joined. */
+  /** Published weeks whose Deadline fell after the member joined and that they made a Pick in. */
   weeksPlayed: number;
   /** Total points divided by weeks played; null before the first week played. */
   averagePoints: number | null;

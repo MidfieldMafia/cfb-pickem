@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { members, week1 } from "./fixtures/week-1-2026";
-import { rules2026 } from "./fixtures/build";
+import { finalGame, rules2026, week } from "./fixtures/build";
 import { scoreSeason, scoreWeek } from "./index";
 
 /**
@@ -68,5 +68,79 @@ describe("Week 1 of 2026 fixture", () => {
       ["cousin-em", 4, 30, 0, 1, 30, 0],
       ["uncle-rick", 5, 0, 0, 1, 0, 73],
     ]);
+  });
+});
+
+/**
+ * A second week on top of the recorded Week 1, so the Played Week rule can be
+ * read against standings that are already hand-verified above.
+ *
+ * Alabama 21, LSU 28: LSU take it, and the Tiebreaker Game's combined score is
+ * 49. Jonah picks it and guesses exactly; Grandma sends a Guess and no Picks;
+ * everyone else does nothing at all.
+ */
+const week2 = week({
+  weekNumber: 2,
+  deadline: "2026-09-12T16:00:00Z",
+  tiebreakerGameId: "w2g1",
+  games: [finalGame("w2g1", "Alabama", "LSU", 21, 28)],
+  picks: [{ memberId: "jonah", gameId: "w2g1", team: "LSU" }],
+  tiebreakerGuesses: [
+    { memberId: "jonah", guess: 49 },
+    { memberId: "grandma", guess: 45 },
+  ],
+});
+
+describe("Week 2 on the Week 1 fixture: a week with no Picks is not a Played Week", () => {
+  const { leaderboard } = scoreSeason(rules2026, [week1, week2], members);
+  const row = (id: string) => leaderboard.find((r) => r.memberId === id)!;
+
+  it("counts a week in which a member made a single Pick", () => {
+    // 80 then 10 over two weeks; errors 3 then 0.
+    expect(row("jonah")).toMatchObject({
+      totalPoints: 90,
+      weeksPlayed: 2,
+      averagePoints: 45,
+      cumulativeTiebreakerError: 3,
+      averageTiebreakerMiss: 1.5,
+    });
+  });
+
+  it("leaves a Guess-only week off the member entirely: weeks played, average and miss are Week 1's", () => {
+    // Grandma's Week 2 Guess of 45 buys nothing — not a played week, not a
+    // point of the average, and not a term in the closeness sum.
+    expect(row("grandma")).toMatchObject({
+      totalPoints: 80,
+      weeksPlayed: 1,
+      averagePoints: 80,
+      cumulativeTiebreakerError: 4,
+      averageTiebreakerMiss: 4,
+    });
+  });
+
+  it("leaves the members who did nothing in Week 2 exactly as Week 1 left them", () => {
+    expect(
+      ["alex", "cousin-em", "uncle-rick"].map((id) => {
+        const r = row(id);
+        return [r.memberId, r.totalPoints, r.weeksPlayed, r.averagePoints, r.cumulativeTiebreakerError];
+      }),
+    ).toEqual([
+      ["alex", 60, 1, 60, 13],
+      ["cousin-em", 30, 1, 30, 0],
+      ["uncle-rick", 0, 1, 0, 73],
+    ]);
+  });
+
+  it("gives Week 2 to the only member who played it, with the rest on the board at zero", () => {
+    const [, second] = scoreSeason(rules2026, [week1, week2], members).weeks;
+
+    // All five are still on the week's board — nobody vanishes for skipping it.
+    expect(second.scores).toHaveLength(members.length);
+    expect(second.scores.filter((s) => s.played).map((s) => s.memberId)).toEqual(["jonah"]);
+    expect(second.scores.filter((s) => !s.played).every((s) => s.points === 0 && s.correct === 0 && s.incorrect === 0)).toBe(
+      true,
+    );
+    // Jonah is the only one in the running, so the week is his outright.
+    expect(second.weeklyWin).toEqual({ winners: ["jonah"], points: 10, decidedBy: "points" });
   });
 });
