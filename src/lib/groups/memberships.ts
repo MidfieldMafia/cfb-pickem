@@ -11,6 +11,7 @@
 import "server-only";
 import { and, asc, eq, isNull, notExists } from "drizzle-orm";
 import {
+  type AbsenceKind,
   groups,
   membershipRemovals,
   memberships,
@@ -30,6 +31,16 @@ export interface RemovalPeriod {
   restoredAt: Date | null;
 }
 
+/**
+ * A period out, and why. The boards and the engine take only the dates — a
+ * member who left is off a board exactly as one removed is — so `kind` matters
+ * only to who may bring them back (#136).
+ */
+export interface Absence extends RemovalPeriod {
+  /** Taken out by an organizer or commissioner, or left on their own. */
+  kind: AbsenceKind;
+}
+
 export interface MemberGroup {
   group: Group;
   role: MembershipRole;
@@ -41,7 +52,7 @@ export interface RosterEntry {
   role: MembershipRole;
   joinedAt: Date;
   /** Oldest first. */
-  removals: RemovalPeriod[];
+  removals: Absence[];
 }
 
 /**
@@ -86,7 +97,7 @@ export async function groupRoster(db: Db, groupId: number): Promise<RosterEntry[
     ...row,
     removals: removals
       .filter((removal) => removal.memberId === row.member.id)
-      .map(({ removedAt, restoredAt }) => ({ removedAt, restoredAt })),
+      .map(({ removedAt, restoredAt, kind }) => ({ removedAt, restoredAt, kind })),
   }));
 }
 

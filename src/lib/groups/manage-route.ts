@@ -24,6 +24,7 @@ import {
   regenerateInGroup,
   removeFromGroup,
   renameGroup,
+  resetJoinLink,
   restoreToGroup,
 } from "./manage";
 import { managePath, type ManageState } from "./manage-state";
@@ -148,5 +149,12 @@ export function renameThisGroup(route: ManageRoute, fields: FormData): Promise<M
   return manageEdit(route, fields, async ({ db, manager }) => {
     const renamed = await renameGroup(db, manager, text(fields, "name"));
     return { done: `Renamed to ${renamed.name}.` };
+  });
+}
+
+export function resetThisJoinLink(route: ManageRoute, fields: FormData): Promise<ManageState> {
+  return manageEdit(route, fields, async ({ db, manager }) => {
+    await resetJoinLink(db, manager);
+    return { done: "The old Join Link has stopped working. Share the new one." };
   });
 }

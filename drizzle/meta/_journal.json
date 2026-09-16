@@ -43,6 +43,13 @@
       "when": 1789485728169,
       "tag": "0005_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789597313976,
+      "tag": "0006_absence-kind",
+      "breakpoints": true
     }
   ]
 }

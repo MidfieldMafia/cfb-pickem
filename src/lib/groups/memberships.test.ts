@@ -253,15 +253,15 @@ describe("a member's groups and a group's roster", () => {
       .values({ groupId: family.id, memberId: grandma.id, removedAt: WEDNESDAY, restoredAt: SATURDAY });
 
     expect((await groupRoster(db, family.id)).find((e) => e.member.id === grandma.id)?.removals).toEqual([
-      { removedAt: WEDNESDAY, restoredAt: SATURDAY },
+      { removedAt: WEDNESDAY, restoredAt: SATURDAY, kind: "removed" },
     ]);
     expect(await memberGroups(db, grandma.id)).toHaveLength(1);
 
     await db.insert(membershipRemovals).values({ groupId: family.id, memberId: grandma.id, removedAt: SUNDAY });
 
     expect((await groupRoster(db, family.id)).find((e) => e.member.id === grandma.id)?.removals).toEqual([
-      { removedAt: WEDNESDAY, restoredAt: SATURDAY },
-      { removedAt: SUNDAY, restoredAt: null },
+      { removedAt: WEDNESDAY, restoredAt: SATURDAY, kind: "removed" },
+      { removedAt: SUNDAY, restoredAt: null, kind: "removed" },
     ]);
     expect(await memberGroups(db, grandma.id)).toEqual([]);
   });

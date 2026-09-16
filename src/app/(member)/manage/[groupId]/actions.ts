@@ -9,6 +9,7 @@ import {
   regeneratePerson,
   removePerson,
   renameThisGroup,
+  resetThisJoinLink,
   restorePerson,
 } from "@/lib/groups/manage-route";
 import type { ManageState } from "@/lib/groups/manage-state";
@@ -47,4 +48,8 @@ export async function regenerateAction(_prev: ManageState, formData: FormData): 
 
 export async function renameAction(_prev: ManageState, formData: FormData): Promise<ManageState> {
   return renameThisGroup(await manageRoute(), formData);
+}
+
+export async function resetJoinLinkAction(_prev: ManageState, formData: FormData): Promise<ManageState> {
+  return resetThisJoinLink(await manageRoute(), formData);
 }

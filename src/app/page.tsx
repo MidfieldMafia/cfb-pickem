@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
 import { db } from "@/db";
 import { currentGroup } from "@/lib/groups/current";
@@ -14,16 +16,19 @@ export default async function Home() {
     redirect(landingRoute(week));
   }
 
+  // The headline is a placeholder until the design pass (#140).
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-16 text-center">
       <Wordmark size="lg" />
       <div className="max-w-sm space-y-3">
-        <h1>Family college football pick&rsquo;em</h1>
+        <h1>College football pick&rsquo;em for your people</h1>
         <p className="text-muted-foreground">
-          Open the personal link a commissioner sent you and you&rsquo;re in. No passwords,
-          no accounts.
+          Open your personal link or the Join Link your group shared. No passwords, no accounts.
         </p>
       </div>
+      <Button asChild size="lg">
+        <Link href="/start">Start a group</Link>
+      </Button>
     </main>
   );
 }

@@ -12,7 +12,8 @@ import type { Db } from "@/db/types";
 import { form } from "@/test/console";
 import { addGroup, familyGroup, joinAt, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { NotOrganizer } from "./manage";
-import { addExistingPerson, addPerson, removePerson, type ManageRoute } from "./manage-route";
+import { groupForJoinLink } from "./join";
+import { addExistingPerson, addPerson, removePerson, resetThisJoinLink, type ManageRoute } from "./manage-route";
 
 function routeAs(db: Db, actor: Member) {
   const revalidated: string[] = [];
@@ -59,6 +60,27 @@ describe("a Manage form", () => {
     const { route } = routeAs(db, grandma);
 
     await expect(removePerson(route, form({ groupId: family.id, memberId: jo.id }))).rejects.toBeInstanceOf(NotOrganizer);
+  });
+});
+
+describe("resetting the Join Link", () => {
+  test("an organizer's reset stops the old link and says so", async () => {
+    const { db, jo, family } = await organized();
+    const { route, revalidated } = routeAs(db, jo);
+
+    expect(await resetThisJoinLink(route, form({ groupId: family.id }))).toEqual({
+      done: "The old Join Link has stopped working. Share the new one.",
+    });
+    expect(await groupForJoinLink(db, family.joinToken)).toBeNull();
+    expect(revalidated).toContain(`/manage/${family.id}`);
+  });
+
+  test("a plain member cannot reset it", async () => {
+    const { db, grandma, family } = await organized();
+    const { route } = routeAs(db, grandma);
+
+    await expect(resetThisJoinLink(route, form({ groupId: family.id }))).rejects.toBeInstanceOf(NotOrganizer);
+    expect((await groupForJoinLink(db, family.joinToken))?.id).toBe(family.id);
   });
 });
 

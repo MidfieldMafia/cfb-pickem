@@ -4,10 +4,13 @@ import { AppHeader } from "@/components/app-header";
 import { MemberChip } from "@/components/member-chip";
 import { Pennant } from "@/components/pennant";
 import { SECTION_LABEL } from "@/components/section-label";
+import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { appUrl } from "@/lib/app-url";
 import { currentManageHref } from "@/lib/groups/current";
+import { joinLinkFor } from "@/lib/groups/join";
 import { MAX_GROUP_NAME } from "@/lib/groups/limits";
 import { manageGroup, manageView, NotOrganizer, type ManagedMember } from "@/lib/groups/manage";
 import { requireMember } from "@/lib/members/current";
@@ -24,6 +27,7 @@ import {
   regenerateAction,
   removeAction,
   renameAction,
+  resetJoinLinkAction,
   restoreAction,
 } from "./actions";
 import { ManageForm } from "./manage-form";
@@ -49,6 +53,7 @@ export default async function Manage({ params }: { params: Promise<{ groupId: st
   const view = await manageView(database, manager);
   const group = { groupId };
   const organizers = view.members.filter((m) => m.role === "organizer").length;
+  const joinLink = joinLinkFor(manager.group, appUrl());
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
@@ -87,6 +92,29 @@ export default async function Manage({ params }: { params: Promise<{ groupId: st
               />
             ))}
           </ul>
+        </section>
+      </Card>
+
+      <Card asChild className="mx-4 gap-3">
+        <section>
+          <p className={SECTION_LABEL}>Join Link</p>
+          <p className="text-sm text-muted-foreground">
+            Anyone who opens it joins {view.group.name}. Share it in your group chat.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs">{joinLink}</code>
+            <CopyButton text={joinLink} />
+          </div>
+          <details>
+            <summary className="flex min-h-tap cursor-pointer items-center text-sm font-semibold text-muted-foreground">
+              Reset the Join Link
+            </summary>
+            <ManageForm action={resetJoinLinkAction} hidden={group} submit="Reset the link" pendingLabel="Resetting…" variant="destructive">
+              <p className="text-xs text-muted-foreground">
+                The old link stops working for anyone who hasn&rsquo;t joined yet. Nobody in the group is removed.
+              </p>
+            </ManageForm>
+          </details>
         </section>
       </Card>
 
