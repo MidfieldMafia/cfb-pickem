@@ -18,6 +18,7 @@ import { plural } from "@/lib/plural";
 import { relativeTime } from "@/lib/relative-time";
 import {
   addAction,
+  addExistingAction,
   demoteAction,
   promoteAction,
   regenerateAction,
@@ -104,6 +105,37 @@ export default async function Manage({ params }: { params: Promise<{ groupId: st
           </ManageForm>
         </section>
       </Card>
+
+      {/* A commissioner's power only: an organizer's people come in through the
+          Join Link. `addable` is always empty for an organizer anyway. */}
+      {manager.commissioner && view.addable.length > 0 ? (
+        <Card asChild className="mx-4 gap-3">
+          <section>
+            <p className={SECTION_LABEL}>Add someone already playing</p>
+            <ManageForm action={addExistingAction} hidden={group} submit="Add to group" pendingLabel="Adding…">
+              <select
+                name="memberId"
+                required
+                defaultValue=""
+                aria-label="Who to add"
+                className="block h-9 w-full rounded-md border border-input bg-card px-3 text-sm"
+              >
+                <option value="" disabled>
+                  Choose someone
+                </option>
+                {view.addable.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.displayName}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Only weeks from today on count for them here. Someone removed from this group is restored below instead.
+              </p>
+            </ManageForm>
+          </section>
+        </Card>
+      ) : null}
 
       {view.removed.length > 0 ? (
         <Card asChild className="mx-4 gap-3">

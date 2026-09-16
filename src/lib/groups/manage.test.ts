@@ -28,7 +28,9 @@ import {
   TUESDAY,
 } from "@/test/week-2";
 import {
+  addExistingToGroup,
   addToGroup,
+  anotherOrganizer,
   demoteInGroup,
   manageGroup,
   manageView,
@@ -174,6 +176,61 @@ describe("adding a person", () => {
   });
 });
 
+describe("adding someone already in the app", () => {
+  test("a commissioner adds an existing person, joined now, and they keep their other groups", async () => {
+    const { db, jonah, grandma, jo } = await organized();
+    const friends = await addGroup(db, "Friends");
+    await joinGroup(db, friends, jo, TUESDAY, "organizer");
+
+    await addExistingToGroup(db, await manageGroup(db, jonah, friends.id), grandma.id, THURSDAY);
+
+    expect((await memberGroups(db, grandma.id)).map((g) => [g.group.name, g.role, g.joinedAt])).toEqual([
+      ["Mabry Family", "member", TUESDAY],
+      ["Friends", "member", THURSDAY],
+    ]);
+  });
+
+  test("only a commissioner may: an organizer's people come in through the Join Link", async () => {
+    const { db, grandma, jo } = await organized();
+    const friends = await addGroup(db, "Friends");
+    await joinGroup(db, friends, jo, TUESDAY, "organizer");
+
+    await expect(
+      addExistingToGroup(db, await manageGroup(db, jo, friends.id), grandma.id, THURSDAY),
+    ).rejects.toBeInstanceOf(NotOrganizer);
+    expect((await memberGroups(db, grandma.id)).map((g) => g.group.name)).toEqual(["Mabry Family"]);
+  });
+
+  test("someone already in the group, or removed from it, is refused with what to do instead", async () => {
+    const { db, jonah, grandma, jo, family } = await organized();
+    const manager = await manageGroup(db, jonah, family.id);
+    await removeFromGroup(db, manager, jo.id, THURSDAY);
+
+    await expect(addExistingToGroup(db, manager, grandma.id, THURSDAY)).rejects.toThrow(
+      "Grandma is already in Mabry Family.",
+    );
+    await expect(addExistingToGroup(db, manager, jo.id, THURSDAY)).rejects.toThrow(
+      "Aunt Jo was removed from Mabry Family; restore them instead.",
+    );
+    await expect(addExistingToGroup(db, manager, 9999, THURSDAY)).rejects.toThrow("No such member.");
+  });
+
+  test("a commissioner's view lists everyone who could be added; an organizer's lists nobody", async () => {
+    const { db, jonah, grandma, jo } = await organized();
+    const friends = await addGroup(db, "Friends");
+    await joinGroup(db, friends, jo, TUESDAY, "organizer");
+
+    const asCommissioner = await manageView(db, await manageGroup(db, jonah, friends.id), THURSDAY);
+    const asOrganizer = await manageView(db, await manageGroup(db, jo, friends.id), THURSDAY);
+
+    expect(asCommissioner.addable).toEqual([
+      { id: jonah.id, displayName: "Jonah" },
+      { id: grandma.id, displayName: "Grandma" },
+    ]);
+    expect(asOrganizer.addable).toEqual([]);
+  });
+});
+
 describe("removing and restoring", () => {
   test("an organizer removes a member, who leaves the group's list for its Removed list", async () => {
     const { db, grandma, jo, family } = await organized();
@@ -264,6 +321,16 @@ describe("organizers", () => {
 
     await demoteInGroup(db, await manageGroup(db, jonah, friends.id), jo.id);
     expect(await roleOf(db, friends.id, jo.id)).toBe("member");
+  });
+  test("the last-organizer rule does not bind a commissioner, who may remove the last one too", async () => {
+    const { db, jonah, jo } = await organized();
+    const friends = await addGroup(db, "Friends");
+    await joinGroup(db, friends, jo, TUESDAY, "organizer");
+
+    await removeFromGroup(db, await manageGroup(db, jonah, friends.id), jo.id, THURSDAY);
+
+    expect(await memberGroups(db, jo.id)).toHaveLength(1);
+    expect(await anotherOrganizer(db, friends.id, jonah.id)).toBe(false);
   });
 });
 

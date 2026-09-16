@@ -14,6 +14,7 @@ import { magicLinkFor } from "@/lib/members/members";
 import { integerField, type Fields } from "@/lib/parse";
 import { Refusal } from "@/lib/refusal";
 import {
+  addExistingToGroup,
   addToGroup,
   demoteInGroup,
   InvalidGroup,
@@ -88,6 +89,15 @@ export function addPerson(route: ManageRoute, fields: FormData): Promise<ManageS
       done: `${added.displayName} is in. Send them this link; it won't be shown again.`,
       link: magicLinkFor(added, route.appUrl),
     };
+  });
+}
+
+/** A commissioner's add of someone already in the app; `addExistingToGroup` refuses anyone else. */
+export function addExistingPerson(route: ManageRoute, fields: FormData): Promise<ManageState> {
+  return manageEdit(route, fields, async ({ db, manager, now }) => {
+    const memberId = integerField(fields, "memberId", () => new InvalidGroup("Choose someone to add."));
+    const added = await addExistingToGroup(db, manager, memberId, now);
+    return { done: `${added.displayName} is in ${manager.group.name}.` };
   });
 }
 

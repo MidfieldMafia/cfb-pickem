@@ -4,9 +4,9 @@ import { groups, membershipRemovals, members, memberships, picks } from "@/db/sc
 import { createTestDb } from "@/test/db";
 import { pickAs, publishWeek2, THURSDAY } from "@/test/week-2";
 import { applyEdit } from "@/lib/picks/edits";
+import { addMember } from "@/lib/groups/console";
 import { asCommissioner, type Commissioner } from "./authority";
 import {
-  addMember,
   bootstrapCommissioner,
   InvalidMember,
   listMembers,
@@ -15,14 +15,16 @@ import {
   regenerateMagicLink,
   removeMember,
   setMemberActive,
+  setPhone,
 } from "./members";
 import { exchangeToken, getSession } from "./auth";
 
 async function setup() {
   const db = await createTestDb();
   const jonah = (await bootstrapCommissioner(db, { displayName: "Jonah" })) as Commissioner;
-  const grandma = await addMember(db, jonah, { displayName: "Grandma", phone: "+12565550140" });
-  return { db, jonah, grandma };
+  const [family] = await db.select().from(groups);
+  const grandma = await addMember(db, jonah, family.id, { displayName: "Grandma", phone: "+12565550140" });
+  return { db, jonah, grandma, family };
 }
 
 describe("commissioner console", () => {
@@ -127,12 +129,12 @@ describe("commissioner console", () => {
   });
 
   test("a phone number already in the app is refused, not a database error", async () => {
-    const { db, jonah } = await setup();
+    const { db, jonah, family } = await setup();
 
-    await expect(addMember(db, jonah, { displayName: "Impostor", phone: " +12565550140 " })).rejects.toThrow(
+    await expect(addMember(db, jonah, family.id, { displayName: "Impostor", phone: " +12565550140 " })).rejects.toThrow(
       InvalidMember,
     );
-    await expect(addMember(db, jonah, { displayName: "Impostor", phone: "+12565550140" })).rejects.toThrow(
+    await expect(addMember(db, jonah, family.id, { displayName: "Impostor", phone: "+12565550140" })).rejects.toThrow(
       /already belongs to Grandma/,
     );
     expect((await listMembers(db, jonah)).map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
@@ -160,5 +162,40 @@ describe("commissioner console", () => {
 
     await expect(removeMember(db, jonah, alex.id)).rejects.toThrow(/on the record/);
     expect((await listMembers(db, jonah)).map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
+  });
+});
+
+describe("editing a phone number", () => {
+  test("a commissioner fills in a number, and the change is on the member", async () => {
+    const { db, jonah } = await setup();
+
+    const updated = await setPhone(db, jonah, jonah.id, " +12565550100 ");
+
+    expect(updated.phone).toBe("+12565550100");
+    expect((await listMembers(db, jonah)).find((m) => m.id === jonah.id)?.phone).toBe("+12565550100");
+  });
+
+  test("a number someone else has is refused and names them; saving a member's own number again is not", async () => {
+    const { db, jonah, grandma } = await setup();
+
+    await expect(setPhone(db, jonah, jonah.id, "+12565550140")).rejects.toThrow(
+      new InvalidMember("That phone number already belongs to Grandma."),
+    );
+    expect((await setPhone(db, jonah, grandma.id, "+12565550140")).phone).toBe("+12565550140");
+    expect((await listMembers(db, jonah)).find((m) => m.id === jonah.id)?.phone).toBeNull();
+  });
+
+  test("a blank number clears it, freeing it for someone else", async () => {
+    const { db, jonah, grandma } = await setup();
+
+    expect((await setPhone(db, jonah, grandma.id, "  ")).phone).toBeNull();
+    expect((await setPhone(db, jonah, jonah.id, "+12565550140")).phone).toBe("+12565550140");
+  });
+
+  test("a number too long, or a member who does not exist, is refused", async () => {
+    const { db, jonah } = await setup();
+
+    await expect(setPhone(db, jonah, jonah.id, "1".repeat(33))).rejects.toThrow("Phone number is too long.");
+    await expect(setPhone(db, jonah, 9999, "+12565550100")).rejects.toThrow("No such member.");
   });
 });

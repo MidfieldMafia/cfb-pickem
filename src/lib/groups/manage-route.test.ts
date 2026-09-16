@@ -10,9 +10,9 @@ import { describe, expect, test } from "vitest";
 import { memberships, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { form } from "@/test/console";
-import { familyGroup, joinAt, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
+import { addGroup, familyGroup, joinAt, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { NotOrganizer } from "./manage";
-import { addPerson, removePerson, type ManageRoute } from "./manage-route";
+import { addExistingPerson, addPerson, removePerson, type ManageRoute } from "./manage-route";
 
 function routeAs(db: Db, actor: Member) {
   const revalidated: string[] = [];
@@ -59,5 +59,19 @@ describe("a Manage form", () => {
     const { route } = routeAs(db, grandma);
 
     await expect(removePerson(route, form({ groupId: family.id, memberId: jo.id }))).rejects.toBeInstanceOf(NotOrganizer);
+  });
+});
+
+describe("a commissioner's Manage form", () => {
+  test("adding someone already in the app answers without a link and refreshes the Manage screen", async () => {
+    const { db, jonah, grandma } = await organized();
+    const friends = await addGroup(db, "Friends");
+    const { route, revalidated } = routeAs(db, jonah);
+
+    expect(await addExistingPerson(route, form({ groupId: friends.id, memberId: grandma.id }))).toEqual({
+      done: "Grandma is in Friends.",
+    });
+    expect(revalidated).toContain(`/manage/${friends.id}`);
+    expect(await addExistingPerson(route, form({ groupId: friends.id }))).toEqual({ error: "Choose someone to add." });
   });
 });

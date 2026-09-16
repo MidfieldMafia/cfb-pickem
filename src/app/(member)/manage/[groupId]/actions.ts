@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import {
+  addExistingPerson,
   addPerson,
   demotePerson,
   promotePerson,
@@ -15,6 +16,10 @@ import { manageRoute } from "./context";
 
 export async function addAction(_prev: ManageState, formData: FormData): Promise<ManageState> {
   return addPerson(await manageRoute(), formData);
+}
+
+export async function addExistingAction(_prev: ManageState, formData: FormData): Promise<ManageState> {
+  return addExistingPerson(await manageRoute(), formData);
 }
 
 export async function removeAction(_prev: ManageState, formData: FormData): Promise<ManageState> {

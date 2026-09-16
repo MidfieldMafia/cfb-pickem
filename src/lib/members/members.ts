@@ -85,7 +85,8 @@ export function cleanInput(input: NewMemberInput): { displayName: string; phone:
 
 /**
  * Seed-only entry point: creates a Commissioner with a fresh Magic Link
- * token. Console additions go through `addMember`, which checks the actor.
+ * token, in Mabry Family. Console additions go through `addMember` in
+ * `groups/console.ts`, which checks the actor and takes the group.
  */
 export async function bootstrapCommissioner(db: Db, input: NewMemberInput): Promise<Member> {
   const clean = await freshInput(db, input);
@@ -104,26 +105,39 @@ export async function bootstrapCommissioner(db: Db, input: NewMemberInput): Prom
  */
 async function freshInput(db: Db, input: NewMemberInput): Promise<ReturnType<typeof cleanInput>> {
   const clean = cleanInput(input);
-  if (clean.phone) {
-    const holder = await db.query.members.findFirst({ where: eq(members.phone, clean.phone) });
-    if (holder) throw new InvalidMember(`That phone number already belongs to ${holder.displayName}.`);
-  }
+  await refuseTakenPhone(db, clean.phone);
   return clean;
+}
+
+/**
+ * The commissioner's refusal for a phone number someone else holds, naming
+ * them: the console sees everyone, so there is nobody to protect by not saying.
+ * An organizer's add refuses without the name (`addToGroup`). `self` is the
+ * member being edited, who may save their own number again.
+ */
+export async function refuseTakenPhone(db: Db, phone: string | null, self?: number): Promise<void> {
+  if (!phone) return;
+  const holder = await db.query.members.findFirst({ where: eq(members.phone, phone) });
+  if (holder && holder.id !== self) {
+    throw new InvalidMember(`That phone number already belongs to ${holder.displayName}.`);
+  }
+}
+
+/**
+ * Sets or clears a member's phone number: how the commissioners fill in their
+ * own, and how a changed number is fixed. Blank clears it, which is also how a
+ * number entered on the wrong person is freed for the right one.
+ */
+export async function setPhone(db: Db, actor: Commissioner, memberId: number, phone: string): Promise<Member> {
+  const clean = phone.trim() || null;
+  if (clean && clean.length > MAX_PHONE) throw new InvalidMember("Phone number is too long.");
+  await refuseTakenPhone(db, clean, memberId);
+  return updateMember(db, memberId, { phone: clean });
 }
 
 /** The Magic Link: the app URL plus the member's secret token. */
 export function magicLinkFor(member: Pick<Member, "token">, appUrl: string): string {
   return `${appUrl.replace(/\/+$/, "")}/m/${member.token}`;
-}
-
-export async function addMember(db: Db, actor: Commissioner, input: NewMemberInput): Promise<Member> {
-  const clean = await freshInput(db, input);
-  const [member] = await db
-    .insert(members)
-    .values({ ...clean, token: newSecret() })
-    .returning();
-  await joinFamily(db, member, "member");
-  return member;
 }
 
 /**

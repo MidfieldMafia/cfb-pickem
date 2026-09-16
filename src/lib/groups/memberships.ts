@@ -150,12 +150,10 @@ export async function groupBoard(db: Db, groupId: number): Promise<BoardMember[]
 }
 
 /**
- * Puts a newly created member in Mabry Family, the oldest group. The Manage
- * screen adds people to its own group (`addToGroup`); until the console's
- * Groups list chooses a group for a new person, the console and the seed only
- * ever add family, and a member left out of
- * every group would vanish from the boards once they are group-scoped. Does
- * nothing on a database with no group.
+ * Puts a newly created commissioner in Mabry Family, the oldest group. Only the
+ * seed's `bootstrapCommissioner` calls it: every other way of adding a person
+ * chooses a group (`addToGroup`, and the console's `addMember`). Does nothing on
+ * a database with no group.
  */
 export async function joinFamily(
   db: Db,

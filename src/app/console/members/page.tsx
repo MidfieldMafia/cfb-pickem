@@ -1,16 +1,21 @@
+import Link from "next/link";
 import { MoreHorizontal, RefreshCw, Shield } from "lucide-react";
 import { db } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Pennant } from "@/components/pennant";
 import { appUrl } from "@/lib/app-url";
+import { groupsByMember, listGroups } from "@/lib/groups/console";
+import { managePath } from "@/lib/groups/manage-state";
 import { requireConsole } from "@/lib/members/current";
 import { deleteWarning } from "@/lib/members/console-edits";
+import { MAX_PHONE } from "@/lib/members/limits";
 import { listMembers, magicLinkFor, pickCountByMember } from "@/lib/members/members";
 import { plural } from "@/lib/plural";
 import { relativeTime } from "@/lib/relative-time";
-import { deleteMemberAction, regenerateAction, setActiveAction } from "./actions";
+import { deleteMemberAction, editPhoneAction, regenerateAction, setActiveAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
 import { ActionForm } from "../action-form";
 import { CopyButton } from "@/components/copy-button";
@@ -22,9 +27,11 @@ function maskedLink(link: string): string {
 
 export default async function Members() {
   const commissioner = await requireConsole();
-  const [roster, pickCounts] = await Promise.all([
+  const [roster, pickCounts, groups, groupsOf] = await Promise.all([
     listMembers(db(), commissioner),
     pickCountByMember(db(), commissioner),
+    listGroups(db(), commissioner),
+    groupsByMember(db(), commissioner),
   ]);
   const base = appUrl();
   const commissioners = roster.filter((m) => m.isCommissioner).length;
@@ -38,14 +45,14 @@ export default async function Members() {
         </p>
       </div>
 
-      <AddMemberForm />
+      <AddMemberForm groups={groups.map(({ id, name }) => ({ id, name }))} />
 
       <Card className="gap-0 overflow-x-auto rounded-md p-0">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
             <tr>
               <th className="p-3">Member</th>
-              <th className="p-3">Role</th>
+              <th className="p-3">Role and groups</th>
               <th className="p-3">Magic Link</th>
               <th className="p-3">Last opened</th>
               <th className="p-3 text-right">Actions</th>
@@ -77,6 +84,19 @@ export default async function Members() {
                       )}
                       {member.active ? null : <Badge variant="outline">Deactivated</Badge>}
                     </div>
+                    {/* Their groups now, each opening its Manage screen. A
+                        column of its own pushed Actions off a laptop screen. */}
+                    <ul className="mt-1 space-y-0.5 text-xs">
+                      {(groupsOf.get(member.id) ?? []).map((group) => (
+                        <li key={group.id} className="whitespace-nowrap">
+                          <Link href={managePath(group.id)}>{group.name}</Link>
+                          {group.role === "organizer" ? (
+                            <span className="text-muted-foreground"> · organizer</span>
+                          ) : null}
+                        </li>
+                      ))}
+                      {groupsOf.has(member.id) ? null : <li className="text-muted-foreground">No group</li>}
+                    </ul>
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
@@ -100,17 +120,36 @@ export default async function Members() {
                       {/* Deactivating is rare and cannot be undone from the
                           member's side, so it sits behind the overflow rather
                           than one stray click from a destructive button in
-                          every row. A commissioner cannot deactivate
-                          themselves, so their row has no overflow at all. */}
-                      {member.id === commissioner.id ? null : (
-                        <details className="text-right">
-                          <summary
-                            aria-label={`More for ${member.displayName}`}
-                            className="flex size-tap cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+                          every row. The phone edit sits there too, so a
+                          commissioner's own row has an overflow for it even
+                          though they cannot deactivate themselves. */}
+                      <details className="text-right">
+                        <summary
+                          aria-label={`More for ${member.displayName}`}
+                          className="flex size-tap cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+                        >
+                          <MoreHorizontal size={16} aria-hidden />
+                        </summary>
+                        <div className="mt-1 flex flex-col items-end gap-2">
+                          <ActionForm
+                            action={editPhoneAction}
+                            hidden={{ memberId: member.id }}
+                            submit="Save phone"
+                            pendingLabel="Saving…"
+                            className="space-y-1 text-right"
                           >
-                            <MoreHorizontal size={16} aria-hidden />
-                          </summary>
-                          <div className="mt-1 flex flex-col items-end gap-2">
+                            <Input
+                              name="phone"
+                              type="tel"
+                              maxLength={MAX_PHONE}
+                              defaultValue={member.phone ?? ""}
+                              aria-label={`Phone number for ${member.displayName}`}
+                              placeholder="Blank clears it"
+                              autoComplete="off"
+                              className="w-44"
+                            />
+                          </ActionForm>
+                          {member.id === commissioner.id ? null : (
                             <form action={setActiveAction}>
                               <input type="hidden" name="memberId" value={member.id} />
                               <input type="hidden" name="active" value={member.active ? "false" : "true"} />
@@ -118,27 +157,27 @@ export default async function Members() {
                                 {member.active ? "Deactivate" : "Reactivate"}
                               </Button>
                             </form>
-                            {/* Deleting is only offered once they are deactivated,
-                                so the irreversible step is never one click from
-                                the reversible one, and the sentence says what
-                                goes with them before the button does it. */}
-                            {member.active ? null : (
-                              <ActionForm
-                                action={deleteMemberAction}
-                                hidden={{ memberId: member.id }}
-                                submit="Delete"
-                                pendingLabel="Deleting…"
-                                variant="destructive"
-                                className="space-y-1 text-right"
-                              >
-                                <span className="max-w-56 text-xs text-muted-foreground">
-                                  {deleteWarning(pickCounts.get(member.id) ?? 0)}
-                                </span>
-                              </ActionForm>
-                            )}
-                          </div>
-                        </details>
-                      )}
+                          )}
+                          {/* Deleting is only offered once they are deactivated,
+                              so the irreversible step is never one click from
+                              the reversible one, and the sentence says what
+                              goes with them before the button does it. */}
+                          {member.active ? null : (
+                            <ActionForm
+                              action={deleteMemberAction}
+                              hidden={{ memberId: member.id }}
+                              submit="Delete"
+                              pendingLabel="Deleting…"
+                              variant="destructive"
+                              className="space-y-1 text-right"
+                            >
+                              <span className="max-w-56 text-xs text-muted-foreground">
+                                {deleteWarning(pickCounts.get(member.id) ?? 0)}
+                              </span>
+                            </ActionForm>
+                          )}
+                        </div>
+                      </details>
                     </div>
                   </td>
                 </tr>

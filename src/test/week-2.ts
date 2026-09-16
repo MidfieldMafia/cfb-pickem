@@ -12,7 +12,8 @@ import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
 import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
 import { asMember, type Commissioner } from "@/lib/members/authority";
-import { addMember, bootstrapCommissioner } from "@/lib/members/members";
+import { addMember } from "@/lib/groups/console";
+import { bootstrapCommissioner } from "@/lib/members/members";
 import { applyEdit } from "@/lib/picks/edits";
 import { addGame, openWeek, publishSlate, setTiebreaker, type Slate } from "@/lib/slate/slate";
 import type { Game, Member, Week } from "@/db/schema";
@@ -58,12 +59,22 @@ export interface Week2Fixture {
 }
 
 /**
- * Adds a member who joined at a given instant. Who is on a Week's board turns
+ * A phone number nobody in the fixture has yet: every person added from now on
+ * needs one, and the numbers are unique. Numbered per module, which is per suite.
+ */
+let phones = 0;
+function nextPhone(): string {
+  phones += 1;
+  return `+1256555${String(1000 + phones)}`;
+}
+
+/**
+ * Adds a member, into Mabry Family, who joined at a given instant. Who is on a Week's board turns
  * on `joinedAt` against the Deadline, so a test that puts someone either side
  * of it says which side here rather than leaning on the wall clock.
  */
 export async function joinAt(db: Db, commissioner: Commissioner, displayName: string, at: Date): Promise<Member> {
-  const member = await addMember(db, commissioner, { displayName });
+  const member = await addMember(db, commissioner, (await familyGroup(db)).id, { displayName, phone: nextPhone() });
   const [pinned] = await db.update(members).set({ joinedAt: at }).where(eq(members.id, member.id)).returning();
   await db.update(memberships).set({ joinedAt: at }).where(eq(memberships.memberId, member.id));
   return pinned;
@@ -116,7 +127,7 @@ export async function seedWeek2(): Promise<Week2Fixture> {
     active: true,
   });
   const jonah = (await bootstrapCommissioner(db, { displayName: "Jonah" })) as Commissioner;
-  const grandma = await addMember(db, jonah, { displayName: "Grandma" });
+  const grandma = await addMember(db, jonah, (await familyGroup(db)).id, { displayName: "Grandma", phone: nextPhone() });
   // Pinned before any Week 2 Deadline, so no suite depends on the wall clock
   // for whether these two are on the board.
   await db.update(members).set({ joinedAt: TUESDAY });
