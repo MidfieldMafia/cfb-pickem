@@ -159,7 +159,7 @@ function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson 
   }
   return (
     <div className="flex items-center gap-3 rounded-xl bg-primary p-3 text-primary-foreground">
-      <Pennant avatarId={viewer.avatarId} size={40} />
+      <Pennant avatarId={viewer.avatarId} name={viewer.displayName} size={40} />
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5">
         <span className="text-xs font-bold uppercase tracking-[0.08em] opacity-85">You · Week {state.week.weekNumber}</span>
         <span className="text-right text-xs font-bold uppercase tracking-[0.08em] tabular-nums opacity-85">
@@ -474,7 +474,7 @@ function SidePanel({
                   you ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                 }`}
               >
-                <Pennant avatarId={member.avatarId} size={20} />
+                <Pennant avatarId={member.avatarId} name={member.displayName} size={20} />
                 <span className={`text-xs ${you ? "font-extrabold" : "font-semibold"}`}>{you ? "You" : member.displayName}</span>
                 {pick.lock === "counts" ? (
                   <Lock size={12} strokeWidth={3} aria-label="Lock of the Week" />
@@ -515,7 +515,7 @@ function TiebreakerSection({ game, scores, viewerId }: { game: RevealGame; score
           const you = s.member.id === viewerId;
           return (
             <div key={s.member.id} className={`flex min-h-8 items-center gap-2 rounded-md px-1.5 ${you ? "bg-accent" : ""}`}>
-              <Pennant avatarId={s.member.avatarId} size={20} />
+              <Pennant avatarId={s.member.avatarId} name={s.member.displayName} size={20} />
               <span className={`min-w-0 flex-1 truncate text-sm ${you ? "font-extrabold" : "font-semibold"}`}>
                 {you ? "You" : s.member.displayName}
               </span>

@@ -10,7 +10,7 @@ import type { MemberJson } from "@/lib/slate/json";
 export function MemberChip({ member }: { member: Pick<MemberJson, "avatarId" | "displayName"> }) {
   return (
     <Link href="/welcome" className="tap flex items-center gap-2 text-sm font-semibold no-underline">
-      <Pennant avatarId={member.avatarId} size={28} />
+      <Pennant avatarId={member.avatarId} name={member.displayName} size={28} />
       {member.displayName}
     </Link>
   );

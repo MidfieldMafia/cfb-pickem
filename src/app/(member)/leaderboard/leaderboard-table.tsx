@@ -134,7 +134,7 @@ export function LeaderboardTable({
                 </TableCell>
                 <TableCell>
                   <span className="flex items-center gap-2">
-                    <Pennant avatarId={row.member.avatarId} size={28} />
+                    <Pennant avatarId={row.member.avatarId} name={row.member.displayName} size={28} />
                     <span className="min-w-0">
                       <span className="flex items-center gap-1.5">
                         <span className="truncate font-semibold">{row.member.displayName}</span>

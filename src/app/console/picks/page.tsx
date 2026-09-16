@@ -39,7 +39,7 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
     <tr className="align-middle">
       <td className="p-3">
         <div className="flex items-center gap-3">
-          <Pennant avatarId={row.member.avatarId} size={36} />
+          <Pennant avatarId={row.member.avatarId} name={row.member.displayName} size={36} />
           <span className="font-semibold">{row.member.displayName}</span>
         </div>
       </td>
