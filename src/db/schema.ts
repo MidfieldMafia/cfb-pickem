@@ -1,6 +1,6 @@
 /**
  * Saturday Slate database schema. Vocabulary follows CONTEXT.md: Season,
- * Week, Game, Member, Pick, Lock of the Week, Tiebreaker Guess, Void,
+ * Week, Game, Member, Group, Pick, Lock of the Week, Tiebreaker Guess, Void,
  * Result Override. All timestamps are UTC. No point totals are stored;
  * scoring recomputes from picks and results on every read.
  */
@@ -8,6 +8,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -139,7 +140,8 @@ export const members = pgTable("members", {
   displayName: text("display_name").notNull(),
   /** Id from public/avatars/avatars.json. Null until the welcome page is done. */
   avatarId: text("avatar_id"),
-  phone: text("phone"),
+  /** Unique across members: one phone is one person, whatever groups they play in. */
+  phone: text("phone").unique(),
   isCommissioner: boolean("is_commissioner").notNull().default(false),
   /** The secret in the Magic Link. Regenerating replaces it. */
   token: text("token").notNull().unique(),
@@ -151,6 +153,66 @@ export const members = pgTable("members", {
   lastSeenAt: utc("last_seen_at"),
   createdAt: utc("created_at").notNull().defaultNow(),
 });
+
+/**
+ * A set of members who compete against each other. Every group plays the same
+ * Slate; the group only decides who is on its boards. Names are not unique.
+ */
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  /** The secret in the Join Link. Resetting replaces it. */
+  joinToken: text("join_token").notNull().unique(),
+  createdAt: utc("created_at").notNull().defaultNow(),
+});
+
+export const membershipRoles = ["organizer", "member"] as const;
+export type MembershipRole = (typeof membershipRoles)[number];
+
+/**
+ * A member's place in one group. Commissioner stays a flag on the member, not
+ * a role here: a commissioner plays only in groups they hold a membership in.
+ */
+export const memberships = pgTable(
+  "memberships",
+  {
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    role: text("role", { enum: membershipRoles }).notNull().default("member"),
+    /** A Week counts in this group only if its Deadline fell after this. Kept through a removal and restore. */
+    joinedAt: utc("joined_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.groupId, t.memberId] }), index("memberships_member_idx").on(t.memberId)],
+);
+
+/**
+ * One row per period a membership was removed. Nothing about the membership
+ * is deleted on removal, so restoring it brings back everything the member had
+ * in the group; a Week whose Deadline fell inside a period does not count.
+ * `restoredAt` is null while the member is still out.
+ */
+export const membershipRemovals = pgTable(
+  "membership_removals",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id").notNull(),
+    memberId: integer("member_id").notNull(),
+    removedAt: utc("removed_at").notNull(),
+    restoredAt: utc("restored_at"),
+  },
+  (t) => [
+    foreignKey({ columns: [t.groupId, t.memberId], foreignColumns: [memberships.groupId, memberships.memberId] }),
+    /** Out at most once at a time. */
+    uniqueIndex("membership_removals_open_idx")
+      .on(t.groupId, t.memberId)
+      .where(sql`${t.restoredAt} is null`),
+    check("membership_removals_restored_after_removed", sql`${t.restoredAt} is null or ${t.restoredAt} > ${t.removedAt}`),
+  ],
+);
 
 export const sessions = pgTable(
   "sessions",
@@ -300,4 +362,6 @@ export type Season = typeof seasons.$inferSelect;
 export type Week = typeof weeks.$inferSelect;
 export type Game = typeof games.$inferSelect;
 export type Member = typeof members.$inferSelect;
+export type Group = typeof groups.$inferSelect;
+export type Membership = typeof memberships.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
