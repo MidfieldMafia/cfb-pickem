@@ -78,7 +78,7 @@ function StepRow({
  * Guess. The countdown runs on the server clock, and at zero the screen
  * flips to its locked state without a reload.
  */
-export function Review({ initial, commissioner }: { initial: SheetJson; commissioner?: boolean }) {
+export function Review({ initial, manage }: { initial: SheetJson; manage?: string | null }) {
   const router = useRouter();
   const [sheet, setSheet] = useState(initial);
   const { remainingMs, passed, sync } = useDeadlineClock(sheet.deadline, sheet.serverNow);
@@ -259,7 +259,7 @@ export function Review({ initial, commissioner }: { initial: SheetJson; commissi
         <Wordmark />
         <div className="flex items-center gap-1">
           <h1 className="min-w-0 flex-1 font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
-          <HeaderLinks commissioner={commissioner} />
+          <HeaderLinks manage={manage} />
           <Badge variant={progress.remaining ? "outline" : "default"}>
             {stepsDone} of {steps}
           </Badge>

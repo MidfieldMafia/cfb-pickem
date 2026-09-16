@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { NoGroup } from "@/components/no-group";
 import { cfbd } from "@/lib/cfbd";
-import { currentGroupChoice } from "@/lib/groups/current";
+import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { toMemberJson } from "@/lib/slate/json";
 import { toWeekStateJson } from "@/lib/week/json";
@@ -31,7 +31,7 @@ export default async function Live() {
     <LiveBoard
       initial={toWeekStateJson(week)}
       viewer={toMemberJson(member)}
-      commissioner={member.isCommissioner}
+      manage={await currentManageHref()}
       switcher={<GroupSwitcher choice={choice} />}
     />
   );

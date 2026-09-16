@@ -157,16 +157,16 @@ describe("a tap on a team", () => {
 describe("the header", () => {
   const link = (name: string) => screen.queryByRole("link", { name });
 
-  test("links every member to How to play, and no one but a commissioner to the Console", () => {
+  test("links every member to How to play, and shows Manage only when there is somewhere to manage", () => {
     render(<PickFlow sheet={sheet()} />);
 
     expect(link("How to play")?.getAttribute("href")).toBe("/rules");
-    expect(link("Commissioner console")).toBeNull();
+    expect(link("Manage")).toBeNull();
   });
 
-  test("links a commissioner to the Console", () => {
-    render(<PickFlow sheet={sheet()} commissioner />);
+  test("links Manage to wherever the page says: the console, or a group's Manage screen", () => {
+    render(<PickFlow sheet={sheet()} manage="/manage/7" />);
 
-    expect(link("Commissioner console")?.getAttribute("href")).toBe("/console");
+    expect(link("Manage")?.getAttribute("href")).toBe("/manage/7");
   });
 });

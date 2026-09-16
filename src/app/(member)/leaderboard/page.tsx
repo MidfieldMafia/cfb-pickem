@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberChip } from "@/components/member-chip";
 import { NoGroup } from "@/components/no-group";
-import { currentGroupChoice } from "@/lib/groups/current";
+import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { seasonResult } from "@/lib/results/results";
 import { weeklyWinSentence } from "@/lib/results/summary";
@@ -42,7 +42,7 @@ export default async function Leaderboard() {
             ? `${season.season.year} season · after Week ${latest.week.weekNumber}`
             : `${season.season.year} season · before the first week`
         }
-        commissioner={member.isCommissioner}
+        manage={await currentManageHref()}
         right={<MemberChip member={member} />}
       />
 

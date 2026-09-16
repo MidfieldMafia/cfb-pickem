@@ -6,7 +6,7 @@ import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberChip } from "@/components/member-chip";
 import { NoGroup } from "@/components/no-group";
 import { SECTION_LABEL } from "@/components/section-label";
-import { currentGroupChoice } from "@/lib/groups/current";
+import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { seasonResult } from "@/lib/results/results";
 import { weeklyWinSentence } from "@/lib/results/summary";
@@ -33,7 +33,7 @@ export default async function History() {
         title="History"
         group={<GroupSwitcher choice={choice} />}
         sub={`${season.season.year} season`}
-        commissioner={member.isCommissioner}
+        manage={await currentManageHref()}
         right={<MemberChip member={member} />}
       />
 

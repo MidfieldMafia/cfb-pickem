@@ -8,7 +8,7 @@ import { RevealList } from "@/components/reveal";
 import { SECTION_LABEL } from "@/components/section-label";
 import { YourWeek } from "@/components/standing-card";
 import { cfbd } from "@/lib/cfbd";
-import { currentGroup } from "@/lib/groups/current";
+import { currentGroup, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import {
   pickBreakdown,
@@ -44,7 +44,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
         <AppHeader
           title="Week results"
-          commissioner={member.isCommissioner}
+          manage={await currentManageHref()}
           right={<MemberChip member={member} />}
         />
         <Card asChild className="mx-4 gap-2">
@@ -82,7 +82,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       <AppHeader
         title={`Week ${weekNumber} results`}
         sub={`${complete ? "Final" : "In progress"}${won ? ` · ${won}` : ""}`}
-        commissioner={member.isCommissioner}
+        manage={await currentManageHref()}
         right={<MemberChip member={member} />}
       />
 

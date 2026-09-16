@@ -613,12 +613,12 @@ function GameSheet({
 export function LiveBoard({
   initial,
   viewer,
-  commissioner,
+  manage,
   switcher,
 }: {
   initial: WeekStateJson;
   viewer: MemberJson;
-  commissioner?: boolean;
+  manage?: string | null;
   /**
    * The group name, rendered on the server and handed down. This file is
    * `"use client"`, so it cannot build the switcher itself: `groups/current.ts`
@@ -653,7 +653,7 @@ export function LiveBoard({
         title="Live Board"
         group={switcher}
         sub={sub}
-        commissioner={commissioner}
+        manage={manage}
         right={<MemberChip member={viewer} />}
       />
 

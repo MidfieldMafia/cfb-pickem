@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MemberChip } from "@/components/member-chip";
 import { SECTION_LABEL } from "@/components/section-label";
+import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { activeSeason, deadlinePassed, publishedSlate } from "@/lib/slate/slate";
 
@@ -38,7 +39,7 @@ export default async function HowToPlay({ searchParams }: { searchParams: Promis
         <AppHeader
           title="How to play"
           sub={`${season.year} season`}
-          commissioner={member.isCommissioner}
+          manage={await currentManageHref()}
           right={<MemberChip member={member} />}
         />
 

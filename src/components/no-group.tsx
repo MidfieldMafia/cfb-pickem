@@ -3,6 +3,7 @@ import { MemberChip } from "@/components/member-chip";
 import { SECTION_LABEL } from "@/components/section-label";
 import { Card } from "@/components/ui/card";
 import type { Member } from "@/db/schema";
+import { currentManageHref } from "@/lib/groups/current";
 
 /**
  * Where a signed-in member with no group lands. Every board screen shows only
@@ -13,12 +14,12 @@ import type { Member } from "@/db/schema";
  * their own ticket, and a button that went nowhere would be worse than a
  * sentence that explains the state.
  */
-export function NoGroup({ member }: { member: Member }) {
+export async function NoGroup({ member }: { member: Member }) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title="Saturday Slate"
-        commissioner={member.isCommissioner}
+        manage={await currentManageHref()}
         right={<MemberChip member={member} />}
       />
       <Card asChild className="mx-4 gap-2">

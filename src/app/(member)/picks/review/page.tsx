@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { toSheetJson } from "@/lib/picks/json";
 import { currentWeek } from "@/lib/week/week";
@@ -10,5 +11,5 @@ export default async function ReviewPage() {
   const member = await requireMember();
   const week = await currentWeek(db(), member);
   if (!week) return <NoSlate />;
-  return <Review initial={toSheetJson(week.sheet)} commissioner={member.isCommissioner} />;
+  return <Review initial={toSheetJson(week.sheet)} manage={await currentManageHref()} />;
 }

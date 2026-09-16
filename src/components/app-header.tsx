@@ -4,7 +4,7 @@ import { HeaderLinks } from "./header-links";
 
 /**
  * Phone screen header: mark, the group this board belongs to, title, optional
- * subtitle, the `HeaderLinks` (Rules, and the Console for a commissioner), and
+ * subtitle, the `HeaderLinks` (Rules, and Manage for whoever runs things), and
  * a slot on the right.
  *
  * `group` sits above the title because it says *whose* board this is, which
@@ -16,14 +16,15 @@ export function AppHeader({
   title,
   sub,
   group,
-  commissioner,
+  manage,
   right,
 }: {
   title: ReactNode;
   sub?: ReactNode;
   /** The group's name, or the switcher for a member of two or more. */
   group?: ReactNode;
-  commissioner?: boolean;
+  /** Where the Manage icon goes, from `currentManageHref`; none when absent. */
+  manage?: string | null;
   right?: ReactNode;
 }) {
   return (
@@ -34,7 +35,7 @@ export function AppHeader({
         <h1 className="m-0 font-display text-[22px] leading-7">{title}</h1>
         {sub ? <div className="text-sm leading-5 text-muted-foreground">{sub}</div> : null}
       </div>
-      <HeaderLinks commissioner={commissioner} />
+      <HeaderLinks manage={manage} />
       {right}
     </header>
   );
