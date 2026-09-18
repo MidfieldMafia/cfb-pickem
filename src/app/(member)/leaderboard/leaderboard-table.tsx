@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Pennant } from "@/components/pennant";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { LeaderboardRow } from "@/lib/results/results";
-import { averageLabel, movement, record, tiebreakerMissLabel, weeksPlayedNote, type Movement } from "@/lib/results/summary";
+import { averageLabel, movement, record, tiebreakerMissLabel, type Movement } from "@/lib/results/summary";
 import { sortLeaderboard, type SortColumn, type SortDirection } from "./leaderboard-sort";
 
 /**
@@ -84,16 +84,35 @@ function SortableHead({
   );
 }
 
+/**
+ * Who the Trophy belongs to: the one member out in front, and only once the
+ * group has a Played Week behind them.
+ *
+ * Both halves are load-bearing, and the board a new group opens on is what
+ * proves it. Nobody there has played a Week — the group was started after the
+ * last Deadline — so every row is level on points, Weekly Wins and Tiebreaker
+ * error, `rank` ties them all at 1 (see `compareSeason` in `score-season.ts`),
+ * and a rank-1 test alone hands every member a Trophy. The same happens inside
+ * a Week that has begun: until a game goes final the whole board sits at zero.
+ *
+ * So a shared first place gets no Trophy at all. It is the honest answer —
+ * nobody is leading a board that is level — and it is the only rule that
+ * cannot degenerate into crowning everyone. `weeksPlayed` then covers the case
+ * the tie test cannot see: a group of one, alone at rank 1 before a Week has
+ * ever counted.
+ */
+function trophyHolder(rows: LeaderboardRow[]): number | null {
+  const leaders = rows.filter((row) => row.rank === 1);
+  if (leaders.length !== 1 || leaders[0].weeksPlayed === 0) return null;
+  return leaders[0].member.id;
+}
+
 export function LeaderboardTable({
   rows,
   viewerId,
-  weeksInSeason,
-  showTrophy,
 }: {
   rows: LeaderboardRow[];
   viewerId: number;
-  weeksInSeason: number;
-  showTrophy: boolean;
 }) {
   // Reinitialized on every mount, so leaving the screen and coming back — a
   // reload — always starts from the default order (#134).
@@ -107,6 +126,9 @@ export function LeaderboardTable({
   }
 
   const displayed = sort ? sortLeaderboard(rows, sort.column, sort.direction) : rows;
+  // Read off the board, not the sorted view: sorting by a column reorders the
+  // rows without changing anyone's rank, so the Trophy stays with the same member.
+  const trophy = trophyHolder(rows);
 
   return (
     <Card className="gap-0 overflow-hidden p-0">
@@ -123,7 +145,6 @@ export function LeaderboardTable({
         <TableBody>
           {displayed.map((row) => {
             const you = row.member.id === viewerId;
-            const weeks = weeksPlayedNote(row, weeksInSeason);
             const move = movement(row);
             return (
               <TableRow key={row.member.id} data-member-id={row.member.id} className={you ? "bg-muted" : undefined}>
@@ -136,17 +157,15 @@ export function LeaderboardTable({
                 <TableCell>
                   <span className="flex items-center gap-2">
                     <Pennant avatarId={row.member.avatarId} name={row.member.displayName} size={28} />
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-1.5">
-                        <span className="truncate font-semibold">{row.member.displayName}</span>
-                        {you ? <span className="text-xs text-muted-foreground">you</span> : null}
-                        {row.rank === 1 && showTrophy ? (
-                          <Badge variant="leader">
-                            <Trophy size={12} aria-hidden /> <span className="sr-only">Leading the season</span>
-                          </Badge>
-                        ) : null}
-                      </span>
-                      {weeks ? <span className="block text-xs text-muted-foreground">{weeks}</span> : null}
+                    {/* min-w-0 is what lets the name truncate rather than widen the column. */}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate font-semibold">{row.member.displayName}</span>
+                      {you ? <span className="text-xs text-muted-foreground">you</span> : null}
+                      {row.member.id === trophy ? (
+                        <Badge variant="leader">
+                          <Trophy size={12} aria-hidden /> <span className="sr-only">Leading the season</span>
+                        </Badge>
+                      ) : null}
                     </span>
                   </span>
                 </TableCell>

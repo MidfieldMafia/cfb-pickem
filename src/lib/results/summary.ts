@@ -329,23 +329,3 @@ export function movement(row: Pick<LeaderboardRow, "rank" | "previousRank">): Mo
     label: `${up ? "Up" : "Down"} ${plural(places, "place")}, from ${ordinal(previousRank)}`,
   };
 }
-
-/**
- * How much of the season a member has actually played, said out loud only
- * when it is less than the season has run: "2 of 3 weeks".
- *
- * A member who joined in Week 3 sits out Weeks 1 and 2 (`roster`, and the
- * engine's `onBoard`), and one who picked nothing in Week 4 sits that one out
- * too (the engine's `playedWeek`), so their total is over fewer weeks than the
- * member above them.
- * Their average already accounts for it; this is the note that stops the total
- * looking like a losing one. Null when they have played every week the season
- * has.
- */
-export function weeksPlayedNote(
-  row: Pick<LeaderboardRow, "weeksPlayed">,
-  weeksInSeason: number,
-): string | null {
-  if (weeksInSeason === 0 || row.weeksPlayed >= weeksInSeason) return null;
-  return `${row.weeksPlayed} of ${plural(weeksInSeason, "week")}`;
-}
