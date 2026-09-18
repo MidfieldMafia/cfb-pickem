@@ -3,7 +3,8 @@
  * The sortable Leaderboard table (#134): clicking Pts, W–L, Wins, Avg, or
  * Miss sorts best-first, a second click reverses, the # column keeps each
  * member's real place regardless of order, and a fresh mount (a reload)
- * always starts from the default order.
+ * always starts from the default order. The Trophy is here too: it belongs to
+ * the one member out in front, and to nobody at all on a board that is level.
  *
  * Assertions are plain DOM reads, not `@testing-library/jest-dom` matchers,
  * as `live-board.test.tsx` explains for this repo.
@@ -49,7 +50,7 @@ function renderedMemberOrder(): number[] {
 
 describe("default order", () => {
   test("renders the given rows in the order they arrived, with no active sort", () => {
-    render(<LeaderboardTable rows={ROWS} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    render(<LeaderboardTable rows={ROWS} viewerId={1} />);
     expect(renderedMemberOrder()).toEqual([1, 2, 3]);
     expect(screen.getByRole("columnheader", { name: /Pts/ }).getAttribute("aria-sort")).toBe("none");
   });
@@ -57,14 +58,14 @@ describe("default order", () => {
 
 describe("sorting by Pts", () => {
   test("first click sorts best-first: highest points first", () => {
-    render(<LeaderboardTable rows={ROWS} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    render(<LeaderboardTable rows={ROWS} viewerId={1} />);
     fireEvent.click(screen.getByRole("button", { name: "Pts" }));
     expect(renderedMemberOrder()).toEqual([2, 1, 3]);
     expect(screen.getByRole("columnheader", { name: /Pts/ }).getAttribute("aria-sort")).toBe("ascending");
   });
 
   test("second click reverses it", () => {
-    render(<LeaderboardTable rows={ROWS} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    render(<LeaderboardTable rows={ROWS} viewerId={1} />);
     const button = screen.getByRole("button", { name: "Pts" });
     fireEvent.click(button);
     fireEvent.click(button);
@@ -73,7 +74,7 @@ describe("sorting by Pts", () => {
   });
 
   test("the # column keeps each member's real place, not their row position", () => {
-    render(<LeaderboardTable rows={ROWS} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    render(<LeaderboardTable rows={ROWS} viewerId={1} />);
     fireEvent.click(screen.getByRole("button", { name: "Pts" }));
     const cells = screen.getAllByRole("row").slice(1).map((tr) => tr.querySelector("td")?.textContent?.trim());
     // Sorted order is member 2 (rank 1), member 1 (rank 2), member 3 (rank 3) — real ranks, unchanged by the sort.
@@ -81,13 +82,54 @@ describe("sorting by Pts", () => {
   });
 
   test("a fresh mount starts back at the default order", () => {
-    const { unmount } = render(<LeaderboardTable rows={ROWS} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    const { unmount } = render(<LeaderboardTable rows={ROWS} viewerId={1} />);
     fireEvent.click(screen.getByRole("button", { name: "Pts" }));
     expect(renderedMemberOrder()).toEqual([2, 1, 3]);
     unmount();
 
-    render(<LeaderboardTable rows={ROWS} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    render(<LeaderboardTable rows={ROWS} viewerId={1} />);
     expect(renderedMemberOrder()).toEqual([1, 2, 3]);
+  });
+});
+
+describe("the Trophy", () => {
+  /** Every row the board would mark as leading, by member id. */
+  function trophies(): number[] {
+    return screen
+      .getAllByRole("row")
+      .slice(1)
+      .filter((tr) => tr.textContent?.includes("Leading the season"))
+      .map((tr) => Number(tr.getAttribute("data-member-id")));
+  }
+
+  test("goes to the one member out in front", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} />);
+    expect(trophies()).toEqual([2]);
+  });
+
+  test("goes to nobody on a board where everyone shares first", () => {
+    // The board a group started after the last Deadline opens on: nobody has
+    // played a Week, so every row ties at rank 1 and no one is leading.
+    const level = [row(1, 1, { weeksPlayed: 0 }), row(2, 1, { weeksPlayed: 0 }), row(3, 1, { weeksPlayed: 0 })];
+    render(<LeaderboardTable rows={level} viewerId={1} />);
+    expect(trophies()).toEqual([]);
+  });
+
+  test("goes to nobody while a first Week is still level at zero", () => {
+    // Deadline passed and everyone picked, but no game is final yet.
+    const played = [row(1, 1), row(2, 1), row(3, 1)];
+    render(<LeaderboardTable rows={played} viewerId={1} />);
+    expect(trophies()).toEqual([]);
+  });
+
+  test("goes to nobody in a group of one before a Week has counted", () => {
+    render(<LeaderboardTable rows={[row(1, 1, { weeksPlayed: 0 })]} viewerId={1} />);
+    expect(trophies()).toEqual([]);
+  });
+
+  test("goes to a group of one once they have played a Week", () => {
+    render(<LeaderboardTable rows={[row(1, 1, { totalPoints: 30 })]} viewerId={1} />);
+    expect(trophies()).toEqual([1]);
   });
 });
 
@@ -99,13 +141,13 @@ describe("sorting by Miss, where a dash sinks last in either direction", () => {
   ];
 
   test("first click sorts lowest-first, the dash last", () => {
-    render(<LeaderboardTable rows={withADash} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    render(<LeaderboardTable rows={withADash} viewerId={1} />);
     fireEvent.click(screen.getByRole("button", { name: /Miss/ }));
     expect(renderedMemberOrder()).toEqual([3, 1, 2]);
   });
 
   test("second click reverses the placed rows, the dash still last", () => {
-    render(<LeaderboardTable rows={withADash} viewerId={1} weeksInSeason={1} showTrophy={false} />);
+    render(<LeaderboardTable rows={withADash} viewerId={1} />);
     const button = screen.getByRole("button", { name: /Miss/ });
     fireEvent.click(button);
     fireEvent.click(button);

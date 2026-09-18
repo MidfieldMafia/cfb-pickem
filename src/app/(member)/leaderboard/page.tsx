@@ -47,12 +47,7 @@ export default async function Leaderboard() {
       />
 
       <section className="px-4">
-        <LeaderboardTable
-          rows={season.leaderboard}
-          viewerId={member.id}
-          weeksInSeason={played.length}
-          showTrophy={latest !== undefined}
-        />
+        <LeaderboardTable rows={season.leaderboard} viewerId={member.id} />
         <p className="pt-3 text-sm text-muted-foreground">
           Ties break by Weekly Wins, then by Tiebreaker Guess closeness that week.
           {won ? ` ${won}.` : ""}

@@ -21,7 +21,6 @@ import {
   tiebreakerOutcome,
   tiebreakerSentence,
   weeklyWinSentence,
-  weeksPlayedNote,
 } from "./summary";
 
 /*
@@ -381,14 +380,6 @@ describe("the leaderboard's own columns", () => {
     expect(averageLabel(30)).toBe("30");
     expect(averageLabel(80 / 3)).toBe("26.7");
     expect(averageLabel(0)).toBe("0");
-  });
-
-  test("a late joiner's weeks are said out loud, and a full season's are not", () => {
-    expect(weeksPlayedNote({ weeksPlayed: 2 }, 3)).toBe("2 of 3 weeks");
-    expect(weeksPlayedNote({ weeksPlayed: 1 }, 2)).toBe("1 of 2 weeks");
-    expect(weeksPlayedNote({ weeksPlayed: 1 }, 1)).toBeNull();
-    expect(weeksPlayedNote({ weeksPlayed: 3 }, 3)).toBeNull();
-    expect(weeksPlayedNote({ weeksPlayed: 0 }, 0)).toBeNull();
   });
 
   test("a climb up the board is a fall in the rank number", () => {
