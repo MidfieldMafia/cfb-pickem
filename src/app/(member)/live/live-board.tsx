@@ -646,7 +646,7 @@ export function LiveBoard({
       />
 
       {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
-      <div className="sticky top-0 z-10 space-y-3 border-b border-border bg-background px-4 pb-3">
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 space-y-3 border-b border-border bg-background px-4 pb-3">
         {state.complete ? null : <FreshnessLine serverNow={state.serverNow} nextPollAt={nextPollAt} />}
         <YourRank state={state} viewer={viewer} />
       </div>

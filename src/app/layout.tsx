@@ -25,7 +25,10 @@ export const metadata: Metadata = {
     // also what makes navigator.standalone answer truthfully.
     capable: true,
     title: "Saturday Slate",
-    statusBarStyle: "default",
+    // Content draws under the status bar; `body` pads itself back down by the
+    // safe-area inset (see RootLayout) and a fixed strip keeps scrolled content
+    // from showing through the translucent bar.
+    statusBarStyle: "black-translucent",
   },
   // Next emits only the modern `mobile-web-app-capable`. iOS before 16.4 reads
   // nothing but the Apple-prefixed one, and without it a home screen launch
@@ -34,6 +37,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Without `cover` every env(safe-area-inset-*) resolves to 0.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F7F1E3" },
     { media: "(prefers-color-scheme: dark)", color: "#1C1714" },
@@ -46,7 +51,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${chivo.variable} ${manrope.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
+        <div
+          aria-hidden
+          className="fixed inset-x-0 top-0 z-20 h-[env(safe-area-inset-top)] bg-background"
+        />
+        {children}
+      </body>
     </html>
   );
 }
