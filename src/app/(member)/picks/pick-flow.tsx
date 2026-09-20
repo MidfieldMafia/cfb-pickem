@@ -238,26 +238,21 @@ export function PickFlow({
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
       {/*
-        Beside the brand mark, the title shares its row with the header
-        icons and the save chip, and the progress line has the row below to
-        itself — next to the icons and chip it wrapped once a slate reached
-        double digits, and the tiles jumped from game to game.
+        The mark, the title over its progress line, then the help icon and the
+        save chip, all centered on the row's midline. The progress line
+        truncates rather than wrapping, so it stays one line at any slate size
+        and the tiles below don't jump from game to game.
       */}
       <header className={`flex items-center gap-3 px-4 pb-1 ${HEADER_TOP}`}>
-        <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
+        <Image src="/brand/mark.svg" alt="" width={44} height={44} priority unoptimized />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1">
-            <h1 className="m-0 min-w-0 flex-1 font-display text-[22px] leading-7">Week {sheet.weekNumber}</h1>
-            {/* `-my-1` sets the 32px icons in the row without growing it past the chip. */}
-            <div className="-my-1 flex items-center">
-              <HeaderLinks />
-            </div>
-            <StatusChip pick={pick} />
-          </div>
+          <h1 className="m-0 font-display text-[22px] leading-7">Week {sheet.weekNumber}</h1>
           <div className="truncate text-sm leading-5 text-muted-foreground">
             Game {index + 1} of {games.length}
           </div>
         </div>
+        <HeaderLinks />
+        <StatusChip pick={pick} />
       </header>
 
       <ProgressStrip games={games} picks={picks} current={index} onJump={goTo} />

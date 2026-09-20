@@ -253,7 +253,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       */}
       <header className={`space-y-1 ${HEADER_TOP}`}>
         <div className="flex items-center gap-3">
-          <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
+          <Image src="/brand/mark.svg" alt="" width={44} height={44} priority unoptimized />
           <div className="min-w-0 flex-1">
             <h1 className="m-0 font-display text-[22px] leading-7">Review picks</h1>
             <div className="truncate text-sm leading-5 text-muted-foreground">Week {sheet.weekNumber}</div>
