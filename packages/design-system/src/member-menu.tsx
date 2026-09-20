@@ -38,7 +38,7 @@ export function MemberMenu({
         className="flex min-h-tap min-w-tap cursor-pointer list-none items-center justify-center [&::-webkit-details-marker]:hidden"
         aria-label={`Menu for ${displayName}`}
       >
-        <Pennant avatar={avatar} name={displayName} size={28} />
+        <Pennant avatar={avatar} name={displayName} size={44} />
       </summary>
       <div className="absolute right-0 z-20 mt-1 grid min-w-56 gap-1 rounded-md border border-border bg-card p-1 shadow-md">
         {group ? (
