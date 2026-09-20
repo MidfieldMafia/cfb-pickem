@@ -255,7 +255,7 @@ export function PickFlow({
             <StatusChip pick={pick} />
           </div>
           <div className="truncate text-sm leading-5 text-muted-foreground">
-            Game {index + 1} of {games.length} · {progress.picksMade} of {progress.liveGames} picked
+            Game {index + 1} of {games.length}
           </div>
         </div>
       </header>
