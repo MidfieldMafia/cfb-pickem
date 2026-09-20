@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, History, Radio, Trophy } from "lucide-react";
+import { ClipboardCheck, History, Lock, Radio, Trophy } from "lucide-react";
 
 const TABS = [
   { href: "/picks", label: "Picks", Icon: ClipboardCheck },
@@ -26,16 +26,20 @@ const TABS = [
  * copy out of the tab order and the accessibility tree, so only one `nav`
  * landmark is exposed.
  */
-export function BottomNav({ locked }: { locked: boolean }) {
+export function BottomNav({ locked, picksOpen }: { locked: boolean; picksOpen: boolean }) {
   const pathname = usePathname();
 
   const tiles = TABS.map(({ href, label, Icon }) => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
+    const isPicks = href === "/picks";
     // The Picks tab silently redirects to /picks/review once the week locks
     // (src/app/(member)/picks/page.tsx) — the label stays "Picks" so the tab
-    // bar doesn't relabel mid-week, but a dot on the icon says a tap now lands
-    // somewhere other than pick entry. See #116.
-    const showLockedBadge = href === "/picks" && locked;
+    // bar doesn't relabel mid-week, but the icon becomes a lock to say a tap now
+    // lands somewhere other than pick entry. See #116, #170.
+    const TabIcon = isPicks && locked ? Lock : Icon;
+    // The dot means something is still to do: it shows while picks are open and
+    // the member has not finished them, and clears once they have.
+    const showTodoDot = isPicks && !locked && picksOpen;
     return (
       <Link
         key={href}
@@ -48,8 +52,8 @@ export function BottomNav({ locked }: { locked: boolean }) {
             active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
           }`}
         >
-          <Icon size={18} />
-          {showLockedBadge ? (
+          <TabIcon size={18} />
+          {showTodoDot ? (
             <span
               aria-hidden
               className={`absolute right-2.5 top-0 h-2 w-2 rounded-full ring-2 ${
@@ -60,7 +64,8 @@ export function BottomNav({ locked }: { locked: boolean }) {
         </span>
         <span className={active ? "text-foreground" : "text-muted-foreground"}>
           {label}
-          {showLockedBadge ? <span className="sr-only"> — picks are locked, tap to review</span> : null}
+          {isPicks && locked ? <span className="sr-only"> — picks are locked, tap to review</span> : null}
+          {showTodoDot ? <span className="sr-only"> — picks still to finish</span> : null}
         </span>
       </Link>
     );

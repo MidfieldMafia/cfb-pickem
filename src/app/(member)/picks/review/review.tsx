@@ -118,6 +118,16 @@ export function Review({ initial, manage }: { initial: SheetJson; manage?: strin
     lockDropped: sheet.lockDropped,
     tiebreakerGuess: sheet.tiebreakerGuess,
   });
+  // The layout's Picks-tab dot reads what the server holds, and a layout is not
+  // re-rendered by client navigation. `sheet.progress` is the server's own count,
+  // so refresh when the answer it gave crosses zero.
+  const serverAllSet = sheet.progress.remaining === 0;
+  const seenAllSet = useRef(serverAllSet);
+  useEffect(() => {
+    if (seenAllSet.current === serverAllSet) return;
+    seenAllSet.current = serverAllSet;
+    router.refresh();
+  }, [serverAllSet, router]);
   const open = progress.liveGames - progress.picksMade;
   const lockGame = sheet.games.find((g) => g.game.id === sheet.lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
