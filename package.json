@@ -16,6 +16,7 @@
     "migrate": "drizzle-kit migrate",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
     "icons": "tsx scripts/icons.ts",
+    "splash": "tsx scripts/splash.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

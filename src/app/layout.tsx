@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Chivo, Manrope } from "next/font/google";
+import { SPLASH_SCREENS, splashMedia, splashUrl } from "@/lib/splash";
 import "./globals.css";
 
 const chivo = Chivo({
@@ -29,6 +30,10 @@ export const metadata: Metadata = {
     // safe-area inset (see RootLayout) and a fixed strip keeps scrolled content
     // from showing through the translucent bar.
     statusBarStyle: "black-translucent",
+    // The launch screen a Home Screen open shows while the app loads. iOS
+    // matches the media query exactly, so the list lives with the script that
+    // renders the images: src/lib/splash.ts.
+    startupImage: SPLASH_SCREENS.map((screen) => ({ url: splashUrl(screen), media: splashMedia(screen) })),
   },
   // Next emits only the modern `mobile-web-app-capable`. iOS before 16.4 reads
   // nothing but the Apple-prefixed one, and without it a home screen launch
