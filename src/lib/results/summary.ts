@@ -288,3 +288,35 @@ export function movement(row: Pick<LeaderboardRow, "rank" | "previousRank">): Mo
     label: `${up ? "Up" : "Down"} ${plural(places, "place")}, from ${ordinal(previousRank)}`,
   };
 }
+
+/**
+ * The member who won the season, or null while there is nobody to crown: the
+ * season's final Week has not been played to completion, or first place is
+ * shared. A shared first is not crowned for the reason a level board is not
+ * (see the Leaderboard's Trophy): the honest answer is no champion, and it
+ * cannot degenerate into crowning everyone.
+ *
+ * Takes the played Weeks and the final Week's number rather than a clock, so
+ * "the season is over" is read off the same graded Weeks the board is.
+ */
+export function seasonChampion(
+  leaderboard: LeaderboardRow[],
+  weeks: { week: { weekNumber: number }; complete: boolean }[],
+  finalWeekNumber: number,
+): number | null {
+  const final = weeks.find((w) => w.week.weekNumber === finalWeekNumber);
+  if (!final?.complete) return null;
+  const leaders = leaderboard.filter((row) => row.rank === 1);
+  return leaders.length === 1 ? leaders[0].member.id : null;
+}
+
+/**
+ * What the Leaderboard's subtitle says about how far the season has got. A
+ * Week whose Deadline has passed is already on the board at its provisional
+ * value, so while it is still being played "after Week N" claims a finished
+ * week that is not — say it is in progress instead.
+ */
+export function seasonStatusLabel(latest: { week: { weekNumber: number }; complete: boolean } | undefined): string {
+  if (!latest) return "before Week 1";
+  return latest.complete ? `through Week ${latest.week.weekNumber}` : `Week ${latest.week.weekNumber} in progress`;
+}
