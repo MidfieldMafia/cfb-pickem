@@ -12,9 +12,13 @@ import { HeaderLinks } from "./header-links";
  * in the `MemberMenu` rather than stacking above the title: a third line
  * pushed the header up into the iPhone status bar.
  *
- * The top padding adds the safe-area inset so the header clears the status bar
- * and Dynamic Island whenever the page extends under them.
+ * The top padding is `HEADER_TOP`, shared with the two pick screens that draw
+ * headers of their own so the mark sits at the same height on every screen. It
+ * carries no safe-area inset: `body` already pads by the inset, and adding it
+ * here as well pushed this header down twice as far as the pick screens.
  */
+export const HEADER_TOP = "pt-[1.125rem]";
+
 export function AppHeader({
   title,
   sub,
@@ -25,7 +29,7 @@ export function AppHeader({
   right?: ReactNode;
 }) {
   return (
-    <header className="flex items-center gap-3 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-2">
+    <header className={`flex items-center gap-3 px-4 pb-2 ${HEADER_TOP}`}>
       <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
       <div className="min-w-0 flex-1">
         <h1 className="m-0 font-display text-[22px] leading-7">{title}</h1>

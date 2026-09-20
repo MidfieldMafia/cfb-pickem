@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { HeaderLinks, Badge, Button, LocalTime } from "@saturday-slate/design-system";
+import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime } from "@saturday-slate/design-system";
 
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
@@ -243,7 +243,7 @@ export function PickFlow({
         itself — next to the icons and chip it wrapped once a slate reached
         double digits, and the tiles jumped from game to game.
       */}
-      <header className="flex items-center gap-3 px-4 pb-1 pt-3">
+      <header className={`flex items-center gap-3 px-4 pb-1 ${HEADER_TOP}`}>
         <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
