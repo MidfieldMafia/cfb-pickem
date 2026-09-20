@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppHeader, SECTION_LABEL, Button, Card } from "@saturday-slate/design-system";
 
-import { MemberChip } from "@/components/member-chip";
+import { MemberMenu } from "@/components/member-menu";
 
 import type { Member } from "@/db/schema";
 import { currentManageHref } from "@/lib/groups/current";
@@ -19,8 +19,7 @@ export async function NoGroup({ member }: { member: Member }) {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title="Saturday Slate"
-        manage={await currentManageHref()}
-        right={<MemberChip member={member} />}
+        right={<MemberMenu member={member} manage={await currentManageHref()} />}
       />
       <Card asChild className="mx-4 gap-2">
         <section>

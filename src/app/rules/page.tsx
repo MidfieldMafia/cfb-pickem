@@ -5,7 +5,7 @@ import { AppHeader, Button, Card, SECTION_LABEL } from "@saturday-slate/design-s
 
 import { BottomNav } from "@/components/bottom-nav";
 
-import { MemberChip } from "@/components/member-chip";
+import { MemberMenu } from "@/components/member-menu";
 
 import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
@@ -49,8 +49,7 @@ export default async function HowToPlay({
         <AppHeader
           title="How to play"
           sub={`${season.year} season`}
-          manage={await currentManageHref()}
-          right={<MemberChip member={member} />}
+          right={<MemberMenu member={member} manage={await currentManageHref()} />}
         />
 
         <Card asChild className="mx-4 gap-1">

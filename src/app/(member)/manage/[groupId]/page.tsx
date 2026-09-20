@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { AppHeader, SECTION_LABEL, CopyButton, Badge, Card, Input } from "@saturday-slate/design-system";
 
-import { MemberChip } from "@/components/member-chip";
+import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
 
 import { appUrl } from "@/lib/app-url";
@@ -56,10 +56,8 @@ export default async function Manage({ params }: { params: Promise<{ groupId: st
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title="Manage"
-        group={view.group.name}
-        sub={plural(view.members.length, "member")}
-        manage={await currentManageHref()}
-        right={<MemberChip member={member} />}
+        sub={`${view.group.name} · ${plural(view.members.length, "member")}`}
+        right={<MemberMenu member={member} manage={await currentManageHref()} />}
       />
 
       <Card asChild className="mx-4 gap-3">

@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { AppHeader } from "@saturday-slate/design-system";
 
 import { GroupSwitcher } from "@/components/group-switcher";
-import { MemberChip } from "@/components/member-chip";
+import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
@@ -37,14 +37,12 @@ export default async function Leaderboard() {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title="Leaderboard"
-        group={<GroupSwitcher choice={choice} />}
         sub={
           latest
-            ? `${season.season.year} season · after Week ${latest.week.weekNumber}`
-            : `${season.season.year} season · before the first week`
+            ? `${season.season.year} · after Week ${latest.week.weekNumber}`
+            : `${season.season.year} · before Week 1`
         }
-        manage={await currentManageHref()}
-        right={<MemberChip member={member} />}
+        right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
       />
 
       <section className="px-4">

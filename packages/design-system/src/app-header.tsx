@@ -3,39 +3,35 @@ import type { ReactNode } from "react";
 import { HeaderLinks } from "./header-links";
 
 /**
- * Phone screen header: mark, the group this board belongs to, title, optional
- * subtitle, the `HeaderLinks` (Rules, and Manage for whoever runs things), and
- * a slot on the right.
+ * Phone screen header: mark, title, optional subtitle, the `HeaderLinks`
+ * (How to play), and a slot on the right, which member screens fill with a
+ * `MemberMenu`.
  *
- * `group` sits above the title because it says *whose* board this is, which
- * qualifies the title rather than replacing it: "Mabry Family" over
- * "Leaderboard". Screens that are not a group's board — pick entry, How to
- * play — pass none, and the header is what it always was.
+ * Two lines, and the subtitle is one: it truncates rather than wrap, so keep it
+ * short and put any sentence in the page body. Which group a board belongs to, and the Manage link, live
+ * in the `MemberMenu` rather than stacking above the title: a third line
+ * pushed the header up into the iPhone status bar.
+ *
+ * The top padding adds the safe-area inset so the header clears the status bar
+ * and Dynamic Island whenever the page extends under them.
  */
 export function AppHeader({
   title,
   sub,
-  group,
-  manage,
   right,
 }: {
   title: ReactNode;
   sub?: ReactNode;
-  /** The group's name, or the switcher for a member of two or more. */
-  group?: ReactNode;
-  /** Where the Manage icon goes, from `currentManageHref`; none when absent. */
-  manage?: string | null;
   right?: ReactNode;
 }) {
   return (
-    <header className="flex items-center gap-3 px-4 pt-3 pb-2">
+    <header className="flex items-center gap-3 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-2">
       <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
       <div className="min-w-0 flex-1">
-        {group ? <div className="text-xs leading-4 text-muted-foreground">{group}</div> : null}
         <h1 className="m-0 font-display text-[22px] leading-7">{title}</h1>
-        {sub ? <div className="text-sm leading-5 text-muted-foreground">{sub}</div> : null}
+        {sub ? <div className="truncate text-sm leading-5 text-muted-foreground">{sub}</div> : null}
       </div>
-      <HeaderLinks manage={manage} />
+      <HeaderLinks />
       {right}
     </header>
   );
