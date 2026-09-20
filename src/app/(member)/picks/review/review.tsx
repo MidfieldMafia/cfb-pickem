@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL } from "@saturday-slate/design-system";
+import { HEADER_TOP, HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL } from "@saturday-slate/design-system";
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
@@ -245,13 +245,13 @@ export function Review({ initial }: { initial: SheetJson }) {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8 pt-6">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8">
       {/*
         The header icons sit beside the badge on the title's row, so the
         deadline line below keeps the full width — beside a commissioner's two
         icons and the badge it wrapped at phone width.
       */}
-      <header className="space-y-1">
+      <header className={`space-y-1 ${HEADER_TOP}`}>
         <div className="flex items-center gap-3">
           <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
           <div className="min-w-0 flex-1">
