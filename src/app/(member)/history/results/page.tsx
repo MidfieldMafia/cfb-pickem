@@ -2,11 +2,12 @@ import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader, Card, SECTION_LABEL } from "@saturday-slate/design-system";
 
+import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 import { RevealList } from "@/components/reveal";
 import { cfbd } from "@/lib/cfbd";
-import { currentGroup, currentManageHref } from "@/lib/groups/current";
+import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { pickBreakdown, tiebreakerOutcome, weeklyWinSentence } from "@/lib/results/summary";
 import { weekParam } from "@/lib/slate/slate";
@@ -26,8 +27,9 @@ import { YourPicks } from "./your-week";
  */
 export default async function WeekResults({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const member = await requireMember();
-  const group = await currentGroup();
-  if (group === null) return <NoGroup member={member} />;
+  const choice = await currentGroupChoice();
+  if (choice === null) return <NoGroup member={member} />;
+  const group = choice.current.id;
   const params = await searchParams;
   const review = await weekInReview(db(), weekParam(params.week), new Date(), { cfbd, group });
 
@@ -36,7 +38,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
         <AppHeader
           title="Week results"
-          right={<MemberMenu member={member} manage={await currentManageHref()} />}
+          right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
         />
         <Card asChild className="mx-4 gap-2">
           <section>
@@ -76,7 +78,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       <AppHeader
         title={`Week ${weekNumber} results`}
         sub={complete ? "Final" : "In progress"}
-        right={<MemberMenu member={member} manage={await currentManageHref()} />}
+        right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
       />
 
       {won ? <p className="px-4 text-sm text-muted-foreground">{won}.</p> : null}
