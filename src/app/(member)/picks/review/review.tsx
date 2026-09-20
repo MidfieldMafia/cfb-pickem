@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL, Wordmark } from "@saturday-slate/design-system";
+import { HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL } from "@saturday-slate/design-system";
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
@@ -251,9 +252,12 @@ export function Review({ initial }: { initial: SheetJson }) {
         icons and the badge it wrapped at phone width.
       */}
       <header className="space-y-1">
-        <Wordmark />
-        <div className="flex items-center gap-1">
-          <h1 className="min-w-0 flex-1 font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
+        <div className="flex items-center gap-3">
+          <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
+          <div className="min-w-0 flex-1">
+            <h1 className="m-0 font-display text-[22px] leading-7">Review picks</h1>
+            <div className="truncate text-sm leading-5 text-muted-foreground">Week {sheet.weekNumber}</div>
+          </div>
           <HeaderLinks />
           <Badge variant={progress.remaining ? "outline" : "default"}>
             {stepsDone} of {steps}

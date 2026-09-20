@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, CircleDashed, ListChecks, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
+import { Check, ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { HeaderLinks, Badge, Button, LocalTime } from "@saturday-slate/design-system";
 
@@ -237,17 +238,13 @@ export function PickFlow({
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
       {/*
-        Beside the review button, the title shares its row with the header
+        Beside the brand mark, the title shares its row with the header
         icons and the save chip, and the progress line has the row below to
         itself — next to the icons and chip it wrapped once a slate reached
         double digits, and the tiles jumped from game to game.
       */}
-      <header className="flex items-center gap-1 px-2 pb-1 pt-3">
-        <Button asChild variant="ghost" size="icon" aria-label="Review picks">
-          <Link href="/picks/review">
-            <ListChecks />
-          </Link>
-        </Button>
+      <header className="flex items-center gap-3 px-4 pb-1 pt-3">
+        <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
             <div className="min-w-0 flex-1 font-display text-lg leading-6">Week {sheet.weekNumber}</div>
