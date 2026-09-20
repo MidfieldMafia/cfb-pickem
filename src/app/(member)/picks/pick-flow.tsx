@@ -247,14 +247,14 @@ export function PickFlow({
         <Image src="/brand/mark.svg" alt="" width={36} height={36} priority unoptimized />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            <div className="min-w-0 flex-1 font-display text-lg leading-6">Week {sheet.weekNumber}</div>
+            <h1 className="m-0 min-w-0 flex-1 font-display text-[22px] leading-7">Week {sheet.weekNumber}</h1>
             {/* `-my-1` sets the 32px icons in the row without growing it past the chip. */}
             <div className="-my-1 flex items-center">
               <HeaderLinks />
             </div>
             <StatusChip pick={pick} />
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="truncate text-sm leading-5 text-muted-foreground">
             Game {index + 1} of {games.length} · {progress.picksMade} of {progress.liveGames} picked
           </div>
         </div>
