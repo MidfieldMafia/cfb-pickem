@@ -47,3 +47,13 @@ next-env.d.ts
 # editors and local agent worktrees
 .idea/
 .claude/worktrees/
+
+# design-sync
+/.ds-sync/
+/ds-bundle/
+/.design-sync/.cache/
+/.design-sync/learnings/
+/.design-sync/node_modules
+/.npm-ci.log
+/packages/*/.ds-compiled.css
+/.design-sync/.*.log
