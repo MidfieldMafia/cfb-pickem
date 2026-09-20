@@ -639,11 +639,14 @@ export function LiveBoard({
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 pb-8">
-      <AppHeader
-        title="Live Board"
-        sub={sub}
-        right={<MemberMenu member={viewer} group={switcher} manage={manage} />}
-      />
+      {/* The sticky block below can travel up over the header, so iOS WebKit promotes the header to a layer of its own and rasterizes the title blurry until the first scroll. Owning the layer and stacking above the sticky block keeps it crisp from the first paint. */}
+      <div className="relative z-20 bg-background [transform:translateZ(0)]">
+        <AppHeader
+          title="Live Board"
+          sub={sub}
+          right={<MemberMenu member={viewer} group={switcher} manage={manage} />}
+        />
+      </div>
 
       {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
       <div className="sticky top-[env(safe-area-inset-top)] z-10 space-y-3 border-b border-border bg-background px-4 pb-3">
