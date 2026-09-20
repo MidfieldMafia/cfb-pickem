@@ -58,22 +58,40 @@ function Side({
           const member = members.get(pick.memberId);
           if (!member) return null;
           const you = pick.memberId === viewerId;
-          return (
-            <li
-              key={pick.memberId}
-              className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs font-semibold ${
-                you ? "border-primary" : "border-border"
-              }`}
-              title={`${member.displayName}${pick.lock === "counts" ? " · Lock of the Week" : ""}${
-                pick.lock === "dropped" ? " · Lock of the Week, dropped: the game is void" : ""
-              }`}
-            >
-              <Pennant avatarId={member.avatarId} name={member.displayName} size={20} />
-              <span className="max-w-24 truncate">{you ? "You" : member.displayName}</span>
+          const title = `${member.displayName}${pick.lock === "counts" ? " · Lock of the Week" : ""}${
+            pick.lock === "dropped" ? " · Lock of the Week, dropped: the game is void" : ""
+          }`;
+          const locks = (
+            <>
               {pick.lock === "counts" ? <Lock size={12} aria-label="Lock of the Week" /> : null}
               {pick.lock === "dropped" ? (
                 <LockOpen size={12} className="text-muted-foreground" aria-label="Lock of the Week, dropped: the game is void" />
               ) : null}
+            </>
+          );
+          // The member's own pick is a graded Badge, ✓ or ✗ once the game is
+          // final, so which side was theirs and whether it won reads at a glance.
+          if (you) {
+            return (
+              <li key={pick.memberId} title={title}>
+                <Badge
+                  variant={pick.outcome === "correct" ? "win" : pick.outcome === "incorrect" ? "loss" : "outline"}
+                  className="gap-1 py-1 text-sm font-bold"
+                >
+                  You {locks}
+                </Badge>
+              </li>
+            );
+          }
+          return (
+            <li
+              key={pick.memberId}
+              className="inline-flex items-center gap-1 rounded-full border border-border px-1.5 py-0.5 text-xs font-semibold"
+              title={title}
+            >
+              <Pennant avatarId={member.avatarId} name={member.displayName} size={20} />
+              <span className="max-w-24 truncate">{member.displayName}</span>
+              {locks}
             </li>
           );
         })}
@@ -82,9 +100,10 @@ function Side({
   );
 }
 
-/** Everyone's Tiebreaker Guess, closest first once the Tiebreaker Game is final. */
+/** The Tiebreaker Guesses of the members tied for first, closest first once the Tiebreaker Game is final. */
 function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewerId: number }) {
   const sorted = [...scores].sort((a, b) => (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity));
+  if (sorted.length === 0) return null;
   return (
     <Card className="gap-1 border-secondary p-2.5">
       <p className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">Tiebreaker Guesses</p>
@@ -109,8 +128,21 @@ function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewer
   );
 }
 
-/** Every member's pick per game, graded once the game is final. Rendered on /week after the Deadline. */
-export function RevealList({ reveal, scores, viewerId }: { reveal: Reveal; scores: WeeklyScore[]; viewerId: number }) {
+/**
+ * Every member's pick per game, graded once the game is final. Rendered on /week after the Deadline.
+ * `guessers` are the member ids whose Tiebreaker Guesses to list: those tied for first.
+ */
+export function RevealList({
+  reveal,
+  scores,
+  viewerId,
+  guessers,
+}: {
+  reveal: Reveal;
+  scores: WeeklyScore[];
+  viewerId: number;
+  guessers: Set<number>;
+}) {
   const members = new Map(reveal.members.map((m) => [m.id, m]));
   return (
     <section className="space-y-3">
@@ -155,7 +187,9 @@ export function RevealList({ reveal, scores, viewerId }: { reveal: Reveal; score
                   viewerId={viewerId}
                 />
               </div>
-              {tiebreaker ? <TiebreakerGuesses scores={scores} viewerId={viewerId} /> : null}
+              {tiebreaker ? (
+                <TiebreakerGuesses scores={scores.filter((s) => guessers.has(s.member.id))} viewerId={viewerId} />
+              ) : null}
             </li>
           );
         })}

@@ -5,18 +5,10 @@ import { AppHeader, Card, SECTION_LABEL } from "@saturday-slate/design-system";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 import { RevealList } from "@/components/reveal";
-
-import { YourWeek } from "@/components/standing-card";
 import { cfbd } from "@/lib/cfbd";
 import { currentGroup, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
-import {
-  pickBreakdown,
-  standing,
-  tiebreakerOutcome,
-  tiebreakerSentence,
-  weeklyWinSentence,
-} from "@/lib/results/summary";
+import { pickBreakdown, tiebreakerOutcome, weeklyWinSentence } from "@/lib/results/summary";
 import { weekParam } from "@/lib/slate/slate";
 import { weekInReview } from "@/lib/week/week";
 import { WeeklyScoreList } from "./weekly-score";
@@ -73,8 +65,11 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
   const won = weeklyWinSentence(weeklyWin, complete);
   const winners = new Set(weeklyWin?.winners.map((m) => m.id) ?? []);
   const mine = scores.find((s) => s.member.id === member.id) ?? null;
-  const place = standing(scores, member.id);
-  const tiebreaker = tiebreakerSentence(tiebreakerOutcome(reveal, scores, weeklyWin));
+  // Only the members tied for first by points: theirs are the Guesses that
+  // decided something. Empty when one member led outright.
+  const guessers = new Set(
+    tiebreakerOutcome(reveal, scores, weeklyWin)?.contenders.map((c) => c.member.id) ?? [],
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
@@ -106,28 +101,22 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
         })}
       </nav>
 
-      <section className="px-4">
-        {mine && place ? (
-          <YourWeek weekNumber={weekNumber} score={mine} place={place} />
-        ) : (
+      {/* No pine summary card: the member's own row in the table below, tinted,
+          already says their place, points and record. */}
+      {mine ? null : (
+        <section className="px-4">
           <Card>
             <p className="text-muted-foreground">
               You joined after this week&rsquo;s deadline, so Week {weekNumber} is not counted for or
               against you.
             </p>
           </Card>
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="space-y-2 px-4">
         <p className={SECTION_LABEL}>Weekly score</p>
-        <WeeklyScoreList
-          scores={scores}
-          winners={winners}
-          viewerId={member.id}
-          hasTiebreakerGame={reveal.week.tiebreakerGameId !== null}
-        />
-        {tiebreaker ? <p className="text-sm text-muted-foreground">{tiebreaker}</p> : null}
+        <WeeklyScoreList scores={scores} winners={winners} viewerId={member.id} guessers={guessers} />
       </section>
 
       {mine ? (
@@ -138,7 +127,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       ) : null}
 
       <div className="px-4">
-        <RevealList reveal={reveal} scores={scores} viewerId={member.id} />
+        <RevealList reveal={reveal} scores={scores} viewerId={member.id} guessers={guessers} />
       </div>
 
       <div className="px-4">

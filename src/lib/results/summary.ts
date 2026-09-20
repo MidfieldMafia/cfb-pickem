@@ -214,47 +214,6 @@ export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[], weeklyW
   return { game, combined, contenders, winners: weeklyWin!.winners };
 }
 
-/**
- * What the Tiebreaker Game settled, in words: the matchup, its combined
- * score, and — only when a points tie actually needed the Guess to settle it
- * — every tied member's Guess and how far off it was. Null when the Week
- * named no Tiebreaker Game, so the line is one condition on the screen.
- *
- * A single leader by points (`contenders` empty) gets no claim about a
- * closest Guess: nobody's placement depended on one, and naming a "closest"
- * anyway is what made this sentence disagree with the Weekly Win line above
- * it in the first place — the two must always agree, because they are
- * describing the same tiebreak.
- *
- * A Void, or a game still to finish, has no combined score to measure a Guess
- * against — the engine leaves every Tiebreaker error null until it does — so
- * the sentence says which of those it is rather than implying a decision that
- * has not happened.
- */
-export function tiebreakerSentence(outcome: TiebreakerOutcome | null): string | null {
-  if (outcome === null) return null;
-  const { game, combined, contenders, winners } = outcome;
-  const matchup = `${game.game.awayTeam} at ${game.game.homeTeam}`;
-  if (combined === null) {
-    return game.result.status === "void"
-      ? `Tiebreaker Guess: ${matchup} is void, so no Guess counts this week.`
-      : `Tiebreaker Guess: ${matchup} is not final yet.`;
-  }
-  const finished = `Tiebreaker Guess: ${matchup} finished ${combined}.`;
-  if (contenders.length === 0) return finished;
-  const said = contenders.map((c) =>
-    c.guess === null ? `${c.member.displayName} did not guess` : `${c.member.displayName} guessed ${c.guess} (off by ${c.error})`,
-  );
-  const guessed = contenders.filter((c) => c.guess !== null);
-  const decided =
-    guessed.length === 0
-      ? "nobody in the tie guessed, so it's shared"
-      : winners.length === 1
-        ? `${winners[0].displayName} closest`
-        : `${listNames(winners)} level, closest of the group`;
-  return `${finished} ${andJoin(said)} — ${decided}.`;
-}
-
 /** One Game as one member played it: the pick-history row. */
 export interface BreakdownRow {
   game: GameView;
