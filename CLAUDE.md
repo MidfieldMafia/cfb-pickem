@@ -28,11 +28,16 @@ Nothing in the test suite covers rendering, and every screen needs a Magic Link 
 
 Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; each roadmap is a `wayfinder:map` issue (v1 and v2 so far) and every ticket is a sub-issue of one with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.
 
-### Claude Design system
+### Claude Design systems
 
-There is one design system in Claude Design: the Artifact "Saturday Slate Design System" (https://claude.ai/artifact/LaNEaker2yyAez16eThdfU), built from `packages/design-system`. Keep it, and do not create another. Before making a design system, list the ones that exist (`Artifact` `action: "list"` or `quickstart`), and update this one instead. Three near-identical systems built from this package were consolidated into it on 2026-09-20.
+`packages/design-system` is represented in Claude Design by two objects, and neither updates the other:
 
-The package wins wherever the two disagree. `/design-sync` reaches only the older claude.ai/design project (`13ff5b45-b28a-4add-8ab7-10ba929c294d`), a stale copy that does not update this Artifact, so package changes have to be carried into the Artifact by hand.
+- **The claude.ai/design project** (`13ff5b45-b28a-4add-8ab7-10ba929c294d`) is a build-produced mirror of the package. `/design-sync` compiles the package and writes the changed components into it. It only writes that direction — nothing flows from the project back into this repo. Its inputs live in `.design-sync/` (see `.design-sync/NOTES.md`). Re-sync after changing a component.
+- **The Artifact "Saturday Slate Design System"** (https://claude.ai/artifact/LaNEaker2yyAez16eThdfU) is a static reference copy: brand-book README, token usage notes, contrast and layout guidelines, brand marks, pennants, all 136 logos and hand-written component previews. It is what designs and decks built with the Artifact tool read. `/design-sync` cannot reach it, so a package change reaches it only by editing `project/` by hand and republishing.
+
+Neither is read by the build, the tests or the app, and neither gates a PR. Use the project when a component changed and the mirror should follow; use the Artifact when making a mockup or deck in the brand.
+
+Do not create another design system of either kind. Three near-identical ones were built from this package on 2026-09-20 by sessions that did not look for an existing one, and were consolidated into these two. List what exists first (`Artifact` `action: "list"` or `quickstart`; `DesignSync` `list_projects`). The package wins wherever any of them disagree.
 
 ### Domain docs
 
