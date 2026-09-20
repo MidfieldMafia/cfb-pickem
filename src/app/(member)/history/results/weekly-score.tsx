@@ -10,23 +10,21 @@ import { guessLabel, record, standing } from "@/lib/results/summary";
  * then Tiebreaker Guess closeness. Members level on both share a place, which
  * is why the place comes from `standing` rather than from the row's index.
  *
- * Each row also carries its own Guess: the sort order above turns on
- * Tiebreaker Guess closeness whenever points tie, at any place in the list —
- * not only at the top — so a member reading their own placement needs their
- * neighbor's Guess beside it, not only the Weekly Win's.
+ * Only the members tied for first carry a Guess: theirs are the ones that
+ * decided the Weekly Win, and a Guess under every row is noise.
  */
 export function WeeklyScoreList({
   scores,
   winners,
   viewerId,
-  hasTiebreakerGame,
+  guessers,
 }: {
   scores: WeeklyScore[];
   /** The member ids the Weekly Win went to; more than one when it was shared. */
   winners: Set<number>;
   viewerId: number;
-  /** False when the Week named no Tiebreaker Game: every Guess would be null, and a row of "No guess" would say nothing. */
-  hasTiebreakerGame: boolean;
+  /** The member ids tied for first by points, whose Guesses are shown; empty when one member led outright. */
+  guessers: Set<number>;
 }) {
   return (
     <Card asChild className="gap-0 overflow-hidden p-0">
@@ -51,7 +49,7 @@ export function WeeklyScoreList({
                   <Trophy size={12} aria-hidden /> Weekly Win
                 </Badge>
               ) : null}
-              {hasTiebreakerGame ? (
+              {guessers.has(score.member.id) ? (
                 <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
                   {guessLabel(score)}
                 </span>

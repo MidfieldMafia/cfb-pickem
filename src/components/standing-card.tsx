@@ -1,16 +1,14 @@
 import { Card } from "@saturday-slate/design-system";
 
 import type { WeeklyScore } from "@/lib/results/results";
-import { record, type SeasonStanding, type Standing } from "@/lib/results/summary";
+import { record, type SeasonStanding } from "@/lib/results/summary";
 
 /**
  * The pine card at the top of a member screen: a caps label with the place
  * under it, and the figure with its note on the right.
  *
- * One shell for the two cards that use it — the week the results screen shows
- * settled, and the season the Live Board shows moving — so the pair cannot
- * drift in type scale or in ink. Neither card decides its own wording: both
- * hand it strings that `summary.ts` built.
+ * It does not decide its own wording: callers hand it strings that
+ * `summary.ts` built.
  */
 function StandingCard({
   label,
@@ -40,29 +38,6 @@ function StandingCard({
         <p className="text-sm opacity-80">{note}</p>
       </div>
     </Card>
-  );
-}
-
-/**
- * The member's own week at a glance: where they placed in it, what they
- * scored, and their record. What the results screen shows, settled.
- */
-export function YourWeek({
-  weekNumber,
-  score,
-  place,
-}: {
-  weekNumber: number;
-  score: WeeklyScore;
-  place: Standing;
-}) {
-  return (
-    <StandingCard
-      label={`You · Week ${weekNumber}`}
-      place={place.label}
-      figure={`${score.points} pts`}
-      note={`${record(score.correct, score.incorrect)} this week`}
-    />
   );
 }
 
