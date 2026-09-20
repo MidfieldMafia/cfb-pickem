@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Wordmark } from "@/components/wordmark";
+import { Card, SECTION_LABEL, Wordmark } from "@saturday-slate/design-system";
 
 /** Shown at /picks and /picks/review before a commissioner publishes a slate. */
 export function NoSlate() {

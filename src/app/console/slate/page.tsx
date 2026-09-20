@@ -1,14 +1,10 @@
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Check, X } from "lucide-react";
 import { db } from "@/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { LocalTime } from "@/components/local-time";
-import { SECTION_LABEL } from "@/components/section-label";
+import { Badge, Button, Card, Input, LocalTime, SECTION_LABEL, TeamName } from "@saturday-slate/design-system";
+
 import { TeamLogo } from "@/components/team-logo";
-import { TeamName } from "@/components/team-name";
+
 import { cfbd } from "@/lib/cfbd";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import { requireConsole } from "@/lib/members/current";

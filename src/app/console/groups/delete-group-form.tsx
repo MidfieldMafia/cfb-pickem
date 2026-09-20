@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button, Input } from "@saturday-slate/design-system";
+
 import { ActionMessage, type ActionState } from "../action-form";
 import { deleteGroupAction } from "./actions";
 

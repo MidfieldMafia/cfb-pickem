@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@saturday-slate/design-system";
+
 import type { ActionState } from "@/lib/console/state";
 
 export type { ActionState };

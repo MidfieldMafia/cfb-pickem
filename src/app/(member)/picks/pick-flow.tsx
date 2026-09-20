@@ -4,13 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleDashed, ListChecks, LoaderCircle, Lock, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { HeaderLinks } from "@/components/header-links";
+import { HeaderLinks, Badge, Button, LocalTime } from "@saturday-slate/design-system";
+
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { LocalTime } from "@/components/local-time";
+
 import { matchupColors } from "@/lib/matchup-colors";
 import { put } from "@/lib/picks/client";
 import { useDeadlineClock } from "@/lib/picks/clock";

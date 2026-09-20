@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { AppHeader } from "@/components/app-header";
-import { Card } from "@/components/ui/card";
+import { AppHeader, Card, SECTION_LABEL } from "@saturday-slate/design-system";
+
 import { MemberChip } from "@/components/member-chip";
 import { NoGroup } from "@/components/no-group";
 import { RevealList } from "@/components/reveal";
-import { SECTION_LABEL } from "@/components/section-label";
+
 import { YourWeek } from "@/components/standing-card";
 import { cfbd } from "@/lib/cfbd";
 import { currentGroup, currentManageHref } from "@/lib/groups/current";

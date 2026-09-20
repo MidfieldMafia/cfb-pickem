@@ -1,9 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useHydrated } from "@/components/local-time";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useHydrated, Button, Input } from "@saturday-slate/design-system";
+
 import { setDeadlineAction, type SlateActionState } from "./actions";
 
 /** datetime-local wants the viewer's wall-clock time without a zone. */

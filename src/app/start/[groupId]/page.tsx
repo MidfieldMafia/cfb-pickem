@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CopyButton } from "@/components/copy-button";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Wordmark } from "@/components/wordmark";
+import { CopyButton, SECTION_LABEL, Button, Card, Wordmark } from "@saturday-slate/design-system";
+
 import { db } from "@/db";
 import { appUrl } from "@/lib/app-url";
 import { joinLinkFor } from "@/lib/groups/join";

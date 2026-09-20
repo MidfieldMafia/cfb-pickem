@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { LocalTime } from "@/components/local-time";
-import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/wordmark";
+import { LocalTime, Button, Wordmark } from "@saturday-slate/design-system";
+
 import { db } from "@/db";
 import { requireMember } from "@/lib/members/current";
 import { publishedSlate } from "@/lib/slate/slate";

@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { AppHeader } from "@/components/app-header";
-import { CopyButton } from "@/components/copy-button";
+import { AppHeader, CopyButton, SECTION_LABEL, Badge, Button, Card } from "@saturday-slate/design-system";
+
 import { Pennant } from "@/components/pennant";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+
 import { db } from "@/db";
 import { appUrl } from "@/lib/app-url";
 import { currentManageHref, groupChoice, CURRENT_GROUP_COOKIE } from "@/lib/groups/current";

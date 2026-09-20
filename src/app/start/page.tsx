@@ -1,4 +1,5 @@
-import { Wordmark } from "@/components/wordmark";
+import { Wordmark } from "@saturday-slate/design-system";
+
 import { avatars } from "@/lib/avatars";
 import { currentMember } from "@/lib/members/current";
 import { StartForm } from "./start-form";

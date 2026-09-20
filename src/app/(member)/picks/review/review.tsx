@@ -4,25 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { HeaderLinks } from "@/components/header-links";
+import { HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL, Wordmark } from "@saturday-slate/design-system";
+
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { LocalTime } from "@/components/local-time";
-import { SECTION_LABEL as LABEL } from "@/components/section-label";
-import { Wordmark } from "@/components/wordmark";
+
 import { put } from "@/lib/picks/client";
 import { formatCountdown, useDeadlineClock } from "@/lib/picks/clock";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
@@ -70,7 +56,6 @@ function StepRow({
     </button>
   );
 }
-
 
 /**
  * Every pick on one screen. Tap a row to change it in the pick flow; choose

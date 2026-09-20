@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Clock, Eye, ListChecks, Lock, Radio, Scale, Trophy, Users } from "lucide-react";
 import { db } from "@/db";
-import { AppHeader } from "@/components/app-header";
+import { AppHeader, Button, Card, SECTION_LABEL } from "@saturday-slate/design-system";
+
 import { BottomNav } from "@/components/bottom-nav";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+
 import { MemberChip } from "@/components/member-chip";
-import { SECTION_LABEL } from "@/components/section-label";
+
 import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { safeInteger } from "@/lib/parse";

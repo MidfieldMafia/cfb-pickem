@@ -3,9 +3,8 @@
 import { ArrowRight } from "lucide-react";
 import { useActionState } from "react";
 import { PennantPicker } from "@/components/pennant-picker";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SECTION_LABEL, Button, Input } from "@saturday-slate/design-system";
+
 import type { Avatar } from "@/lib/avatars";
 import { MAX_DISPLAY_NAME } from "@/lib/members/limits";
 import { saveWelcome, type WelcomeState } from "./actions";

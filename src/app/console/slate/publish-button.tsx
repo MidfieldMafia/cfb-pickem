@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@saturday-slate/design-system";
+
 import { plural } from "@/lib/plural";
 import { publishAction, type SlateActionState } from "./actions";
 

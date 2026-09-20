@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@saturday-slate/design-system";
 
 export default function ConsoleError({ error, reset }: { error: Error; reset: () => void }) {
   return (

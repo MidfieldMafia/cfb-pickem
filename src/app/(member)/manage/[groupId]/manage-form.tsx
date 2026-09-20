@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, type ReactNode } from "react";
-import { CopyButton } from "@/components/copy-button";
-import { Button } from "@/components/ui/button";
+import { CopyButton, Button } from "@saturday-slate/design-system";
+
 import type { ManageState } from "@/lib/groups/manage-state";
 
 type Action = (prev: ManageState, formData: FormData) => Promise<ManageState>;

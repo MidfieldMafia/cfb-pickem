@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { NewPersonFields } from "@/components/new-person-fields";
-import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/wordmark";
+import { Button, Wordmark } from "@saturday-slate/design-system";
+
 import { db } from "@/db";
 import { avatars } from "@/lib/avatars";
 import { groupForJoinLink, joinStanding } from "@/lib/groups/join";

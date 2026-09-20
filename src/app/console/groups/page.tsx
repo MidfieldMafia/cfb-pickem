@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 import { db } from "@/db";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { SECTION_LABEL } from "@/components/section-label";
+import { Card, Input, SECTION_LABEL } from "@saturday-slate/design-system";
+
 import { listGroups } from "@/lib/groups/console";
 import { leftWithoutGroupWarning } from "@/lib/groups/console-edits";
 import { MAX_GROUP_NAME } from "@/lib/groups/limits";
