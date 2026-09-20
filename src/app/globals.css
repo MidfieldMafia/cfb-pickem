@@ -8,4 +8,22 @@
      the install page then confirms it in JS, which is the only signal older
      iOS gives. */
   @media (display-mode: standalone) { .when-browser { display: none; } }
+
+  /* The launch hold (components/launch-screen.tsx): shown only in a Home Screen
+     window, and only until the first document of the launch marks <html>. */
+  .launch-screen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    background: var(--background);
+    transition: opacity 200ms ease-out;
+  }
+  .launch-screen[data-leaving] { opacity: 0; }
+  @media (display-mode: standalone) {
+    html:not([data-launched]) .launch-screen { display: flex; }
+  }
+  @media (prefers-reduced-motion: reduce) { .launch-screen { transition: none; } }
 }
