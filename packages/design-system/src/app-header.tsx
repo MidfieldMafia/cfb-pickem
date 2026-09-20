@@ -17,7 +17,7 @@ import { HeaderLinks } from "./header-links";
  * carries no safe-area inset: `body` already pads by the inset, and adding it
  * here as well pushed this header down twice as far as the pick screens.
  */
-export const HEADER_TOP = "pt-[1.125rem]";
+export const HEADER_TOP = "pt-[21px]";
 
 export function AppHeader({
   title,
