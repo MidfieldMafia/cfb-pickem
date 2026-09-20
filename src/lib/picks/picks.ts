@@ -142,6 +142,15 @@ export async function pickSheet(
   };
 }
 
+/**
+ * True while the member still has something to do before the Deadline — a Pick,
+ * the Lock, or the Tiebreaker Guess. The Picks tab's dot reads it. There is no
+ * submit step (every tap saves), so "submitted" means nothing is left open.
+ */
+export async function picksOpenFor(db: Db, actor: Pick<Member, "id">, slate: Slate, now: Date = new Date()): Promise<boolean> {
+  return (await pickSheet(db, actor, slate, now)).progress.remaining > 0;
+}
+
 /** One member's picks as they stand at the Reveal. */
 export interface MemberPicks {
   memberId: number;

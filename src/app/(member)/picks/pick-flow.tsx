@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, CircleDashed, ListChecks, LoaderCircle, Lock, TriangleAlert } from "lucide-react";
+import { Check, ChevronRight, CircleDashed, ListChecks, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { HeaderLinks, Badge, Button, LocalTime } from "@saturday-slate/design-system";
 
@@ -115,11 +115,9 @@ function StatusChip({ pick }: { pick: LocalPick | undefined }) {
 export function PickFlow({
   sheet,
   startGameId,
-  manage,
 }: {
   sheet: SheetJson;
   startGameId?: number;
-  manage?: string | null;
 }) {
   const router = useRouter();
   const games = sheet.games;
@@ -145,6 +143,7 @@ export function PickFlow({
   const voided = isVoid(view);
   const why = voidNote(view);
   const pick = picks[game.id];
+  const tiebreaker = game.id === sheet.tiebreakerGameId;
   // Recounted from the local picks, which hold only what the server took: an
   // in-flight or failed save leaves its game open here just as it does on the sheet.
   const progress = sheetProgress({
@@ -154,6 +153,15 @@ export function PickFlow({
     lockDropped: sheet.lockDropped,
     tiebreakerGuess: sheet.tiebreakerGuess,
   });
+  // The layout's Picks-tab dot reads what the server holds, and a layout is not
+  // re-rendered by client navigation, so refresh it when the count crosses zero.
+  const allSet = progress.remaining === 0;
+  const seenAllSet = useRef(allSet);
+  useEffect(() => {
+    if (seenAllSet.current === allSet) return;
+    seenAllSet.current = allSet;
+    router.refresh();
+  }, [allSet, router]);
   const last = index + 1 >= games.length;
   // What the end of the slate still owes, counting this game as picked: `advance`
   // runs from the post-save timeout, whose closure caught `picks` before the save
@@ -245,7 +253,7 @@ export function PickFlow({
             <div className="min-w-0 flex-1 font-display text-lg leading-6">Week {sheet.weekNumber}</div>
             {/* `-my-1` sets the 32px icons in the row without growing it past the chip. */}
             <div className="-my-1 flex items-center">
-              <HeaderLinks manage={manage} />
+              <HeaderLinks />
             </div>
             <StatusChip pick={pick} />
           </div>
@@ -280,11 +288,20 @@ export function PickFlow({
               </span>
             ) : null}
           </span>
-          {game.id === sheet.tiebreakerGameId ? <Badge variant="secondary">Tiebreaker</Badge> : null}
+          {tiebreaker ? (
+            <Badge variant="secondary">
+              <Scale size={12} aria-hidden />
+              Tiebreaker
+            </Badge>
+          ) : null}
           {voided ? <Badge variant="void">Void{why ? `: ${why}` : ""}</Badge> : null}
           {detail?.weather ? <WeatherPill weather={detail.weather} /> : null}
         </div>
 
+        {/* An outline, not a border: it sets the Tiebreaker Game apart without moving the tiles. */}
+        <div
+          className={`flex flex-1 flex-col gap-2 rounded-lg ${tiebreaker ? "outline-2 outline-offset-4 outline-secondary" : ""}`}
+        >
         <MatchupPanel
           awayTeam={game.awayTeam}
           homeTeam={game.homeTeam}
@@ -318,6 +335,7 @@ export function PickFlow({
             disabled={locked || voided}
             onPick={() => choose(game.homeTeamId)}
           />
+        </div>
         </div>
 
         {lateError ? (

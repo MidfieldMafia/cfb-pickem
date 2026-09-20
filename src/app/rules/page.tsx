@@ -10,6 +10,7 @@ import { MemberMenu } from "@/components/member-menu";
 import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { safeInteger } from "@/lib/parse";
+import { picksOpenFor } from "@/lib/picks/picks";
 import { activeSeason, deadlinePassed, publishedSlate } from "@/lib/slate/slate";
 
 /**
@@ -42,6 +43,7 @@ export default async function HowToPlay({
   const { pointsPerCorrectPick, lockMultiplier, tiebreakOrder } = season.rules;
   const slate = inSetup ? null : await publishedSlate(database);
   const locked = slate ? deadlinePassed(slate.week, new Date()) : false;
+  const picksOpen = slate && !locked ? await picksOpenFor(database, member, slate) : false;
 
   return (
     <>
@@ -173,7 +175,7 @@ export default async function HowToPlay({
           </Link>
         )}
       </main>
-      {inSetup ? null : <BottomNav locked={locked} />}
+      {inSetup ? null : <BottomNav locked={locked} picksOpen={picksOpen} />}
     </>
   );
 }

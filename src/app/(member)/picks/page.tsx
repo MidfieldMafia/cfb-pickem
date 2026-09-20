@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { toSheetJson } from "@/lib/picks/json";
 import { currentWeek } from "@/lib/week/week";
@@ -20,6 +19,6 @@ export default async function Picks({ searchParams }: { searchParams: Promise<{ 
   const { game } = await searchParams;
   const startGameId = typeof game === "string" ? Number(game) : undefined;
   return (
-    <PickFlow sheet={toSheetJson(week.sheet)} startGameId={startGameId} manage={await currentManageHref()} />
+    <PickFlow sheet={toSheetJson(week.sheet)} startGameId={startGameId} />
   );
 }

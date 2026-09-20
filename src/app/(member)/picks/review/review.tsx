@@ -63,7 +63,7 @@ function StepRow({
  * Guess. The countdown runs on the server clock, and at zero the screen
  * flips to its locked state without a reload.
  */
-export function Review({ initial, manage }: { initial: SheetJson; manage?: string | null }) {
+export function Review({ initial }: { initial: SheetJson }) {
   const router = useRouter();
   const [sheet, setSheet] = useState(initial);
   const { remainingMs, passed, sync } = useDeadlineClock(sheet.deadline, sheet.serverNow);
@@ -118,6 +118,16 @@ export function Review({ initial, manage }: { initial: SheetJson; manage?: strin
     lockDropped: sheet.lockDropped,
     tiebreakerGuess: sheet.tiebreakerGuess,
   });
+  // The layout's Picks-tab dot reads what the server holds, and a layout is not
+  // re-rendered by client navigation. `sheet.progress` is the server's own count,
+  // so refresh when the answer it gave crosses zero.
+  const serverAllSet = sheet.progress.remaining === 0;
+  const seenAllSet = useRef(serverAllSet);
+  useEffect(() => {
+    if (seenAllSet.current === serverAllSet) return;
+    seenAllSet.current = serverAllSet;
+    router.refresh();
+  }, [serverAllSet, router]);
   const open = progress.liveGames - progress.picksMade;
   const lockGame = sheet.games.find((g) => g.game.id === sheet.lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
@@ -244,7 +254,7 @@ export function Review({ initial, manage }: { initial: SheetJson; manage?: strin
         <Wordmark />
         <div className="flex items-center gap-1">
           <h1 className="min-w-0 flex-1 font-display text-[22px] leading-7">Week {sheet.weekNumber} picks</h1>
-          <HeaderLinks manage={manage} />
+          <HeaderLinks />
           <Badge variant={progress.remaining ? "outline" : "default"}>
             {stepsDone} of {steps}
           </Badge>

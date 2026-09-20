@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { db } from "@/db";
 import { BottomNav } from "@/components/bottom-nav";
 import { requireMember } from "@/lib/members/current";
+import { picksOpenFor } from "@/lib/picks/picks";
 import { deadlinePassed, publishedSlate } from "@/lib/slate/slate";
 
 /**
@@ -15,13 +16,14 @@ import { deadlinePassed, publishedSlate } from "@/lib/slate/slate";
  * session once, not twice.
  */
 export default async function MemberLayout({ children }: { children: ReactNode }) {
-  await requireMember();
+  const member = await requireMember();
   const slate = await publishedSlate(db());
   const locked = slate ? deadlinePassed(slate.week, new Date()) : false;
+  const picksOpen = slate && !locked ? await picksOpenFor(db(), member, slate) : false;
   return (
     <>
       {children}
-      <BottomNav locked={locked} />
+      <BottomNav locked={locked} picksOpen={picksOpen} />
     </>
   );
 }

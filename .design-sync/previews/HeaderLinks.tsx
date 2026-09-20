@@ -15,14 +15,3 @@ export function Member() {
     </div>
   );
 }
-
-export function WithManage() {
-  return (
-    <div style={{ padding: 16 }}>
-      <div style={bar}>
-        <span className="font-display" style={{ flex: 1, fontSize: 18 }}>Live Board</span>
-        <HeaderLinks manage="/console" />
-      </div>
-    </div>
-  );
-}
