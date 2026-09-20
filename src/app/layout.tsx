@@ -3,6 +3,8 @@ import { Chivo, Manrope } from "next/font/google";
 import { SPLASH_SCREENS, splashMedia, splashUrl } from "@/lib/splash";
 import "./globals.css";
 
+const PAPER = "#F7F1E3";
+
 const chivo = Chivo({
   variable: "--font-chivo",
   subsets: ["latin"],
@@ -55,6 +57,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${chivo.variable} ${manrope.variable} h-full antialiased`}
+      // The stylesheet sets the page color, but iOS paints the canvas white
+      // between the launch splash going away and that stylesheet arriving.
+      // The app is light-only (nothing sets `.dark`), so paper is always right.
+      style={{ backgroundColor: PAPER }}
     >
       <body className="flex min-h-full flex-col pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
         <div
