@@ -157,16 +157,10 @@ describe("a tap on a team", () => {
 describe("the header", () => {
   const link = (name: string) => screen.queryByRole("link", { name });
 
-  test("links every member to How to play, and shows Manage only when there is somewhere to manage", () => {
+  test("links every member to How to play, and carries no Manage icon — that lives in the avatar menu", () => {
     render(<PickFlow sheet={sheet()} />);
 
     expect(link("How to play")?.getAttribute("href")).toBe("/rules");
     expect(link("Manage")).toBeNull();
-  });
-
-  test("links Manage to wherever the page says: the console, or a group's Manage screen", () => {
-    render(<PickFlow sheet={sheet()} manage="/manage/7" />);
-
-    expect(link("Manage")?.getAttribute("href")).toBe("/manage/7");
   });
 });

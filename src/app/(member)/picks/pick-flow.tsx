@@ -115,11 +115,9 @@ function StatusChip({ pick }: { pick: LocalPick | undefined }) {
 export function PickFlow({
   sheet,
   startGameId,
-  manage,
 }: {
   sheet: SheetJson;
   startGameId?: number;
-  manage?: string | null;
 }) {
   const router = useRouter();
   const games = sheet.games;
@@ -255,7 +253,7 @@ export function PickFlow({
             <div className="min-w-0 flex-1 font-display text-lg leading-6">Week {sheet.weekNumber}</div>
             {/* `-my-1` sets the 32px icons in the row without growing it past the chip. */}
             <div className="-my-1 flex items-center">
-              <HeaderLinks manage={manage} />
+              <HeaderLinks />
             </div>
             <StatusChip pick={pick} />
           </div>
