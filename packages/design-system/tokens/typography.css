@@ -1,0 +1,8 @@
+/* Raw font-family tokens. The actual `--font-chivo`/`--font-manrope` custom
+   properties are supplied by the app via `next/font` on `<html>` — a
+   component library can't own font loading in a Next app, so this file only
+   owns the indirection, never the literal family names. */
+@theme inline {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-chivo), var(--font-manrope), sans-serif;
+}

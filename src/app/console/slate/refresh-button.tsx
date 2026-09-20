@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@saturday-slate/design-system";
+
 import { refreshAction, type SlateActionState } from "./actions";
 
 export function RefreshButton({ weekId }: { weekId: number }) {

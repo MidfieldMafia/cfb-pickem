@@ -1,4 +1,5 @@
-import { Card } from "@/components/ui/card";
+import { Card } from "@saturday-slate/design-system";
+
 import type { WeeklyScore } from "@/lib/results/results";
 import { record, type SeasonStanding, type Standing } from "@/lib/results/summary";
 

@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CopyButton } from "@/components/copy-button";
-import { LocalTime } from "@/components/local-time";
+import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, CopyButton, LocalTime, SECTION_LABEL } from "@saturday-slate/design-system";
+
 import { Pennant } from "@/components/pennant";
-import { SECTION_LABEL } from "@/components/section-label";
+
 import { requireConsole } from "@/lib/members/current";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
 import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { AppHeader } from "@/components/app-header";
+import { AppHeader } from "@saturday-slate/design-system";
+
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberChip } from "@/components/member-chip";
 import { NoGroup } from "@/components/no-group";

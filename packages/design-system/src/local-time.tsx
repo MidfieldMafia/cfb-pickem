@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { formatterFor } from "@/lib/intl-time";
+import { formatterFor } from "./intl-time";
 
 export type TimeStyle = "kickoff" | "deadline" | "slot";
 

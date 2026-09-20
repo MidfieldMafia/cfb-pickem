@@ -1,6 +1,6 @@
 import { PennantPicker } from "@/components/pennant-picker";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Input } from "@/components/ui/input";
+import { SECTION_LABEL, Input } from "@saturday-slate/design-system";
+
 import type { Avatar } from "@/lib/avatars";
 import { MAX_DISPLAY_NAME, MAX_PHONE } from "@/lib/members/limits";
 

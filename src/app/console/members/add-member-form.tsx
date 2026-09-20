@@ -2,10 +2,8 @@
 
 import { useActionState } from "react";
 import { UserPlus } from "lucide-react";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { SECTION_LABEL, Button, Card, Input } from "@saturday-slate/design-system";
+
 import { MAX_DISPLAY_NAME, MAX_PHONE } from "@/lib/members/limits";
 import { ActionMessage, type ActionState } from "../action-form";
 import { addMemberAction } from "./actions";

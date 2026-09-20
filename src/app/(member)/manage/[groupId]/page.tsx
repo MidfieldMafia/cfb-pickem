@@ -1,13 +1,10 @@
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { AppHeader } from "@/components/app-header";
+import { AppHeader, SECTION_LABEL, CopyButton, Badge, Card, Input } from "@saturday-slate/design-system";
+
 import { MemberChip } from "@/components/member-chip";
 import { Pennant } from "@/components/pennant";
-import { SECTION_LABEL } from "@/components/section-label";
-import { CopyButton } from "@/components/copy-button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+
 import { appUrl } from "@/lib/app-url";
 import { currentManageHref } from "@/lib/groups/current";
 import { joinLinkFor } from "@/lib/groups/join";

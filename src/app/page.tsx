@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/wordmark";
+import { Button, Wordmark } from "@saturday-slate/design-system";
+
 import { db } from "@/db";
 import { currentGroup } from "@/lib/groups/current";
 import { currentMember } from "@/lib/members/current";

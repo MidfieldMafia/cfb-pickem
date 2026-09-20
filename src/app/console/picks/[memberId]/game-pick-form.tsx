@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@saturday-slate/design-system";
+
 import { TeamLogo } from "@/components/team-logo";
 import { ActionMessage, type ActionState } from "../../action-form";
 import { overridePickAction } from "../actions";

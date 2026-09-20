@@ -2,6 +2,9 @@
   "name": "cfb-pickem",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "drizzle-kit migrate && next build",
@@ -17,6 +20,7 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@neondatabase/serverless": "^1.1.0",
+    "@saturday-slate/design-system": "*",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.2.5",
     "drizzle-orm": "^0.45.2",

@@ -3,8 +3,8 @@
 import { Check, Compass, Download, EllipsisVertical, SquareArrowUp, SquarePlus } from "lucide-react";
 import type { ComponentType } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button, Card } from "@saturday-slate/design-system";
+
 import { isInstalled, readBrowser, type Browser, type Phone } from "@/lib/install/install";
 
 interface Step {

@@ -1,9 +1,8 @@
 import { Lock, LockOpen } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { LocalTime } from "@/components/local-time";
+import { Badge, Card, LocalTime, SECTION_LABEL as LABEL } from "@saturday-slate/design-system";
+
 import { Pennant } from "@/components/pennant";
-import { SECTION_LABEL as LABEL } from "@/components/section-label";
+
 import { TeamLogo } from "@/components/team-logo";
 import { clockLabel } from "@/lib/results/result";
 import type { Reveal, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";

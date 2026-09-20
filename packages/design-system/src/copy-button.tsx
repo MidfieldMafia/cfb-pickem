@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "./button";
 
 /** Copies `text` to the clipboard, falling back to a prompt the user can copy from by hand. */
 export function CopyButton({

@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Trophy } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Badge, Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@saturday-slate/design-system";
+
 import { Pennant } from "@/components/pennant";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import type { LeaderboardRow } from "@/lib/results/results";
 import { averageLabel, movement, record, tiebreakerMissLabel, type Movement } from "@/lib/results/summary";
 import { sortLeaderboard, type SortColumn, type SortDirection } from "./leaderboard-sort";

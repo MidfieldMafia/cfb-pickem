@@ -1,4 +1,5 @@
-import { CAPS_LABEL as LABEL } from "@/components/section-label";
+import { CAPS_LABEL as LABEL } from "@saturday-slate/design-system";
+
 import { matchupColors } from "@/lib/matchup-colors";
 import { spreadSides } from "./spread";
 import type { MatchupDetail } from "./types";

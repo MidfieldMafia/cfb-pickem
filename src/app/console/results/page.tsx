@@ -1,10 +1,8 @@
 import { Ban, Pencil, Radio } from "lucide-react";
 import type { VariantProps } from "class-variance-authority";
 import { db } from "@/db";
-import { Badge, badgeVariants } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { LocalTime } from "@/components/local-time";
+import { Badge, badgeVariants, Card, CardDescription, CardHeader, CardTitle, Input, LocalTime } from "@saturday-slate/design-system";
+
 import { TeamLogo } from "@/components/team-logo";
 import { requireConsole } from "@/lib/members/current";
 import { MAX_NOTE } from "@/lib/notes";

@@ -2,22 +2,12 @@
 
 import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, Scale, X } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { AppHeader } from "@/components/app-header";
-import { LocalTime } from "@/components/local-time";
+import { AppHeader, LocalTime, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@saturday-slate/design-system";
+
 import { MemberChip } from "@/components/member-chip";
 import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+
 import { useDeadlineClock } from "@/lib/picks/clock";
 import { clockLabel, type GameResult } from "@/lib/results/result";
 import type { RevealGame, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";

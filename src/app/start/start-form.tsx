@@ -3,9 +3,8 @@
 import { ArrowRight } from "lucide-react";
 import { useActionState, useState } from "react";
 import { NewPersonFields } from "@/components/new-person-fields";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SECTION_LABEL, Button, Input } from "@saturday-slate/design-system";
+
 import type { Avatar } from "@/lib/avatars";
 import { cleanGroupName, MAX_GROUP_NAME } from "@/lib/groups/limits";
 import type { JoinState } from "@/lib/groups/join-state";

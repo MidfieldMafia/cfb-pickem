@@ -1,6 +1,6 @@
 import { Trophy } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Badge, Card } from "@saturday-slate/design-system";
+
 import { Pennant } from "@/components/pennant";
 import type { WeeklyScore } from "@/lib/results/results";
 import { guessLabel, record, standing } from "@/lib/results/summary";

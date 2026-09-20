@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { SECTION_LABEL } from "@/components/section-label";
+import { SECTION_LABEL } from "@saturday-slate/design-system";
+
 import type { Avatar } from "@/lib/avatars";
 
 /**

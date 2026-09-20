@@ -1,4 +1,4 @@
-import { Wordmark } from "@/components/wordmark";
+import { Wordmark } from "@saturday-slate/design-system";
 
 export default function ExpiredLink() {
   return (

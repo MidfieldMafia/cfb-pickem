@@ -1,0 +1,15 @@
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "tnum" 1; /* tabular numerals everywhere: scores, records, points */
+    text-wrap: pretty;
+  }
+  h1, h2, h3, .font-display { font-family: var(--font-display); font-weight: 900; letter-spacing: -0.01em; }
+  h1 { @apply text-[28px] leading-8; }
+  h2 { @apply text-[22px] leading-7 font-bold; }
+  /* shadcn defaults to 36px buttons/inputs; the app minimum is 44px. */
+  button, [role="button"], input, select, textarea, a.tap { min-height: var(--spacing-tap); }
+}

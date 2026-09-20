@@ -2,6 +2,10 @@
 
 # dependencies
 /node_modules
+/packages/*/node_modules
+
+# design-system package build output
+/packages/*/dist
 /.pnp
 .pnp.*
 .yarn/*

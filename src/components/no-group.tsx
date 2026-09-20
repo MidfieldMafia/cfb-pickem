@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/app-header";
+import { AppHeader, SECTION_LABEL, Button, Card } from "@saturday-slate/design-system";
+
 import { MemberChip } from "@/components/member-chip";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+
 import type { Member } from "@/db/schema";
 import { currentManageHref } from "@/lib/groups/current";
 

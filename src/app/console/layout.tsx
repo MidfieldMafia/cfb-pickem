@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { MemberChip } from "@/components/member-chip";
-import { SECTION_LABEL } from "@/components/section-label";
-import { Wordmark } from "@/components/wordmark";
+import { SECTION_LABEL, Wordmark } from "@saturday-slate/design-system";
+
 import { requireConsole } from "@/lib/members/current";
 import { activeSeason, defaultWeekNumber, seasonWeeks, WEEK_NUMBERS } from "@/lib/slate/slate";
 import { ConsoleNav } from "./console-nav";

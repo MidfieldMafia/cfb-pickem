@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { LocalTime } from "@/components/local-time";
+import { Badge, Card, Input, LocalTime } from "@saturday-slate/design-system";
+
 import { Pennant } from "@/components/pennant";
 import { requireConsole } from "@/lib/members/current";
 import { InvalidMember } from "@/lib/members/members";

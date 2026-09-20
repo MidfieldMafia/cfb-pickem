@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { MoreHorizontal, RefreshCw, Shield } from "lucide-react";
 import { db } from "@/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Badge, Button, Card, Input, CopyButton } from "@saturday-slate/design-system";
+
 import { Pennant } from "@/components/pennant";
 import { appUrl } from "@/lib/app-url";
 import { groupsByMember, listGroups } from "@/lib/groups/console";
@@ -18,7 +16,6 @@ import { relativeTime } from "@/lib/relative-time";
 import { deleteMemberAction, editPhoneAction, regenerateAction, setActiveAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
 import { ActionForm } from "../action-form";
-import { CopyButton } from "@/components/copy-button";
 
 function maskedLink(link: string): string {
   const url = new URL(link);
