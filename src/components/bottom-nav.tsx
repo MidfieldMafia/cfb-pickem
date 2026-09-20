@@ -76,7 +76,7 @@ export function BottomNav({ locked }: { locked: boolean }) {
       </div>
       <nav
         aria-label="App"
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-card pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-card pr-[env(safe-area-inset-right)] pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)]"
       >
         {tiles}
       </nav>
