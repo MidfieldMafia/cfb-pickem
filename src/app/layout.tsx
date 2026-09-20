@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Chivo, Manrope } from "next/font/google";
+import { LaunchScreen } from "@/components/launch-screen";
+import { LAUNCH_GUARD } from "@/lib/launch";
 import { SPLASH_SCREENS, splashMedia, splashUrl } from "@/lib/splash";
 import "./globals.css";
 
@@ -56,6 +58,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // LAUNCH_GUARD sets data-launched before hydration.
+      suppressHydrationWarning
       className={`${chivo.variable} ${manrope.variable} h-full antialiased`}
       // The stylesheet sets the page color, but iOS paints the canvas white
       // between the launch splash going away and that stylesheet arriving.
@@ -67,6 +71,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           aria-hidden
           className="fixed inset-x-0 top-0 z-20 h-[env(safe-area-inset-top)] bg-background"
         />
+        <script dangerouslySetInnerHTML={{ __html: LAUNCH_GUARD }} />
+        <LaunchScreen />
         {children}
       </body>
     </html>
