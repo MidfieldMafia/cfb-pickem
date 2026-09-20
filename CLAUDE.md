@@ -28,6 +28,12 @@ Nothing in the test suite covers rendering, and every screen needs a Magic Link 
 
 Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; each roadmap is a `wayfinder:map` issue (v1 and v2 so far) and every ticket is a sub-issue of one with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.
 
+### Claude Design system
+
+There is one design system in Claude Design: the Artifact "Saturday Slate Design System" (https://claude.ai/artifact/LaNEaker2yyAez16eThdfU), built from `packages/design-system`. Keep it, and do not create another. Before making a design system, list the ones that exist (`Artifact` `action: "list"` or `quickstart`), and update this one instead. Three near-identical systems built from this package were consolidated into it on 2026-09-20.
+
+The package wins wherever the two disagree. `/design-sync` reaches only the older claude.ai/design project (`13ff5b45-b28a-4add-8ab7-10ba929c294d`), a stale copy that does not update this Artifact, so package changes have to be carried into the Artifact by hand.
+
 ### Domain docs
 
 Single-context: `CONTEXT.md` at the root, ADRs in `docs/adr/`, research in `docs/research/`. See `docs/agents/domain.md`.
