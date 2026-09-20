@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "next/image": ["./shims/next-image.tsx"],
+      "next/link": ["./shims/next-link.tsx"]
+    }
+  }
+}
