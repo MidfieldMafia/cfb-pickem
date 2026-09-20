@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "npm run build --workspace @saturday-slate/design-system",
     "dev": "next dev",
     "build": "drizzle-kit migrate && next build",
     "start": "next start",
