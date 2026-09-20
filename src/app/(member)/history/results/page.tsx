@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader, Card, SECTION_LABEL } from "@saturday-slate/design-system";
 
-import { MemberChip } from "@/components/member-chip";
+import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 import { RevealList } from "@/components/reveal";
 
@@ -44,8 +44,7 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
         <AppHeader
           title="Week results"
-          manage={await currentManageHref()}
-          right={<MemberChip member={member} />}
+          right={<MemberMenu member={member} manage={await currentManageHref()} />}
         />
         <Card asChild className="mx-4 gap-2">
           <section>
@@ -81,10 +80,11 @@ export default async function WeekResults({ searchParams }: { searchParams: Prom
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title={`Week ${weekNumber} results`}
-        sub={`${complete ? "Final" : "In progress"}${won ? ` · ${won}` : ""}`}
-        manage={await currentManageHref()}
-        right={<MemberChip member={member} />}
+        sub={complete ? "Final" : "In progress"}
+        right={<MemberMenu member={member} manage={await currentManageHref()} />}
       />
+
+      {won ? <p className="px-4 text-sm text-muted-foreground">{won}.</p> : null}
 
       {/* Past weeks are plain links: a GET per week, nothing to hydrate, and
           the one on screen is the one the URL names. */}

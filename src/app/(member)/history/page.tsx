@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { AppHeader, Card, SECTION_LABEL } from "@saturday-slate/design-system";
 
 import { GroupSwitcher } from "@/components/group-switcher";
-import { MemberChip } from "@/components/member-chip";
+import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
@@ -31,10 +31,8 @@ export default async function History() {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader
         title="History"
-        group={<GroupSwitcher choice={choice} />}
         sub={`${season.season.year} season`}
-        manage={await currentManageHref()}
-        right={<MemberChip member={member} />}
+        right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
       />
 
       {played.length > 0 ? (

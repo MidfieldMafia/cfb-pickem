@@ -4,7 +4,7 @@ import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, Scale, X } from 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AppHeader, LocalTime, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@saturday-slate/design-system";
 
-import { MemberChip } from "@/components/member-chip";
+import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
 
@@ -623,8 +623,8 @@ export function LiveBoard({
   const sub = state.locked
     ? state.complete
       ? `Week ${weekNumber} · Final`
-      : `Week ${weekNumber} · Reveal is on, everyone’s picks are visible`
-    : `Week ${weekNumber} · Picks are still open`;
+      : `Week ${weekNumber} · Picks revealed`
+    : `Week ${weekNumber} · Picks open`;
   // Ordered once, from the page's first paint, and never again: a poll that
   // moves a game to final must not move it under a member mid-scan (#93). The
   // boundary this waits for is a fresh mount — leaving the screen and coming
@@ -641,10 +641,8 @@ export function LiveBoard({
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 pb-8">
       <AppHeader
         title="Live Board"
-        group={switcher}
         sub={sub}
-        manage={manage}
-        right={<MemberChip member={viewer} />}
+        right={<MemberMenu member={viewer} group={switcher} manage={manage} />}
       />
 
       {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
