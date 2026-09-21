@@ -9,8 +9,15 @@ description: Write the week's What's new entry in CHANGELOG.md and open the PR. 
 needs nothing from you. This skill is the other half: the handful of bullets a
 member of the league would notice, in their words.
 
-Run it on a Sunday, before the next slate goes up. It ends in a PR Jonah merges,
-like everything else here.
+Run it on a Thursday morning, and understand why it is that day rather than the
+start of the week. Most of a week's shipping happens Monday to Wednesday, aimed
+at being ready before that week's Deadline. An entry written on Monday covers
+only the week behind it, so a fix that shipped Wednesday *for this week* would
+not be announced until the next one — by which time everyone has already played
+the week it was for. Thursday catches it, and lands while members are opening
+the app to pick.
+
+It ends in a PR Jonah merges, like everything else here.
 
 Locally, take a worktree of its own (`new-worktree`). The weekly routine runs in
 a cloud sandbox that is already an isolated checkout, so there it just branches
