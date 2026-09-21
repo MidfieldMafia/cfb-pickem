@@ -60,7 +60,11 @@ export interface WeekStateJson {
  * is what the Deadline gates, and `currentWeek` never grades before it — so
  * the two shapes of the screen are one shape with two empty halves.
  */
-export function toWeekStateJson({ slate, sheet, result, season }: WeekContext): WeekStateJson {
+export function toWeekStateJson(week: WeekContext): WeekStateJson {
+  const { slate, sheet } = week;
+  const graded = week.state === "live" || week.state === "settled" ? week : null;
+  const result = graded?.result ?? null;
+  const season = graded?.season ?? null;
   return {
     week: toWeekJson(slate.week),
     year: slate.season.year,

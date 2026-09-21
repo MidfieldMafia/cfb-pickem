@@ -27,24 +27,66 @@ import {
 import { seasonStanding, type SeasonStanding } from "@/lib/results/summary";
 import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
 
-/** The published Week for one member at one instant. */
-export interface WeekContext {
+interface WeekBase {
   slate: Slate;
   sheet: PickSheet;
-  /**
-   * The Week graded: the Reveal board, everyone's Weekly Score, and the
-   * Weekly Win. Null before the Deadline, and null after it for the screens
-   * that did not ask for it — grading costs a read per member.
-   */
-  result: GradedWeekResult | null;
+}
+
+/** Before the Deadline: Picks are still open, and there is no Reveal to grade. */
+export interface OpenWeek extends WeekBase {
+  state: "open";
+}
+
+/**
+ * Past the Deadline, and nobody asked for the grading — it costs a read per
+ * member. Whether the Week is still live or settled is exactly what this
+ * state does not know, so `landingRoute` does not take it: ask with
+ * `{ graded: true }` and the type in hand is one that can be routed.
+ */
+export interface LockedWeek extends WeekBase {
+  state: "locked";
+}
+
+/**
+ * Past the Deadline for a member in no group. There is no board to grade, so
+ * there is nothing to tell live from settled either; the member lands on the
+ * "not in a group yet" screen rather than on an empty Leaderboard.
+ */
+export interface UngroupedWeek extends WeekBase {
+  state: "ungrouped";
+}
+
+interface GradedBase extends WeekBase {
+  /** The Week graded: the Reveal board, everyone's Weekly Score, and the Weekly Win. */
+  result: GradedWeekResult;
   /**
    * Where the member stands in the season, this Week's provisional points
-   * included. Null before the Deadline and for the screens that did not ask
-   * for it — the season costs a grading pass over every played Week, not just
-   * this one.
+   * included. Null for the screens that did not ask for it — the season costs a
+   * grading pass over every played Week, not just this one — and for a member
+   * the season board does not carry at all.
    */
   season: SeasonStanding | null;
 }
+
+/** Past the Deadline, graded, and a game still to finish. */
+export interface LiveWeek extends GradedBase {
+  state: "live";
+}
+
+/** Past the Deadline, graded, and every non-void game final. */
+export interface SettledWeek extends GradedBase {
+  state: "settled";
+}
+
+/**
+ * The published Week for one member at one instant, as the state it is in
+ * rather than a bag of nullable fields. "There is no published Week" is the
+ * one shape outside it: `currentWeek` answers null.
+ */
+export type WeekContext = OpenWeek | LockedWeek | UngroupedWeek | LiveWeek | SettledWeek;
+
+/** What `currentWeek(..., { graded: true })` can answer: every state but the one that skipped the grading. */
+export type GradedWeekContext = Exclude<WeekContext, LockedWeek>;
 
 export interface WeekOptions {
   /**
@@ -97,7 +139,22 @@ async function refreshQuietly(db: Db, cfbd: () => CfbdClient, slate: Slate, now:
  * season has been published. The Slate arrives published by construction, so
  * the "not published" throws inside `pickSheet` and `weekPicks` are
  * unreachable from here: null is the only way "there is no Week" comes back.
+ *
+ * Asking for `graded` narrows the answer to `GradedWeekContext`, which has no
+ * `locked` state: past the Deadline it is `live`, `settled`, or `ungrouped`.
  */
+export async function currentWeek(
+  db: Db,
+  actor: Member,
+  now: Date | undefined,
+  options: WeekOptions & { graded: true },
+): Promise<GradedWeekContext | null>;
+export async function currentWeek(
+  db: Db,
+  actor: Member,
+  now?: Date,
+  options?: WeekOptions,
+): Promise<WeekContext | null>;
 export async function currentWeek(
   db: Db,
   actor: Member,
@@ -109,14 +166,15 @@ export async function currentWeek(
   const locked = deadlinePassed(published.week, now);
   // Any feed pull happens before the reads, so the sheet and the Reveal see the same rows.
   const slate = locked && options.cfbd ? await refreshQuietly(db, options.cfbd, published, now) : published;
-  // No group is no board: the flags ask for a grading that has nobody to be
-  // graded against, so both come back null rather than the read inventing a
-  // site-wide board that no longer exists.
+  // No group is no board: a grading with nobody to be graded against is the
+  // `ungrouped` state, rather than the read inventing a site-wide board that no
+  // longer exists.
   const group = options.group ?? null;
+  const wantsGrading = Boolean(options.graded || options.season);
   // Once locked, the season's played Weeks include this one, so asking for the
   // standing as well as the Week is one grading pass with the Week cut out of
   // it — not `weekResult` and `seasonResult` each grading it again.
-  const grading = locked && group !== null && (options.graded || options.season);
+  const grading = locked && wantsGrading && group !== null;
   const [sheet, graded] = await Promise.all([
     pickSheet(db, actor, slate, now),
     !grading
@@ -125,11 +183,15 @@ export async function currentWeek(
         ? gradedSeason(db, group, slate, now)
         : weekResult(db, group, slate, now).then((result) => ({ result, season: null })),
   ]);
+  const base = { slate, sheet };
+  if (!locked) return { ...base, state: "open" };
+  if (!wantsGrading) return { ...base, state: "locked" };
+  if (!graded) return { ...base, state: "ungrouped" };
   return {
-    slate,
-    sheet,
-    result: options.graded && graded ? graded.result : null,
-    season: options.season && graded?.season ? seasonStanding(graded.season.leaderboard, actor.id) : null,
+    ...base,
+    state: graded.result.complete ? "settled" : "live",
+    result: graded.result,
+    season: options.season && graded.season ? seasonStanding(graded.season.leaderboard, actor.id) : null,
   };
 }
 
@@ -144,18 +206,24 @@ export async function currentWeek(
  * picking is sent to the screen that does rather than back to the top of a
  * slate they have already decided.
  *
- * `week` must have been asked to grade (`currentWeek(..., { graded: true })`)
- * for the last two states to tell apart — an ungraded `WeekContext` carries a
- * null `result` whether the Week is mid-Reveal or long settled, and this
- * would read both as still live.
+ * Takes a `GradedWeekContext`, so a Week read without `{ graded: true }` is a
+ * type error rather than a settled Week quietly sent to the Live Board. A
+ * member in no group lands on the Live Board too, which is where the "not in a
+ * group yet" screen lives.
  */
 export function landingRoute(
-  week: WeekContext | null,
+  week: GradedWeekContext | null,
 ): "/leaderboard" | "/picks" | "/picks/review" | "/live" | "/history" {
   if (!week) return "/leaderboard";
-  if (!week.sheet.locked) return picksComplete(week.sheet.progress) ? "/picks/review" : "/picks";
-  if (!week.result?.complete) return "/live";
-  return "/history";
+  switch (week.state) {
+    case "open":
+      return picksComplete(week.sheet.progress) ? "/picks/review" : "/picks";
+    case "settled":
+      return "/history";
+    case "live":
+    case "ungrouped":
+      return "/live";
+  }
 }
 
 /** A Week the season has finished with, graded, with the Weeks a member may look at instead. */
