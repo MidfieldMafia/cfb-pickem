@@ -77,6 +77,7 @@ function member(overrides: Partial<Member> = {}): Member {
     token: "token",
     joinedAt: new Date("2026-08-01T00:00:00Z"),
     active: true,
+    smsOptedOut: false,
     welcomedAt: null,
     lastSeenAt: null,
     createdAt: new Date("2026-08-01T00:00:00Z"),

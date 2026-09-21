@@ -4,10 +4,16 @@ import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, CopyButton
 
 import { Pennant } from "@/components/pennant";
 
+import { appUrl } from "@/lib/app-url";
 import { requireConsole } from "@/lib/members/current";
+import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
+import { planReminders, textBudget, UNREACHED } from "@/lib/messaging/texts";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
+import { plural } from "@/lib/plural";
 import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
 import { requestedWeekNumber } from "../week-param";
+import { ActionForm } from "../action-form";
+import { textRemindersAction } from "./actions";
 import { DeadlineCountdown } from "./deadline-countdown";
 
 const KINDS: Record<PickAudit["kind"], string> = {
@@ -90,6 +96,11 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
   const [report, log] = published
     ? await Promise.all([whoHasntPicked(database, commissioner, week.id), pickAuditsFor(database, commissioner, week.id)])
     : [null, []];
+  // What the Text button will do, planned from the same rows it sends from, so
+  // the people it cannot reach are named here before anyone presses it.
+  const sender = senderFromEnv();
+  const budget = await textBudget(database, sender, new Date());
+  const plan = report ? planReminders(report, appUrl(), budget.remaining) : null;
   const gameName = new Map(slate.games.map((g) => [g.id, `${g.awayTeam} at ${g.homeTeam}`]));
 
   return (
@@ -198,9 +209,54 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
                 <p className={SECTION_LABEL}>Reminder</p>
                 <p className="text-sm">{reminderText(report)}</p>
                 <CopyButton text={reminderText(report)} label="Copy reminder" size="default" className="w-full" />
-                <p className="text-xs text-muted-foreground">Paste it into the group chat. Automated texts come later.</p>
+                <p className="text-xs text-muted-foreground">Paste it into the group chat.</p>
               </section>
             </Card>
+            {plan ? (
+              <Card asChild className="gap-2 rounded-md p-4">
+                <section>
+                  <p className={SECTION_LABEL}>Text reminders</p>
+                  <p className="text-sm">
+                    {plan.send.length === 0
+                      ? "Nobody left to text."
+                      : `Texts ${plan.send.map((t) => t.member.displayName).join(", ")}.`}
+                  </p>
+                  <ActionForm
+                    action={textRemindersAction}
+                    hidden={{ weekId: report!.week.id }}
+                    submit={`Text ${plural(plan.send.length, "member")}`}
+                    pendingLabel="Texting…"
+                    variant="default"
+                    size="default"
+                    className="space-y-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {sender.name === NOOP
+                      ? "No PINGRAM_API_KEY is set, so texts are logged but not delivered."
+                      : `${budget.used} of ${budget.budget} texts used this month.`}{" "}
+                    A daily reminder also goes out on its own the day the Deadline is within 24 hours.
+                  </p>
+                  {plan.skip.length > 0 ? (
+                    <div className="space-y-2 border-t border-border pt-2">
+                      <p className="text-sm font-semibold">Not reachable by text</p>
+                      <ul className="text-sm text-muted-foreground">
+                        {plan.skip.map(({ row, why }) => (
+                          <li key={row.member.id}>
+                            {row.member.displayName}: {UNREACHED[why]}
+                          </li>
+                        ))}
+                      </ul>
+                      <CopyButton
+                        text={reminderText({ ...report!, members: plan.skip.map((s) => s.row) })}
+                        label="Copy reminder for them"
+                        size="default"
+                        className="w-full"
+                      />
+                    </div>
+                  ) : null}
+                </section>
+              </Card>
+            ) : null}
           </aside>
         </div>
       )}

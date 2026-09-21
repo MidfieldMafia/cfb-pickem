@@ -103,15 +103,15 @@ async function arrive(db: Db, person: NewPerson, now: Date): Promise<{ member: M
 
 /**
  * The Join Link, signed out: a new person, in the group as of now. A phone
- * number already in the app is refused without saying whose: that person opens
- * their own link and then this one, and joins signed in.
+ * number already in the app is refused without saying whose: that person texts
+ * themselves their own link (#142), opens it, then opens this one, and joins signed in.
  */
 export async function joinSignedOut(db: Db, token: string, person: NewPerson, now: Date = new Date()): Promise<Arrival> {
   const group = await linkedGroup(db, token);
   const clean = await cleanPerson(
     db,
     person,
-    "This number already plays in another group. Open your personal link first, then this link again.",
+    "This number already plays in another group. Text yourself your link below, open it, then open this link again.",
   );
   const { member, sessionId } = await arrive(db, clean, now);
   await db.insert(memberships).values({ groupId: group.id, memberId: member.id, role: "member", joinedAt: now });
@@ -167,7 +167,7 @@ export async function startGroupSignedOut(
   const clean = await cleanPerson(
     db,
     person,
-    "This number already plays in another group. Open your personal link first, then start your group from there.",
+    "This number already plays in another group. Text yourself your link below, open it, then start your group from there.",
   );
   const { member, sessionId } = await arrive(db, clean, now);
   return { member, group: await found(db, name, member, now), sessionId };

@@ -10,6 +10,7 @@ import {
   picks,
   resultAudits,
   sessions,
+  textMessages,
   tiebreakerGuesses,
   type Member,
 } from "@/db/schema";
@@ -179,6 +180,15 @@ export async function renewToken(db: Db, memberId: number, keep?: string): Promi
   return updated;
 }
 
+/**
+ * Flags a member who replied STOP, or clears the flag when they ask to hear
+ * from the app again. The app hears no replies, so this is the commissioner
+ * recording what a member told them.
+ */
+export async function setSmsOptedOut(db: Db, actor: Commissioner, memberId: number, optedOut: boolean): Promise<Member> {
+  return updateMember(db, memberId, { smsOptedOut: optedOut });
+}
+
 /** Deactivating signs the member out everywhere and refuses their link until reactivated. */
 export async function setMemberActive(
   db: Db,
@@ -231,6 +241,7 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     );
   }
   await db.delete(sessions).where(eq(sessions.memberId, memberId));
+  await db.delete(textMessages).where(eq(textMessages.memberId, memberId));
   await db.delete(pickAudits).where(eq(pickAudits.memberId, memberId));
   await db.delete(tiebreakerGuesses).where(eq(tiebreakerGuesses.memberId, memberId));
   await db.delete(locks).where(eq(locks.memberId, memberId));

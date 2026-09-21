@@ -75,7 +75,7 @@ describe("joining signed out", () => {
 
     await expect(joining).rejects.toBeInstanceOf(Refusal);
     await expect(joining).rejects.toThrow(
-      "This number already plays in another group. Open your personal link first, then this link again.",
+      "This number already plays in another group. Text yourself your link below, open it, then open this link again.",
     );
     expect(await db.select().from(members)).toHaveLength(before.length);
   });
@@ -186,7 +186,7 @@ describe("starting a group", () => {
     const [people, groupsBefore] = await Promise.all([db.select().from(members), db.query.groups.findMany()]);
 
     await expect(startGroupSignedOut(db, "Tailgate Crew", { ...COUSIN, phone: grandma.phone! }, THURSDAY)).rejects.toThrow(
-      "This number already plays in another group. Open your personal link first, then start your group from there.",
+      "This number already plays in another group. Text yourself your link below, open it, then start your group from there.",
     );
     expect(await db.select().from(members)).toHaveLength(people.length);
     expect(await db.query.groups.findMany()).toHaveLength(groupsBefore.length);
