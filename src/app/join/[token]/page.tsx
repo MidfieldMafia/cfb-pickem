@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { NewPersonFields } from "@/components/new-person-fields";
+import { TextMyLink } from "@/components/text-my-link";
 import { Button, Wordmark } from "@saturday-slate/design-system";
 
 import { db } from "@/db";
@@ -39,6 +40,7 @@ export default async function JoinLink({ params }: { params: Promise<{ token: st
         <JoinForm token={token} submit={`Join ${group.name}`}>
           <NewPersonFields avatars={avatars} />
         </JoinForm>
+        <TextMyLink />
       </Screen>
     );
   }

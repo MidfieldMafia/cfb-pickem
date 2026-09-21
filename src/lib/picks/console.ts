@@ -93,6 +93,14 @@ export interface PickReport {
  * stay off it — there is nothing to chase them about.
  */
 export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number, now: Date = new Date()): Promise<PickReport> {
+  return pickReport(db, weekId, now);
+}
+
+/**
+ * `whoHasntPicked` without a commissioner: the scheduled reminder runs with
+ * nobody signed in, and reads the same table the console does.
+ */
+export async function pickReport(db: Db, weekId: number, now: Date = new Date()): Promise<PickReport> {
   const slate = await slateFor(db, weekId);
   const deadline = publishedDeadline(slate.week);
   const everyone = await db.query.members.findMany({ orderBy: joinedOrder });

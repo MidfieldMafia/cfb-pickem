@@ -10,12 +10,16 @@ import { managePath } from "@/lib/groups/manage-state";
 import { requireConsole } from "@/lib/members/current";
 import { deleteWarning } from "@/lib/members/console-edits";
 import { MAX_PHONE } from "@/lib/members/limits";
+import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
+import { recentTexts, textBudget } from "@/lib/messaging/texts";
 import { listMembers, magicLinkFor, pickCountByMember } from "@/lib/members/members";
 import { plural } from "@/lib/plural";
 import { relativeTime } from "@/lib/relative-time";
-import { deleteMemberAction, editPhoneAction, regenerateAction, setActiveAction } from "./actions";
+import { deleteMemberAction, editPhoneAction, optOutAction, regenerateAction, setActiveAction, textMagicLinkAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
 import { ActionForm } from "../action-form";
+
+const TEXT_KINDS = { magic_link: "sign-in link", reminder: "reminder", scheduled_reminder: "scheduled reminder" };
 
 function maskedLink(link: string): string {
   const url = new URL(link);
@@ -24,11 +28,14 @@ function maskedLink(link: string): string {
 
 export default async function Members() {
   const commissioner = await requireConsole();
-  const [roster, pickCounts, groups, groupsOf] = await Promise.all([
+  const sender = senderFromEnv();
+  const [roster, pickCounts, groups, groupsOf, texts, budget] = await Promise.all([
     listMembers(db(), commissioner),
     pickCountByMember(db(), commissioner),
     listGroups(db(), commissioner),
     groupsByMember(db(), commissioner),
+    recentTexts(db(), commissioner),
+    textBudget(db(), sender, new Date()),
   ]);
   const base = appUrl();
   const commissioners = roster.filter((m) => m.isCommissioner).length;
@@ -65,7 +72,10 @@ export default async function Members() {
                       <Pennant avatarId={member.avatarId} name={member.displayName} size={36} />
                       <div>
                         <p className="font-semibold">{member.displayName}</p>
-                        <p className="text-xs text-muted-foreground">{member.phone ?? "No phone yet"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {member.phone ?? "No phone yet"}
+                          {member.smsOptedOut ? " · opted out of texts" : ""}
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -107,6 +117,13 @@ export default async function Members() {
                   </td>
                   <td className="p-3">
                     <div className="flex items-center justify-end gap-1">
+                      <ActionForm
+                        action={textMagicLinkAction}
+                        hidden={{ memberId: member.id }}
+                        submit="Text link"
+                        pendingLabel="Texting…"
+                        className="space-y-1 text-right"
+                      />
                       <form action={regenerateAction}>
                         <input type="hidden" name="memberId" value={member.id} />
                         <Button type="submit" variant="outline" size="sm">
@@ -146,6 +163,13 @@ export default async function Members() {
                               className="w-44"
                             />
                           </ActionForm>
+                          <ActionForm
+                            action={optOutAction}
+                            hidden={{ memberId: member.id, optedOut: member.smsOptedOut ? "false" : "true" }}
+                            submit={member.smsOptedOut ? "Text them again" : "Mark opted out of texts"}
+                            pendingLabel="Saving…"
+                            className="space-y-1 text-right"
+                          />
                           {member.id === commissioner.id ? null : (
                             <form action={setActiveAction}>
                               <input type="hidden" name="memberId" value={member.id} />
@@ -182,6 +206,29 @@ export default async function Members() {
             })}
           </tbody>
         </table>
+      </Card>
+
+      <Card className="gap-0 rounded-md p-0">
+        <div className="border-b border-border p-3">
+          <p className="font-semibold">Recent texts</p>
+          <p className="text-xs text-muted-foreground">
+            {sender.name === NOOP
+              ? "No PINGRAM_API_KEY is set, so texts are logged but not delivered."
+              : `${budget.used} of ${budget.budget} texts used this month.`}
+          </p>
+        </div>
+        <ul className="divide-y divide-border text-sm">
+          {texts.map((text) => (
+            <li key={text.id} className="flex flex-wrap items-baseline justify-between gap-2 p-3">
+              <span>
+                <span className="font-semibold">{text.memberName}</span> · {TEXT_KINDS[text.kind]}
+                {text.ok ? null : <span className="font-semibold text-destructive"> · failed: {text.detail}</span>}
+              </span>
+              <span className="text-xs text-muted-foreground">{relativeTime(text.createdAt)}</span>
+            </li>
+          ))}
+          {texts.length === 0 ? <li className="p-3 text-muted-foreground">No texts sent yet.</li> : null}
+        </ul>
       </Card>
     </div>
   );

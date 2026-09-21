@@ -1,5 +1,6 @@
 import { Wordmark } from "@saturday-slate/design-system";
 
+import { TextMyLink } from "@/components/text-my-link";
 import { avatars } from "@/lib/avatars";
 import { currentMember } from "@/lib/members/current";
 import { StartForm } from "./start-form";
@@ -23,6 +24,7 @@ export default async function StartGroup() {
         </p>
       </div>
       <StartForm avatars={member ? null : avatars} />
+      {member ? null : <TextMyLink />}
     </main>
   );
 }

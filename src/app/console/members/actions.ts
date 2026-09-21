@@ -6,6 +6,9 @@ import { db } from "@/db";
 import { SESSION_COOKIE } from "@/lib/members/cookie";
 import { requireConsole } from "@/lib/members/current";
 import type { ActionState } from "@/lib/console/state";
+import { appUrl } from "@/lib/app-url";
+import { editOptOut, sendMagicLinkText } from "@/lib/messaging/console-edits";
+import { senderFromEnv } from "@/lib/messaging/sender";
 import { addPersonToGroup } from "@/lib/groups/console-edits";
 import { deleteMember, editPhone } from "@/lib/members/console-edits";
 import { InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
@@ -34,6 +37,14 @@ export async function setActiveAction(formData: FormData) {
 
 export async function deleteMemberAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return deleteMember(consoleRoute(), formData);
+}
+
+export async function textMagicLinkAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return sendMagicLinkText(consoleRoute(), senderFromEnv(), appUrl(), formData);
+}
+
+export async function optOutAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return editOptOut(consoleRoute(), formData);
 }
 
 export async function editPhoneAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

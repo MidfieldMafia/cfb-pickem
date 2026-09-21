@@ -8,7 +8,7 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { describe, expect, test } from "vitest";
@@ -36,6 +36,11 @@ import { weekCandidates } from "@/lib/cfbd/candidates";
 import { recordedCfbd } from "@/lib/cfbd/recorded";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
 import { groupRoster, memberGroups, MABRY_FAMILY } from "./memberships";
+
+/** The member columns that existed before groups; later migrations only add to them. */
+const columnsThen = Object.fromEntries(
+  Object.entries(getTableColumns(members)).filter(([name]) => name !== "smsOptedOut"),
+) as Omit<ReturnType<typeof getTableColumns<typeof members>>, "smsOptedOut">;
 
 /** The migration before groups: the schema production ran through Week 2. */
 const BEFORE_GROUPS = "0004_live-clock";
@@ -76,13 +81,17 @@ async function familyBeforeGroups() {
     },
     active: true,
   });
-  const add = async (displayName: string, joinedAt: Date, extra: Partial<typeof members.$inferInsert> = {}) =>
-    (
-      await db
-        .insert(members)
-        .values({ displayName, joinedAt, token: `token-${displayName}`, ...extra })
-        .returning()
-    )[0];
+  // Raw SQL, and a select without the newer columns: this database predates them,
+  // so the schema's own insert would name columns it does not have yet.
+  const add = async (displayName: string, joinedAt: Date, extra: Partial<typeof members.$inferInsert> = {}) => {
+    const { rows } = (await db.execute(sql`
+      insert into members (display_name, joined_at, token, is_commissioner, phone)
+      values (${displayName}, ${joinedAt.toISOString()}, ${`token-${displayName}`}, ${extra.isCommissioner ?? false}, ${extra.phone ?? null})
+      returning id`)) as unknown as { rows: { id: number }[] };
+    const [{ id }] = rows;
+    const [row] = await db.select(columnsThen).from(members).where(eq(members.id, id));
+    return { ...row, smsOptedOut: false };
+  };
   const jonah = (await add("Jonah", TUESDAY, { isCommissioner: true })) as Commissioner;
   const alex = await add("Alex", TUESDAY, { isCommissioner: true, phone: "+12565550100" });
   const grandma = await add("Grandma", WEDNESDAY, { phone: "+12565550140" });
@@ -133,7 +142,7 @@ async function familyBeforeGroups() {
  */
 async function rowsOf(db: Db) {
   return {
-    members: await db.select().from(members).orderBy(asc(members.id)),
+    members: await db.select(columnsThen).from(members).orderBy(asc(members.id)),
     picks: await db.select().from(picks).orderBy(asc(picks.id)),
     locks: await db.select().from(locks).orderBy(asc(locks.memberId)),
     guesses: await db.select().from(tiebreakerGuesses).orderBy(asc(tiebreakerGuesses.memberId)),

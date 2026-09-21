@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, Wordmark } from "@saturday-slate/design-system";
 
+import { TextMyLink } from "@/components/text-my-link";
 import { db } from "@/db";
 import { currentGroup } from "@/lib/groups/current";
 import { currentMember } from "@/lib/members/current";
@@ -29,6 +30,9 @@ export default async function Home() {
       <Button asChild size="lg">
         <Link href="/start">Start a group</Link>
       </Button>
+      <div className="w-full max-w-sm">
+        <TextMyLink />
+      </div>
     </main>
   );
 }

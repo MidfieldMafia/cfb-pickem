@@ -46,7 +46,7 @@ describe("the Join Link form", () => {
     const outcome = await joinFromForm(route, form({ token: friends.joinToken, ...PERSON, phone: grandma.phone! }));
 
     expect(outcome).toEqual({
-      error: "This number already plays in another group. Open your personal link first, then this link again.",
+      error: "This number already plays in another group. Text yourself your link below, open it, then open this link again.",
     });
     expect(seen.sessions).toEqual([]);
   });

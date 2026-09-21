@@ -148,6 +148,11 @@ export const members = pgTable("members", {
   /** A week counts as played only if its Deadline fell after this. */
   joinedAt: utc("joined_at").notNull().defaultNow(),
   active: boolean("active").notNull().default(true),
+  /**
+   * Replied STOP to a text, so the app sends them none. Set by hand in the
+   * console: the app hears no replies, only the commissioner does.
+   */
+  smsOptedOut: boolean("sms_opted_out").notNull().default(false),
   /** Set when the member finishes the welcome page for the first time. */
   welcomedAt: utc("welcomed_at"),
   lastSeenAt: utc("last_seen_at"),
@@ -354,6 +359,40 @@ export const resultAudits = pgTable(
   (t) => [index("result_audits_game_idx").on(t.gameId)],
 );
 
+export const textKinds = ["magic_link", "reminder", "scheduled_reminder"] as const;
+export type TextKind = (typeof textKinds)[number];
+export const textStatuses = ["sent", "failed"] as const;
+export type TextStatus = (typeof textStatuses)[number];
+
+/**
+ * One row per text the app tried to send, whoever asked for it. The month's
+ * budget is counted from here, so a row means the provider was called: texts
+ * the app declined to send (opted out, no number, over budget) leave no row.
+ */
+export const textMessages = pgTable(
+  "text_messages",
+  {
+    id: serial("id").primaryKey(),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    kind: text("kind", { enum: textKinds }).notNull(),
+    /** The Week a reminder was about; null for a Magic Link. */
+    weekId: integer("week_id").references(() => weeks.id),
+    /** The number as sent, in E.164, so a later edit to the member's phone does not rewrite history. */
+    phone: text("phone").notNull(),
+    /** "pingram", or "noop" when no key is set: a noop row delivered nothing and spends no budget. */
+    provider: text("provider").notNull(),
+    status: text("status", { enum: textStatuses }).notNull(),
+    /** What the provider answered: its tracking id when sent, its error when not. */
+    detail: text("detail"),
+    /** How many billed messages the body was: one per 160 characters, then per 153. */
+    segments: integer("segments").notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("text_messages_created_idx").on(t.createdAt), index("text_messages_week_kind_idx").on(t.weekId, t.kind)],
+);
+
 export const seasonsRelations = relations(seasons, ({ many }) => ({ weeks: many(weeks) }));
 export const weeksRelations = relations(weeks, ({ one, many }) => ({
   season: one(seasons, { fields: [weeks.seasonId], references: [seasons.id] }),
@@ -374,3 +413,4 @@ export type Member = typeof members.$inferSelect;
 export type Group = typeof groups.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
+export type TextMessage = typeof textMessages.$inferSelect;
