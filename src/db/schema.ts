@@ -78,6 +78,10 @@ export const weeks = pgTable(
 export const gameStatuses = ["scheduled", "in_progress", "final"] as const;
 export type GameStatus = (typeof gameStatuses)[number];
 
+/** Which team has the ball, resolved to a side before it is stored — never the feed's raw string. */
+export const possessionSides = ["home", "away"] as const;
+export type PossessionSide = (typeof possessionSides)[number];
+
 export const games = pgTable(
   "games",
   {
@@ -115,6 +119,22 @@ export const games = pgTable(
      */
     period: integer("period"),
     clock: text("clock"),
+    /**
+     * The rest of what the scoreboard says about a game under way: which team
+     * has the ball, the last play in the feed's own words ("Jalen Milroe pass
+     * complete to…"), and the down-and-distance ("3rd & 7"). Same lifetime as
+     * `period` and `clock` — all null before kickoff and once final — and the
+     * same reader: the Live Board, never the scoring.
+     *
+     * `possession` is resolved to a side at the ingest seam and stored that
+     * way, so nothing downstream sees the feed's raw string. It is null
+     * whenever the feed has not said, and null too when the value is a shape
+     * the resolver cannot place: the value has never been observed in the
+     * wild (see `possessionSide`).
+     */
+    possession: text("possession", { enum: possessionSides }),
+    lastPlay: text("last_play"),
+    situation: text("situation"),
     /** Canceled or postponed after publish: scores 0 for everyone. */
     void: boolean("void").notNull().default(false),
     voidNote: text("void_note"),

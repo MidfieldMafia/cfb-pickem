@@ -71,6 +71,15 @@ async function familyBeforeGroups() {
   const client = new PGlite();
   const db: Db = drizzle({ client, schema });
   await migrate(drizzle({ client, schema }), { migrationsFolder: migrationsThrough(BEFORE_GROUPS) });
+  // The members workaround below cannot be used for games: the fixture builds
+  // its slate through the app's own `addGame` and `ingestResults`, which name
+  // every column in today's schema. So bring `games` alone forward. These
+  // columns have nothing to do with the groups migration under test, and
+  // `0008_live-detail` adds them `if not exists`, so migrating the real folder
+  // forward later still passes over them cleanly.
+  await db.execute(sql`alter table games add column if not exists possession text`);
+  await db.execute(sql`alter table games add column if not exists last_play text`);
+  await db.execute(sql`alter table games add column if not exists situation text`);
 
   await db.insert(seasons).values({
     year: 2026,

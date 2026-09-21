@@ -291,7 +291,10 @@ describe("the week state", () => {
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
     await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY);
     await pickAs(db, jonah, slate, texas, texas.homeTeamId, THURSDAY);
-    const feed = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }, { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "12:00"] });
+    const feed = feedWith(
+      { [OKLAHOMA_AT_MICHIGAN]: [24, 27] },
+      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "12:00", { possession: "251", situation: "2nd & 8", lastPlay: "Arch Manning rush for 2 yards" }] },
+    );
 
     const state = await json<WeekStateJson>(await getWeekState(poll(), { ...asGrandma(SUNDAY), cfbd: () => feed }));
 
@@ -307,7 +310,19 @@ describe("the week state", () => {
       [grandma.id, "correct"],
     ]);
     const texasRow = state.games.find((g) => g.game.id === texas.id)!;
-    expect(texasRow.result.live).toEqual({ awayScore: 3, homeScore: 0, period: 1, clock: "12:00" });
+    // The live detail reaches the wire on the existing `live` object — no new
+    // `WeekStateJson` field — so the Live Board reads possession, the last
+    // play and the down-and-distance straight off the game it already has.
+    // Texas (251) has the ball, placed from its ESPN id, stored as a side.
+    expect(texasRow.result.live).toEqual({
+      awayScore: 3,
+      homeScore: 0,
+      period: 1,
+      clock: "12:00",
+      possession: "home",
+      situation: "2nd & 8",
+      lastPlay: "Arch Manning rush for 2 yards",
+    });
     expect(texasRow.picks.map((p) => [p.memberId, p.outcome])).toEqual([[jonah.id, "pending"]]);
     // Provisional: Texas is not final, so Jonah's pick there counts nothing yet.
     expect(state.scores!.map((s) => [s.member.displayName, s.points, s.pending])).toEqual([

@@ -66,7 +66,7 @@ const PENDING: GameResult = {
 
 const LIVE: GameResult = {
   ...PENDING,
-  live: { awayScore: 10, homeScore: 28, period: 3, clock: "08:12" },
+  live: { awayScore: 10, homeScore: 28, period: 3, clock: "08:12", possession: null, lastPlay: null, situation: null },
   shown: { awayScore: 10, homeScore: 28 },
   label: "In progress",
 };

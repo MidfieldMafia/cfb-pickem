@@ -8,7 +8,7 @@
  * dragging the Drizzle schema into a browser bundle. The audit log, which does
  * write rows, stays next door in `audit.ts`.
  */
-import type { Game } from "@/db/schema";
+import type { Game, PossessionSide } from "@/db/schema";
 
 export type ResultStatus = "pending" | "final" | "void";
 
@@ -27,6 +27,17 @@ export interface LiveScore extends Score {
   period: number | null;
   /** "08:42", as the feed writes it. Null when the feed has not said. */
   clock: string | null;
+  /**
+   * Which team has the ball, already resolved to a side. Null when the feed
+   * has not said, and null too when it said something the resolver could not
+   * place — so a screen must treat nothing-to-show as the ordinary case, not
+   * an error.
+   */
+  possession: PossessionSide | null;
+  /** The last play in the feed's own words, a full sentence. Null when the feed has not said. */
+  lastPlay: string | null;
+  /** The down-and-distance, "3rd & 7". Null when the feed has not said. */
+  situation: string | null;
 }
 
 /**
@@ -134,7 +145,15 @@ export function effectiveResult(game: Game): GameResult {
   // both the running score and the word for it.
   const live: LiveScore | null =
     game.status === "in_progress" && game.homeScore !== null && game.awayScore !== null
-      ? { homeScore: game.homeScore, awayScore: game.awayScore, period: game.period, clock: game.clock }
+      ? {
+          homeScore: game.homeScore,
+          awayScore: game.awayScore,
+          period: game.period,
+          clock: game.clock,
+          possession: game.possession,
+          lastPlay: game.lastPlay,
+          situation: game.situation,
+        }
       : null;
   return {
     status: "pending",

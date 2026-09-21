@@ -95,7 +95,7 @@ describe("results ingest", () => {
     const { db, week, miami, michigan, texas, reload, ingest } = await setup();
     const feed = feedWith(
       { [FAMU_AT_MIAMI]: [7, 45], [OKLAHOMA_AT_MICHIGAN]: [24, 27] },
-      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"] },
+      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42", { possession: "home", situation: "1st & 10", lastPlay: "Quintrevion Wisner rush for 4 yards" }] },
     );
 
     expect(await ingest(feed, SATURDAY_EVENING)).toEqual({ changed: 3 });
@@ -111,6 +111,10 @@ describe("results ingest", () => {
       homeScore: 0,
       period: 1,
       clock: "08:42",
+      // Texas is the home side, and the feed said "home": stored as a side, never the raw string.
+      possession: "home",
+      situation: "1st & 10",
+      lastPlay: "Quintrevion Wisner rush for 4 yards",
     });
     // The running score rides along as `live`, so a screen can show it without counting it.
     expect(effectiveResult(await reload(texas.id))).toEqual({
@@ -118,7 +122,15 @@ describe("results ingest", () => {
       homeScore: null,
       awayScore: null,
       source: null,
-      live: { awayScore: 3, homeScore: 0, period: 1, clock: "08:42" },
+      live: {
+        awayScore: 3,
+        homeScore: 0,
+        period: 1,
+        clock: "08:42",
+        possession: "home",
+        situation: "1st & 10",
+        lastPlay: "Quintrevion Wisner rush for 4 yards",
+      },
       // A running score is what to put on screen; it is still not what counts.
       shown: { awayScore: 3, homeScore: 0 },
       label: "In progress",
@@ -134,7 +146,78 @@ describe("results ingest", () => {
     expect(await ingest(feed, SUNDAY)).toEqual({ changed: 0 });
     const later = feedWith({ [FAMU_AT_MIAMI]: [7, 45], [OKLAHOMA_AT_MICHIGAN]: [24, 27], [OHIO_STATE_AT_TEXAS]: [31, 28] });
     expect(await ingest(later, SUNDAY)).toEqual({ changed: 1 });
-    expect(await reload(texas.id)).toMatchObject({ status: "final", awayScore: 31, homeScore: 28 });
+    // A final clears every live column, not just the clock: nothing has the ball once it is over.
+    expect(await reload(texas.id)).toMatchObject({
+      status: "final",
+      awayScore: 31,
+      homeScore: 28,
+      period: null,
+      clock: null,
+      possession: null,
+      situation: null,
+      lastPlay: null,
+    });
+  });
+
+  test("a game that rolls off the board does not keep showing the last thing it was seen doing", async () => {
+    const { texas, reload, ingest } = await setup();
+
+    await ingest(
+      feedWith({}, { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42", { possession: "home", situation: "1st & 10", lastPlay: "Wisner rush for 4" }] }),
+      SATURDAY_EVENING,
+    );
+    expect(await reload(texas.id)).toMatchObject({ possession: "home", situation: "1st & 10" });
+
+    // The board is the week being played, so a game can fall off it with its
+    // final unread. `/games` is the backstop and carries none of the live
+    // detail — it must null all five rather than leave them standing.
+    const offBoard = feedWith({ [OHIO_STATE_AT_TEXAS]: [31, 28] }, {}, { offBoard: [OHIO_STATE_AT_TEXAS] });
+    expect(await ingest(offBoard, SUNDAY)).toEqual({ changed: 1 });
+    expect(await reload(texas.id)).toMatchObject({
+      status: "final",
+      awayScore: 31,
+      homeScore: 28,
+      period: null,
+      clock: null,
+      possession: null,
+      situation: null,
+      lastPlay: null,
+    });
+  });
+
+  test("a drive that moves without the score moving is still a change worth writing", async () => {
+    const { texas, reload, ingest } = await setup();
+    const drive = (situation: string, lastPlay: string, possession: string) =>
+      feedWith({}, { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42", { possession, situation, lastPlay }] });
+
+    await ingest(drive("1st & 10", "Quintrevion Wisner rush for 4 yards", "home"), SATURDAY_EVENING);
+    expect(await reload(texas.id)).toMatchObject({ situation: "1st & 10", possession: "home" });
+
+    // Same score, same clock, new down: `sameColumns` has to weigh the live
+    // detail, or a board mid-drive would never look changed and would sit on
+    // a stale last play for the rest of the quarter.
+    expect(await ingest(drive("2nd & 6", "Arch Manning pass incomplete", "home"), SATURDAY_EVENING)).toEqual({
+      changed: 1,
+    });
+    expect(await reload(texas.id)).toMatchObject({
+      situation: "2nd & 6",
+      lastPlay: "Arch Manning pass incomplete",
+      awayScore: 3,
+      homeScore: 0,
+      clock: "08:42",
+    });
+
+    // A turnover moves nothing but the ball.
+    expect(await ingest(drive("2nd & 6", "Arch Manning pass incomplete", "194"), SATURDAY_EVENING)).toEqual({
+      changed: 1,
+    });
+    // Ohio State is the away side, placed from its ESPN id.
+    expect(await reload(texas.id)).toMatchObject({ possession: "away" });
+
+    // Nothing moved at all: still no write.
+    expect(await ingest(drive("2nd & 6", "Arch Manning pass incomplete", "194"), SATURDAY_EVENING)).toEqual({
+      changed: 0,
+    });
   });
 
   test("the database refuses a game that says final without both scores", async () => {
