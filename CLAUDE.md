@@ -24,6 +24,16 @@ Fetching a page from `next dev` does not substitute. Every console and member sc
 
 Nothing in the test suite covers rendering, and every screen needs a Magic Link to reach. See `.claude/skills/verify-running-app/SKILL.md`.
 
+### Changelog
+
+`CHANGELOG.md` is half generated and half written. `npm run changelog` rebuilds
+the "All changes" half from every PR merged into `main` and derives
+`src/data/changelog.json`; never edit between its markers. The "What's new" half
+is prose for the league, written weekly by a routine — see
+`.claude/skills/weekly-changelog/SKILL.md`. CHANGELOG.md is the source of truth
+for that prose, so fixing its wording there is enough; the JSON follows on the
+next run.
+
 ### Issue tracker
 
 Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; each roadmap is a `wayfinder:map` issue (v1 and v2 so far) and every ticket is a sub-issue of one with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.
