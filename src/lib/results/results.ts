@@ -7,7 +7,17 @@
  */
 import "server-only";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
-import { games, members, resultAudits, weeks, type Game, type ResultAuditKind, type Season, type Week } from "@/db/schema";
+import {
+  games,
+  members,
+  resultAudits,
+  weeks,
+  type Game,
+  type PossessionSide,
+  type ResultAuditKind,
+  type Season,
+  type Week,
+} from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
 import { groupBoard, type BoardMember } from "@/lib/groups/memberships";
@@ -107,9 +117,44 @@ async function loadGame(db: Db, gameId: number): Promise<Game & { week: Week }> 
 }
 
 /** The columns a feed read owns on a `games` row. */
-type FeedColumns = Pick<Game, "status" | "homeScore" | "awayScore" | "period" | "clock">;
+type FeedColumns = Pick<
+  Game,
+  "status" | "homeScore" | "awayScore" | "period" | "clock" | "possession" | "lastPlay" | "situation"
+>;
 
-const NOT_STARTED: FeedColumns = { status: "scheduled", homeScore: null, awayScore: null, period: null, clock: null };
+/** The five live-detail columns, all null: a game not under way has none of them. */
+const NOT_LIVE = { period: null, clock: null, possession: null, lastPlay: null, situation: null } as const;
+
+const NOT_STARTED: FeedColumns = { status: "scheduled", homeScore: null, awayScore: null, ...NOT_LIVE };
+
+/**
+ * Which team has the ball, from the scoreboard's `possession` — resolved to a
+ * side here, at the seam, so nothing downstream ever sees the raw string.
+ *
+ * **The value has never been observed.** CFBD's DDL is
+ * `current_possession character varying(5)`, which rules out team names and
+ * leaves `"home"`/`"away"`, a team abbreviation, or an ESPN team id as a
+ * string; CFBD's own test fixture says `'Michigan'`, which does not fit its
+ * own column and so cannot be trusted either (see #172, #211). So this is
+ * total: anything it cannot place is null, and a null indicator is the
+ * ordinary case a screen must already handle.
+ *
+ * Both id branches read `homeTeam.id`/`awayTeam.id` off the same payload row,
+ * so placing a value costs no second call and no name join.
+ */
+export function possessionSide(board: CfbdScoreboardGame): PossessionSide | null {
+  const raw = board.possession?.trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === "home" || raw === "away") return raw;
+  if (raw === String(board.homeTeam.id)) return "home";
+  if (raw === String(board.awayTeam.id)) return "away";
+  // The whole safety net: if the feed turns out to speak abbreviations, day
+  // one shows no footballs and this says exactly what to add.
+  if (board.status === "in_progress") {
+    console.info(`possession: unplaceable value ${JSON.stringify(board.possession)} on game ${board.id}`);
+  }
+  return null;
+}
 
 /**
  * What the scoreboard says about one game, in the shape of the columns it
@@ -121,7 +166,7 @@ function boardResult(board: CfbdScoreboardGame): FeedColumns {
   const homeScore = board.homeTeam.points;
   const awayScore = board.awayTeam.points;
   const scored = homeScore !== null && awayScore !== null;
-  if (board.status === "completed" && scored) return { status: "final", homeScore, awayScore, period: null, clock: null };
+  if (board.status === "completed" && scored) return { status: "final", homeScore, awayScore, ...NOT_LIVE };
   if (board.status === "in_progress") {
     // Under way and not yet scored is 0–0, which is a running score, not the absence of one.
     return {
@@ -130,19 +175,27 @@ function boardResult(board: CfbdScoreboardGame): FeedColumns {
       awayScore: awayScore ?? 0,
       period: board.period,
       clock: board.clock,
+      possession: possessionSide(board),
+      lastPlay: board.lastPlay,
+      situation: board.situation,
     };
   }
   return NOT_STARTED;
 }
 
-/** What the `/games` feed says, which carries points and `completed` and no clock. */
+/**
+ * What the `/games` feed says, which carries points and `completed` and none
+ * of the live detail — no clock, no possession, no last play, no situation.
+ * The backstop nulls all five rather than leaving them, so a game that rolls
+ * off the board cannot keep showing the last thing it was seen doing.
+ */
 function feedResult(feed: CfbdGame): FeedColumns {
   const scored = feed.homePoints !== null && feed.awayPoints !== null;
   if (feed.completed && scored) {
-    return { status: "final", homeScore: feed.homePoints, awayScore: feed.awayPoints, period: null, clock: null };
+    return { status: "final", homeScore: feed.homePoints, awayScore: feed.awayPoints, ...NOT_LIVE };
   }
   if (scored) {
-    return { status: "in_progress", homeScore: feed.homePoints, awayScore: feed.awayPoints, period: null, clock: null };
+    return { status: "in_progress", homeScore: feed.homePoints, awayScore: feed.awayPoints, ...NOT_LIVE };
   }
   return NOT_STARTED;
 }
@@ -153,16 +206,19 @@ function sameColumns(next: FeedColumns, game: Game): boolean {
     next.homeScore === game.homeScore &&
     next.awayScore === game.awayScore &&
     next.period === game.period &&
-    next.clock === game.clock
+    next.clock === game.clock &&
+    next.possession === game.possession &&
+    next.lastPlay === game.lastPlay &&
+    next.situation === game.situation
   );
 }
 
 /**
  * Pulls the scoreboard from CollegeFootballData and writes each slate game's
- * score, status, period and clock. Only `completed` makes a game final; a
- * game the feed never completes stays pending (there is no postponed or
- * canceled status, see docs/research/collegefootballdata-api.md), for
- * `needsReview` to flag. Overrides and voids live in other columns, so a
+ * score, status, and live detail — period, clock, possession, last play and
+ * down-and-distance. Only `completed` makes a game final; a game the feed
+ * never completes stays pending (there is no postponed or canceled status,
+ * see docs/research/collegefootballdata-api.md), for `needsReview` to flag. Overrides and voids live in other columns, so a
  * re-run never disturbs them. Returns how many games changed.
  *
  * One call covers the whole slate, which is what makes the Saturday cadence

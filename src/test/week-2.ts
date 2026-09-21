@@ -200,8 +200,22 @@ export function guessAs(db: Db, member: Member, slate: Slate, guess: number | nu
 /** Scores by recorded game id: `[away, home]`. */
 export type Finals = Record<number, [away: number, home: number]>;
 
-/** A running score by recorded game id, with the quarter and clock the board would show for it. */
-export type Live = Record<number, [away: number, home: number, period?: number, clock?: string]>;
+/**
+ * A running score by recorded game id, with the live detail the board would
+ * show for it. `possession` is the feed's **raw** string, not a resolved side,
+ * so a suite can drive `possessionSide` through every branch — "home", an
+ * ESPN team id, an abbreviation it cannot place.
+ */
+export type Live = Record<
+  number,
+  [
+    away: number,
+    home: number,
+    period?: number,
+    clock?: string,
+    detail?: { possession?: string | null; lastPlay?: string | null; situation?: string | null },
+  ]
+>;
 
 /** How many times each feed endpoint answered. */
 export interface FeedReads {
@@ -248,7 +262,17 @@ export function feedWith(finals: Finals, live: Live = {}, { offBoard = [] as num
     });
     if (final) return { ...g, status: "completed", ...sides(final[0], final[1]) };
     if (inPlay) {
-      return { ...g, status: "in_progress", period: inPlay[2] ?? null, clock: inPlay[3] ?? null, ...sides(inPlay[0], inPlay[1]) };
+      const detail = inPlay[4] ?? {};
+      return {
+        ...g,
+        status: "in_progress",
+        period: inPlay[2] ?? null,
+        clock: inPlay[3] ?? null,
+        possession: detail.possession ?? null,
+        lastPlay: detail.lastPlay ?? null,
+        situation: detail.situation ?? null,
+        ...sides(inPlay[0], inPlay[1]),
+      };
     }
     return g;
   });
