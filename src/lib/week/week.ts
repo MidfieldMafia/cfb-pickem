@@ -18,9 +18,9 @@ import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
 import {
+  gradedSeason,
   playedWeeks,
   refreshResultsIfStale,
-  seasonResult,
   weekResult,
   type GradedWeekResult,
 } from "@/lib/results/results";
@@ -113,16 +113,23 @@ export async function currentWeek(
   // graded against, so both come back null rather than the read inventing a
   // site-wide board that no longer exists.
   const group = options.group ?? null;
-  const [sheet, result, season] = await Promise.all([
+  // Once locked, the season's played Weeks include this one, so asking for the
+  // standing as well as the Week is one grading pass with the Week cut out of
+  // it — not `weekResult` and `seasonResult` each grading it again.
+  const grading = locked && group !== null && (options.graded || options.season);
+  const [sheet, graded] = await Promise.all([
     pickSheet(db, actor, slate, now),
-    locked && options.graded && group !== null ? weekResult(db, group, slate, now) : null,
-    locked && options.season && group !== null ? seasonResult(db, group, now) : null,
+    !grading
+      ? null
+      : options.season
+        ? gradedSeason(db, group, slate, now)
+        : weekResult(db, group, slate, now).then((result) => ({ result, season: null })),
   ]);
   return {
     slate,
     sheet,
-    result,
-    season: season ? seasonStanding(season.leaderboard, actor.id) : null,
+    result: options.graded && graded ? graded.result : null,
+    season: options.season && graded?.season ? seasonStanding(graded.season.leaderboard, actor.id) : null,
   };
 }
 

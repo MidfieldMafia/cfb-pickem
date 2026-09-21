@@ -13,7 +13,7 @@ import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types"
 import { groupBoard, type BoardMember } from "@/lib/groups/memberships";
 import type { Commissioner } from "@/lib/members/authority";
 import { noteError } from "@/lib/notes";
-import { seasonPicks, weekPicks } from "@/lib/picks/picks";
+import { seasonPicks, weekPicks, type MemberPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
 import { Refusal } from "@/lib/refusal";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
@@ -690,24 +690,22 @@ export async function weekResult(
   // this used to do over every member in the app.
   const group = await groupBoard(db, groupId);
   const memberPicks = await weekPicks(db, group, slate, now);
-  const ids = new Set(memberPicks.map((m) => m.memberId));
-  const rows = group.filter((m) => ids.has(m.id));
+  const rows = boardRows(group, memberPicks);
   const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, memberPicks), rows.map(toEngineMember));
-  const byId = memberIndex(rows);
-  return { ...toGradedWeek(slate.week, graded, byId), reveal: revealFrom(slate, rows, graded) };
+  return gradedWeekResult(slate, rows, graded);
 }
 
-/**
- * The season graded: the Leaderboard and every Week behind it, from one
- * `scoreSeason` pass over rows read in a fixed number of round trips. Only
- * published Weeks whose Deadline has passed count — a published Week still
- * open scores zero for everyone and would drag every average down as a week
- * played (see `@/lib/scoring`).
- *
- * Every active member gets a Leaderboard row, including before the first
- * Deadline of the season: an empty season is a table of zeroes, not an empty
- * screen.
- */
+/** Who a Week's board holds: the group's members that `weekPicks` or `seasonPicks` gave a row. */
+function boardRows(group: readonly BoardMember[], memberPicks: readonly { memberId: number }[]): BoardMember[] {
+  const ids = new Set(memberPicks.map((m) => m.memberId));
+  return group.filter((m) => ids.has(m.id));
+}
+
+/** One graded Week and its Reveal, from a grading that has already happened. */
+function gradedWeekResult(slate: Slate, rows: readonly BoardMember[], graded: engine.WeekResult): GradedWeekResult {
+  return { ...toGradedWeek(slate.week, graded, memberIndex(rows)), reveal: revealFrom(slate, rows, graded) };
+}
+
 /**
  * The Weeks a season counts, in week order: published, and past their
  * Deadline on the server clock.
@@ -730,7 +728,19 @@ export async function playedWeeks(db: Db, season: Season, now: Date = new Date()
   return published.filter((w) => w.deadline !== null && w.deadline.getTime() <= now.getTime());
 }
 
-export async function seasonResult(db: Db, groupId: number, now: Date = new Date()): Promise<SeasonResult> {
+/** One grading pass over the season, before it is cut into the views screens ask for. */
+interface SeasonPass {
+  season: Season;
+  group: BoardMember[];
+  /** The played Weeks with the rows each was graded from, keyed by week id. */
+  boards: Map<number, MemberPicks[]>;
+  played: Week[];
+  /** Every member the pass graded: `group`'s active members plus anyone since deactivated who still has Picks. */
+  rows: BoardMember[];
+  graded: engine.SeasonResult;
+}
+
+async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPass> {
   // Neither read depends on the other, so the board waits for one round trip.
   const [season, group] = await Promise.all([activeSeason(db), groupBoard(db, groupId)]);
   const played = await playedWeeks(db, season, now);
@@ -741,20 +751,25 @@ export async function seasonResult(db: Db, groupId: number, now: Date = new Date
     games: slateOrder(gameRows.filter((g) => g.weekId === week.id)),
   }));
 
-  const picksOf = await seasonPicks(db, group, weekGames, now);
+  const boards = await seasonPicks(db, group, weekGames, now);
   // `seasonPicks` has already applied `roster` a Week at a time, so this is not a
-  // fourth answer to who is on the board — it is the season-wide superset of those
+  // fourth answer to who is on the board � it is the season-wide superset of those
   // boards, within this group: its active members plus anyone since deactivated
   // who still has Picks, so the grading has a name for every id it hands back,
   // and an empty season is a table of zeroes rather than an empty screen.
-  const onABoard = new Set(weekGames.flatMap(({ week }) => picksOf.get(week.id)!.map((m) => m.memberId)));
+  const onABoard = new Set(weekGames.flatMap(({ week }) => boards.get(week.id)!.map((m) => m.memberId)));
   const rows = group.filter((m) => m.active || onABoard.has(m.id));
 
   const graded = scoreSeason(
     season.rules,
-    weekGames.map(({ week, games: slateGames }) => toEngineWeek(week, slateGames, picksOf.get(week.id)!)),
+    weekGames.map(({ week, games: slateGames }) => toEngineWeek(week, slateGames, boards.get(week.id)!)),
     rows.map(toEngineMember),
   );
+  return { season, group, boards, played, rows, graded };
+}
+
+/** The Leaderboard and the played Weeks, as the read models screens take. */
+function seasonView({ season, played, rows, graded }: SeasonPass): SeasonResult {
   const byId = memberIndex(rows);
   // The engine answers in week numbers, which are unique within a season; nothing here leans on read order.
   const weekOf = new Map(played.map((w) => [w.weekNumber, w]));
@@ -765,5 +780,48 @@ export async function seasonResult(db: Db, groupId: number, now: Date = new Date
       member: byId.get(memberId)!,
       ...rest,
     })),
+  };
+}
+
+/**
+ * The season graded: the Leaderboard and every Week behind it, from one
+ * `scoreSeason` pass over rows read in a fixed number of round trips. Only
+ * published Weeks whose Deadline has passed count — a published Week still
+ * open scores zero for everyone and would drag every average down as a week
+ * played (see `@/lib/scoring`).
+ *
+ * Every active member gets a Leaderboard row, including before the first
+ * Deadline of the season: an empty season is a table of zeroes, not an empty
+ * screen.
+ */
+export async function seasonResult(db: Db, groupId: number, now: Date = new Date()): Promise<SeasonResult> {
+  return seasonView(await gradeSeason(db, groupId, now));
+}
+
+/**
+ * The season and the Week the caller is standing in, graded in one pass. Once
+ * the Deadline has passed the season's played Weeks include the current one,
+ * so `result` is that Week cut out of the pass rather than a second grading of
+ * it: the Live Board, which wants both, pays for one read of the board and one
+ * of the picks instead of two, and the two cannot disagree.
+ *
+ * `slate` is the one the caller already holds, for `weekResult`'s reason � a
+ * visit may have pulled the feed first, and the Reveal is drawn from those
+ * rows. It must be a Week the season has played, which a published Slate past
+ * its Deadline is; anything else is a caller bug and throws.
+ */
+export async function gradedSeason(
+  db: Db,
+  groupId: number,
+  slate: Slate,
+  now: Date = new Date(),
+): Promise<{ season: SeasonResult; result: GradedWeekResult }> {
+  const pass = await gradeSeason(db, groupId, now);
+  const graded = pass.graded.weeks.find((w) => w.weekNumber === slate.week.weekNumber);
+  const board = pass.boards.get(slate.week.id);
+  if (!graded || !board) throw new Error("That Week is not one the season has played.");
+  return {
+    season: seasonView(pass),
+    result: gradedWeekResult(slate, boardRows(pass.group, board), graded),
   };
 }
