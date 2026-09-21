@@ -36,7 +36,7 @@ export interface Slate {
 }
 
 /** The last week a season can reach: the regular season plus conference championship week. */
-const MAX_WEEK_NUMBER = 15;
+export const MAX_WEEK_NUMBER = 15;
 
 /** Every week number a commissioner can open, for the console's chooser. */
 export const WEEK_NUMBERS = Array.from({ length: MAX_WEEK_NUMBER }, (_, i) => i + 1);

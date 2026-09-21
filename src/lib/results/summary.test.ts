@@ -16,7 +16,9 @@ import {
   ordinal,
   pickBreakdown,
   record,
+  seasonChampion,
   seasonStanding,
+  seasonStatusLabel,
   standing,
   tiebreakerOutcome,
   weeklyWinSentence,
@@ -403,5 +405,41 @@ describe("the leaderboard's own columns", () => {
   test("the ordinal in the label survives the teens, where the naive rule does not", () => {
     expect(movement({ rank: 10, previousRank: 11 })!.label).toBe("Up 1 place, from 11th");
     expect(movement({ rank: 22, previousRank: 21 })!.label).toBe("Down 1 place, from 21st");
+  });
+});
+
+describe("who has won the season", () => {
+  const week = (weekNumber: number, complete: boolean) => ({ week: { weekNumber }, complete });
+  const board = [row(JONAH, 1, 90), row(ALEX, 2, 80), row(GRANDMA, 3, 70)];
+
+  test("nobody, however clear the lead, until the final week is complete", () => {
+    expect(seasonChampion(board, [week(14, true), week(15, false)], 15)).toBeNull();
+  });
+
+  test("nobody when the final week has not been played at all", () => {
+    expect(seasonChampion(board, [week(13, true), week(14, true)], 15)).toBeNull();
+  });
+
+  test("the sole leader once the final week is complete", () => {
+    expect(seasonChampion(board, [week(14, true), week(15, true)], 15)).toBe(JONAH.id);
+  });
+
+  test("nobody when first place is shared", () => {
+    const tied = [row(JONAH, 1, 90), row(ALEX, 1, 90), row(GRANDMA, 3, 70)];
+    expect(seasonChampion(tied, [week(15, true)], 15)).toBeNull();
+  });
+});
+
+describe("how far the season has got", () => {
+  test("before any week is played", () => {
+    expect(seasonStatusLabel(undefined)).toBe("before Week 1");
+  });
+
+  test("a week still being played is in progress, not finished", () => {
+    expect(seasonStatusLabel({ week: { weekNumber: 3 }, complete: false })).toBe("Week 3 in progress");
+  });
+
+  test("a finished week is through", () => {
+    expect(seasonStatusLabel({ week: { weekNumber: 3 }, complete: true })).toBe("through Week 3");
   });
 });
