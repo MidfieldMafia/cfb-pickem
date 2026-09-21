@@ -47,14 +47,15 @@ describe("grading the current week for the Live Board", () => {
     const group = (await familyGroup(db)).id;
 
     passes.boards = passes.weeks = passes.seasons = 0;
-    const live = (await currentWeek(db, grandma, SUNDAY, { graded: true, season: true, group }))!;
+    const live = await currentWeek(db, grandma, SUNDAY, { graded: true, season: true, group });
+    if (live?.state !== "live") throw new Error(`expected a live Week, got ${live?.state}`);
 
     // `scoreSeason` grades each played Week inside itself, so a top-level
     // `scoreWeek` or a second board read is the current Week graded again.
     expect(passes).toEqual({ boards: 1, weeks: 0, seasons: 1 });
 
     const season = await seasonResult(db, group, SUNDAY);
-    expect(live.result!.scores).toEqual(season.weeks.find((w) => w.week.id === week.id)!.scores);
+    expect(live.result.scores).toEqual(season.weeks.find((w) => w.week.id === week.id)!.scores);
     expect(live.season).toEqual(seasonStanding(season.leaderboard, grandma.id));
   });
 
@@ -63,9 +64,9 @@ describe("grading the current week for the Live Board", () => {
     const group = (await familyGroup(db)).id;
 
     passes.boards = passes.weeks = passes.seasons = 0;
-    const week = (await currentWeek(db, grandma, SUNDAY, { graded: true, group }))!;
+    const week = await currentWeek(db, grandma, SUNDAY, { graded: true, group });
 
-    expect(week.result).not.toBeNull();
+    if (week?.state !== "live") throw new Error(`expected a live Week, got ${week?.state}`);
     expect(week.season).toBeNull();
     expect(passes).toEqual({ boards: 1, weeks: 1, seasons: 0 });
   });
