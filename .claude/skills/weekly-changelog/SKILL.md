@@ -9,8 +9,13 @@ description: Write the week's What's new entry in CHANGELOG.md and open the PR. 
 needs nothing from you. This skill is the other half: the handful of bullets a
 member of the league would notice, in their words.
 
-Run it from a worktree of its own (`new-worktree`), on a Sunday, before the next
-slate goes up. It ends in a PR Jonah merges, like everything else here.
+Run it on a Sunday, before the next slate goes up. It ends in a PR Jonah merges,
+like everything else here.
+
+Locally, take a worktree of its own (`new-worktree`). The weekly routine runs in
+a cloud sandbox that is already an isolated checkout, so there it just branches
+from `origin/main`. It has no `.env.local` and needs none — nothing here reaches
+the database.
 
 ## 1. Read what merged
 
@@ -77,8 +82,12 @@ That rewrites the generated half and derives `src/data/changelog.json` from the
 prose you just wrote. Both files belong in the commit. Check the JSON picked up
 your entry; if `entries` did not grow, the heading is malformed.
 
-`npm run typecheck`, `npm run test` and `npx eslint src` all still apply, though
-a prose-only week touches nothing they cover.
+A normal week here changes `CHANGELOG.md` and `src/data/changelog.json` and
+nothing else. The three checks in CLAUDE.md cover none of that, and `npm run
+typecheck` on a cold checkout fails on `LayoutProps` until `next build` has
+written `.next/types` — a ten-minute detour to learn nothing about your diff.
+Skip them for a prose-only week. Run them if you touched `scripts/changelog.ts`
+or anything under `src/`.
 
 ## 5. Open the PR
 
