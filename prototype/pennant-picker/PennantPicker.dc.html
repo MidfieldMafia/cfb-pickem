@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pennant picker — conference drill-down</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;background:#F7F1E3;font-family:Manrope,ui-sans-serif,system-ui,sans-serif;color:#241F1A;-webkit-font-smoothing:antialiased}
+a{color:#A94B17}a:hover{color:#8E3D12}
+button{font-family:inherit}
+input{font-family:inherit}
+*{box-sizing:border-box}
+.sb::-webkit-scrollbar{width:0;height:0}
+
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F7F1E3; overflow: hidden;">
+<div style="padding: 16px 16px 8px; flex-shrink: 0;">
+<div style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 28px; line-height: 32px; margin-bottom: 4px;">Welcome to the Slate</div>
+<div style="font-size: 14px; line-height: 20px; color: #6F6152;">Two things and you are in: your name, and the mark that stands for you.</div>
+</div>
+<div style="padding: 0 16px 8px; flex-shrink: 0;">
+<sc-if value="{{atRoot}}" hint-placeholder-val="{{yes}}">
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #A94B17;">Pick your pennant</div>
+</sc-if>
+<sc-if value="{{showBack}}" hint-placeholder-val="{{no}}">
+<button type="button" onClick="{{back}}" style="display: inline-flex; align-items: center; gap: 4px; height: 44px; padding: 0 8px 0 0; border: none; background: transparent; color: #1F4034; font-size: 14px; font-weight: 700; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F4034" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>{{backLabel}}</button>
+<div style="font-family: Chivo, sans-serif; font-weight: 700; font-size: 22px; line-height: 28px;">{{headTitle}}</div>
+</sc-if>
+</div>
+<div class="sb" style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px;">
+<sc-if value="{{atRoot}}" hint-placeholder-val="{{yes}}">
+<button type="button" onClick="{{openFlags}}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 18px 16px; margin-bottom: 12px; border-radius: 14px; border: 1px solid #9C845F44; background: #FBF6EC; cursor: pointer; text-align: left;">
+<span style="display: flex; align-items: center; flex-shrink: 0;">
+<sc-for list="{{flagPeek}}" as="p" hint-placeholder-count="4">
+<span style="{{p.peekStyle}}"><img src="{{p.u}}" alt="" style="width: 50px; height: 50px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></span>
+</sc-for>
+</span>
+<span style="flex-grow: 1; min-width: 0;"><span style="display: block; font-family: Chivo, sans-serif; font-weight: 700; font-size: 18px;">Flags</span><span style="display: block; font-size: 13px; color: #6F6152; margin-top: 2px;">12 pennants</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6F6152" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+<button type="button" onClick="{{openConfs}}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 18px 16px; border-radius: 14px; border: 1px solid #9C845F44; background: #FBF6EC; cursor: pointer; text-align: left;">
+<span style="display: flex; align-items: center; flex-shrink: 0;">
+<sc-for list="{{teamPeek}}" as="p" hint-placeholder-count="4">
+<span style="{{p.peekStyle}}"><img src="{{p.u}}" alt="" style="width: 26px; height: 26px; object-fit: contain;"></span>
+</sc-for>
+</span>
+<span style="flex-grow: 1; min-width: 0;"><span style="display: block; font-family: Chivo, sans-serif; font-weight: 700; font-size: 18px;">Team Logos</span><span style="display: block; font-size: 13px; color: #6F6152; margin-top: 2px;">136 teams in 11 conferences</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6F6152" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</sc-if>
+<sc-if value="{{isFlags}}" hint-placeholder-val="{{no}}">
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+<sc-for list="{{flagList}}" as="f" hint-placeholder-count="12">
+<button type="button" onClick="{{f.pick}}" aria-label="{{f.n}}" style="{{f.style}}">
+<img src="{{f.u}}" alt="" style="width: 90px; height: 90px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{isConfs}}" hint-placeholder-val="{{no}}">
+<sc-for list="{{confRows}}" as="c" hint-placeholder-count="6">
+<button type="button" onClick="{{c.open}}" style="width: 100%; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 8px; border-radius: 14px; border: 1px solid #9C845F44; background: #FBF6EC; cursor: pointer; text-align: left;">
+<span style="flex-grow: 1; min-width: 0;"><span style="display: block; font-size: 16px; font-weight: 600;">{{c.name}}</span><span style="display: block; font-size: 12px; color: #6F6152;">{{c.count}} teams</span></span>
+<span style="display: flex; align-items: center; flex-shrink: 0;">
+<sc-for list="{{c.peek}}" as="p" hint-placeholder-count="3">
+<img src="{{p.u}}" alt="" style="width: 26px; height: 26px; object-fit: contain; margin-left: -6px;">
+</sc-for>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6F6152" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</sc-for>
+</sc-if>
+<sc-if value="{{inConf}}" hint-placeholder-val="{{no}}">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+<sc-for list="{{confTeams}}" as="t" hint-placeholder-count="9">
+<button type="button" onClick="{{t.pick}}" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 4px; border-radius: 14px; cursor: pointer; {{t.cell}}">
+<span style="{{t.discStyle}}"><img src="{{t.u}}" alt="" style="width: 44px; height: 44px; object-fit: contain;"></span>
+<span style="font-size: 12px; line-height: 16px; text-align: center; color: #241F1A;">{{t.n}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<div style="flex-shrink: 0; padding: 12px 16px 16px; border-top: 1px solid #9C845F33; background: #F7F1E3;">
+<button type="button" style="width: 100%; height: 44px; border: none; border-radius: 6px; background: #1F4034; color: #FBF6EC; font-size: 16px; font-weight: 700; cursor: pointer;">Save and start picking</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: 'root', picked: null }; }
+  disc(selected, color) {
+    return 'position: relative; overflow: hidden; width: 100%; aspect-ratio: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999px; cursor: pointer; padding: 0; '
+      + 'background: color-mix(in srgb, ' + color + ' 18%, transparent); '
+      + (selected ? 'border: 2px solid #1F4034; box-shadow: 0 0 0 3px #1F403433;' : 'border: 1px solid #9C845F55;');
+  }
+  peek(color, i) {
+    return 'position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 999px; flex-shrink: 0; '
+      + 'box-shadow: 0 0 0 2px #FBF6EC; background: color-mix(in srgb, ' + color + ' 18%, transparent); '
+      + (i === 0 ? '' : 'margin-left: -10px;');
+  }
+  renderVals() {
+    const self = this;
+    const view = this.state.view;
+    const known = view === 'root' || view === 'flags' || view === 'confs';
+    const conf = known ? null : view;
+    const teams = conf ? (CONFS.filter(function (c) { return c.name === conf; })[0] || { teams: [] }).teams : [];
+    return {
+      yes: true, no: false,
+      atRoot: view === 'root', isFlags: view === 'flags', isConfs: view === 'confs', inConf: !!conf,
+      showBack: view !== 'root',
+      headTitle: view === 'flags' ? 'Flags' : (view === 'confs' ? 'Team Logos' : (conf || '')),
+      backLabel: conf ? 'Team Logos' : 'Pick your pennant',
+      back: function () { self.setState({ view: conf ? 'confs' : 'root' }); },
+      openFlags: function () { self.setState({ view: 'flags' }); },
+      openConfs: function () { self.setState({ view: 'confs' }); },
+      flagPeek: FLAGS.slice(0, 4).map(function (f, i) { return { u: f.u, peekStyle: self.peek(f.c, i) }; }),
+      teamPeek: FLAT.slice(0, 4).map(function (t, i) { return { u: t.u, peekStyle: self.peek(t.c, i) }; }),
+      flagList: FLAGS.map(function (f) {
+        return { n: f.n, u: f.u, style: self.disc(self.state.picked === f.n, f.c), pick: function () { self.setState({ picked: f.n }); } };
+      }),
+      confRows: CONFS.map(function (c) {
+        return {
+          name: c.name, count: c.teams.length,
+          peek: c.teams.slice(0, 3),
+          open: function () { self.setState({ view: c.name }); },
+        };
+      }),
+      confTeams: teams.map(function (t) {
+        const on = self.state.picked === t.n;
+        return {
+          n: t.n, u: t.u,
+          cell: on ? 'background: #EFE7D5; border: 1px solid #1F4034;' : 'background: transparent; border: 1px solid transparent;',
+          discStyle: 'display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 999px; background: color-mix(in srgb, ' + t.c + ' 18%, transparent);',
+          pick: function () { self.setState({ picked: t.n }); },
+        };
+      }),
+    };
+  }
+}
+const CONFS = [{"name":"SEC","teams":[{"n":"Alabama","c":"#9E1B32","u":"/_blob/a51bab6bb47efc0606d6a226136cdbe8","cf":"SEC"},{"n":"Arkansas","c":"#9D2235","u":"/_blob/63dcdb437203669389ba7a9a489f89dc","cf":"SEC"},{"n":"Auburn","c":"#0C2340","u":"/_blob/3ba2cf22324af776e50ff8a5d915af84","cf":"SEC"},{"n":"Florida","c":"#0021A5","u":"/_blob/5cf7f368b20ab8337ea759a59d5708f5","cf":"SEC"},{"n":"Georgia","c":"#BA0C2F","u":"/_blob/f2bf202b40956b8ce68f0354ad374041","cf":"SEC"},{"n":"Kentucky","c":"#0033A0","u":"/_blob/dd93f8bffc4c11d697ae2b8559232233","cf":"SEC"},{"n":"LSU","c":"#461D7C","u":"/_blob/0dc11e47b388ef9909c708131dbbea11","cf":"SEC"},{"n":"Mississippi State","c":"#660000","u":"/_blob/60bb3109bc8dad09aadfd4e36d7894ca","cf":"SEC"},{"n":"Missouri","c":"#F1B82D","u":"/_blob/24c7ab06fd40118ac71506e876750ac8","cf":"SEC"},{"n":"Oklahoma","c":"#841617","u":"/_blob/b79533502407548d6cbca401311d9dd0","cf":"SEC"},{"n":"Ole Miss","c":"#CE1126","u":"/_blob/0bc8d71453f443ef7cd47d1632a6a55b","cf":"SEC"},{"n":"South Carolina","c":"#73000A","u":"/_blob/a4127cb3d3fbeeb8ec39b74b5e667941","cf":"SEC"},{"n":"Tennessee","c":"#FF8200","u":"/_blob/6d30d1e03c341add2dc1cf499b152ccd","cf":"SEC"},{"n":"Texas","c":"#BF5700","u":"/_blob/59294d54c7fa4f3a32adfcdb06e6eb19","cf":"SEC"},{"n":"Texas A&M","c":"#500000","u":"/_blob/72e25fbc3cf37f47a875d774be55d436","cf":"SEC"},{"n":"Vanderbilt","c":"#866D4B","u":"/_blob/9fb0322b6e6a52ebc6df8a33f49a4338","cf":"SEC"}]},{"name":"Big Ten","teams":[{"n":"Illinois","c":"#13294b","u":"/_blob/b60210c71d18e330cb01c55ea8a3309d","cf":"Big Ten"},{"n":"Indiana","c":"#990000","u":"/_blob/23efc4a05868fb21b78588fcf994c682","cf":"Big Ten"},{"n":"Iowa","c":"#FFCD00","u":"/_blob/51c982567b044f5b962d4ac64ae3397f","cf":"Big Ten"},{"n":"Maryland","c":"#E03a3e","u":"/_blob/edfec768e65b632810c7aa44b4906469","cf":"Big Ten"},{"n":"Michigan","c":"#00274C","u":"/_blob/d91fd1a753e7c16c88848d97b65b42ed","cf":"Big Ten"},{"n":"Michigan State","c":"#18453B","u":"/_blob/175ea84870446d1c16a729e84968155b","cf":"Big Ten"},{"n":"Minnesota","c":"#7A0019","u":"/_blob/63b1d194b08576c998e8b69d7d9e6fd1","cf":"Big Ten"},{"n":"Nebraska","c":"#e41c38","u":"/_blob/94ec814dbdd194f49c3ba3b63b004de4","cf":"Big Ten"},{"n":"Northwestern","c":"#4E2A84","u":"/_blob/0084e29d57e4720e3b416888837ab051","cf":"Big Ten"},{"n":"Ohio State","c":"#BB0000","u":"/_blob/acfbc7df7fcb003fbde2050257e5cf69","cf":"Big Ten"},{"n":"Oregon","c":"#154733","u":"/_blob/1937e41cbf542462d9bade9314ad208e","cf":"Big Ten"},{"n":"Penn State","c":"#041E42","u":"/_blob/2c486051ddf8eeb8c8b0abe6ad1df76f","cf":"Big Ten"},{"n":"Purdue","c":"#ceb888","u":"/_blob/a3bcb44caf62e82ebbef5644dd35e044","cf":"Big Ten"},{"n":"Rutgers","c":"#cc0033","u":"/_blob/2eccc4c049e27a30840cf081025eb7ef","cf":"Big Ten"},{"n":"UCLA","c":"#2d68c4","u":"/_blob/6e98cfffd5f46aa72b61459bd03d3b23","cf":"Big Ten"},{"n":"USC","c":"#990000","u":"/_blob/aaac1fc44a14491e71b50b1f8e6f9ff8","cf":"Big Ten"},{"n":"Washington","c":"#4B2E83","u":"/_blob/0731cc707c8c7953696654bb7cbedc91","cf":"Big Ten"},{"n":"Wisconsin","c":"#c5050c","u":"/_blob/123079bd9a0b17fa4b8f9cb2cbe8d248","cf":"Big Ten"}]},{"name":"Big 12","teams":[{"n":"Arizona","c":"#CC0033","u":"/_blob/425d352e8c7875a48b74415fa810be1c","cf":"Big 12"},{"n":"Arizona State","c":"#8C1D40","u":"/_blob/247cb9756b53cbfc1fbdc04c78431f54","cf":"Big 12"},{"n":"Baylor","c":"#154734","u":"/_blob/c66088be726ec27c714b741ec6573bcf","cf":"Big 12"},{"n":"BYU","c":"#002E5D","u":"/_blob/04f71cba1e39d24b229ba66655e2e95e","cf":"Big 12"},{"n":"Cincinnati","c":"#E00122","u":"/_blob/cdaeae4a0b2433614a8159457e14aaa2","cf":"Big 12"},{"n":"Colorado","c":"#FFC627","u":"/_blob/f2e4e5b301a95d5535795f81dbeca06d","cf":"Big 12"},{"n":"Houston","c":"#C8102E","u":"/_blob/03e318f5ee61327bd054ee50571e84a5","cf":"Big 12"},{"n":"Iowa State","c":"#C8102E","u":"/_blob/c3e17a0839a6c23be6a8ab514b40aaa1","cf":"Big 12"},{"n":"Kansas","c":"#0051BA","u":"/_blob/b7cfb07c8b917ca9f40d7f8efa0d508c","cf":"Big 12"},{"n":"Kansas State","c":"#512888","u":"/_blob/3a15ee0650c65dc03bcb7122dc41944a","cf":"Big 12"},{"n":"Oklahoma State","c":"#FF7300","u":"/_blob/146e7c4dff32435267601e2ce4eb1d9a","cf":"Big 12"},{"n":"TCU","c":"#4d1979","u":"/_blob/ebb0e7561a1b7e18aed78808463dbd2a","cf":"Big 12"},{"n":"Texas Tech","c":"#CC0000","u":"/_blob/6eed7200d8d362c95931981b72686ff6","cf":"Big 12"},{"n":"UCF","c":"#ffc904","u":"/_blob/abd58b6f301805c8a54a35cff1a652d3","cf":"Big 12"},{"n":"Utah","c":"#CC0000","u":"/_blob/be0071659310b9a271764bb4b6eff180","cf":"Big 12"},{"n":"West Virginia","c":"#002855","u":"/_blob/a698437504cd034b7bc54cadfb35903f","cf":"Big 12"}]},{"name":"ACC","teams":[{"n":"Boston College","c":"#98002E","u":"/_blob/3d644ac5ff9f5d9ae683707f553887e5","cf":"ACC"},{"n":"California","c":"#003262","u":"/_blob/c8d933a6ad88b5df133eff91534a8239","cf":"ACC"},{"n":"Clemson","c":"#F56600","u":"/_blob/79901d30271ac56b639b2dd3ae539e30","cf":"ACC"},{"n":"Duke","c":"#003087","u":"/_blob/ff20b83d1b0315979d5c510e8d286c98","cf":"ACC"},{"n":"Florida State","c":"#782F40","u":"/_blob/e35b3e71003667a9445f0fdbf4b6d126","cf":"ACC"},{"n":"Georgia Tech","c":"#A28D5B","u":"/_blob/d39a74fd4d4180520d9e2e11ba8c1ac5","cf":"ACC"},{"n":"Louisville","c":"#AD0000","u":"/_blob/25035c422dcdce11294672abc03faffe","cf":"ACC"},{"n":"Miami","c":"#F47321","u":"/_blob/fe03e328917bf15a0c5218db0a3fecef","cf":"ACC"},{"n":"North Carolina","c":"#7BAFD4","u":"/_blob/e958ae3eb02eba774aa35aead86ee049","cf":"ACC"},{"n":"NC State","c":"#CC0000","u":"/_blob/9244994a5cf639b509a6d848e67fce9f","cf":"ACC"},{"n":"Pittsburgh","c":"#003594","u":"/_blob/f0284fce9987c3358d45b2350be4d2e4","cf":"ACC"},{"n":"SMU","c":"#0033A0","u":"/_blob/5c6311a80420ee96c3039bae53827c8e","cf":"ACC"},{"n":"Stanford","c":"#8C1515","u":"/_blob/8d4550cbee1b0eeae31f0fddbbfa9cdb","cf":"ACC"},{"n":"Syracuse","c":"#F76900","u":"/_blob/9582afefcdf5bfd09f7c19b2fad844ce","cf":"ACC"},{"n":"Virginia","c":"#232D4B","u":"/_blob/d593b2360f4dd2f6c937902b16d21345","cf":"ACC"},{"n":"Virginia Tech","c":"#630031","u":"/_blob/3bc5ac7ab5346f2fd3ed86bc489b3103","cf":"ACC"},{"n":"Wake Forest","c":"#9E7E38","u":"/_blob/02d80861665bb8933896d6a635d2b8c6","cf":"ACC"}]},{"name":"Independent","teams":[{"n":"Notre Dame","c":"#0C2340","u":"/_blob/8c35271a1286dd3a569b97e309fb269d","cf":"Independent"},{"n":"UConn","c":"#000e2f","u":"/_blob/d49fbc624d3aff9859a98bbcd1f4ce6b","cf":"Independent"}]},{"name":"American","teams":[{"n":"Army","c":"#D4BF91","u":"/_blob/586d17f7816956cb76c5b54920893a7c","cf":"American"},{"n":"Charlotte","c":"#046A38","u":"/_blob/c92e89a29aede77c315eda7ce88b64a3","cf":"American"},{"n":"East Carolina","c":"#592A8A","u":"/_blob/c487188d86b03fcb19c8017e52657773","cf":"American"},{"n":"Florida Atlantic","c":"#003366","u":"/_blob/f2e1b19bd1f88443b21d3ce8264177e6","cf":"American"},{"n":"Memphis","c":"#003087","u":"/_blob/2fb9101e0e5967a0a2d8a7f28d3cba93","cf":"American"},{"n":"Navy","c":"#00205B","u":"/_blob/115977ddc6048f7e1bee6a7435df77e0","cf":"American"},{"n":"North Texas","c":"#00853E","u":"/_blob/b4849420043475924386d66a9b3e7eb5","cf":"American"},{"n":"Rice","c":"#00205B","u":"/_blob/8901bba927b14674323a054bf4304541","cf":"American"},{"n":"South Florida","c":"#006747","u":"/_blob/7934c5ec922f4e63dc3bb0ac150a9809","cf":"American"},{"n":"Temple","c":"#9D2235","u":"/_blob/f9fa412412a05c37c26da9c6b37a1a28","cf":"American"},{"n":"Tulane","c":"#006747","u":"/_blob/d2489570c2f8bb97e637dbe1ce07f2b0","cf":"American"},{"n":"Tulsa","c":"#002D72","u":"/_blob/c9b0f0b1d24c902521f301f229bffed5","cf":"American"},{"n":"UAB","c":"#006341","u":"/_blob/eb4296a232c96a07e03e8b57f4a3d0b8","cf":"American"},{"n":"UTSA","c":"#f15a22","u":"/_blob/588f65983f0f5dafa8ef105c2d43319e","cf":"American"}]},{"name":"Mountain West","teams":[{"n":"Air Force","c":"#003087","u":"/_blob/a52bd1290de381c255f3f4fb37255d51","cf":"Mountain West"},{"n":"Boise State","c":"#D64309","u":"/_blob/aca134afc0f338c02c3882c898706e0d","cf":"Mountain West"},{"n":"Colorado State","c":"#1E4D2B","u":"/_blob/1f99681fe640e2bb8da942e04092d028","cf":"Mountain West"},{"n":"Fresno State","c":"#db0032","u":"/_blob/9edf921486c2e0251c393600f923eef9","cf":"Mountain West"},{"n":"Hawai'i","c":"#024731","u":"/_blob/2c40151f6e93b8cbcfc766e42dade0b3","cf":"Mountain West"},{"n":"Nevada","c":"#003366","u":"/_blob/acb7d7a0277ea5a6d58d2ce20fec8719","cf":"Mountain West"},{"n":"New Mexico","c":"#BA0C2F","u":"/_blob/a1b3f0d93f5f5a979121c79e05d4e4b3","cf":"Mountain West"},{"n":"San Diego State","c":"#a6192e","u":"/_blob/a722a84083574cfc49b99f41697a37ad","cf":"Mountain West"},{"n":"San José State","c":"#0055A2","u":"/_blob/6a43601dc154a651dbf446dd8a6b05f6","cf":"Mountain West"},{"n":"UNLV","c":"#CF0A2C","u":"/_blob/07864db8ea657b0d3e161c271b9424b8","cf":"Mountain West"},{"n":"Utah State","c":"#00263A","u":"/_blob/1d59cbc955037cd0f77017756aa8c172","cf":"Mountain West"},{"n":"Wyoming","c":"#ffc425","u":"/_blob/2e56f5701f873b0f40687e1df1ca6bfd","cf":"Mountain West"}]},{"name":"Pac-12","teams":[{"n":"Oregon State","c":"#dc4405","u":"/_blob/15804decd47b1b49405b56a7b13f0386","cf":"Pac-12"},{"n":"Washington State","c":"#981E32","u":"/_blob/dea5410905585c783e49d687181873b8","cf":"Pac-12"}]},{"name":"Sun Belt","teams":[{"n":"Appalachian State","c":"#222222","u":"/_blob/af91bde22e1d17c16d3b716bb672acaa","cf":"Sun Belt"},{"n":"Arkansas State","c":"#cc092f","u":"/_blob/30a6e35db33b4927780ee930c9efe014","cf":"Sun Belt"},{"n":"Coastal Carolina","c":"#006f71","u":"/_blob/1f4a7548d0aa5e211f6cd1a6ee384eae","cf":"Sun Belt"},{"n":"Georgia Southern","c":"#011e41","u":"/_blob/0dde72b304645222b831bd6edd8a468a","cf":"Sun Belt"},{"n":"Georgia State","c":"#0039A6","u":"/_blob/00b27abf99878dac796fdc025516971b","cf":"Sun Belt"},{"n":"James Madison","c":"#450084","u":"/_blob/8bb281d13995a671ab407f2596fa1d28","cf":"Sun Belt"},{"n":"Louisiana","c":"#ce181e","u":"/_blob/55f6864bddd84f1fa79f9732b9752681","cf":"Sun Belt"},{"n":"UL Monroe","c":"#840029","u":"/_blob/273f0f260e986aaef17ea8f72c684663","cf":"Sun Belt"},{"n":"Marshall","c":"#00B140","u":"/_blob/d58d0423ccf7d594845bad6e0ec87852","cf":"Sun Belt"},{"n":"Old Dominion","c":"#003057","u":"/_blob/a2e2bed43694916b439c8af6ebbcd095","cf":"Sun Belt"},{"n":"South Alabama","c":"#00205B","u":"/_blob/ee6ce930a70230d1cdbc166b3aed12d7","cf":"Sun Belt"},{"n":"Southern Miss","c":"#000000","u":"/_blob/c6e871252bc27c830c12804090b99143","cf":"Sun Belt"},{"n":"Texas State","c":"#501214","u":"/_blob/a45a642f7e8f75f51887e472177a7c07","cf":"Sun Belt"},{"n":"Troy","c":"#8a2432","u":"/_blob/67dad7e3fe4591aea611ada2abf1ceab","cf":"Sun Belt"}]},{"name":"MAC","teams":[{"n":"Akron","c":"#041E42","u":"/_blob/baec03f599c00c4179b9c56e2e5cb880","cf":"MAC"},{"n":"Ball State","c":"#BA0C2F","u":"/_blob/361e293ba194fbe1c2396393b682d61a","cf":"MAC"},{"n":"Bowling Green","c":"#FE5000","u":"/_blob/1539061cf26b733eff838ad9723fb4a1","cf":"MAC"},{"n":"Buffalo","c":"#005BBB","u":"/_blob/fe9c5d907b6c4a99eeae45606fda67fc","cf":"MAC"},{"n":"Central Michigan","c":"#6A0032","u":"/_blob/867efa157562e25bcc785e42fbfe681f","cf":"MAC"},{"n":"Eastern Michigan","c":"#006633","u":"/_blob/6f4c388b851b4d16e6ea320c552674ca","cf":"MAC"},{"n":"Kent State","c":"#002664","u":"/_blob/f5fd3045b6084c1f296887f18e1aa76a","cf":"MAC"},{"n":"UMass","c":"#971B2F","u":"/_blob/b7b1bdba44961c43dc1527ae85e7d52c","cf":"MAC"},{"n":"Miami (OH)","c":"#b61e2e","u":"/_blob/38bdd6ea2038c5787a97550b6343184e","cf":"MAC"},{"n":"Northern Illinois","c":"#BA0C2F","u":"/_blob/d2e515220a93f53a4a5403e64f9c4a7e","cf":"MAC"},{"n":"Ohio","c":"#00694E","u":"/_blob/854a919c87c796ecab41f6dc43d52467","cf":"MAC"},{"n":"Toledo","c":"#15397F","u":"/_blob/45f35b30004d7c0f52641e358c547d35","cf":"MAC"},{"n":"Western Michigan","c":"#6C4023","u":"/_blob/23255b48d346c862f90408d904018e93","cf":"MAC"}]},{"name":"Conference USA","teams":[{"n":"Delaware","c":"#00539f","u":"/_blob/390bcbd7f50baac130c6209a79d38f90","cf":"Conference USA"},{"n":"FIU","c":"#081E3F","u":"/_blob/113099ec01b8bf26b716464a9171ceed","cf":"Conference USA"},{"n":"Jacksonville State","c":"#CC0000","u":"/_blob/ded49bfbdb7e4d4c01aac6fc541d3ca1","cf":"Conference USA"},{"n":"Kennesaw State","c":"#FDBB30","u":"/_blob/404ff960a039485f944d94a75a96c250","cf":"Conference USA"},{"n":"Liberty","c":"#002d62","u":"/_blob/b6bdce6a8ec0ef50ff84fe8fba49ed6d","cf":"Conference USA"},{"n":"Louisiana Tech","c":"#002F8B","u":"/_blob/195456521947cec17a35f8a9db822b2e","cf":"Conference USA"},{"n":"Middle Tennessee","c":"#000000","u":"/_blob/67d6aef14ba882e26d295f86f48dec41","cf":"Conference USA"},{"n":"Missouri State","c":"#5E0009","u":"/_blob/aa720f0313bb9d0fe2fe6f25b5f9457d","cf":"Conference USA"},{"n":"New Mexico State","c":"#861F41","u":"/_blob/6f75c722725e166a0daed31269fb95d1","cf":"Conference USA"},{"n":"Sam Houston","c":"#fe5100","u":"/_blob/50cd985615c087e6ed4694787b57ea69","cf":"Conference USA"},{"n":"UTEP","c":"#FF8200","u":"/_blob/77b39f7629d68be72946ce4cc8832752","cf":"Conference USA"},{"n":"Western Kentucky","c":"#c60c30","u":"/_blob/7ad328ed08013c2d9845dc883d8ee131","cf":"Conference USA"}]}];
+const FLAGS = [{"id":"pennants-04","n":"Moss Dot","c":"#6A9449","u":"/_blob/9f23f743806663b61349284812005af7"},{"id":"pennants-05","n":"Oxblood Bars","c":"#5E1F1A","u":"/_blob/136551ca4cb64cc5990a88384b79afe7"},{"id":"pennants-06","n":"Maroon Chevrons","c":"#75222C","u":"/_blob/d6acb45dd72486c6b031fbf45c96ef1d"},{"id":"pennants-07","n":"Ink Block","c":"#241F1A","u":"/_blob/bdfbcfae5884ede215510c9bbaeb61a2"},{"id":"pennants-13","n":"Sage Twin Bands","c":"#5C9A74","u":"/_blob/03b0402dd6a62d12b3a459019850fb8d"},{"id":"pennants-14","n":"Copper Tip","c":"#D2712E","u":"/_blob/b9cbd7497a2ac8e87ffbe398efc88b99"},{"id":"pennants-15","n":"Gold Diamond","c":"#B08D2E","u":"/_blob/67b1225445a6b386e2754e12184dd3da"},{"id":"pennants-16","n":"Pine Sash","c":"#1F4034","u":"/_blob/8a87f7615d4d02b721bea68bad9fbfe9"},{"id":"pennants-17","n":"Slate Cross","c":"#2B4A5E","u":"/_blob/f1d9ff5ecbed2d1b70f127ce6c84073f"},{"id":"pennants-18","n":"Stone Pips","c":"#6F6152","u":"/_blob/1c7fd7fb865bf509921dddec0695bd62"},{"id":"pennants-19","n":"Teal Rails","c":"#1E6F73","u":"/_blob/03ca2e7274a05d5555076e1d0633af7a"},{"id":"pennants-20","n":"Plum Chevron","c":"#4A2B45","u":"/_blob/30f0cd2f6a68b610688c1c2abd7bb891"}];
+const FLAT = CONFS.flatMap(function (c) { return c.teams; });
+</script>
+</body>
+</html>

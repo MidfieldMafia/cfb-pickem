@@ -1,0 +1,121 @@
+// Emits PennantDisc.dc.html — the DECIDED disc rule only (treatment 1, inset
+// with the tint kept). The four rejected treatments stay on the canvas.
+import { writeFileSync } from "node:fs";
+
+const OUT = process.argv[2];
+
+const T = { bg: "#F7F1E3", fg: "#241F1A", card: "#FBF6EC", secondary: "#A94B17", mutedFg: "#6F6152", border: "#9C845F", accent: "#EFE7D5" };
+
+const SCHOOLS = [
+  { n: "Michigan", c: "#00274C", u: "/_blob/d91fd1a753e7c16c88848d97b65b42ed" },
+  { n: "Alabama", c: "#9E1B32", u: "/_blob/a51bab6bb47efc0606d6a226136cdbe8" },
+  { n: "Oregon", c: "#154733", u: "/_blob/1937e41cbf542462d9bade9314ad208e" },
+  { n: "Iowa", c: "#FFCD00", u: "/_blob/51c982567b044f5b962d4ac64ae3397f" },
+  { n: "Miami", c: "#F47321", u: "/_blob/fe03e328917bf15a0c5218db0a3fecef" },
+  { n: "Penn State", c: "#041E42", u: "/_blob/2c486051ddf8eeb8c8b0abe6ad1df76f" },
+];
+const FLAG = { n: "Pine Sash", c: "#1F4034", u: "/_blob/8a87f7615d4d02b721bea68bad9fbfe9" };
+
+const caps = (t) => `<div style="font-size: 12px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: ${T.secondary};">${t}</div>`;
+
+const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The pennant disc, decided</title>
+<script src="./support.js"><\/script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;background:${T.bg};font-family:Manrope,ui-sans-serif,system-ui,sans-serif;color:${T.fg};-webkit-font-smoothing:antialiased}
+a{color:${T.secondary}}a:hover{color:#8E3D12}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<div style="width: 820px; height: 620px; padding: 32px; background: ${T.bg}; display: flex; flex-direction: column; gap: 18px;">
+
+<div>
+<div style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 28px; line-height: 32px;">The pennant disc, decided</div>
+<div style="font-size: 14px; line-height: 20px; color: ${T.mutedFg}; margin-top: 4px;">Issue #225, treatment 1: inset, keep the tint. One code path, every size.</div>
+</div>
+
+<div style="display: flex; gap: 28px;">
+<div style="flex-grow: 1; padding: 14px 16px; border-radius: 14px; background: ${T.card}; border: 1px solid ${T.border}44;">
+${caps("Flag — bleeds at 125%")}
+<div style="display: flex; align-items: flex-end; gap: 14px; margin-top: 10px;">
+<sc-for list="{{flagRow}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+<span style="{{s.box}}"><img src="{{s.u}}" alt="" style="{{s.img}}"></span>
+<span style="font-size: 10px; color: ${T.mutedFg};">{{s.px}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="flex-grow: 1; padding: 14px 16px; border-radius: 14px; background: ${T.card}; border: 1px solid ${T.border}44;">
+${caps("Logo — inset at 72%")}
+<div style="display: flex; align-items: flex-end; gap: 14px; margin-top: 10px;">
+<sc-for list="{{logoRow}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+<span style="{{s.box}}"><img src="{{s.u}}" alt="" style="{{s.img}}"></span>
+<span style="font-size: 10px; color: ${T.mutedFg};">{{s.px}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="padding: 14px 16px; border-radius: 14px; background: ${T.card}; border: 1px solid ${T.border}44;">
+${caps("Six schools at 44, the size the boards use")}
+<div style="display: flex; gap: 18px; margin-top: 10px;">
+<sc-for list="{{row}}" as="t" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 78px;">
+<span style="{{t.box}}"><img src="{{t.u}}" alt="" style="{{t.img}}"></span>
+<span style="font-size: 11px; line-height: 14px; text-align: center; color: ${T.mutedFg};">{{t.n}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="margin-top: auto; padding: 12px 16px; border-radius: 14px; background: ${T.accent}; border: 1px solid ${T.border}44; font-size: 13px; line-height: 19px;">
+<strong>The rule.</strong> A logo sits inside the disc at 72% with <code>object-fit: contain</code>, over the existing 18% tint of the school's <code>colors.primary</code>. A flag keeps bleeding past the edge at 125%. No crop, no second shape, no small-size fallback.
+<br><strong>Accepted, not overlooked:</strong> a light primary makes a very faint disc — Iowa is <code>#FFCD00</code> — and an inset logo at 20px is small. Both were looked at with the alternatives drawn and judged fine. Do not add a border or a tint floor to "fix" the faint disc.
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":820,"height":620}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sizes = [72, 44, 28, 20];
+    function tint(c) { return 'color-mix(in srgb, ' + c + ' 18%, transparent)'; }
+    function box(px, c) {
+      return 'display: inline-flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex-shrink: 0; '
+        + 'width: ' + px + 'px; height: ' + px + 'px; border-radius: 999px; background: ' + tint(c) + ';';
+    }
+    return {
+      flagRow: sizes.map(function (px) {
+        return { px: px, u: FLAG.u, box: box(px, FLAG.c),
+          img: 'width: ' + Math.round(px * 1.25) + 'px; height: ' + Math.round(px * 1.25) + 'px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);' };
+      }),
+      logoRow: sizes.map(function (px) {
+        return { px: px, u: SCHOOLS[0].u, box: box(px, SCHOOLS[0].c),
+          img: 'width: ' + Math.round(px * 0.72) + 'px; height: ' + Math.round(px * 0.72) + 'px; object-fit: contain;' };
+      }),
+      row: SCHOOLS.map(function (t) {
+        return { n: t.n, u: t.u, box: box(44, t.c), img: 'width: 32px; height: 32px; object-fit: contain;' };
+      }),
+    };
+  }
+}
+const SCHOOLS = ${JSON.stringify(SCHOOLS)};
+const FLAG = ${JSON.stringify(FLAG)};
+<\/script>
+</body>
+</html>
+`;
+
+writeFileSync(OUT, html);
+console.log("wrote", OUT, html.length, "bytes");
