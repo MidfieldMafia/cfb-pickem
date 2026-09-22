@@ -247,7 +247,7 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
   );
 }
 
-/** The two disclosures' handles, as the mockups draw them: a button, and a word. */
+/** The two disclosures' handles: a button, and a word. */
 const SET_SCORE = "inline-flex min-h-tap w-fit cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 font-semibold hover:bg-accent";
 const VOID = "inline-flex min-h-tap w-fit cursor-pointer items-center gap-1.5 font-semibold text-destructive";
 
@@ -261,8 +261,8 @@ function OverrideCell({ row }: { row: GameView }) {
   const { game, result } = row;
   const matchup = `${game.awayTeam} at ${game.homeTeam}`;
   return (
-    // Both handles on one line, as the mockup has them, so a row of scores
-    // stays a row and not a stack.
+    // Both handles on one line, so a row of scores stays a row and not a
+    // stack.
     <div className="flex flex-wrap items-start gap-x-3">
       <details>
         <summary aria-label={`Set the score for ${matchup}`} className={SET_SCORE}>

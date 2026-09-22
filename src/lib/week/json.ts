@@ -40,11 +40,10 @@ export interface WeekStateJson {
   weeklyWin: WeeklyWin | null;
   /**
    * The viewer's own place and total across the season, this Week's
-   * provisional points included: the card at the top of the Live Board, as
-   * mockup 05 draws it. Null before the Deadline, and for a member the season
-   * board does not carry at all — one deactivated with no Picks all season. A
-   * member who has played no Week yet is on that board at zero and has a place
-   * to show.
+   * provisional points included: the card at the top of the Live Board. Null
+   * before the Deadline, and for a member the season board does not carry at
+   * all — one deactivated with no Picks all season. A member who has played no
+   * Week yet is on that board at zero and has a place to show.
    *
    * The viewer's standing rather than the whole Leaderboard, because that card
    * is the only thing on this screen that reads the season, and shipping every

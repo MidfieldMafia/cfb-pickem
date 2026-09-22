@@ -47,7 +47,7 @@ export function WeekSwitcher({ year, weeks, fallback }: { year: number; weeks: W
     <form
       method="get"
       action={pathname}
-      // The rust chip from the mockups, with the week itself as the control:
+      // A rust chip, with the week itself as the control:
       // reading the week and changing it are the same gesture.
       className={CHIP}
     >

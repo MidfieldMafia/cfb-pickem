@@ -310,7 +310,7 @@ function SlateRow({
             <input type="hidden" name="weekId" value={weekId} />
             <input type="hidden" name="gameId" value={game.id} />
             {/* The one Tiebreaker Game reads as a chosen-one-of-many mark, so
-                it wears the rust ring the mockups draw rather than a word. */}
+                it wears a rust ring rather than a word. */}
             <button
               type="submit"
               aria-pressed={tiebreaker}
