@@ -11,12 +11,12 @@ import { requireConsole } from "@/lib/members/current";
 import { MAX_NOTE } from "@/lib/notes";
 import { plural } from "@/lib/plural";
 import { isVoid, toGameView, toSlateCandidates, voidNote, type GameView } from "@/lib/slate/json";
-import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
+import { consoleWeek } from "@/lib/slate/slate";
 import { ActionForm } from "../action-form";
 import { pillClass } from "../pill";
-import { requestedWeekNumber } from "../week-param";
-import { fbsOnlyParam, filterParam, FILTERS, matches, type Filter } from "./candidate-filter";
-import { dirParam, sortCandidates, sortParam, type SortDir, type SortKey } from "./candidate-sort";
+import { fbsOnlyParam, filterParam, FILTERS, matches } from "./candidate-filter";
+import { dirParam, sortCandidates, sortParam, type SortDir } from "./candidate-sort";
+import { slateQuery } from "./slate-query";
 import { addGameAction, removeGameAction, setTiebreakerAction, voidGameAction } from "./actions";
 import { openMeteo } from "@/lib/weather/open-meteo";
 import { CandidateCheckbox } from "./candidate-checkbox";
@@ -32,29 +32,21 @@ export default async function SlateBuilder({
   const commissioner = await requireConsole();
   const params = await searchParams;
   const database = db();
-  const season = await activeSeason(database);
-  const existing = await seasonWeeks(database, season);
-  const weekNumber = requestedWeekNumber(existing, params.week);
+  const { season, week, slate } = await consoleWeek(database, commissioner, params.week);
+  const weekNumber = week.weekNumber;
   const filter = filterParam(params.filter);
   const fbsOnly = fbsOnlyParam(params.fbs);
   const q = params.q?.trim() ?? "";
   const sort = sortParam(params.sort);
   const dir = dirParam(params.dir);
 
-  // The feed is ten HTTP calls and does not depend on the week row, so it runs alongside it.
-  const [{ week, slate }, feed] = await Promise.all([
-    openWeek(database, commissioner, weekNumber, season).then(async (w) => ({
-      week: w,
-      slate: await slateFor(database, w.id),
-    })),
-    weekCandidates(cfbd(), { year: season.year, week: weekNumber }, openMeteo()).then(
-      (games) => ({ games, error: null as string | null }),
-      (error: unknown) => ({
-        games: [] as CandidateGame[],
-        error: error instanceof Error ? error.message : "CollegeFootballData did not answer.",
-      }),
-    ),
-  ]);
+  const feed = await weekCandidates(cfbd(), { year: season.year, week: weekNumber }, openMeteo()).then(
+    (games) => ({ games, error: null as string | null }),
+    (error: unknown) => ({
+      games: [] as CandidateGame[],
+      error: error instanceof Error ? error.message : "CollegeFootballData did not answer.",
+    }),
+  );
   const candidates = feed.games;
   const feedError = feed.error;
   const slateGames = slate.games.map(toGameView);
@@ -67,43 +59,7 @@ export default async function SlateBuilder({
     slate.games,
   );
   const tiebreaker = slateGames.find((g) => g.game.id === slate.week.tiebreakerGameId)?.game ?? null;
-  const sortSearchParams = () => {
-    const p = new URLSearchParams();
-    if (sort !== "kickoff") p.set("sort", sort);
-    if (dir !== "asc") p.set("dir", dir);
-    return p;
-  };
-  const filterHref = (f: Filter) => {
-    const p = new URLSearchParams({ week: String(weekNumber) });
-    if (f !== "all") p.set("filter", f);
-    if (!fbsOnly) p.set("fbs", "0");
-    if (q) p.set("q", q);
-    for (const [k, v] of sortSearchParams()) p.set(k, v);
-    return `/console/slate?${p}`;
-  };
-  const fbsOnlyHref = () => {
-    const p = new URLSearchParams({ week: String(weekNumber) });
-    if (filter !== "all") p.set("filter", filter);
-    if (fbsOnly) p.set("fbs", "0");
-    if (q) p.set("q", q);
-    for (const [k, v] of sortSearchParams()) p.set(k, v);
-    return `/console/slate?${p}`;
-  };
-  /**
-   * A repeat click flips direction; a first click on the other column starts
-   * at its natural ascending order. "asc" is each column's default and never
-   * shows up in the URL, matching `fbsOnlyParam`'s "absent means default".
-   */
-  const sortHref = (key: SortKey) => {
-    const p = new URLSearchParams({ week: String(weekNumber) });
-    if (filter !== "all") p.set("filter", filter);
-    if (!fbsOnly) p.set("fbs", "0");
-    if (q) p.set("q", q);
-    const nextDir: SortDir = sort === key && dir === "asc" ? "desc" : "asc";
-    if (key !== "kickoff") p.set("sort", key);
-    if (nextDir !== "asc") p.set("dir", nextDir);
-    return `/console/slate?${p}`;
-  };
+  const view = slateQuery({ week: weekNumber, filter, fbsOnly, q, sort, dir });
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -142,11 +98,11 @@ export default async function SlateBuilder({
           </div>
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
             {FILTERS.map((f) => (
-              <Link key={f.key} href={filterHref(f.key)} className={pillClass(f.key === filter)}>
+              <Link key={f.key} href={view.with({ filter: f.key }).href()} className={pillClass(f.key === filter)}>
                 {f.label}
               </Link>
             ))}
-            <Link href={fbsOnlyHref()} className={pillClass(fbsOnly)}>
+            <Link href={view.with({ fbsOnly: !fbsOnly }).href()} className={pillClass(fbsOnly)}>
               FBS only
             </Link>
             <RefreshButton weekId={week.id} />
@@ -164,9 +120,9 @@ export default async function SlateBuilder({
                     <span className="sr-only">On the slate</span>
                   </th>
                   <th className="p-3">Game</th>
-                  <SortHeader label="Kickoff" active={sort === "kickoff"} dir={dir} href={sortHref("kickoff")} />
+                  <SortHeader label="Kickoff" active={sort === "kickoff"} dir={dir} href={view.sortedBy("kickoff").href()} />
                   <th className="px-2 py-3">TV</th>
-                  <SortHeader label="Spread" active={sort === "spread"} dir={dir} href={sortHref("spread")} />
+                  <SortHeader label="Spread" active={sort === "spread"} dir={dir} href={view.sortedBy("spread").href()} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

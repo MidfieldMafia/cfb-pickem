@@ -242,11 +242,39 @@ export async function seasonWeeks(db: Db, season: Season): Promise<Week[]> {
 /**
  * The Week a console page opens on when the commissioner did not ask for one:
  * the latest published Week, else the latest that exists, else 1. Stated here
- * rather than in the route so `resultsConsole` and `week-param.ts` cannot
- * land on different Weeks for the same season.
+ * rather than in the route so every console page lands on the same Week for
+ * the same season.
  */
 export function defaultWeekNumber(existing: Week[]): number {
   return existing.filter((w) => w.published).at(-1)?.weekNumber ?? existing.at(-1)?.weekNumber ?? 1;
+}
+
+/** The Week a console page is showing, with everything a page needs to draw around it. */
+export interface ConsoleWeek {
+  season: Season;
+  /** The chooser's Weeks: those that exist, plus the one just opened. */
+  weeks: Week[];
+  week: Week;
+  slate: Slate;
+}
+
+/**
+ * The one answer to "which Week is this console page on". `requested` is the
+ * raw `?week=` (or a number); a missing or junk value falls to
+ * `defaultWeekNumber`. The Week row is created on first visit, and the chooser
+ * includes it even though `seasonWeeks` was read before it existed.
+ */
+export async function consoleWeek(
+  db: Db,
+  actor: Commissioner,
+  requested: string | number | undefined,
+): Promise<ConsoleWeek> {
+  const season = await activeSeason(db);
+  const existing = await seasonWeeks(db, season);
+  const number = (typeof requested === "number" ? requested : weekParam(requested)) ?? defaultWeekNumber(existing);
+  const week = await openWeek(db, actor, number, season);
+  const weeks = existing.some((w) => w.id === week.id) ? existing : [...existing, week];
+  return { season, weeks, week, slate: await slateFor(db, week.id) };
 }
 
 /**
