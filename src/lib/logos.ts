@@ -16,6 +16,12 @@ export interface TeamLogo {
   slug: string;
   /** CFBD `team.id` — the numeric identity, when one is on hand. */
   espnId: number;
+  /**
+   * The conference the school plays in. Maintained by hand through
+   * realignment — the file is also *ordered* by conference, but nothing reads
+   * that order for membership.
+   */
+  conference: string;
   /** 150px mark, relative to `public/`. */
   file: string;
   /** 32px mark keyed by ESPN id, relative to `public/`. */
@@ -27,6 +33,27 @@ export const teamLogos: readonly TeamLogo[] = logoList;
 
 const bySlug = new Map(teamLogos.map((t) => [t.slug, t]));
 const byEspnId = new Map(teamLogos.map((t) => [t.espnId, t]));
+
+export interface Conference {
+  name: string;
+  teams: readonly TeamLogo[];
+}
+
+/**
+ * The schools grouped by conference, for anything that browses all 136 rather
+ * than resolving one. Conferences come out in the order they first appear in
+ * the file, which is the order they are listed in; membership comes from each
+ * entry's `conference`, so a school filed out of order still lands correctly.
+ */
+export const conferences: readonly Conference[] = (() => {
+  const grouped = new Map<string, TeamLogo[]>();
+  for (const team of teamLogos) {
+    const existing = grouped.get(team.conference);
+    if (existing) existing.push(team);
+    else grouped.set(team.conference, [team]);
+  }
+  return [...grouped].map(([name, teams]) => ({ name, teams }));
+})();
 
 /** Matches the slugs in logos.json, so a display name resolves without a lookup table. */
 function slugify(school: string): string {

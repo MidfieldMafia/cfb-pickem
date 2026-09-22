@@ -10,10 +10,16 @@ const DISC = "bg-[color-mix(in_srgb,var(--pennant)_18%,transparent)]";
 export interface PennantMark {
   /** The pennant's own display name, used as the image `alt`. */
   name: string;
-  /** Path to the pennant flag SVG. */
+  /** Path to the mark — a pennant flag SVG, or a school's 150px logo. */
   file: string;
-  /** The member's chosen tint, used at 18% behind the flag. */
+  /** The member's chosen tint, used at 18% behind the mark. */
   color: string;
+  /**
+   * A flag is drawn at 125% and bleeds past the disc edge, so the tint reads as
+   * a field. A school logo sits *inside* the disc at 72%, so the same tint
+   * reads as a ring around it. One code path, every size.
+   */
+  kind: "flag" | "logo";
 }
 
 /**
@@ -44,7 +50,8 @@ export function Pennant({
     );
   }
 
-  const flagSize = Math.round(size * 1.25);
+  const logo = avatar.kind === "logo";
+  const markSize = Math.round(size * (logo ? 0.72 : 1.25));
   return (
     <span
       className={cn("relative inline-flex shrink-0 overflow-hidden rounded-full", DISC)}
@@ -53,10 +60,14 @@ export function Pennant({
       <Image
         src={avatar.file}
         alt={avatar.name}
-        width={flagSize}
-        height={flagSize}
+        width={markSize}
+        height={markSize}
         unoptimized
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2", logo && "object-contain")}
+        // A logo gets an explicit square box so the 72% is the box and not just
+        // a width: the base `img` rule is `height: auto`, and one school (UAB)
+        // ships a 3:2 mark that would otherwise sit shorter than it is wide.
+        style={logo ? { width: markSize, height: markSize } : undefined}
       />
     </span>
   );

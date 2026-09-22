@@ -1,7 +1,6 @@
 import { Wordmark } from "@saturday-slate/design-system";
 
 import { TextMyLink } from "@/components/text-my-link";
-import { avatars } from "@/lib/avatars";
 import { currentMember } from "@/lib/members/current";
 import { StartForm } from "./start-form";
 
@@ -23,7 +22,7 @@ export default async function StartGroup() {
           Your own pick&rsquo;em for your people: the same games every week, your own leaderboard.
         </p>
       </div>
-      <StartForm avatars={member ? null : avatars} />
+      <StartForm signedOut={member === null} />
       {member ? null : <TextMyLink />}
     </main>
   );
