@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Photo pennant stacks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;color:#241F1A;background:#F7F1E3}
+</style>
+</helmet>
+<div style="width: 1000px; height: 860px; box-sizing: border-box; padding: 40px; background: #F7F1E3; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #A94B17;">Prototype · throwaway</div>
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 28px; line-height: 32px;">PennantGroup stacks</h1>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #6F6152; max-width: 760px;">Six members, five shown, overlapping by {{overlapLabel}} of the disc with a 2px paper ring between them, the viewer pinned first. The worst case: a face at 20px with part of it under the next face. Overlap is a tweak.</p>
+</div>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; background: #FBF6EC; border-radius: 14px; padding: 16px;">
+<div style="display: grid; grid-template-columns: 200px repeat(3, minmax(0, 1fr)); align-items: end; padding-bottom: 12px;">
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #A94B17;">{{g.label}}</div>
+<div style="font-size: 14px; font-weight: 700;">A · Bare</div>
+<div style="font-size: 14px; font-weight: 700;">B · Hairline</div>
+<div style="font-size: 14px; font-weight: 700;">C · Inset ring</div>
+</div>
+<sc-for list="{{g.rows}}" as="row" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 200px repeat(3, minmax(0, 1fr)); align-items: center; min-height: 64px; border-top: 1px solid #C6B49A;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="font-size: 14px; font-weight: 700;">{{row.label}}</div>
+<div style="font-size: 12px; line-height: 16px; color: #6F6152;">{{row.sub}}</div>
+</div>
+<sc-for list="{{row.cells}}" as="cell" hint-placeholder-count="3">
+<div style="display: flex; align-items: center;">
+<sc-for list="{{cell.items}}" as="it" hint-placeholder-count="5">
+<span style="{{it.wrap}}">
+<dc-import name="Pennant" mark="{{it.mark}}" size="{{it.size}}" treatment="{{it.t}}" hint-size="{{it.hint}}"></dc-import>
+</span>
+</sc-for>
+<span style="{{cell.more}}">+1</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"overlap":{"editor":"enum","options":["third","quarter","fifth"],"default":"third","section":"Stack"},"$preview":{"width":1000,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var overlapKey = this.props.overlap || 'third';
+    var divisor = { third: 3, quarter: 4, fifth: 5 }[overlapKey] || 3;
+    var F = {
+      moss: { kind: 'flag', src: '/_blob/7221f6a19db8073d8826d2b7beb133f2', alt: 'Moss Dot', color: '#6A9449' },
+      ink: { kind: 'flag', src: '/_blob/5bfe7c4184de00f99ba38ab0f596570a', alt: 'Ink Block', color: '#241F1A' },
+      copper: { kind: 'flag', src: '/_blob/cc52b042f0daf71cb602b44f2d938770', alt: 'Copper Tip', color: '#D2712E' },
+      teal: { kind: 'flag', src: '/_blob/b4be4234f65a8a93f51e797c48ebef56', alt: 'Teal Rails', color: '#1E6F73' },
+      bama: { kind: 'logo', src: '/_blob/710b7544de7273b045c023d0fcbaf2ac', alt: 'Alabama', color: '#9E1B32' },
+      mich: { kind: 'logo', src: '/_blob/6b9d7322db4e044416f32196ecc23b31', alt: 'Michigan', color: '#00274C' }
+    };
+    var P = {
+      dale: { kind: 'photo', src: '/_blob/503d5448eb23abb55bf9fdeca418dcdb', alt: 'Dale', initial: 'D' },
+      coach: { kind: 'photo', src: '/_blob/c131cb1411e50d00a53cbb4cc50b2b99', alt: 'Coach T', initial: 'C' },
+      mike: { kind: 'photo', src: '/_blob/665df7505b3dd8ac8f6b51bf993a66ae', alt: 'Big Mike', initial: 'M' },
+      kels: { kind: 'photo', src: '/_blob/8573b683f77fafb986d384bb0341559e', alt: 'Kels', initial: 'K' },
+      priya: { kind: 'photo', src: '/_blob/2f5a81d7ed8131f7d6aaf59969ae9296', alt: 'Priya', initial: 'P' },
+      dog: { kind: 'photo', src: '/_blob/df852c7dc8e80ebe6230c73b7fdb72d2', alt: 'Beth', initial: 'B' },
+      ball: { kind: 'photo', src: '/_blob/f6c1467948df51496c3b99150d18a541', alt: 'Jen', initial: 'J' }
+    };
+    var POOLS = [
+      { label: 'Flags today', sub: 'flags and logos only', marks: [F.moss, F.ink, F.bama, F.copper, F.teal] },
+      { label: 'All photos', sub: 'faces, a dog, a football', marks: [P.dale, P.priya, P.dog, P.coach, P.ball] },
+      { label: 'Mixed pool', sub: 'the real test', marks: [P.dale, F.copper, P.kels, F.mich, P.mike] }
+    ];
+    function stack(marks, size, t) {
+      var overlap = Math.round(size / divisor);
+      return {
+        items: marks.map(function (m, i) {
+          return {
+            mark: m, size: size, t: t, hint: size + 'px,' + size + 'px',
+            wrap: 'display: inline-flex; border-radius: 9999px; box-shadow: 0 0 0 2px #F7F1E3;' + (i === 0 ? '' : ' margin-left: -' + overlap + 'px;')
+          };
+        }),
+        more: 'display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 9999px; background: #EAE0CC; color: #6F6152; font-size: 12px; font-weight: 600; box-shadow: 0 0 0 2px #F7F1E3; width: ' + size + 'px; height: ' + size + 'px; margin-left: -' + overlap + 'px;'
+      };
+    }
+    function group(size) {
+      return {
+        label: size + 'px',
+        rows: POOLS.map(function (p) {
+          return { label: p.label, sub: p.sub, cells: ['bare', 'hairline', 'inset'].map(function (t) { return stack(p.marks, size, t); }) };
+        })
+      };
+    }
+    return {
+      overlapLabel: 'a ' + overlapKey,
+      groups: [group(28), group(20)]
+    };
+  }
+}
+</script>
+</body>
+</html>

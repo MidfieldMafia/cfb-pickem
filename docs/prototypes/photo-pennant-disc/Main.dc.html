@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Photo pennant sizes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;color:#241F1A;background:#F7F1E3}
+</style>
+</helmet>
+<div style="width: 1000px; height: 2160px; box-sizing: border-box; padding: 40px; background: #F7F1E3; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #A94B17;">Prototype · throwaway</div>
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 28px; line-height: 32px;">A photo in the Pennant disc</h1>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #6F6152; max-width: 720px;">Every size the app renders a Pennant at today. Photos arrive as square crops, as the client-side crop will upload them. Judge at 100% zoom: the canvas re-renders images sharper when zoomed in, which a phone never does.</p>
+</div>
+<div style="display: grid; grid-template-columns: 220px repeat(6, minmax(0, 1fr)); align-items: end; padding: 0 16px;">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6F6152;">Size</div>
+<sc-for list="{{sizes}}" as="s" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+<div style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 18px; font-variant-numeric: tabular-nums;">{{s.px}}</div>
+<div style="font-size: 12px; line-height: 16px; color: #6F6152; text-align: center;">{{s.where}}</div>
+</div>
+</sc-for>
+</div>
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; background: #FBF6EC; border-radius: 14px; padding: 16px;">
+<div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px;">
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #A94B17;">{{sec.label}}</div>
+<div style="font-size: 14px; line-height: 20px; color: #6F6152;">{{sec.note}}</div>
+</div>
+<sc-for list="{{sec.rows}}" as="row" hint-placeholder-count="4">
+<div style="display: grid; grid-template-columns: 220px repeat(6, minmax(0, 1fr)); align-items: center; min-height: 92px; border-top: 1px solid #C6B49A;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="font-size: 14px; font-weight: 700;">{{row.label}}</div>
+<div style="font-size: 12px; line-height: 16px; color: #6F6152;">{{row.sub}}</div>
+</div>
+<sc-for list="{{row.cells}}" as="c" hint-placeholder-count="6">
+<div style="display: flex; justify-content: center; align-items: center;">
+<dc-import name="Pennant" mark="{{c.mark}}" size="{{c.size}}" treatment="{{c.t}}" hint-size="{{c.hint}}"></dc-import>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1000,"height":2160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var SIZES = [
+      { px: 72, where: 'picker' },
+      { px: 56, where: 'you' },
+      { px: 44, where: 'lists' },
+      { px: 36, where: 'console' },
+      { px: 28, where: 'inline, leaderboard' },
+      { px: 20, where: 'drawer chips' }
+    ];
+    var M = {
+      flag: { kind: 'flag', src: '/_blob/7221f6a19db8073d8826d2b7beb133f2', alt: 'Moss Dot', color: '#6A9449' },
+      darkFlag: { kind: 'flag', src: '/_blob/5bfe7c4184de00f99ba38ab0f596570a', alt: 'Ink Block', color: '#241F1A' },
+      logo: { kind: 'logo', src: '/_blob/710b7544de7273b045c023d0fcbaf2ac', alt: 'Alabama', color: '#9E1B32' },
+      none: { kind: 'none', initial: 'S' },
+      face: { kind: 'photo', src: '/_blob/503d5448eb23abb55bf9fdeca418dcdb', alt: 'Dale', initial: 'D' },
+      faceLight: { kind: 'photo', src: '/_blob/2f5a81d7ed8131f7d6aaf59969ae9296', alt: 'Priya', initial: 'P' },
+      dog: { kind: 'photo', src: '/_blob/df852c7dc8e80ebe6230c73b7fdb72d2', alt: 'Beth', initial: 'B' },
+      ball: { kind: 'photo', src: '/_blob/f6c1467948df51496c3b99150d18a541', alt: 'Jen', initial: 'J' }
+    };
+    function row(label, sub, mark, t) {
+      return {
+        label: label, sub: sub,
+        cells: SIZES.map(function (s) {
+          return { mark: mark, size: s.px, t: t, hint: s.px + 'px,' + s.px + 'px' };
+        })
+      };
+    }
+    function photos(t) {
+      return [
+        row('Face, close crop', 'the common case', M.face, t),
+        row('Face, light background', 'where the disc edge disappears', M.faceLight, t),
+        row('A dog', 'not every photo is a person', M.dog, t),
+        row('A football on turf', 'no face at all', M.ball, t)
+      ];
+    }
+    return {
+      sizes: SIZES,
+      sections: [
+        { label: 'Today, for comparison', note: 'A flag at 125% bleeding past a disc tinted at 18%; a school logo inside it at 72%; the initial when there is no pennant.',
+          rows: [row('Flag', 'Moss Dot', M.flag, 'bare'), row('Dark flag', 'Ink Block', M.darkFlag, 'bare'), row('School logo', 'Alabama', M.logo, 'bare'), row('No pennant', 'initial, aria-hidden', M.none, 'bare')] },
+        { label: 'A · Bare', note: 'The tinted disc is dropped. The photo fills the disc edge to edge at 1x.', rows: photos('bare') },
+        { label: 'B · Hairline', note: 'The photo fills the disc at 1x, with a 1px ink rule at 24% inside the edge so a pale photo keeps its circle on paper.', rows: photos('hairline') },
+        { label: 'C · Inset ring', note: 'The tinted disc survives as a ring: the photo sits inside it at 84%, the way a logo sits at 72%. Tint is the no-pennant fallback, since a photo has no color.', rows: photos('inset') }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

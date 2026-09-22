@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pennant disc</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;color:#241F1A}
+</style>
+</helmet>
+<span style="{{discStyle}}">
+<sc-if value="{{showImg}}" hint-placeholder-val="{{ true }}">
+<img src="{{src}}" alt="{{alt}}" style="{{imgStyle}}">
+</sc-if>
+<sc-if value="{{showInitial}}" hint-placeholder-val="{{ false }}">
+<span aria-hidden="true">{{initial}}</span>
+</sc-if>
+<sc-if value="{{hairline}}" hint-placeholder-val="{{ false }}">
+<span aria-hidden="true" style="position: absolute; inset: 0; border-radius: 9999px; box-shadow: inset 0 0 0 1px rgba(36,31,26,0.24);"></span>
+</sc-if>
+</span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mark":{"editor":null},"size":{"editor":"int","default":72,"min":12,"max":160},"treatment":{"editor":"enum","options":["bare","hairline","inset"],"default":"hairline"},"floor":{"editor":"int","default":0,"min":0,"max":44},"$preview":{"width":72,"height":72}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var m = this.props.mark || { kind: 'photo', src: '/_blob/503d5448eb23abb55bf9fdeca418dcdb', alt: 'Dale', initial: 'D' };
+    var size = Number(this.props.size != null ? this.props.size : 72);
+    var t = this.props.treatment || 'hairline';
+    var floor = Number(this.props.floor || 0);
+    var kind = m.kind;
+    // Below the floor a photo gives way to the member's initial, same as no pennant.
+    if (kind === 'photo' && size <= floor) kind = 'none';
+    var FALLBACK = '#6F6152';
+    function tint(c) { return 'color-mix(in srgb, ' + c + ' 18%, transparent)'; }
+    var base = 'position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border-radius: 9999px; box-sizing: border-box; width: ' + size + 'px; height: ' + size + 'px;';
+    var centered = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: none; display: block;';
+    var disc = base, img = '', showImg = true, showInitial = false, hairline = false;
+    if (kind === 'none') {
+      disc = base + ' background: ' + tint(FALLBACK) + '; color: ' + FALLBACK + '; font-family: Chivo, Manrope, sans-serif; font-weight: 900; line-height: 1; font-size: ' + (size * 0.42) + 'px;';
+      showImg = false; showInitial = true;
+    } else if (kind === 'flag') {
+      var f = Math.round(size * 1.25);
+      disc = base + ' background: ' + tint(m.color) + ';';
+      img = centered + ' width: ' + f + 'px; height: ' + f + 'px;';
+    } else if (kind === 'logo') {
+      var l = Math.round(size * 0.72);
+      disc = base + ' background: ' + tint(m.color) + ';';
+      img = centered + ' width: ' + l + 'px; height: ' + l + 'px; object-fit: contain;';
+    } else if (t === 'inset') {
+      // The tinted disc survives as a ring: the photo sits inside it, like a logo does.
+      var p = Math.round(size * 0.84);
+      disc = base + ' background: ' + tint(FALLBACK) + ';';
+      img = centered + ' width: ' + p + 'px; height: ' + p + 'px; border-radius: 9999px; object-fit: cover;';
+    } else {
+      // bare / hairline: the photo fills the disc edge to edge at 1x.
+      disc = base + ' background: #EAE0CC;';
+      img = 'display: block; width: ' + size + 'px; height: ' + size + 'px; object-fit: cover;';
+      hairline = t === 'hairline';
+    }
+    return {
+      discStyle: disc, imgStyle: img, showImg: showImg, showInitial: showInitial, hairline: hairline,
+      src: m.src || '', alt: m.alt || '', initial: m.initial || ''
+    };
+  }
+}
+</script>
+</body>
+</html>
