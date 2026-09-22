@@ -164,3 +164,31 @@ describe("the header", () => {
     expect(link("Manage")).toBeNull();
   });
 });
+
+/**
+ * The Lock of the Week and the Tiebreaker Guess are only settable on review,
+ * and the flow walks the slate in order — so review had to be reachable from
+ * every game, not just the last one, where a member who was three games in
+ * could only get there by picking out the rest of the slate first.
+ */
+describe("the way to review", () => {
+  const reviewLink = () => screen.queryByRole("link", { name: /review/i });
+
+  test("is offered mid-slate, not only on the last game", () => {
+    render(<PickFlow sheet={sheet()} startGameId={MIAMI.game.id} />);
+
+    expect(reviewLink()?.getAttribute("href")).toBe("/picks/review");
+    // `Next` is still the obvious move: the game is unpicked, so it reads as a skip.
+    expect(screen.getByRole("button", { name: /Skip for now/ })).toBeTruthy();
+  });
+
+  test("is still there once the Deadline passes under the member", async () => {
+    answering(lockedOut());
+    render(<PickFlow sheet={sheet()} startGameId={MIAMI.game.id} />);
+
+    tile("Miami").click();
+
+    await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/Picks are locked/));
+    expect(reviewLink()?.getAttribute("href")).toBe("/picks/review");
+  });
+});

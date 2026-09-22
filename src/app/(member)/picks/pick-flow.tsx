@@ -357,18 +357,42 @@ export function PickFlow({
                 ? "Nothing more to enter this week."
                 : voided
                   ? "This game is void: it scores zero for everyone."
-                  : "Tap a team. Saved the moment you tap; there is no submit step."}
+                  : // Shorter than it was: with Review beside it, the old wording ran to a
+                    // third line at 375px whichever way the forward button read.
+                    "Tap a team — it saves as you go, no submit step."}
           </span>
+          {/*
+            Review is reachable from every game, not only the last one: the Lock
+            of the Week and the Tiebreaker Guess are settable nowhere else, and
+            the flow walks the slate in order, so a member part-way down it had
+            no way to that screen but to pick out the rest of the games first.
+
+            Mid-slate it is the underlined text link the Leaderboard and You
+            screens use for a secondary destination, not a second button —
+            `Next` stays the one obvious move, and an aside that reads as a link
+            beats a ghost button that reads as label text. `tap` because
+            `tokens/base.css` holds `button` to the 44px floor but leaves
+            anchors to opt in; the last game's Button-as-Link needs it for the
+            same reason, and had measured 32px since it was written.
+          */}
           {last ? (
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="tap">
               <Link href="/picks/review">
                 Review picks <ChevronRight />
               </Link>
             </Button>
           ) : (
-            <Button type="button" variant="outline" size="sm" onClick={() => goTo(index + 1)}>
-              {isSaved(pick) ? "Next" : "Skip for now"} <ChevronRight />
-            </Button>
+            <>
+              <Link
+                href="/picks/review"
+                className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
+              >
+                Review
+              </Link>
+              <Button type="button" variant="outline" size="sm" onClick={() => goTo(index + 1)}>
+                {isSaved(pick) ? "Next" : "Skip for now"} <ChevronRight />
+              </Button>
+            </>
           )}
         </div>
       </div>
