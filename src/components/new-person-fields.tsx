@@ -1,7 +1,6 @@
 import { PennantPicker } from "@/components/pennant-picker";
 import { SECTION_LABEL, Input } from "@saturday-slate/design-system";
 
-import type { Avatar } from "@/lib/avatars";
 import { MAX_DISPLAY_NAME, MAX_PHONE } from "@/lib/members/limits";
 
 /**
@@ -10,7 +9,7 @@ import { MAX_DISPLAY_NAME, MAX_PHONE } from "@/lib/members/limits";
  * knows one person from two, so it is required here, as it is for anyone added
  * by hand.
  */
-export function NewPersonFields({ avatars }: { avatars: readonly Avatar[] }) {
+export function NewPersonFields() {
   return (
     <>
       <div className="space-y-2">
@@ -26,7 +25,7 @@ export function NewPersonFields({ avatars }: { avatars: readonly Avatar[] }) {
         <Input id="phone" name="phone" type="tel" maxLength={MAX_PHONE} required autoComplete="tel" className="text-lg" />
         <p className="text-sm text-muted-foreground">One number is one person, in every group you play in.</p>
       </div>
-      <PennantPicker avatars={avatars} />
+      <PennantPicker />
     </>
   );
 }

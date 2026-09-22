@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { gameDetail, week1 } from "./scoring/fixtures/week-1-2026";
-import { FALLBACK_TEAM_COLOR, findLogo, findLogoByEspnId, logoSrc, teamColor, teamLogos } from "./logos";
+import { conferences, FALLBACK_TEAM_COLOR, findLogo, findLogoByEspnId, logoSrc, teamColor, teamLogos } from "./logos";
 
 describe("logo index", () => {
   it("resolves a school by display name and by ESPN id", () => {
@@ -26,6 +26,24 @@ describe("logo index", () => {
   it("falls back to the border token for a school it does not know", () => {
     expect(findLogo("Hogwarts")).toBeUndefined();
     expect(teamColor("Hogwarts")).toBe(FALLBACK_TEAM_COLOR);
+  });
+
+  it("files every school in a conference, and groups them without reading array order", () => {
+    expect(teamLogos.filter((t) => !t.conference).map((t) => t.slug)).toEqual([]);
+    expect(conferences.reduce((n, c) => n + c.teams.length, 0)).toBe(teamLogos.length);
+    expect(conferences.map((c) => `${c.name} ${c.teams.length}`)).toEqual([
+      "SEC 16",
+      "Big Ten 18",
+      "Big 12 16",
+      "ACC 17",
+      "Independent 2",
+      "American 14",
+      "Mountain West 12",
+      "Pac-12 2",
+      "Sun Belt 14",
+      "MAC 13",
+      "Conference USA 12",
+    ]);
   });
 
   it("points every entry at files that exist in public/", () => {

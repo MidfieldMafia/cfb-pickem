@@ -31,7 +31,7 @@ A group's shareable URL. Opening it adds the person to that group, setting them 
 _Avoid_: Invite link, group code
 
 **Pennant**:
-The badge a member chooses to stand for them on every screen. Two members may share one.
+The badge a member chooses to stand for them on every screen — one of twelve preset flags, or their team's logo. Two members may share one.
 _Avoid_: Avatar, icon
 
 ### Time

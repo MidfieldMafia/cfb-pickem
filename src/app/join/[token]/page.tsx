@@ -5,7 +5,6 @@ import { TextMyLink } from "@/components/text-my-link";
 import { Button, Wordmark } from "@saturday-slate/design-system";
 
 import { db } from "@/db";
-import { avatars } from "@/lib/avatars";
 import { groupForJoinLink, joinStanding } from "@/lib/groups/join";
 import { currentMember } from "@/lib/members/current";
 import { JoinForm } from "./join-form";
@@ -38,7 +37,7 @@ export default async function JoinLink({ params }: { params: Promise<{ token: st
     return (
       <Screen title={`Join ${group.name}`} lede="Set yourself up once. After that the app remembers you on this phone.">
         <JoinForm token={token} submit={`Join ${group.name}`}>
-          <NewPersonFields avatars={avatars} />
+          <NewPersonFields />
         </JoinForm>
         <TextMyLink />
       </Screen>

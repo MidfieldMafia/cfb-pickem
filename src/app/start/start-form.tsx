@@ -5,7 +5,6 @@ import { useActionState, useState } from "react";
 import { NewPersonFields } from "@/components/new-person-fields";
 import { SECTION_LABEL, Button, Input } from "@saturday-slate/design-system";
 
-import type { Avatar } from "@/lib/avatars";
 import { cleanGroupName, MAX_GROUP_NAME } from "@/lib/groups/limits";
 import type { JoinState } from "@/lib/groups/join-state";
 import { startAction } from "./actions";
@@ -16,10 +15,9 @@ import { startAction } from "./actions";
  * one form in two steps, so a refusal on the second (a phone number already in
  * the app) keeps the name typed on the first.
  */
-export function StartForm({ avatars }: { avatars: readonly Avatar[] | null }) {
+export function StartForm({ signedOut }: { signedOut: boolean }) {
   const [state, action, pending] = useActionState<JoinState, FormData>(startAction, {});
   const [groupName, setGroupName] = useState("");
-  const signedOut = avatars !== null;
   const [step, setStep] = useState<"group" | "you">("group");
   const onYou = signedOut && step === "you";
 
@@ -53,7 +51,7 @@ export function StartForm({ avatars }: { avatars: readonly Avatar[] | null }) {
           <p className="text-center text-muted-foreground">
             Now you. You&rsquo;ll organize <span className="font-semibold text-foreground">{groupName.trim()}</span>.
           </p>
-          <NewPersonFields avatars={avatars} />
+          <NewPersonFields />
         </>
       ) : null}
 

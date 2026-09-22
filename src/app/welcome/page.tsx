@@ -1,6 +1,5 @@
 import { Wordmark } from "@saturday-slate/design-system";
 
-import { avatars } from "@/lib/avatars";
 import { requireMember } from "@/lib/members/current";
 import { WelcomeForm } from "./welcome-form";
 
@@ -18,13 +17,17 @@ export default async function Welcome() {
           {returning ? "Your name and pennant" : "Welcome to the 2026 season"}
         </h1>
         {returning ? null : (
-          <p className="text-muted-foreground">
-            This link is yours &mdash; keep it, it signs you in on any phone.
-          </p>
+          <>
+            <p className="text-muted-foreground">
+              Two things and you are in: your name, and the pennant that stands for you.
+            </p>
+            <p className="text-muted-foreground">
+              This link is yours &mdash; keep it, it signs you in on any phone.
+            </p>
+          </>
         )}
       </div>
       <WelcomeForm
-        avatars={avatars}
         displayName={member.displayName}
         avatarId={member.avatarId}
         returning={returning}

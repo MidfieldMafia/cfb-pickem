@@ -5,17 +5,14 @@ import { useActionState } from "react";
 import { PennantPicker } from "@/components/pennant-picker";
 import { SECTION_LABEL, Button, Input } from "@saturday-slate/design-system";
 
-import type { Avatar } from "@/lib/avatars";
 import { MAX_DISPLAY_NAME } from "@/lib/members/limits";
 import { saveWelcome, type WelcomeState } from "./actions";
 
 export function WelcomeForm({
-  avatars,
   displayName,
   avatarId,
   returning,
 }: {
-  avatars: readonly Avatar[];
   displayName: string;
   avatarId: string | null;
   returning: boolean;
@@ -39,7 +36,7 @@ export function WelcomeForm({
         />
       </div>
 
-      <PennantPicker avatars={avatars} selected={avatarId} />
+      <PennantPicker selected={avatarId} />
 
       {state.error ? (
         <p role="alert" className="text-sm font-semibold text-destructive">
