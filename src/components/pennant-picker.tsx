@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { Card, SECTION_LABEL } from "@saturday-slate/design-system";
+import { Card, Pennant, SECTION_LABEL } from "@saturday-slate/design-system";
 
 import { avatars, findAvatar, teamAvatarConferences, type Avatar } from "@/lib/avatars";
 
@@ -12,6 +12,11 @@ import { avatars, findAvatar, teamAvatarConferences, type Avatar } from "@/lib/a
  * Link, and Start a group. Two kinds of pennant live behind it — twelve flags
  * and 136 school logos — so it is a three-level drill-down rather than one
  * grid, and therefore a client component (#224).
+ *
+ * Every disc here is the design system's `Pennant`, tinted with the mark's own
+ * colour at 18% exactly as it will be once chosen, so the picker shows the
+ * thing itself and not a preview of it. Selection sits on the cell around the
+ * disc rather than on the disc, which would fight the tint.
  *
  * The choice rides in a `sr-only` `avatarId` input rather than on the discs
  * themselves. A radio in a level the member has navigated away from would
@@ -40,7 +45,7 @@ export function PennantPicker({ selected }: { selected?: string | null }) {
         <div className="space-y-2">
           {current ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mark avatar={current} size={28} className="border-primary bg-accent" />
+              <Pennant avatar={current} size={28} />
               Yours: <span className="font-semibold text-foreground">{current.name}</span>
             </p>
           ) : null}
@@ -61,7 +66,7 @@ export function PennantPicker({ selected }: { selected?: string | null }) {
 
       {view.level === "flags" ? (
         <Level title="Flags" onBack={() => setView({ level: "root" })}>
-          <div className="grid grid-cols-[repeat(auto-fill,72px)] gap-2">
+          <div className="grid grid-cols-4 gap-3">
             {avatars.map((avatar) => (
               <Disc key={avatar.id} avatar={avatar} size={72} chosen={chosen} onChoose={setChosen} />
             ))}
@@ -77,7 +82,7 @@ export function PennantPicker({ selected }: { selected?: string | null }) {
                 <Choice
                   title={conference.name}
                   detail={`${conference.teams.length} teams`}
-                  peek={conference.teams.slice(0, 3)}
+                  marks={conference.teams.slice(0, 3)}
                   onClick={() => setView({ level: "teams", conference: conference.name })}
                 />
               </li>
@@ -114,30 +119,47 @@ function teamsIn(conference: string): readonly Avatar[] {
   return teamAvatarConferences.find((c) => c.name === conference)?.teams ?? [];
 }
 
-/** A full-width row that walks one level in: a peek of real marks, a label, a chevron. */
+/**
+ * A full-width row that walks one level in. The two root cards lead with
+ * overlapping discs; a conference row leads with its name and trails the bare
+ * marks, so eleven rows read as a list of names rather than a wall of discs.
+ */
 function Choice({
   title,
   detail,
   peek,
+  marks,
   onClick,
 }: {
   title: string;
   detail: string;
-  peek: readonly Avatar[];
+  peek?: readonly Avatar[];
+  marks?: readonly Avatar[];
   onClick: () => void;
 }) {
   return (
     <Card asChild className="p-0">
       <button type="button" onClick={onClick} className="w-full flex-row items-center gap-3 p-3 text-left">
-        <span className="flex shrink-0 items-center">
-          {peek.map((avatar, i) => (
-            <Mark key={avatar.id} avatar={avatar} size={28} className={i === 0 ? "" : "-ml-2 ring-2 ring-card"} />
-          ))}
-        </span>
+        {peek ? (
+          <span className="flex shrink-0 items-center">
+            {peek.map((avatar, i) => (
+              <span key={avatar.id} className={i === 0 ? "" : "-ml-2 rounded-full ring-2 ring-card"}>
+                <Pennant avatar={avatar} size={28} />
+              </span>
+            ))}
+          </span>
+        ) : null}
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold">{title}</span>
           <span className="block text-sm text-muted-foreground">{detail}</span>
         </span>
+        {marks ? (
+          <span className="flex shrink-0 items-center gap-1">
+            {marks.map((avatar) => (
+              <Image key={avatar.id} src={avatar.file} alt="" width={24} height={24} unoptimized className="size-6 object-contain" />
+            ))}
+          </span>
+        ) : null}
         <ChevronRight aria-hidden className="size-5 shrink-0 text-muted-foreground" />
       </button>
     </Card>
@@ -160,6 +182,11 @@ function Level({ title, onBack, children }: { title: string; onBack: () => void;
   );
 }
 
+/**
+ * One choosable pennant. The disc is `Pennant` untouched — the tint is the
+ * point — so being chosen shows on the cell around it: the accent fill and
+ * primary border every selected surface in the app uses.
+ */
 function Disc({
   avatar,
   size,
@@ -179,42 +206,13 @@ function Disc({
       type="button"
       onClick={() => onChoose(avatar.id)}
       aria-pressed={isChosen}
-      className="flex h-auto flex-col items-center gap-1 text-center"
+      className={`flex h-auto flex-col items-center gap-1.5 rounded-xl border p-1.5 text-center ${
+        isChosen ? "border-primary bg-accent" : "border-transparent"
+      }`}
     >
-      <Mark
-        avatar={avatar}
-        size={size}
-        className={isChosen ? "border-primary bg-accent" : "border-border bg-card"}
-      />
-      {named ? <span className="w-full text-xs leading-tight text-muted-foreground">{avatar.name}</span> : null}
+      <Pennant avatar={avatar} size={size} />
+      {named ? <span className="w-full text-xs leading-tight">{avatar.name}</span> : null}
       {named ? null : <span className="sr-only">{avatar.name}</span>}
     </button>
-  );
-}
-
-/**
- * The picker's own disc. It shows the mark on card paper rather than over the
- * 18% tint `Pennant` uses, because a grid of 136 tinted discs reads as noise.
- * The geometry is `Pennant`'s: a logo inset at 72% (#225), a flag filling the
- * disc.
- */
-function Mark({ avatar, size, className = "" }: { avatar: Avatar; size: number; className?: string }) {
-  const logo = avatar.kind === "logo";
-  const markSize = Math.round(size * (logo ? 0.72 : 1));
-  return (
-    <span
-      className={`relative inline-flex shrink-0 overflow-hidden rounded-full border ${className}`}
-      style={{ width: size, height: size }}
-    >
-      <Image
-        src={avatar.file}
-        alt=""
-        width={markSize}
-        height={markSize}
-        unoptimized
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain"
-        style={{ width: markSize, height: markSize }}
-      />
-    </span>
   );
 }
