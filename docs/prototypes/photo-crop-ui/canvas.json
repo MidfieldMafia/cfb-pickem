@@ -1,0 +1,90 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "CameraDenied.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "5 · Camera gave nothing back",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "Chosen.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "3 · Photo chosen (new crop, or the one you have)",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Crop.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "2 · Fit your photo (drag and zoom work)",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "JoinLine.dc.html": {
+      "h": 400,
+      "title": "7 · Join Link and Start a group",
+      "w": 390,
+      "x": 2820,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "1 · No photo yet",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "SaveFailed.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "6 · Save failed",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "Switched.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "4 · Tapped a flag: the crop waits",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-22T23:35:10Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "row": {
+      "kind": "title1",
+      "maxW": 3210,
+      "text": "Your photo, on the welcome page",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Crop.dc.html",
+    "Chosen.dc.html",
+    "Switched.dc.html",
+    "CameraDenied.dc.html",
+    "SaveFailed.dc.html",
+    "JoinLine.dc.html"
+  ],
+  "pages": [],
+  "title": "Photo pennants: crop UI"
+}

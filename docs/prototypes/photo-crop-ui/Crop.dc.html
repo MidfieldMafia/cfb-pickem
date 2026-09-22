@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fit your photo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;font-size:16px;line-height:24px;color:#241F1A;background:#F7F1E3}
+a{color:#1F4034}a:hover{color:#163026}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F7F1E3; color: #241F1A;">
+<div style="height: 56px; padding: 0 8px; display: flex; align-items: center; gap: 4px;">
+<a href="Main.dc.html" style="display: inline-flex; align-items: center; gap: 4px; height: 44px; padding: 0 8px; font-weight: 600; color: #241F1A; text-decoration: none;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m15 18-6-6 6-6"></path></svg>Cancel</a>
+</div>
+<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 16px; flex-grow: 1;">
+<div style="display: flex; flex-direction: column; gap: 4px; text-align: center;">
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 28px; line-height: 32px;">Fit your photo</h1>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #6F6152;">Drag to move it. Pinch or use the slider to zoom.</p>
+</div>
+<div onPointerDown="{{down}}" onPointerMove="{{move}}" onPointerUp="{{up}}" onPointerCancel="{{up}}" style="position: relative; width: 358px; height: 358px; border-radius: 14px; overflow: hidden; background: #241F1A; touch-action: none; cursor: grab;">
+<img src="/_blob/f13b13a9f78a74c6cb0a17f27c80ebaf" alt="Your photo" draggable="false" onLoad="{{loaded}}" style="position: absolute; left: {{left}}px; top: {{top}}px; width: {{w}}px; height: {{h}}px; max-width: none; user-select: none; pointer-events: none;">
+<div style="position: absolute; left: 29px; top: 29px; width: 300px; height: 300px; box-sizing: border-box; border-radius: 9999px; border: 2px solid rgba(251, 246, 236, 0.9); box-shadow: 0 0 0 400px rgba(36, 31, 26, 0.62); pointer-events: none;"></div>
+</div>
+<div style="display: flex; align-items: center; gap: 4px;">
+<button type="button" onClick="{{zoomOut}}" aria-label="Zoom out" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #241F1A; cursor: pointer;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M5 12h14"></path></svg></button>
+<input type="range" aria-label="Zoom" min="1" max="4" step="0.01" value="{{zoom}}" onChange="{{zoomTo}}" style="flex-grow: 1; accent-color: #1F4034;">
+<button type="button" onClick="{{zoomIn}}" aria-label="Zoom in" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #241F1A; cursor: pointer;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 16px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #A94B17;">How it looks</span>
+<span style="position: relative; width: 72px; height: 72px; border-radius: 9999px; overflow: hidden; flex-shrink: 0;"><img src="/_blob/f13b13a9f78a74c6cb0a17f27c80ebaf" alt="" style="position: absolute; max-width: none; left: {{p72.l}}px; top: {{p72.t}}px; width: {{p72.w}}px; height: {{p72.h}}px;"></span>
+<span style="position: relative; width: 44px; height: 44px; border-radius: 9999px; overflow: hidden; flex-shrink: 0;"><img src="/_blob/f13b13a9f78a74c6cb0a17f27c80ebaf" alt="" style="position: absolute; max-width: none; left: {{p44.l}}px; top: {{p44.t}}px; width: {{p44.w}}px; height: {{p44.h}}px;"></span>
+<span style="position: relative; width: 28px; height: 28px; border-radius: 9999px; overflow: hidden; flex-shrink: 0;"><img src="/_blob/f13b13a9f78a74c6cb0a17f27c80ebaf" alt="" style="position: absolute; max-width: none; left: {{p28.l}}px; top: {{p28.t}}px; width: {{p28.w}}px; height: {{p28.h}}px;"></span>
+</div>
+<div style="margin-top: auto; padding-bottom: 32px;"><a href="Chosen.dc.html" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 24px; width: 100%; border: 0; border-radius: 6px; background: #1F4034; color: #FBF6EC; font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; box-sizing: border-box;">Use this photo</a></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { ox: 0, oy: 0, zoom: 1, nw: 0, nh: 0 };
+    this.drag = null;
+  }
+  dims(zoom, nw, nh) {
+    const R = 300;
+    const W = nw || 900, H = nh || 1200;
+    const k = (R / Math.min(W, H)) * zoom;
+    return { w: W * k, h: H * k };
+  }
+  clamp(ox, oy, zoom) {
+    const R = 300;
+    const d = this.dims(zoom, this.state.nw, this.state.nh);
+    const mx = (d.w - R) / 2, my = (d.h - R) / 2;
+    return { ox: Math.max(-mx, Math.min(mx, ox)), oy: Math.max(-my, Math.min(my, oy)) };
+  }
+  setZoom(z) {
+    const zoom = Math.max(1, Math.min(4, z));
+    this.setState({ zoom, ...this.clamp(this.state.ox, this.state.oy, zoom) });
+  }
+  renderVals() {
+    const S = 358, R = 300;
+    const d = this.dims(this.state.zoom, this.state.nw, this.state.nh);
+    const ox = this.state.ox, oy = this.state.oy;
+    const preview = (s) => {
+      const k = s / R;
+      return { w: d.w * k, h: d.h * k, l: (R / 2 + ox - d.w / 2) * k, t: (R / 2 + oy - d.h / 2) * k };
+    };
+    return {
+      w: d.w, h: d.h,
+      left: S / 2 + ox - d.w / 2,
+      top: S / 2 + oy - d.h / 2,
+      zoom: this.state.zoom,
+      p72: preview(72), p44: preview(44), p28: preview(28),
+      loaded: (e) => this.setState({ nw: e.target.naturalWidth, nh: e.target.naturalHeight, ox: 0, oy: 0 }),
+      down: (e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const scale = e.currentTarget.getBoundingClientRect().width / S || 1;
+        this.drag = { x: e.clientX, y: e.clientY, ox: this.state.ox, oy: this.state.oy, scale };
+      },
+      move: (e) => {
+        const g = this.drag;
+        if (!g) return;
+        const next = this.clamp(g.ox + (e.clientX - g.x) / g.scale, g.oy + (e.clientY - g.y) / g.scale, this.state.zoom);
+        this.setState(next);
+      },
+      up: () => { this.drag = null; },
+      zoomTo: (e) => this.setZoom(parseFloat(e.target.value)),
+      zoomIn: () => this.setZoom(this.state.zoom + 0.25),
+      zoomOut: () => this.setZoom(this.state.zoom - 0.25),
+    };
+  }
+}
+</script>
+</body>
+</html>
