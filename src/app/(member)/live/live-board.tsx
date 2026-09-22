@@ -120,8 +120,7 @@ function FreshnessLine({ serverNow, nextPollAt }: { serverNow: string; nextPollA
 /**
  * The viewer's own place in the Week so far: pinned above the games so it
  * never scrolls out of reach. Reads `state.scores` rather than the season —
- * the season card was mockup 05's own earlier draft; this Week is the stake
- * on a Saturday.
+ * this Week is the stake on a Saturday.
  */
 function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson }) {
   if (!state.locked) {

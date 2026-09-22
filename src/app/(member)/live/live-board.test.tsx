@@ -4,11 +4,10 @@
  * the picker sheet at twelve members, and each state a Saturday passes through
  * — before the Deadline, before kickoff, in progress, final and Void.
  *
- * Twelve is the point of it. `#33` recorded that the fixture carries five
- * members while the mockups are drawn around twelve. The board itself only
- * ever shows the viewer's own pick on the row now — the full picker list
- * lives in the sheet a tap opens, so this is where twelve members on one side
- * actually gets exercised, and there is no cap to hit: the sheet wraps.
+ * Twelve is the point of it. The board itself only ever shows the viewer's own
+ * pick on the row now — the full picker list lives in the sheet a tap opens,
+ * so this is where twelve members on one side actually gets exercised, and
+ * there is no cap to hit: the sheet wraps.
  *
  * Assertions are plain DOM reads, as `picks/pick-flow.test.tsx` explains:
  * `@testing-library/jest-dom` is not a dependency here, and its matchers fail
@@ -36,7 +35,7 @@ function member(id: number): ScoredMember {
   return { id, displayName: `Member ${id}`, avatarId: null };
 }
 
-/** The whole family: twelve, as the mockups are drawn. */
+/** The whole family: twelve. */
 const FAMILY: ScoredMember[] = Array.from({ length: 12 }, (_, i) => member(i + 1));
 const VIEWER: MemberJson = FAMILY[0];
 

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * A candidate's place on the Slate, as the checkbox the mockups ask for: on
- * means the Game is on the Slate. Ticking it submits the form it sits in —
+ * A candidate's place on the Slate, as a checkbox: on means the Game is on the
+ * Slate. Ticking it submits the form it sits in —
  * `addGameAction` or `removeGameAction`, whichever the row handed it — so the
  * gesture is one click rather than a button press.
  *

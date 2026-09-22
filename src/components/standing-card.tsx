@@ -42,14 +42,13 @@ function StandingCard({
 }
 
 /**
- * The member's own season, as mockup 05 draws the card at the top of the Live
- * Board: the season place and total, with this week's record as the note.
+ * The member's own season, as the card at the top of the Live Board: the
+ * season place and total, with this week's record as the note.
  *
  * The season rather than the week — the one respect in which this card differs
- * from the results screen's, and deliberately so, because mockup 06 draws the
- * week in this slot and 05 draws the season. On a Saturday the season total is
- * the stake and the week's record is the movement; the total already carries
- * this week's provisional points (`playedWeeks` counts a Week from its
+ * from the results screen's, and deliberately so. On a Saturday the season
+ * total is the stake and the week's record is the movement; the total already
+ * carries this week's provisional points (`playedWeeks` counts a Week from its
  * Deadline), so the figure climbs as games go final.
  */
 export function YourSeason({ season, score }: { season: SeasonStanding; score: WeeklyScore }) {
