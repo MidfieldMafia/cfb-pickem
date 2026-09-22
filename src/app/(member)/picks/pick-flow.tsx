@@ -13,9 +13,9 @@ import { WeatherPill } from "@/components/picks/weather-pill";
 
 import { matchupColors } from "@/lib/matchup-colors";
 import { put } from "@/lib/picks/client";
-import { useDeadlineClock } from "@/lib/picks/clock";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
-import { firstOpenGame, sheetProgress } from "@/lib/picks/progress";
+import { firstOpenGame } from "@/lib/picks/progress";
+import { usePickSheet } from "@/lib/picks/use-pick-sheet";
 import { isVoid, voidNote } from "@/lib/slate/json";
 
 type Status = "saved" | "saving" | "failed";
@@ -25,6 +25,9 @@ interface LocalPick {
   status: Status;
   error?: string;
 }
+
+/** Saves the sheet does not hold yet: in flight, or refused. Everything else is on the sheet. */
+type Unsettled = Record<number, LocalPick | undefined>;
 
 type LocalPicks = Record<number, LocalPick | undefined>;
 
@@ -114,25 +117,28 @@ function StatusChip({ pick }: { pick: LocalPick | undefined }) {
  * save, so jumping ahead mid-request never loses the earlier answer.
  */
 export function PickFlow({
-  sheet,
+  sheet: initial,
   startGameId,
 }: {
   sheet: SheetJson;
   startGameId?: number;
 }) {
   const router = useRouter();
-  const games = sheet.games;
-  const [picks, setPicks] = useState<LocalPicks>(() =>
-    Object.fromEntries(sheet.picks.map((p) => [p.gameId, { teamId: p.teamId, status: "saved" as const }])),
-  );
+  const { sheet: held, locked, apply } = usePickSheet(initial);
+  const games = held.games;
+  const [unsettled, setUnsettled] = useState<Unsettled>({});
+  // What the server holds, overlaid with the saves it has not answered yet. Only
+  // the server's part counts as picked: an in-flight or failed save leaves its
+  // game open here just as it does on the sheet.
+  const picks: LocalPicks = {
+    ...Object.fromEntries(held.picks.map((p) => [p.gameId, { teamId: p.teamId, status: "saved" as const }])),
+    ...unsettled,
+  };
   const [index, setIndex] = useState(() => {
     const requested = games.findIndex((g) => idOf(g) === startGameId);
     return requested === -1 ? firstUnpicked(games, picks) : requested;
   });
-  const [lockedByServer, setLockedByServer] = useState(sheet.locked);
   const [lateError, setLateError] = useState<string | null>(null);
-  const { passed, sync } = useDeadlineClock(sheet.deadline, sheet.serverNow);
-  const locked = lockedByServer || passed;
   const [flash, setFlash] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const attempts = useRef(new Map<number, number>());
@@ -144,25 +150,7 @@ export function PickFlow({
   const voided = isVoid(view);
   const why = voidNote(view);
   const pick = picks[game.id];
-  const tiebreaker = game.id === sheet.tiebreakerGameId;
-  // Recounted from the local picks, which hold only what the server took: an
-  // in-flight or failed save leaves its game open here just as it does on the sheet.
-  const progress = sheetProgress({
-    games,
-    picked: (gameId) => isSaved(picks[gameId]),
-    lockGameId: sheet.lockGameId,
-    lockDropped: sheet.lockDropped,
-    tiebreakerGuess: sheet.tiebreakerGuess,
-  });
-  // The layout's Picks-tab dot reads what the server holds, and a layout is not
-  // re-rendered by client navigation, so refresh it when the count crosses zero.
-  const allSet = progress.remaining === 0;
-  const seenAllSet = useRef(allSet);
-  useEffect(() => {
-    if (seenAllSet.current === allSet) return;
-    seenAllSet.current = allSet;
-    router.refresh();
-  }, [allSet, router]);
+  const tiebreaker = game.id === held.tiebreakerGameId;
   const last = index + 1 >= games.length;
   // What the end of the slate still owes, counting this game as picked: `advance`
   // runs from the post-save timeout, whose closure caught `picks` before the save
@@ -190,40 +178,31 @@ export function PickFlow({
     const gameId = game.id;
     const attemptId = (attempts.current.get(gameId) ?? 0) + 1;
     attempts.current.set(gameId, attemptId);
-    const previous = picks[gameId];
     clearTimeout(advanceTimer.current);
     setFlash(false);
-    setPicks((p) => ({ ...p, [gameId]: { teamId, status: "saving" } }));
+    setUnsettled((u) => ({ ...u, [gameId]: { teamId, status: "saving" } }));
 
     const result = await put<SheetJson>("/api/week/picks", { gameId, teamId });
     // A newer tap on this same game supersedes this answer; other games are unaffected.
     if (attempts.current.get(gameId) !== attemptId) return;
 
-    let next: LocalPick | undefined;
-    if (result.ok) {
-      sync(result.body.serverNow);
-      next = { teamId, status: "saved" };
-    } else if (result.locked) {
-      // The Deadline passed under us: what the server holds is what counts, and
-      // now it says so. The refusal carries the sheet, so this reads the pick the
-      // server actually has for this game — where it used to re-show a remembered
-      // local value under a comment claiming the same thing.
-      setLockedByServer(true);
-      setLateError(result.error);
-      if (result.body) {
-        sync(result.body.serverNow);
-        const held = result.body.picks.find((p) => p.gameId === gameId);
-        next = held ? { teamId: held.teamId, status: "saved" } : undefined;
-      } else {
-        // No sheet came with the refusal; the last value the server confirmed is
-        // the best answer left.
-        next = isSaved(previous) ? previous : undefined;
-      }
-    } else {
-      next = { teamId, status: "failed", error: result.error };
-    }
-    setPicks((p) => ({ ...p, [gameId]: next }));
-    if (next?.status === "saved" && games[index]?.game.id === gameId) {
+    // A save takes only its own game onto the sheet: answers to different games
+    // can arrive out of order, and the older must not roll back the newer. A 423
+    // is the exception the hook handles: the Deadline passed under us, what the
+    // server holds is what counts, and its refusal carries the sheet that says so.
+    const now = apply(result, (h, body) => ({
+      ...h,
+      picks: [...h.picks.filter((p) => p.gameId !== gameId), { gameId, teamId, updatedAt: body.serverNow }],
+    }));
+    if (!result.ok && result.locked) setLateError(result.error);
+    const failed = !result.ok && !result.locked;
+    // Settled saves leave the overlay, or its `undefined` would hide the sheet's own pick.
+    setUnsettled((u) => {
+      const rest = { ...u };
+      delete rest[gameId];
+      return failed ? { ...rest, [gameId]: { teamId, status: "failed", error: result.error } } : rest;
+    });
+    if (!failed && now.picks.some((p) => p.gameId === gameId) && games[index]?.game.id === gameId) {
       setFlash(true);
       advanceTimer.current = setTimeout(() => {
         setFlash(false);
@@ -246,7 +225,7 @@ export function PickFlow({
       <header className={`flex items-center gap-3 px-4 pb-1 ${HEADER_TOP}`}>
         <Image src="/brand/mark.svg" alt="" width={44} height={44} priority unoptimized />
         <div className="min-w-0 flex-1">
-          <h1 className="m-0 font-display text-[22px] leading-7">Week {sheet.weekNumber}</h1>
+          <h1 className="m-0 font-display text-[22px] leading-7">Week {held.weekNumber}</h1>
           <div className="truncate text-sm leading-5 text-muted-foreground">
             Game {index + 1} of {games.length}
           </div>
@@ -262,7 +241,7 @@ export function PickFlow({
           <div role="status" className="flex items-center gap-2 rounded-md bg-locked p-3 text-sm text-locked-foreground">
             <Lock size={16} />
             <span>
-              Picks are locked. The deadline was <LocalTime at={sheet.deadline} style="deadline" />.
+              Picks are locked. The deadline was <LocalTime at={held.deadline} style="deadline" />.
             </span>
           </div>
         ) : null}
