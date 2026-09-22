@@ -64,6 +64,13 @@
       "when": 1790025745025,
       "tag": "0008_live-detail",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790117801927,
+      "tag": "0009_member-photos",
+      "breakpoints": true
     }
   ]
 }

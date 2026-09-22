@@ -8,18 +8,19 @@ const FALLBACK_PENNANT = "var(--muted-foreground)";
 const DISC = "bg-[color-mix(in_srgb,var(--pennant)_18%,transparent)]";
 
 export interface PennantMark {
-  /** The pennant's own display name, used as the image `alt`. */
+  /** The pennant's own display name, used as the image `alt` of a flag or logo. */
   name: string;
-  /** Path to the mark — a pennant flag SVG, or a school's 150px logo. */
+  /** Path to the mark — a pennant flag SVG, a school's 150px logo, or the member's 216px photo. */
   file: string;
-  /** The member's chosen tint, used at 18% behind the mark. */
+  /** The member's chosen tint, used at 18% behind a flag or logo. */
   color: string;
   /**
    * A flag is drawn at 125% and bleeds past the disc edge, so the tint reads as
    * a field. A school logo sits *inside* the disc at 72%, so the same tint
-   * reads as a ring around it. One code path, every size.
+   * reads as a ring around it. A photo fills the disc at 100%, bare: no tint,
+   * no ring (#221). One code path, every size.
    */
-  kind: "flag" | "logo";
+  kind: "flag" | "logo" | "photo";
 }
 
 /**
@@ -46,6 +47,16 @@ export function Pennant({
         style={{ width: size, height: size, "--pennant": FALLBACK_PENNANT, color: FALLBACK_PENNANT, fontSize: size * 0.42 } as CSSProperties}
       >
         {initial}
+      </span>
+    );
+  }
+
+  if (avatar.kind === "photo") {
+    // The alt is empty: the member's name is always beside their pennant, and
+    // "Photo of Grandma" next to "Grandma" says it twice to a screen reader.
+    return (
+      <span className="relative inline-flex shrink-0 overflow-hidden rounded-full" style={{ width: size, height: size }}>
+        <Image src={avatar.file} alt="" width={size} height={size} unoptimized className="size-full object-cover" />
       </span>
     );
   }

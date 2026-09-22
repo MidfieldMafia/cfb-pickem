@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
-import { avatars, findAvatar, teamAvatarConferences, teamAvatarId } from "./avatars";
+import { avatars, findAvatar, photoAvatarId, teamAvatarConferences, teamAvatarId } from "./avatars";
 import { findLogo, teamLogos } from "./logos";
 
 describe("pennants", () => {
@@ -34,7 +34,29 @@ describe("pennants", () => {
     expect(new Set(pennants.map((p) => p.id)).size).toBe(teamLogos.length);
   });
 
-  it("keeps the two kinds from colliding", () => {
+  it("resolves a member's photo with no database, to the URL that serves it", () => {
+    expect(findAvatar("photo-7-0a1b2c3d")).toEqual({
+      id: "photo-7-0a1b2c3d",
+      name: "Photo",
+      file: "/pennants/7/0a1b2c3d.jpg",
+      color: "var(--muted-foreground)",
+      kind: "photo",
+    });
+    expect(photoAvatarId(7, "0a1b2c3d")).toBe("photo-7-0a1b2c3d");
+  });
+
+  it("refuses a photo id that is not a member id and an eight-character hash", () => {
+    expect(findAvatar("photo")).toBeUndefined();
+    expect(findAvatar("photo-7")).toBeUndefined();
+    expect(findAvatar("photo-7-0a1b2c3")).toBeUndefined();
+    expect(findAvatar("photo-7-0A1B2C3D")).toBeUndefined();
+    expect(findAvatar("photo-x-0a1b2c3d")).toBeUndefined();
+    expect(findAvatar("photo-0-0a1b2c3d")).toBeUndefined();
+    expect(findAvatar("photo-7-0a1b2c3d/../x")).toBeUndefined();
+  });
+
+  it("keeps the three kinds from colliding", () => {
+    expect(avatars.filter((a) => a.id.startsWith("photo")).map((a) => a.id)).toEqual([]);
     const ids = new Set(avatars.map((a) => a.id));
     expect(teamAvatarConferences.flatMap((c) => c.teams).filter((p) => ids.has(p.id))).toEqual([]);
   });

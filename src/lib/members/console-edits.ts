@@ -12,6 +12,7 @@ import { plural } from "@/lib/plural";
 import { managePath } from "@/lib/groups/manage-state";
 import { memberGroups } from "@/lib/groups/memberships";
 import { InvalidMember, removeMember, setPhone } from "./members";
+import { clearPhoto } from "./photos";
 
 export const MEMBERS_PATH = "/console/members";
 
@@ -53,6 +54,22 @@ export function editPhone(route: ConsoleRoute, form: FormData): Promise<ActionSt
     return {
       done: `${updated.displayName}'s phone number is ${updated.phone ? "saved" : "cleared"}.`,
       revalidate: [MEMBERS_PATH, ...theirs.map((g) => managePath(g.group.id))],
+    };
+  });
+}
+
+/**
+ * Takes a member's photo down (#176's moderation floor): they show their
+ * initial on every board until they pick a pennant again. Refreshes every
+ * screen that draws Pennants, and each of their groups' Manage screens.
+ */
+export function clearMemberPhoto(route: ConsoleRoute, form: FormData): Promise<ActionState> {
+  return consoleEdit(route, async ({ db, actor }) => {
+    const cleared = await clearPhoto(db, actor, id(form, "memberId"));
+    const theirs = await memberGroups(db, cleared.id);
+    return {
+      done: `${cleared.displayName}'s photo is cleared.`,
+      revalidate: [...SHOWN, "/you", ...theirs.map((g) => managePath(g.group.id))],
     };
   });
 }
