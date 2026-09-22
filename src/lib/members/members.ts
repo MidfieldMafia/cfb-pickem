@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { and, asc, count, eq, ne } from "drizzle-orm";
 import {
   locks,
+  memberPhotos,
   membershipRemovals,
   members,
   memberships,
@@ -213,7 +214,7 @@ export async function pickCountByMember(db: Db, actor: Commissioner): Promise<Ma
 }
 
 /**
- * Deletes a member outright: the row, their sessions, their group
+ * Deletes a member outright: the row, their sessions, their photo, their group
  * memberships, and every Pick, Lock, Tiebreaker Guess and change-log entry
  * about them. Deactivating keeps a
  * member on the boards they played (`roster.ts` says why); deleting is the
@@ -248,6 +249,7 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
   await db.delete(picks).where(eq(picks.memberId, memberId));
   await db.delete(membershipRemovals).where(eq(membershipRemovals.memberId, memberId));
   await db.delete(memberships).where(eq(memberships.memberId, memberId));
+  await db.delete(memberPhotos).where(eq(memberPhotos.memberId, memberId));
   const [deleted] = await db.delete(members).where(eq(members.id, memberId)).returning();
   return deleted;
 }

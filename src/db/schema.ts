@@ -158,7 +158,12 @@ export const games = pgTable(
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   displayName: text("display_name").notNull(),
-  /** Id from public/avatars/avatars.json. Null until the welcome page is done. */
+  /**
+   * The member's Pennant, resolved by `findAvatar`: a flag id from
+   * public/avatars/avatars.json, `team-<espnId>`, or `photo-<memberId>-<hash8>`
+   * for a photo in `member_photos`. Null until the welcome page is done, and
+   * after a commissioner clears a photo.
+   */
   avatarId: text("avatar_id"),
   /** Unique across members: one phone is one person, whatever groups they play in. */
   phone: text("phone").unique(),
@@ -177,6 +182,20 @@ export const members = pgTable("members", {
   welcomedAt: utc("welcomed_at"),
   lastSeenAt: utc("last_seen_at"),
   createdAt: utc("created_at").notNull().defaultNow(),
+});
+
+/**
+ * A member's own photo, when it is their Pennant: one 216×216 JPEG, as
+ * base64. A sibling table rather than a column on `members`, so reading a
+ * roster never carries the bytes. At most one per member; replacing it
+ * upserts, and switching away from it deletes the row.
+ */
+export const memberPhotos = pgTable("member_photos", {
+  memberId: integer("member_id")
+    .primaryKey()
+    .references(() => members.id),
+  bytes: text("bytes").notNull(),
+  updatedAt: utc("updated_at").notNull().defaultNow(),
 });
 
 /**

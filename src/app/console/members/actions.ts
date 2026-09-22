@@ -10,7 +10,7 @@ import { appUrl } from "@/lib/app-url";
 import { editOptOut, sendMagicLinkText } from "@/lib/messaging/console-edits";
 import { senderFromEnv } from "@/lib/messaging/sender";
 import { addPersonToGroup } from "@/lib/groups/console-edits";
-import { deleteMember, editPhone } from "@/lib/members/console-edits";
+import { clearMemberPhoto, deleteMember, editPhone } from "@/lib/members/console-edits";
 import { InvalidMember, regenerateMagicLink, setMemberActive } from "@/lib/members/members";
 import { integerField } from "@/lib/parse";
 import { consoleRoute } from "../context";
@@ -49,4 +49,8 @@ export async function optOutAction(_prev: ActionState, formData: FormData): Prom
 
 export async function editPhoneAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return editPhone(consoleRoute(), formData);
+}
+
+export async function clearPhotoAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return clearMemberPhoto(consoleRoute(), formData);
 }

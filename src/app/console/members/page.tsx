@@ -10,12 +10,13 @@ import { managePath } from "@/lib/groups/manage-state";
 import { requireConsole } from "@/lib/members/current";
 import { deleteWarning } from "@/lib/members/console-edits";
 import { MAX_PHONE } from "@/lib/members/limits";
+import { isPhotoId } from "@/lib/members/photos";
 import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
 import { recentTexts, textBudget } from "@/lib/messaging/texts";
 import { listMembers, magicLinkFor, pickCountByMember } from "@/lib/members/members";
 import { plural } from "@/lib/plural";
 import { relativeTime } from "@/lib/relative-time";
-import { deleteMemberAction, editPhoneAction, optOutAction, regenerateAction, setActiveAction, textMagicLinkAction } from "./actions";
+import { clearPhotoAction, deleteMemberAction, editPhoneAction, optOutAction, regenerateAction, setActiveAction, textMagicLinkAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
 import { ActionForm } from "../action-form";
 
@@ -170,6 +171,17 @@ export default async function Members() {
                             pendingLabel="Saving…"
                             className="space-y-1 text-right"
                           />
+                          {/* The moderation floor: a photo comes down and they
+                              show their initial until they pick again. */}
+                          {isPhotoId(member.avatarId) ? (
+                            <ActionForm
+                              action={clearPhotoAction}
+                              hidden={{ memberId: member.id }}
+                              submit="Clear photo"
+                              pendingLabel="Clearing…"
+                              className="space-y-1 text-right"
+                            />
+                          ) : null}
                           {member.id === commissioner.id ? null : (
                             <form action={setActiveAction}>
                               <input type="hidden" name="memberId" value={member.id} />

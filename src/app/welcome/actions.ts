@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { currentGroup } from "@/lib/groups/current";
-import { completeWelcome, InvalidWelcome } from "@/lib/members/auth";
+import { completeWelcome, InvalidWelcome, readWelcome } from "@/lib/members/auth";
 import { requireMember } from "@/lib/members/current";
 import { currentWeek, landingRoute } from "@/lib/week/week";
 
@@ -15,10 +15,7 @@ export async function saveWelcome(_prev: WelcomeState, formData: FormData): Prom
   const member = await requireMember();
   const firstVisit = member.welcomedAt === null;
   try {
-    await completeWelcome(db(), member, {
-      displayName: String(formData.get("displayName") ?? ""),
-      avatarId: String(formData.get("avatarId") ?? ""),
-    });
+    await completeWelcome(db(), member, await readWelcome(formData));
   } catch (error) {
     if (error instanceof InvalidWelcome) return { error: error.message };
     throw error;

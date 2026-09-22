@@ -8,12 +8,13 @@ export interface Avatar {
   color: string;
   /**
    * How the mark is drawn in the disc: a flag bleeds past the edge, a school
-   * logo sits inside it. Settled in #225 — see `Pennant` in the design system.
+   * logo sits inside it (#225), a photo fills it bare (#221). See `Pennant`
+   * in the design system.
    */
-  kind: "flag" | "logo";
+  kind: "flag" | "logo" | "photo";
 }
 
-/** The twelve preset pennants. The other kind is a school logo, below. */
+/** The twelve preset pennants. The other kinds are a school logo and a member's photo, below. */
 export const avatars: readonly Avatar[] = avatarList.map((a) => ({ ...a, kind: "flag" as const }));
 
 const byId = new Map(avatars.map((a) => [a.id, a]));
@@ -53,13 +54,33 @@ export const teamAvatarConferences: readonly AvatarConference[] = conferences.ma
   teams: c.teams.map(toAvatar),
 }));
 
-/** The one resolver, for both kinds. `undefined` means the member has no pennant yet. */
+/**
+ * A member's own photo is `photo-<memberId>-<hash8>`, where `hash8` is the
+ * first eight hex characters of the JPEG's SHA-256. The hash is in the id so
+ * that a replaced photo is a new URL, which is what lets it be served
+ * `immutable`; the member id is there so the id resolves with no database.
+ */
+const PHOTO_ID = /^photo-([1-9][0-9]*)-([0-9a-f]{8})$/;
+
+export function photoAvatarId(memberId: number, hash8: string): string {
+  return `photo-${memberId}-${hash8}`;
+}
+
+/** The mark carries no color of its own, and is drawn untinted; this is only for a caller that asks. */
+const PHOTO_COLOR = "var(--muted-foreground)";
+
+/** The one resolver, for all three kinds. `undefined` means the member has no pennant yet. */
 export function findAvatar(id: string | null | undefined): Avatar | undefined {
   if (!id) return undefined;
   if (id.startsWith(TEAM_PREFIX)) {
     const espnId = Number(id.slice(TEAM_PREFIX.length));
     const team = Number.isInteger(espnId) ? findLogoByEspnId(espnId) : undefined;
     return team && toAvatar(team);
+  }
+  const photo = PHOTO_ID.exec(id);
+  if (photo) {
+    const [, memberId, hash8] = photo;
+    return { id, name: "Photo", file: `/pennants/${memberId}/${hash8}.jpg`, color: PHOTO_COLOR, kind: "photo" };
   }
   return byId.get(id);
 }
