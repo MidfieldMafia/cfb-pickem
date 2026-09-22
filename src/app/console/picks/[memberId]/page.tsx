@@ -13,9 +13,8 @@ import { InvalidPick } from "@/lib/picks/picks";
 import { liveGames } from "@/lib/picks/progress";
 import { safeInteger } from "@/lib/parse";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
-import { activeSeason, openWeek, seasonWeeks } from "@/lib/slate/slate";
+import { consoleWeek } from "@/lib/slate/slate";
 import { ActionForm } from "../../action-form";
-import { requestedWeekNumber } from "../../week-param";
 import { overrideLockAction, overrideTiebreakerAction } from "../actions";
 import { GamePickForm } from "./game-pick-form";
 
@@ -31,10 +30,8 @@ export default async function MemberPicks({
   if (memberId === null) notFound();
   const query = await searchParams;
   const database = db();
-  const season = await activeSeason(database);
-  const existing = await seasonWeeks(database, season);
-  const weekNumber = requestedWeekNumber(existing, query.week);
-  const week = await openWeek(database, commissioner, weekNumber, season);
+  const { season, week } = await consoleWeek(database, commissioner, query.week);
+  const weekNumber = week.weekNumber;
 
   let loaded;
   try {

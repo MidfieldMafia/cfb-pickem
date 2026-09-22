@@ -10,8 +10,7 @@ import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
 import { planReminders, textBudget, UNREACHED } from "@/lib/messaging/texts";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
-import { activeSeason, openWeek, seasonWeeks, slateFor } from "@/lib/slate/slate";
-import { requestedWeekNumber } from "../week-param";
+import { consoleWeek } from "@/lib/slate/slate";
 import { ActionForm } from "../action-form";
 import { textRemindersAction } from "./actions";
 import { DeadlineCountdown } from "./deadline-countdown";
@@ -87,11 +86,8 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
   const commissioner = await requireConsole();
   const params = await searchParams;
   const database = db();
-  const season = await activeSeason(database);
-  const existing = await seasonWeeks(database, season);
-  const weekNumber = requestedWeekNumber(existing, params.week);
-  const week = await openWeek(database, commissioner, weekNumber, season);
-  const slate = await slateFor(database, week.id);
+  const { week, slate } = await consoleWeek(database, commissioner, params.week);
+  const weekNumber = week.weekNumber;
   const published = slate.week.published && slate.week.deadline !== null;
   const [report, log] = published
     ? await Promise.all([whoHasntPicked(database, commissioner, week.id), pickAuditsFor(database, commissioner, week.id)])

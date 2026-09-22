@@ -29,10 +29,8 @@ import {
 import {
   activeSeason,
   applyGamePatches,
-  defaultWeekNumber,
+  consoleWeek,
   gameWithWeek,
-  openWeek,
-  seasonWeeks,
   slateFor,
   slateOrder,
   type Slate,
@@ -429,8 +427,7 @@ export interface ResultsConsole {
  * built. This is that shape, for the one screen that was still building it.
  *
  * `weekNumber` is the `?week=` a commissioner asked for; leave it undefined
- * and the console opens on `defaultWeekNumber`, the same Week the chooser
- * would have landed on.
+ * and `consoleWeek` opens on the default Week, the same one every console page does.
  */
 export async function resultsConsole(
   db: Db,
@@ -438,12 +435,8 @@ export async function resultsConsole(
   weekNumber: number | undefined,
   now: Date = new Date(),
 ): Promise<ResultsConsole> {
-  const season = await activeSeason(db);
-  const existing = await seasonWeeks(db, season);
-  const week = await openWeek(db, actor, weekNumber ?? defaultWeekNumber(existing), season);
-  // The chooser lists the Week just opened too, which `seasonWeeks` predates.
-  const weeks = existing.some((w) => w.id === week.id) ? existing : [...existing, week];
-  const [slate, log] = await Promise.all([slateFor(db, week.id), resultAuditsFor(db, actor, week.id)]);
+  const { season, weeks, slate } = await consoleWeek(db, actor, weekNumber);
+  const log = await resultAuditsFor(db, actor, slate.week.id);
   return {
     year: season.year,
     week: toWeekJson(slate.week),
