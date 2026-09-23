@@ -1,0 +1,98 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Capped.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "5 · The 11th in a day",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "Console.dc.html": {
+      "h": 860,
+      "is_interactive": true,
+      "title": "6 · Console Feedback (Done and Not done work)",
+      "w": 1280,
+      "x": 0,
+      "y": 1267
+    },
+    "ConsolePhone.dc.html": {
+      "h": 844,
+      "title": "7 · Console Feedback on a phone",
+      "w": 390,
+      "x": 1360,
+      "y": 1267
+    },
+    "Filled.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "3 · Filled in, with a screenshot",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Form.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "2 · Send feedback (it all works)",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Sent.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "4 · Sent",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "You.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "1 · You: the Send feedback entry",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-22T23:59:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "commissioners": {
+      "kind": "title1",
+      "maxW": 1750,
+      "text": "Commissioners read it",
+      "w": 240,
+      "x": 0,
+      "y": 964
+    },
+    "members": {
+      "kind": "title1",
+      "maxW": 2270,
+      "text": "Members send it",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    }
+  },
+  "order": [
+    "You.dc.html",
+    "Form.dc.html",
+    "Filled.dc.html",
+    "Sent.dc.html",
+    "Capped.dc.html",
+    "Console.dc.html",
+    "ConsolePhone.dc.html"
+  ],
+  "pages": [],
+  "title": "Feedback: send and read"
+}
