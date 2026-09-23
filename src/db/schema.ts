@@ -432,6 +432,42 @@ export const textMessages = pgTable(
   (t) => [index("text_messages_created_idx").on(t.createdAt), index("text_messages_week_kind_idx").on(t.weekId, t.kind)],
 );
 
+export const feedbackKinds = ["bug", "idea"] as const;
+export type FeedbackKind = (typeof feedbackKinds)[number];
+
+/**
+ * A member's bug report or idea (#178, #237). Only commissioners read it, and
+ * `doneAt` is theirs alone: the member hears nothing back beyond the thanks
+ * on sending. The user agent is kept raw and read into a device at display.
+ */
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: serial("id").primaryKey(),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    kind: text("kind", { enum: feedbackKinds }).notNull(),
+    text: text("text").notNull(),
+    userAgent: text("user_agent").notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+    /** Set when a commissioner files it under Done; null while it is still to read. */
+    doneAt: utc("done_at"),
+  },
+  (t) => [index("feedback_member_created_idx").on(t.memberId, t.createdAt)],
+);
+
+/**
+ * At most one screenshot per Feedback, as base64 JPEG text, following
+ * `member_photos`: the phone shrinks it first, so it is never large.
+ */
+export const feedbackScreenshots = pgTable("feedback_screenshots", {
+  feedbackId: integer("feedback_id")
+    .primaryKey()
+    .references(() => feedback.id),
+  bytes: text("bytes").notNull(),
+});
+
 export const seasonsRelations = relations(seasons, ({ many }) => ({ weeks: many(weeks) }));
 export const weeksRelations = relations(weeks, ({ one, many }) => ({
   season: one(seasons, { fields: [weeks.seasonId], references: [seasons.id] }),
@@ -453,3 +489,4 @@ export type Group = typeof groups.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type TextMessage = typeof textMessages.$inferSelect;
+export type Feedback = typeof feedback.$inferSelect;

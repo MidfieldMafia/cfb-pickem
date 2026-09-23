@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { MessageSquare } from "lucide-react";
 import { AppHeader, CopyButton, SECTION_LABEL, Badge, Button, Card } from "@saturday-slate/design-system";
 import { MemberMenu } from "@/components/member-menu";
 
@@ -18,8 +19,8 @@ import { LeaveForm } from "./leave-form";
 
 /**
  * The member's own place in the app, opened by the name chip: their name and
- * pennant, their personal link, their groups — switch to one, leave one — and
- * Start a group.
+ * pennant, their personal link, their groups — switch to one, leave one —
+ * Start a group, and Send feedback.
  *
  * Leave is drawn only where `leaveGroup` would allow it (the last organizer
  * stays), but that is a convenience: the library refuses it either way.
@@ -117,6 +118,19 @@ export default async function You() {
           )}
           <Button asChild variant="outline" className="self-start">
             <Link href="/start">Start a group</Link>
+          </Button>
+        </section>
+      </Card>
+
+      <Card asChild className="mx-4 gap-2">
+        <section>
+          <p className={SECTION_LABEL}>Feedback</p>
+          <p className="text-sm text-muted-foreground">Something broken, or an idea for the app?</p>
+          <Button asChild variant="outline" className="tap self-start">
+            <Link href="/you/feedback">
+              <MessageSquare aria-hidden />
+              Send feedback
+            </Link>
           </Button>
         </section>
       </Card>
