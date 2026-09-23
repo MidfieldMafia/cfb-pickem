@@ -91,9 +91,11 @@ export function PhotoCrop({
       role="dialog"
       aria-modal="true"
       aria-labelledby="photo-crop-title"
-      className="fixed inset-0 z-50 overflow-y-auto bg-background text-foreground"
+      className="fixed inset-0 z-50 overflow-y-auto bg-background pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-foreground"
     >
-      <div className="mx-auto flex min-h-full w-full max-w-md flex-col gap-4 px-4 pb-8">
+      {/* Fixed over the page, it escapes body's safe-area padding, so it carries its own:
+          the clock sits over the top edge and the home indicator over the bottom one. */}
+      <div className="mx-auto flex min-h-full w-full max-w-md flex-col gap-4 px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
         <div className="flex h-14 items-center">
           <button type="button" onClick={onCancel} className="-ml-2 flex items-center gap-1 px-2 font-semibold">
             <ChevronLeft aria-hidden className="size-5" />
