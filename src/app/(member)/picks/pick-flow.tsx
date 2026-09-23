@@ -11,6 +11,7 @@ import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
 
+import { track } from "@/lib/analytics/analytics";
 import { matchupColors } from "@/lib/matchup-colors";
 import { put } from "@/lib/picks/client";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
@@ -196,6 +197,7 @@ export function PickFlow({
     }));
     if (!result.ok && result.locked) setLateError(result.error);
     const failed = !result.ok && !result.locked;
+    if (result.ok) track("pick_saved");
     // Settled saves leave the overlay, or its `undefined` would hide the sheet's own pick.
     setUnsettled((u) => {
       const rest = { ...u };

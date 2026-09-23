@@ -10,6 +10,7 @@ import { HEADER_TOP, HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, Dr
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
 
+import { track } from "@/lib/analytics/analytics";
 import { put } from "@/lib/picks/client";
 import { formatCountdown } from "@/lib/picks/clock";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
@@ -131,6 +132,7 @@ export function Review({ initial }: { initial: SheetJson }) {
     setLockPending(false);
     apply(result);
     if (result.ok) {
+      track("lock_set", { cleared: gameId === null });
       setLockOpen(false);
       return;
     }
@@ -151,6 +153,7 @@ export function Review({ initial }: { initial: SheetJson }) {
     // On success the stored Guess as the server has it, rather than the value sent to it.
     apply(result);
     setGuessState(result.ok ? { saved: true } : { error: result.error });
+    if (result.ok) track("tiebreaker_saved");
   };
 
   const pickRow = (view: SheetGameJson) => {

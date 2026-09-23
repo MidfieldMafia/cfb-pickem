@@ -11,6 +11,7 @@ import {
   SCREENSHOT_LONG_EDGE,
   type FeedbackState,
 } from "@/lib/feedback/limits";
+import { track } from "@/lib/analytics/analytics";
 import { sendFeedbackAction } from "./actions";
 
 type Kind = "" | "bug" | "idea";
@@ -54,6 +55,11 @@ export function FeedbackForm() {
   }, [shot]);
 
   useEffect(() => () => void (shot && URL.revokeObjectURL(shot.url)), [shot]);
+
+  // `sent` is the new row's id, so each send changes it exactly once.
+  useEffect(() => {
+    if (state.sent !== undefined) track("feedback_sent");
+  }, [state.sent]);
 
   if (state.sent !== undefined && state.sent !== dismissed) {
     return (

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { db } from "@/db";
+import { AnalyticsMember } from "@/components/analytics-member";
 import { BottomNav } from "@/components/bottom-nav";
 import { requireMember } from "@/lib/members/current";
 import { picksOpenFor } from "@/lib/picks/picks";
@@ -22,6 +23,7 @@ export default async function MemberLayout({ children }: { children: ReactNode }
   const picksOpen = slate && !locked ? await picksOpenFor(db(), member, slate) : false;
   return (
     <>
+      <AnalyticsMember memberId={member.id} />
       {children}
       <BottomNav locked={locked} picksOpen={picksOpen} />
     </>
