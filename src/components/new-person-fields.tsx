@@ -25,7 +25,11 @@ export function NewPersonFields() {
         <Input id="phone" name="phone" type="tel" maxLength={MAX_PHONE} required autoComplete="tel" className="text-lg" />
         <p className="text-sm text-muted-foreground">One number is one person, in every group you play in.</p>
       </div>
-      <PennantPicker />
+      <div className="space-y-2">
+        <PennantPicker />
+        {/* The uploader is the welcome page's alone (#223); here it is only promised. */}
+        <p className="text-sm text-muted-foreground">You can add your own photo later from your profile.</p>
+      </div>
     </>
   );
 }

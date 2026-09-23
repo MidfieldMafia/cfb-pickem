@@ -1,10 +1,12 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 import { useActionState } from "react";
 import { PennantPicker } from "@/components/pennant-picker";
 import { SECTION_LABEL, Button, Input } from "@saturday-slate/design-system";
 
+import { NEW_PHOTO } from "@/lib/avatars";
 import { MAX_DISPLAY_NAME } from "@/lib/members/limits";
 import { saveWelcome, type WelcomeState } from "./actions";
 
@@ -17,7 +19,7 @@ export function WelcomeForm({
   avatarId: string | null;
   returning: boolean;
 }) {
-  const [state, action, pending] = useActionState<WelcomeState, FormData>(saveWelcome, {});
+  const [state, action, pending] = useActionState<WelcomeState, FormData>(save, {});
 
   return (
     <form action={action} className="flex flex-1 flex-col gap-6">
@@ -36,7 +38,7 @@ export function WelcomeForm({
         />
       </div>
 
-      <PennantPicker selected={avatarId} />
+      <PennantPicker selected={avatarId} photo />
 
       {state.error ? (
         <p role="alert" className="text-sm font-semibold text-destructive">
@@ -52,4 +54,24 @@ export function WelcomeForm({
       </div>
     </form>
   );
+}
+
+/**
+ * Save, with a dropped request or a server fault kept on this page as a line
+ * above the button instead of an error screen: a crop lives only in page
+ * state, and leaving would lose it (#231). Pressing Save again is the retry.
+ * The redirect a successful Save ends in is thrown too, and must go through.
+ */
+async function save(previous: WelcomeState, form: FormData): Promise<WelcomeState> {
+  try {
+    return await saveWelcome(previous, form);
+  } catch (error) {
+    unstable_rethrow(error);
+    return {
+      error:
+        form.get("avatarId") === NEW_PHOTO
+          ? "Your photo didn’t save. Press Save to try again."
+          : "That didn’t save. Press Save to try again.",
+    };
+  }
 }

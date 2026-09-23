@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
-import { Card, Pennant, SECTION_LABEL } from "@saturday-slate/design-system";
+import { Camera, ChevronLeft, ChevronRight, CircleAlert, ImageIcon } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { buttonVariants, Card, Pennant, SECTION_LABEL } from "@saturday-slate/design-system";
 
-import { avatars, findAvatar, teamAvatarConferences, type Avatar } from "@/lib/avatars";
+import { avatars, findAvatar, NEW_PHOTO, teamAvatarConferences, type Avatar } from "@/lib/avatars";
+import { PhotoCrop } from "./photo-crop";
 
 /**
  * The pennant picker every "who are you" form shares: the welcome page, a Join
@@ -23,14 +24,33 @@ import { avatars, findAvatar, teamAvatarConferences, type Avatar } from "@/lib/a
  * unmount and silently lose their pick; one input outside the levels survives
  * every step, still posts with whatever form the picker sits in, and still
  * carries `required` so the browser asks before the server has to.
+ *
+ * With `photo`, which only the welcome page passes, a third root card offers
+ * the member's own photo (#231). A new crop is a JPEG held in page state until
+ * Save: `avatarId` says `photo`, and the JPEG joins the form's `FormData` as
+ * `photo` when it is built. A member who already has a photo sees it in the
+ * card, and choosing it posts back its own `photo-…` id. Either stays one tap
+ * away while the member tries flags, until the page is left.
  */
-export function PennantPicker({ selected }: { selected?: string | null }) {
+export function PennantPicker({ selected, photo = false }: { selected?: string | null; photo?: boolean }) {
   const [chosen, setChosen] = useState(selected ?? "");
   const [view, setView] = useState<View>({ level: "root" });
-  const current = findAvatar(chosen);
+  const [crop, setCrop] = useState<NewPhoto | null>(null);
+  const fieldset = useRef<HTMLFieldSetElement>(null);
+  const saved = findAvatar(selected);
+  const own: Avatar | undefined = crop ? crop.mark : saved?.kind === "photo" ? saved : undefined;
+  const current = chosen === NEW_PHOTO ? crop?.mark : findAvatar(chosen);
+
+  useEffect(() => {
+    const form = fieldset.current?.form;
+    if (!form || !crop || chosen !== NEW_PHOTO) return;
+    const attach = (event: FormDataEvent) => event.formData.set("photo", crop.jpeg, "photo.jpg");
+    form.addEventListener("formdata", attach);
+    return () => form.removeEventListener("formdata", attach);
+  }, [crop, chosen]);
 
   return (
-    <fieldset className="space-y-2">
+    <fieldset ref={fieldset} className="space-y-2">
       <legend className={SECTION_LABEL}>Pick your pennant</legend>
       <input
         name="avatarId"
@@ -46,7 +66,7 @@ export function PennantPicker({ selected }: { selected?: string | null }) {
           {current ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Pennant avatar={current} size={28} />
-              Yours: <span className="font-semibold text-foreground">{current.name}</span>
+              Yours: <span className="font-semibold text-foreground">{current.kind === "photo" ? "Your photo" : current.name}</span>
             </p>
           ) : null}
           <Choice
@@ -61,6 +81,18 @@ export function PennantPicker({ selected }: { selected?: string | null }) {
             peek={peekTeams}
             onClick={() => setView({ level: "conferences" })}
           />
+          {photo ? (
+            <PhotoCard
+              own={own}
+              chosen={own !== undefined && own.id === chosen}
+              onChoose={() => own && setChosen(own.id)}
+              onCrop={(jpeg) => {
+                if (crop) URL.revokeObjectURL(crop.mark.file);
+                setCrop(newPhoto(jpeg));
+                setChosen(NEW_PHOTO);
+              }}
+            />
+          ) : null}
         </div>
       ) : null}
 
@@ -102,6 +134,19 @@ export function PennantPicker({ selected }: { selected?: string | null }) {
       ) : null}
     </fieldset>
   );
+}
+
+/** A crop not yet saved: the JPEG that will post, and a mark to show it by until then. */
+interface NewPhoto {
+  jpeg: Blob;
+  mark: Avatar;
+}
+
+function newPhoto(jpeg: Blob): NewPhoto {
+  return {
+    jpeg,
+    mark: { id: NEW_PHOTO, name: "Your photo", file: URL.createObjectURL(jpeg), color: "var(--muted-foreground)", kind: "photo" },
+  };
 }
 
 type View =
@@ -214,5 +259,128 @@ function Disc({
       {named ? <span className="w-full text-xs leading-tight">{avatar.name}</span> : null}
       {named ? null : <span className="sr-only">{avatar.name}</span>}
     </button>
+  );
+}
+
+const NOTHING_BACK = "No photo came back from the camera. If your phone won’t let Chrome use it, choose a photo instead.";
+const NOT_A_PHOTO = "That file isn’t a photo. Choose another.";
+
+/**
+ * The "Your photo" root card. Unlike Flags and Team Logos it does not open a
+ * level: its two actions sit on it, because each one is a file input, and a
+ * member who already has a photo taps the card's head to choose it again.
+ *
+ * Two inputs, not one: Android's photo picker hides the camera from a plain
+ * `accept="image/*"`, so the camera gets its own `capture` input (#219, #229).
+ * Neither has a `name`; what posts is the finished crop, never the original.
+ */
+function PhotoCard({
+  own,
+  chosen,
+  onChoose,
+  onCrop,
+}: {
+  own: Avatar | undefined;
+  chosen: boolean;
+  onChoose: () => void;
+  onCrop: (jpeg: Blob) => void;
+}) {
+  const [source, setSource] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const close = () => {
+    if (source) URL.revokeObjectURL(source);
+    setSource(null);
+  };
+
+  const pick = (event: React.ChangeEvent<HTMLInputElement>, camera: boolean) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    // Cleared so that picking the same photo again still fires a change.
+    input.value = "";
+    if (!file) return setNote(camera ? NOTHING_BACK : null);
+    // The type, never the name: iOS names a camera photo `image.jpg` whatever it is (#218).
+    if (!file.type.startsWith("image/")) return setNote(NOT_A_PHOTO);
+    setNote(null);
+    setSource(URL.createObjectURL(file));
+  };
+
+  // A camera Chrome may not use returns no file and fires no change, only `cancel`,
+  // which is also what backing out fires; the note is worded for both (#229).
+  const cameraCancel = useCallback((input: HTMLInputElement | null) => {
+    if (!input) return;
+    const nothingBack = () => setNote(NOTHING_BACK);
+    input.addEventListener("cancel", nothingBack);
+    return () => input.removeEventListener("cancel", nothingBack);
+  }, []);
+
+  const action = buttonVariants({ variant: "outline", className: "h-tap w-full cursor-pointer has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50" });
+
+  return (
+    <Card className={chosen ? "border-primary bg-accent" : undefined}>
+      {own ? (
+        <button type="button" onClick={onChoose} aria-pressed={chosen} className="flex w-full items-center gap-3 text-left">
+          <Pennant avatar={own} size={44} />
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Your photo</span>
+            <span className="block text-sm text-muted-foreground">{chosen ? "Chosen" : "Tap to use it again"}</span>
+          </span>
+          {chosen ? (
+            <span className="text-xs font-bold text-primary">Yours</span>
+          ) : (
+            <ChevronRight aria-hidden className="size-5 shrink-0 text-muted-foreground" />
+          )}
+        </button>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--muted-foreground)_18%,transparent)] text-muted-foreground">
+            <Camera aria-hidden className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Your photo</span>
+            <span className="block text-sm text-muted-foreground">A selfie, or one from your phone</span>
+          </span>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <label className={action}>
+          <Camera aria-hidden />
+          {own ? "New photo" : "Take a photo"}
+          <input
+            ref={cameraCancel}
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={(event) => pick(event, true)}
+            className="sr-only"
+          />
+        </label>
+        <label className={action}>
+          <ImageIcon aria-hidden />
+          {own ? "Choose another" : "Choose a photo"}
+          <input type="file" accept="image/*" onChange={(event) => pick(event, false)} className="sr-only" />
+        </label>
+      </div>
+      {note ? (
+        <p role="status" className="flex gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+          <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          {note}
+        </p>
+      ) : null}
+      {source ? (
+        <PhotoCrop
+          src={source}
+          onCancel={close}
+          onUse={(jpeg) => {
+            close();
+            onCrop(jpeg);
+          }}
+          onFail={(message) => {
+            close();
+            setNote(message);
+          }}
+        />
+      ) : null}
+    </Card>
   );
 }
