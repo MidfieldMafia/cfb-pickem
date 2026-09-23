@@ -60,6 +60,13 @@ export const teamAvatarConferences: readonly AvatarConference[] = conferences.ma
  * that a replaced photo is a new URL, which is what lets it be served
  * `immutable`; the member id is there so the id resolves with no database.
  */
+/**
+ * What `avatarId` says when the welcome form also carries a new photo in its
+ * `photo` field. It is not an id anything resolves: the server swaps it for
+ * `photo-<memberId>-<hash8>` when it stores the photo. No flag id is `photo`.
+ */
+export const NEW_PHOTO = "photo";
+
 const PHOTO_ID = /^photo-([1-9][0-9]*)-([0-9a-f]{8})$/;
 
 export function photoAvatarId(memberId: number, hash8: string): string {

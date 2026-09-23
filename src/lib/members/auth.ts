@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { inOneBatch } from "@/db/batch";
 import { memberPhotos, members, sessions, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
-import { findAvatar } from "@/lib/avatars";
+import { findAvatar, NEW_PHOTO } from "@/lib/avatars";
 import { Refusal } from "@/lib/refusal";
 import { cleanDisplayName, MAX_DISPLAY_NAME } from "./limits";
 import { newSecret } from "./members";
@@ -38,9 +38,6 @@ export async function getSession(db: Db, sessionId: string): Promise<Member | nu
 }
 
 export class InvalidWelcome extends Refusal {}
-
-/** What `avatarId` says when the form also carries a new photo in its `photo` field. */
-export const NEW_PHOTO = "photo";
 
 export interface WelcomeInput {
   displayName: string;
