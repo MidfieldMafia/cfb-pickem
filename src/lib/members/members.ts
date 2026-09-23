@@ -1,7 +1,10 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, count, eq, ne } from "drizzle-orm";
+import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
+import { inOneBatch } from "@/db/batch";
 import {
+  feedback,
+  feedbackScreenshots,
   locks,
   memberPhotos,
   membershipRemovals,
@@ -227,9 +230,9 @@ export async function pickCountByMember(db: Db, actor: Commissioner): Promise<Ma
  *   who changed someone else's pick or a result — stays, because the log that
  *   names them is worth more than the row. Their own audits go with them.
  *
- * The Neon HTTP driver runs no transactions, so the writes go in an order
- * that leaves a retryable member behind if one fails midway: the row itself
- * goes last.
+ * Every row that names them goes in one batch with the member, so a failure
+ * leaves them whole rather than half deleted. That includes their Feedback
+ * and its screenshots (#237).
  */
 export async function removeMember(db: Db, actor: Commissioner, memberId: number): Promise<Member> {
   if (memberId === actor.id) throw new InvalidMember("You cannot delete yourself.");
@@ -241,16 +244,22 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
       `${member.displayName} made commissioner edits that are on the record, so they cannot be deleted.`,
     );
   }
-  await db.delete(sessions).where(eq(sessions.memberId, memberId));
-  await db.delete(textMessages).where(eq(textMessages.memberId, memberId));
-  await db.delete(pickAudits).where(eq(pickAudits.memberId, memberId));
-  await db.delete(tiebreakerGuesses).where(eq(tiebreakerGuesses.memberId, memberId));
-  await db.delete(locks).where(eq(locks.memberId, memberId));
-  await db.delete(picks).where(eq(picks.memberId, memberId));
-  await db.delete(membershipRemovals).where(eq(membershipRemovals.memberId, memberId));
-  await db.delete(memberships).where(eq(memberships.memberId, memberId));
-  await db.delete(memberPhotos).where(eq(memberPhotos.memberId, memberId));
-  const [deleted] = await db.delete(members).where(eq(members.id, memberId)).returning();
+  const theirFeedback = db.select({ id: feedback.id }).from(feedback).where(eq(feedback.memberId, memberId));
+  const writes = await inOneBatch(db, (tx) => [
+    tx.delete(sessions).where(eq(sessions.memberId, memberId)),
+    tx.delete(textMessages).where(eq(textMessages.memberId, memberId)),
+    tx.delete(pickAudits).where(eq(pickAudits.memberId, memberId)),
+    tx.delete(tiebreakerGuesses).where(eq(tiebreakerGuesses.memberId, memberId)),
+    tx.delete(locks).where(eq(locks.memberId, memberId)),
+    tx.delete(picks).where(eq(picks.memberId, memberId)),
+    tx.delete(membershipRemovals).where(eq(membershipRemovals.memberId, memberId)),
+    tx.delete(memberships).where(eq(memberships.memberId, memberId)),
+    tx.delete(memberPhotos).where(eq(memberPhotos.memberId, memberId)),
+    tx.delete(feedbackScreenshots).where(inArray(feedbackScreenshots.feedbackId, theirFeedback)),
+    tx.delete(feedback).where(eq(feedback.memberId, memberId)),
+    tx.delete(members).where(eq(members.id, memberId)).returning(),
+  ]);
+  const [deleted] = writes[11];
   return deleted;
 }
 

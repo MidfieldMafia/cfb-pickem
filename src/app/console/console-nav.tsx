@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, ListPlus, Pencil, Smartphone, Users, UsersRound } from "lucide-react";
+import { ClipboardCheck, ListPlus, MessageSquare, Pencil, Smartphone, Users, UsersRound } from "lucide-react";
 
 const LINKS = [
   { href: "/console/slate", label: "Slate builder", Icon: ListPlus },
@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/console/members", label: "Members", Icon: Users },
   { href: "/console/picks", label: "Who hasn't picked", Icon: ClipboardCheck },
   { href: "/console/results", label: "Result overrides", Icon: Pencil },
+  { href: "/console/feedback", label: "Feedback", Icon: MessageSquare },
 ] as const;
 
 /**
@@ -20,7 +21,12 @@ const LINKS = [
  */
 const ITEM = "tap flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold whitespace-nowrap no-underline";
 
-export function ConsoleNav() {
+/**
+ * `feedback` is how many Feedback are not yet Done, shown as a pill on its
+ * row. None shows nothing, so the pill only appears when there is something
+ * to read.
+ */
+export function ConsoleNav({ feedback }: { feedback: number }) {
   const pathname = usePathname();
   return (
     <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-4 py-2 md:w-56 md:flex-col md:overflow-x-visible md:overflow-y-auto md:border-b-0 md:border-r md:py-4">
@@ -34,7 +40,21 @@ export function ConsoleNav() {
             className={`${ITEM} ${active ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
           >
             <Icon size={20} aria-hidden />
-            {label}
+            {href === "/console/feedback" && feedback > 0 ? (
+              <>
+                <span className="flex-1">{label}</span>
+                <span
+                  aria-label={`${feedback} not done`}
+                  className={`min-w-5 rounded-full px-1.5 text-center text-xs leading-5 font-bold ${
+                    active ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+                  }`}
+                >
+                  {feedback}
+                </span>
+              </>
+            ) : (
+              label
+            )}
           </Link>
         );
       })}

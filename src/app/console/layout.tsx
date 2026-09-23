@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { MemberChip } from "@/components/member-chip";
 import { SECTION_LABEL, Wordmark } from "@saturday-slate/design-system";
 
+import { openFeedbackCount } from "@/lib/feedback/feedback";
 import { requireConsole } from "@/lib/members/current";
 import { activeSeason, defaultWeekNumber, seasonWeeks, WEEK_NUMBERS } from "@/lib/slate/slate";
 import { ConsoleNav } from "./console-nav";
@@ -11,7 +12,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const commissioner = await requireConsole();
   const database = db();
   const season = await activeSeason(database);
-  const existing = await seasonWeeks(database, season);
+  const [existing, feedback] = await Promise.all([
+    seasonWeeks(database, season),
+    openFeedbackCount(database, commissioner),
+  ]);
   const published = new Set(existing.filter((w) => w.published).map((w) => w.weekNumber));
   // Every week a commissioner can open, not only the rows that exist: opening
   // a week is how it comes into being, and the page does that on arrival.
@@ -39,7 +43,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         </div>
       </header>
       <div className="flex flex-1 flex-col md:min-h-0 md:flex-row">
-        <ConsoleNav />
+        <ConsoleNav feedback={feedback} />
         <main className="flex-1 px-4 py-6 md:overflow-y-auto">{children}</main>
       </div>
     </div>
