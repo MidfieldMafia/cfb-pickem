@@ -54,6 +54,22 @@ another Chrome. Stop the hung task first. If `curl` to `$BASE` now returns
 `000` while the port is still LISTENING, the dev server is wedged: kill it and
 restart it, and tell the user if they are watching that URL.
 
+## Reach every branch
+
+List the screen's branches before choosing data: none, partial, full. The data
+that shows a feature is the data that routes around its empty state; #78 drove
+a finished week and missed a 19px link that renders only before the first
+deadline (#22). The shared database is often already the empty case, so that
+pass is usually free.
+
+When the state you need is not in the database (a final game, a void, a
+mid-week lock), render it rather than writing it. Add a throwaway route such as
+`src/app/dev-preview-<issue>/page.tsx` that imports the real component and
+feeds it the fixtures from that component's own `*.test.tsx`. Delete it before
+you commit, then `rm -rf .next/dev`: `next dev` recorded the route in
+`.next/dev/types/validator.ts`, and the push gate's `next build` fails on
+`Cannot find module '.../dev-preview-<issue>/page.js'` until it is gone.
+
 ## Measure
 
 A screenshot shows what you thought to look at. Assert on numbers:

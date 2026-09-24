@@ -16,6 +16,8 @@ npx shadcn@latest add button card badge avatar drawer progress table input
 
 Use semantic tokens, never hex. Every token has a `-foreground` pair that passes 4.5:1 on it.
 
+Every pair in `globals.css` clears its bar with no headroom: text lands at 4.52–4.94:1, borders at 3.11–3.38:1. So check a new token by measuring, and against the **darkest surface it can sit on**. A `loss-border` ring lands on `settled`, not `card`, which costs about 0.3:1; in #149 a value passed on the card at 3.04:1 and failed on `settled` at 2.76:1. The 3:1 bar applies to borders and fills that carry meaning. A decorative rule stays quieter on purpose: `settled-border` is 1.79:1, because anything past 3:1 is indistinguishable from `border`.
+
 | Token | Use it for |
 | --- | --- |
 | `bg-background` / `text-foreground` | Page and primary text |

@@ -18,6 +18,11 @@ Every ticket names its owner two ways: a GitHub assignee and a label.
 - `owner:jonah` (assignee `jonahmabry`): logic, data, API, scoring, infrastructure.
 - `owner:alex` (assignee `AlexMabry`): design, visual system, screen polish, brand assets.
 
+## Before building a ticket
+
+- **Audit the ticket against the tree.** A ticket's account of the existing code is a claim. #151 named a `spacious` variant that did not exist, estimated ~30 surfaces where there were 48, and listed a picker swatch as a card. Grep finds candidates; read each to learn its role, and scope by role, not by class pattern. Post the divergences on the ticket before starting, and ask where they change scope.
+- **Options are a question.** An `owner:alex` ticket that lays out several shapes to react to, rather than one spec, is asking Alex to choose. Check `git log` on the affected files for any part already decided, then ask about the rest before writing code.
+
 ## Roadmap (wayfinder)
 
 - **Maps**: issues labelled `wayfinder:map`, one per effort: "Saturday Slate roadmap" (v1, #1), "Saturday Slate v2 roadmap" (groups, #129) and "Saturday Slate v3 roadmap" (chat, #241). Every roadmap item is a GitHub **sub-issue** of exactly one map.

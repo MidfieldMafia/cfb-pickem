@@ -13,12 +13,14 @@ Warm it, see it **green** on untouched code, then write code. Cleanup is
 ## 1. Cut it from `origin/main`
 
 ```bash
-cd "$(git rev-parse --show-toplevel)"
+cd "$(git rev-parse --path-format=absolute --git-common-dir)/.."
 git fetch origin
 git worktree add -b <branch> .claude/worktrees/<name> origin/main
 ```
 
-Name `origin/main` in full: `origin/HEAD` is unset here, and local `main` lags
+Start from the main checkout: `--show-toplevel` names the worktree you are
+standing in, so run from inside one it nests the new tree under it. Name
+`origin/main` in full: `origin/HEAD` is unset here, and local `main` lags
 behind merges from other sessions. `.claude/worktrees/` is gitignored.
 
 **Done when** your first message about the work names the base commit.
