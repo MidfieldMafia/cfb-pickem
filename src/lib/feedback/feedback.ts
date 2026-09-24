@@ -116,7 +116,7 @@ export interface FeedbackItem {
 }
 
 /** Every Feedback, newest first. Commissioners only: the type is the check. */
-export async function listFeedback(db: Db, actor: Commissioner): Promise<FeedbackItem[]> {
+export async function listFeedback(db: Db, _actor: Commissioner): Promise<FeedbackItem[]> {
   const rows = await db
     .select({
       id: feedback.id,
@@ -142,7 +142,7 @@ export async function listFeedback(db: Db, actor: Commissioner): Promise<Feedbac
 }
 
 /** How many are not yet Done, for the console nav's count. */
-export async function openFeedbackCount(db: Db, actor: Commissioner): Promise<number> {
+export async function openFeedbackCount(db: Db, _actor: Commissioner): Promise<number> {
   const [row] = await db.select({ n: count() }).from(feedback).where(isNull(feedback.doneAt));
   return row.n;
 }

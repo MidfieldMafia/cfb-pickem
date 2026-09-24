@@ -149,10 +149,10 @@ export function magicLinkFor(member: Pick<Member, "token">, appUrl: string): str
 
 /**
  * Every member, commissioners and deactivated included, in the order they
- * joined. `actor` is the guard, not a value this reads: nothing here needs
+ * joined. `_actor` is the guard, not a value this reads: nothing here needs
  * it, only proof that a caller holds a `Commissioner`.
  */
-export async function listMembers(db: Db, actor: Commissioner): Promise<Member[]> {
+export async function listMembers(db: Db, _actor: Commissioner): Promise<Member[]> {
   return db.query.members.findMany({ orderBy: joinedOrder });
 }
 
@@ -211,9 +211,9 @@ export async function setMemberActive(
  * How many Picks each member has, keyed by member id; a member with none is
  * absent. The console reads it next to the Delete button, so the sentence
  * before the click says what goes with them rather than the one after.
- * `actor` is the guard here too, as `listMembers`' is.
+ * `_actor` is the guard here too, as `listMembers`' is.
  */
-export async function pickCountByMember(db: Db, actor: Commissioner): Promise<Map<number, number>> {
+export async function pickCountByMember(db: Db, _actor: Commissioner): Promise<Map<number, number>> {
   const rows = await db.select({ memberId: picks.memberId, picks: count() }).from(picks).groupBy(picks.memberId);
   return new Map(rows.map((row) => [row.memberId, row.picks]));
 }
