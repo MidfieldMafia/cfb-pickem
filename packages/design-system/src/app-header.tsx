@@ -3,6 +3,14 @@ import type { ReactNode } from "react";
 import { HeaderLinks } from "./header-links";
 
 /**
+ * The header's top padding, shared with the two pick screens that draw
+ * headers of their own so the mark sits at the same height on every screen. It
+ * carries no safe-area inset: `body` already pads by the inset, and adding it
+ * here as well pushed this header down twice as far as the pick screens.
+ */
+export const HEADER_TOP = "pt-[21px]";
+
+/**
  * Phone screen header: mark, title, optional subtitle, the `HeaderLinks`
  * (How to play), and a slot on the right, which member screens fill with a
  * `MemberMenu`.
@@ -12,13 +20,8 @@ import { HeaderLinks } from "./header-links";
  * in the `MemberMenu` rather than stacking above the title: a third line
  * pushed the header up into the iPhone status bar.
  *
- * The top padding is `HEADER_TOP`, shared with the two pick screens that draw
- * headers of their own so the mark sits at the same height on every screen. It
- * carries no safe-area inset: `body` already pads by the inset, and adding it
- * here as well pushed this header down twice as far as the pick screens.
+ * Its top padding is `HEADER_TOP`.
  */
-export const HEADER_TOP = "pt-[21px]";
-
 export function AppHeader({
   title,
   sub,

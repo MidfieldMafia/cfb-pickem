@@ -38,16 +38,15 @@ next run.
 
 Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; each roadmap is a `wayfinder:map` issue (v1 and v2 so far) and every ticket is a sub-issue of one with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.
 
-### Claude Design systems
+### Design system Artifact
 
-`packages/design-system` is represented in Claude Design by two objects, and neither updates the other:
+`packages/design-system` has one design system outside the repo: the Artifact "Saturday Slate Design System" (https://claude.ai/artifact/LaNEaker2yyAez16eThdfU). It holds the brand book, token usage notes, contrast and layout guidelines, brand marks, pennants, all 136 logos, the live component bundle and a preview per component, and it is what every mockup or deck built with the Artifact tool reads. Build designs on it.
 
-- **The claude.ai/design project** (`13ff5b45-b28a-4add-8ab7-10ba929c294d`) is a build-produced mirror of the package. `/design-sync` compiles the package and writes the changed components into it. It only writes that direction — nothing flows from the project back into this repo. Its inputs live in `.design-sync/` (see `.design-sync/NOTES.md`). Re-sync after changing a component.
-- **The Artifact "Saturday Slate Design System"** (https://claude.ai/artifact/LaNEaker2yyAez16eThdfU) is a static reference copy: brand-book README, token usage notes, contrast and layout guidelines, brand marks, pennants, all 136 logos and hand-written component previews. It is what designs and decks built with the Artifact tool read. `/design-sync` cannot reach it, so a package change reaches it only by editing `project/` by hand and republishing.
+A change that lands on `main` in `packages/design-system`, `public/brand`, `public/avatars/pennants` or `public/logos` leaves it stale until someone runs the sync: `.claude/skills/sync-design-artifact/SKILL.md`, on the session that made the change. Nothing else updates it, and it gates no PR.
 
-Neither is read by the build, the tests or the app, and neither gates a PR. Use the project when a component changed and the mirror should follow; use the Artifact when making a mockup or deck in the brand.
+The claude.ai/design project `13ff5b45-b28a-4add-8ab7-10ba929c294d` is retired: `/design-sync` writes only there, so this repo no longer runs it.
 
-Do not create another design system of either kind. Three near-identical ones were built from this package on 2026-09-20 by sessions that did not look for an existing one, and were consolidated into these two. List what exists first (`Artifact` `action: "list"` or `quickstart`; `DesignSync` `list_projects`). The package wins wherever any of them disagree.
+Build on the existing Artifact rather than a new design system. Three near-identical ones were made from this package on 2026-09-20 by sessions that did not look first; `Artifact` `action: "list"` shows what exists. The package wins wherever the Artifact disagrees with it.
 
 ### Domain docs
 
