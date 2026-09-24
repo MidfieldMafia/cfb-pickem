@@ -4,20 +4,14 @@
 # Push is the moment a bad diff reaches CI and the Vercel preview, so that is where
 # the gate sits -- commits stay instant, including throwaway WIP ones.
 #
-# Runs the checks that CLAUDE.md calls mandatory before work leaves the machine,
-# in this order:
-#   1. npx next build   -- the only local check that catches non-async "use server"
-#                          exports, a "use client" file reaching a server-only module,
-#                          and extra exports in a route.ts. Applies no migrations, so
-#                          it is safe here (unlike `npm run build`).
-#   2. npm run typecheck
-#   3. npm run test
-#   4. npx eslint src
-# Build runs first on purpose: it writes .next/types, without which typecheck reports
-# a spurious `Cannot find name 'LayoutProps'` in a fresh worktree.
+# Runs the checks that CLAUDE.md calls mandatory before work leaves the machine --
+# next build, typecheck, test, eslint -- through preflight-checks.sh, which holds
+# their order and reasons. A tree that `npm run preflight` already passed, clean
+# and unchanged since, is stamped, and the gate lets it through without running
+# them again.
 #
 # A fifth, non-blocking check follows: Neon branch capacity (see below). It never
-# gates the push -- only 1-4 do.
+# gates the push -- only the four checks do.
 #
 # Exit 0 lets the git command through; exit 2 blocks it and hands the reason to Claude.
 
@@ -122,51 +116,15 @@ if [ ! -d node_modules ]; then
   exit 2
 fi
 
-# BSD mktemp (macOS) needs a template; GNU accepts one too, so always pass it.
-log=$(mktemp "${TMPDIR:-/tmp}/preflight.XXXXXX")
-trap 'rm -f "$log"' EXIT
+# Next to this file, so the gate uses the main checkout's copy even in a worktree
+# cut before the script existed.
+checks="$(dirname "${BASH_SOURCE[0]}")/preflight-checks.sh"
 
-# `next build` holds an exclusive lock on the dist dir for its whole run and gives up
-# after ~1s of contention, so two builds in one checkout collide -- two Claude
-# sessions sharing a worktree is enough to cause it. A lost race says nothing about
-# the diff, so wait for the lock rather than reporting a broken build.
-lock_msg="Another next build process is already running"
-lock_delay=10
-lock_attempts=24
-
-attempt=1
-while :; do
-  if npx next build >"$log" 2>&1; then
-    break
-  fi
-  if ! grep -qF "$lock_msg" "$log"; then
-    echo "BLOCKED: 'npx next build' failed, so this push would break the Vercel build. Fix it before pushing. Last 40 lines:" >&2
-    tail -n 40 "$log" >&2
-    exit 2
-  fi
-  if [ "$attempt" -ge "$lock_attempts" ]; then
-    echo "BLOCKED: another 'next build' held the build lock for the whole $((lock_delay * lock_attempts))s this waited, so the diff was never checked. Nothing here says it is broken -- find the build that is holding it (another session in this checkout, or a stray process) and push again." >&2
-    exit 2
-  fi
-  attempt=$((attempt + 1))
-  sleep "$lock_delay"
-done
-
-if ! npm run typecheck >"$log" 2>&1; then
-  echo "BLOCKED: 'npm run typecheck' failed. Fix the type errors before pushing. Last 40 lines:" >&2
-  tail -n 40 "$log" >&2
-  exit 2
-fi
-
-if ! npm run test >"$log" 2>&1; then
-  echo "BLOCKED: 'npm run test' failed. Fix the failing tests before pushing. Last 40 lines:" >&2
-  tail -n 40 "$log" >&2
-  exit 2
-fi
-
-if ! npx eslint src >"$log" 2>&1; then
-  echo "BLOCKED: 'npx eslint src' failed. Fix the lint errors before pushing. Last 40 lines:" >&2
-  tail -n 40 "$log" >&2
+if bash "$checks" --stamped; then
+  : # Passed on this exact tree already; nothing to rerun.
+elif ! out=$(bash "$checks" 2>&1); then
+  echo "BLOCKED: a check failed, so this push would break CI or the Vercel build. Fix it before pushing." >&2
+  printf '%s\n' "$out" >&2
   exit 2
 fi
 

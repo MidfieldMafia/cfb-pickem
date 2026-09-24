@@ -4,6 +4,8 @@
 
 Verify with `npm run typecheck`, `npm run test`, and `npx eslint src`.
 
+Before a push, run `npm run preflight` once the work is committed: it runs `npx next build` and all three, prints one line, and stamps the clean tree it passed. The push gate in `.claude/hooks/preflight.sh` runs the same script, so it lets a stamped tree through without running anything, and runs the checks itself on anything else. Checking by hand as well only repeats the work.
+
 A fresh worktree needs `npm ci` before any of them: `node_modules` is not shared, and `vitest.config.ts` resolves its `server-only` alias relative to itself, so without a local install every server-seam suite fails to import. `typecheck` also reports `Cannot find name 'LayoutProps'` in `src/app/layout.tsx` until `next dev` has run there once and written `.next/types`.
 
 Do not run `npm run build` to check your work. It is `drizzle-kit migrate && next build`, and `DATABASE_URL` in `.env.local` points at a shared Neon database, so the build applies migrations to a database other people are using.
