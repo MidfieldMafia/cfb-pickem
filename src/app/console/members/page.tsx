@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MoreHorizontal, RefreshCw, Shield } from "lucide-react";
 import { db } from "@/db";
-import { Badge, Button, Card, Input, CopyButton } from "@saturday-slate/design-system";
+import { Badge, Button, Card, Input, CopyButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@saturday-slate/design-system";
 
 import { Pennant } from "@/components/pennant";
 import { appUrl } from "@/lib/app-url";
@@ -52,23 +52,23 @@ export default async function Members() {
 
       <AddMemberForm groups={groups.map(({ id, name }) => ({ id, name }))} />
 
-      <Card className="gap-0 overflow-x-auto rounded-md p-0">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-            <tr>
-              <th className="p-3">Member</th>
-              <th className="p-3">Role and groups</th>
-              <th className="p-3">Magic Link</th>
-              <th className="p-3">Last opened</th>
-              <th className="p-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      <Card className="gap-0 overflow-hidden rounded-md p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead variant="caps">Member</TableHead>
+              <TableHead variant="caps">Role and groups</TableHead>
+              <TableHead variant="caps">Magic Link</TableHead>
+              <TableHead variant="caps">Last opened</TableHead>
+              <TableHead variant="caps" className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {roster.map((member) => {
               const link = magicLinkFor(member, base);
               return (
-                <tr key={member.id} className={member.active ? "" : "opacity-60"}>
-                  <td className="p-3">
+                <TableRow key={member.id} className={member.active ? "" : "opacity-60"}>
+                  <TableCell>
                     <div className="flex items-center gap-3">
                       <Pennant avatarId={member.avatarId} name={member.displayName} size={36} />
                       <div>
@@ -79,11 +79,11 @@ export default async function Members() {
                         </p>
                       </div>
                     </div>
-                  </td>
-                  <td className="p-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex flex-wrap items-center gap-2">
                       {member.isCommissioner ? (
-                        <Badge className="bg-secondary text-secondary-foreground">
+                        <Badge variant="secondary">
                           <Shield size={12} aria-hidden />
                           Commissioner
                         </Badge>
@@ -105,18 +105,18 @@ export default async function Members() {
                       ))}
                       {groupsOf.has(member.id) ? null : <li className="text-muted-foreground">No group</li>}
                     </ul>
-                  </td>
-                  <td className="p-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-2">
                       <code className="rounded bg-muted px-2 py-1 text-xs whitespace-nowrap">{maskedLink(link)}</code>
                       <CopyButton text={link} />
                     </div>
-                  </td>
+                  </TableCell>
                   {/* The column says "Last opened"; the cell need not say it again. */}
-                  <td className="p-3 whitespace-nowrap text-muted-foreground">
+                  <TableCell className="text-muted-foreground">
                     {member.lastSeenAt ? relativeTime(member.lastSeenAt) : "Never"}
-                  </td>
-                  <td className="p-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       <ActionForm
                         action={textMagicLinkAction}
@@ -212,12 +212,12 @@ export default async function Members() {
                         </div>
                       </details>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
 
       <Card className="gap-0 rounded-md p-0">

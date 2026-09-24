@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, CopyButton, LocalTime, SECTION_LABEL } from "@saturday-slate/design-system";
+import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, CopyButton, LocalTime, SECTION_LABEL, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@saturday-slate/design-system";
 
 import { Pennant } from "@/components/pennant";
 
@@ -39,37 +39,37 @@ function PickDots({ picked, needed }: { picked: number; needed: number }) {
 function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: number; weekNumber: number }) {
   const missing = owed(row);
   return (
-    <tr className="align-middle">
-      <td className="p-3">
+    <TableRow>
+      <TableCell>
         <div className="flex items-center gap-3">
           <Pennant avatarId={row.member.avatarId} name={row.member.displayName} size={36} />
           <span className="font-semibold">{row.member.displayName}</span>
         </div>
-      </td>
-      <td className="p-3 whitespace-nowrap">
+      </TableCell>
+      <TableCell>
         <PickDots picked={row.picked} needed={needed} />
-      </td>
-      <td className="p-3">
+      </TableCell>
+      <TableCell>
         {row.lockTeam ? (
-          <Badge className="bg-secondary text-secondary-foreground">{row.lockTeam}</Badge>
+          <Badge variant="secondary">{row.lockTeam}</Badge>
         ) : (
           <Badge variant="outline">{row.lockDropped ? "Dropped (game void)" : "Not set"}</Badge>
         )}
-      </td>
-      <td className="p-3 tabular-nums">
+      </TableCell>
+      <TableCell className="tabular-nums">
         {row.tiebreakerGuess === null ? <Badge variant="outline">Not set</Badge> : row.tiebreakerGuess}
-      </td>
+      </TableCell>
       {/* `live` is the one hot orange and belongs to a game in progress; a
           member who is finished is a win, with the glyph the design notes
           require so the state does not rest on hue alone. */}
-      <td className="p-3">
+      <TableCell className="whitespace-normal">
         {row.complete ? (
           <Badge variant="win">Done</Badge>
         ) : (
           <span className="text-sm text-muted-foreground">Missing {missing.join(", ")}</span>
         )}
-      </td>
-      <td className="p-3 text-right">
+      </TableCell>
+      <TableCell className="text-right">
         {/* `asChild` renders a link, which the base layer's 44px rule does not
             reach; `tap` is how a link asks for it. */}
         <Button asChild variant="outline" size="sm">
@@ -77,8 +77,8 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
             Edit picks
           </Link>
         </Button>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -120,33 +120,33 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
           </p>
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="space-y-6">
-            <Card className="gap-0 overflow-x-auto rounded-md p-0">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                  <tr>
-                    <th className="p-3">Member</th>
-                    <th className="p-3">Picks</th>
-                    <th className="p-3">Lock of the Week</th>
-                    <th className="p-3">Tiebreaker Guess</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
+            <Card className="gap-0 overflow-hidden rounded-md p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead variant="caps">Member</TableHead>
+                    <TableHead variant="caps">Picks</TableHead>
+                    <TableHead variant="caps">Lock of the Week</TableHead>
+                    <TableHead variant="caps">Tiebreaker Guess</TableHead>
+                    <TableHead variant="caps">Status</TableHead>
+                    <TableHead variant="caps" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {report.members.map((row) => (
                     <Progress key={row.member.id} row={row} needed={report.needed} weekNumber={weekNumber} />
                   ))}
                   {report.members.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-3 text-muted-foreground">
+                    <TableRow>
+                      <TableCell colSpan={6} className="whitespace-normal text-muted-foreground">
                         No active members joined before the deadline.
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : null}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </Card>
 
             <Card asChild className="gap-0 rounded-md p-0">

@@ -64,12 +64,23 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   )
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+/**
+ * A column header. `variant="caps"` is the console's look: 12px bold caps,
+ * tracked, in the muted colour, for a working table whose headers label rather
+ * than lead. The member leaderboard keeps the default.
+ */
+function TableHead({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"th"> & { variant?: "default" | "caps" }) {
   return (
     <th
       data-slot="table-head"
+      data-variant={variant}
       className={cn(
         "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        variant === "caps" && "text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase",
         className
       )}
       {...props}
