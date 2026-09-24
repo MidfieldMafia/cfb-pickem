@@ -135,6 +135,18 @@ async function refreshQuietly(db: Db, cfbd: () => CfbdClient, slate: Slate, now:
 }
 
 /**
+ * The published Slate with its scores as fresh as the stale gate allows, for a
+ * screen that reads the season rather than one member's Week: the Leaderboard
+ * pulls the feed here first, so the standings it grades next see the same rows.
+ * Null when no Week is published.
+ */
+export async function freshSlate(db: Db, cfbd: () => CfbdClient, now: Date = new Date()): Promise<Slate | null> {
+  const published = await publishedSlate(db);
+  if (!published) return null;
+  return deadlinePassed(published.week, now) ? refreshQuietly(db, cfbd, published, now) : published;
+}
+
+/**
  * The Week this member is in right now, or null when no Week in the active
  * season has been published. The Slate arrives published by construction, so
  * the "not published" throws inside `pickSheet` and `weekPicks` are

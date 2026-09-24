@@ -2,15 +2,19 @@ import Link from "next/link";
 import { db } from "@/db";
 import { AppHeader } from "@saturday-slate/design-system";
 
+import { cfbd } from "@/lib/cfbd";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
-import { seasonResult } from "@/lib/results/results";
+import { effectiveResult, seasonResult } from "@/lib/results/results";
 import { seasonChampion, seasonStatusLabel, weeklyWinSentence } from "@/lib/results/summary";
-import { MAX_WEEK_NUMBER, weekParam } from "@/lib/slate/slate";
+import { MAX_WEEK_NUMBER } from "@/lib/slate/slate";
+import { freshSlate } from "@/lib/week/week";
 import { LeaderboardTable } from "./leaderboard-table";
+import { gamesLeftLabel, selectedWeek, stripTiles, weekInProgress } from "./week-view";
+import { LiveWeekCard, WeekStrip } from "./week-strip";
 import { WeeklyScoreList } from "./weekly-score";
 
 /**
@@ -23,19 +27,32 @@ import { WeeklyScoreList } from "./weekly-score";
  *
  * `?week=` swaps the season table for that one Week's standings. They come
  * out of the same `seasonResult` pass, so a week's board and the season it
- * feeds cannot disagree, and choosing a week costs no further query. A Week
- * that has not been played falls back to the season.
+ * feeds cannot disagree, and choosing a week costs no further query. Without
+ * one — or with a Week that has not been played — it opens on the Week in
+ * progress while there is one, and on Season otherwise (#243);
+ * `?week=season` asks for Season outright.
+ *
+ * While a Week is in progress the feed is pulled first, on the Live Board's
+ * stale gate, so the standings and the games-left card read the same scores.
  */
 export default async function Leaderboard({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const member = await requireMember();
   const choice = await currentGroupChoice();
   if (choice === null) return <NoGroup member={member} />;
-  const season = await seasonResult(db(), choice.current.id, new Date());
+  const now = new Date();
+  const slate = await freshSlate(db(), cfbd, now);
+  const season = await seasonResult(db(), choice.current.id, now);
   const played = season.weeks;
   const latest = played[played.length - 1];
   const { week: requested } = await searchParams;
-  const requestedNumber = weekParam(requested);
-  const shown = played.find((w) => w.week.weekNumber === requestedNumber) ?? null;
+  const shown = selectedWeek(played, requested);
+  const going = weekInProgress(played);
+  // The games are the published Slate's, which is the Week in progress
+  // whenever there is one: only the latest played Week can be.
+  const left =
+    shown !== null && shown === going && slate?.week.id === going.week.id
+      ? gamesLeftLabel(slate.games.map(effectiveResult))
+      : "";
   // Null when nobody played the Week, which is not the same as an empty
   // sentence: interpolating it straight into the footnote puts "null" on the board.
   const won = shown ? weeklyWinSentence(shown.weeklyWin, shown.complete) : null;
@@ -56,26 +73,22 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
         right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
       />
 
-      {/* Plain links: a GET per view, nothing
-          to hydrate, and the one on screen is the one the URL names. */}
       {played.length > 0 ? (
-        <nav aria-label="Standings" className="flex flex-wrap gap-2 px-4">
-          {[null, ...played.map((w) => w.week.weekNumber)].map((number) => {
-            const here = (shown?.week.weekNumber ?? null) === number;
-            return (
-              <Link
-                key={number ?? "season"}
-                href={number === null ? "/leaderboard" : `/leaderboard?week=${number}`}
-                aria-current={here ? "page" : undefined}
-                className={`flex min-h-tap items-center rounded-full border px-3 text-sm font-bold no-underline ${
-                  here ? "border-primary bg-primary text-primary-foreground" : "border-border text-foreground"
-                }`}
-              >
-                {number === null ? "Season" : `Week ${number}`}
-              </Link>
-            );
+        <WeekStrip
+          tiles={stripTiles({
+            year: season.season.year,
+            played,
+            leaderboard: season.leaderboard,
+            viewerId: member.id,
+            shown,
           })}
-        </nav>
+        />
+      ) : null}
+
+      {left ? (
+        <div className="px-4">
+          <LiveWeekCard left={left} serverNow={now.toISOString()} />
+        </div>
       ) : null}
 
       <section className="px-4">
