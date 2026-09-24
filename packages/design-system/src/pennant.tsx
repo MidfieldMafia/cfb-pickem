@@ -5,7 +5,9 @@ import { cn } from "cn";
 /** The tint every disc without a chosen pennant falls back to — never flat gray. */
 const FALLBACK_PENNANT = "var(--muted-foreground)";
 
-const DISC = "bg-[color-mix(in_srgb,var(--pennant)_18%,transparent)]";
+// Mixed over the card rather than `transparent`, so the disc is opaque paper on
+// any surface: over the pine YourRank card a see-through tint went muddy (#246).
+const DISC = "bg-[color-mix(in_srgb,var(--pennant)_18%,var(--card))]";
 
 export interface PennantMark {
   /** The pennant's own display name, used as the image `alt` of a flag or logo. */
