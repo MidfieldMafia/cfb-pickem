@@ -73,7 +73,7 @@ function groupCounts(rows: Standing[]): Map<number, number> {
 }
 
 /** Every group, oldest first, with what the console's list shows about each. */
-export async function listGroups(db: Db, actor: Commissioner): Promise<GroupSummary[]> {
+export async function listGroups(db: Db, _actor: Commissioner): Promise<GroupSummary[]> {
   const [all, rows] = await Promise.all([db.query.groups.findMany({ orderBy: asc(groups.id) }), standing(db)]);
   const counts = groupCounts(rows);
   return all.map((group) => {
@@ -90,9 +90,9 @@ export async function listGroups(db: Db, actor: Commissioner): Promise<GroupSumm
 
 /**
  * Each person's groups now, keyed by member id, oldest group first; a person in
- * none is absent. `actor` is the guard, as `listMembers`' is.
+ * none is absent. `_actor` is the guard, as `listMembers`' is.
  */
-export async function groupsByMember(db: Db, actor: Commissioner): Promise<Map<number, GroupOfMember[]>> {
+export async function groupsByMember(db: Db, _actor: Commissioner): Promise<Map<number, GroupOfMember[]>> {
   const [all, rows] = await Promise.all([db.query.groups.findMany({ orderBy: asc(groups.id) }), standing(db)]);
   const byMember = new Map<number, GroupOfMember[]>();
   for (const group of all) {
