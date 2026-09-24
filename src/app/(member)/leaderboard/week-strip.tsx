@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, Radio } from "lucide-react";
 
-import { FreshnessLine } from "@/components/freshness-line";
 import type { StripTile } from "./week-view";
 
 /**
@@ -86,10 +85,11 @@ export function WeekStrip({ tiles }: { tiles: StripTile[] }) {
 
 /**
  * Above a Week in progress: what is left of it and a way back to the Live
- * Board, where it is being played. Gone once the Week is final. The freshness
- * line has no "next check" half, because this screen does not poll.
+ * Board, where it is being played. Gone once the Week is final. No freshness
+ * line, unlike the Live Board's: this screen does not poll, so it would only
+ * count up from the page load.
  */
-export function LiveWeekCard({ left, serverNow }: { left: string; serverNow: string }) {
+export function LiveWeekCard({ left }: { left: string }) {
   return (
     <Link
       href="/live"
@@ -97,10 +97,7 @@ export function LiveWeekCard({ left, serverNow }: { left: string; serverNow: str
       className="flex min-h-14 items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2 text-foreground no-underline"
     >
       <Radio size={20} aria-hidden className="shrink-0" />
-      <div className="flex grow flex-col">
-        <p className="text-sm font-bold">{left}</p>
-        <FreshnessLine serverNow={serverNow} nextPollAt={null} icon={false} />
-      </div>
+      <p className="grow text-sm font-bold">{left}</p>
       <ChevronRight size={16} aria-hidden className="shrink-0 text-muted-foreground" />
     </Link>
   );

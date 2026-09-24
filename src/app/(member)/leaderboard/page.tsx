@@ -87,7 +87,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
 
       {left ? (
         <div className="px-4">
-          <LiveWeekCard left={left} serverNow={now.toISOString()} />
+          <LiveWeekCard left={left} />
         </div>
       ) : null}
 

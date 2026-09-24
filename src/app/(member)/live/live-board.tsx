@@ -1,14 +1,14 @@
 "use client";
 
-import { Check, ChevronRight, Lock, LockOpen, Radio, Scale, X } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, Scale, X } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AppHeader, LocalTime, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@saturday-slate/design-system";
 
-import { FreshnessLine } from "@/components/freshness-line";
 import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
 
+import { useDeadlineClock } from "@/lib/picks/clock";
 import { clockLabel, type GameResult } from "@/lib/results/result";
 import type { RevealGame, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import { sideStanding, type SideStanding } from "@/lib/results/side";
@@ -16,6 +16,7 @@ import { record, standing } from "@/lib/results/summary";
 import { plural } from "@/lib/plural";
 import { isVoid, voidNote, type MemberJson } from "@/lib/slate/json";
 import { fetchWeekState } from "@/lib/week/client";
+import { agoLabel, dueInLabel } from "@/lib/week/freshness";
 import type { WeekStateJson } from "@/lib/week/json";
 import { nextPollMs } from "@/lib/week/poll";
 
@@ -79,6 +80,41 @@ function useWeekState(initial: WeekStateJson): { state: WeekStateJson; nextPollA
   }, [state]);
 
   return { state, nextPollAt };
+}
+
+/**
+ * The reassurance Norah asked pull-to-refresh for (#95): when the scores on
+ * screen were last confirmed current, and when the next check is due. Ticks
+ * on its own between polls rather than freezing at the render that set it —
+ * `useDeadlineClock` already does exactly that against the server's clock, so
+ * this reads it backwards: "remaining" to a `serverNow` already in the past
+ * is the negative of how long ago it was. `nextPollAt` is the phone's own
+ * clock, so it needs no such correction.
+ *
+ * Rendered only while there is still something to poll for; once the Week is
+ * complete there is nothing left to go stale, and the games' own "Final"
+ * already says so.
+ */
+const subscribeEverySecond = (onTick: () => void) => {
+  const timer = setInterval(onTick, 1000);
+  return () => clearInterval(timer);
+};
+
+function FreshnessLine({ serverNow, nextPollAt }: { serverNow: string; nextPollAt: number | null }) {
+  const { remainingMs } = useDeadlineClock(serverNow, serverNow);
+  const elapsedMs = Math.max(0, -remainingMs);
+  // `nextPollAt` is stamped on the phone's own clock, so ticking this against
+  // it needs no server-offset correction — just a re-render every second,
+  // read the sanctioned way rather than calling `Date.now()` in the render body.
+  const clientNow = useSyncExternalStore(subscribeEverySecond, () => Date.now(), () => 0);
+  const dueInMs = nextPollAt === null ? null : Math.max(0, nextPollAt - clientNow);
+  return (
+    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+      <RefreshCw size={11} aria-hidden />
+      Updated {agoLabel(elapsedMs)}
+      {dueInMs === null ? null : ` · next check ${dueInLabel(dueInMs)}`}
+    </p>
+  );
 }
 
 /**
