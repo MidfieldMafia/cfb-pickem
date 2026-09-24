@@ -118,3 +118,12 @@ export function gamesLeftLabel(results: readonly GameResult[]): string {
   if (toKickOff > 0) parts.push(parts.length ? `${toKickOff} to kick off` : `${plural(toKickOff, "game")} to kick off`);
   return parts.join(" · ");
 }
+
+/**
+ * Where the Reveal card under a Week's standings goes (#244, board 9), or null
+ * where there is no card: on Season, and on a Week still being played, whose
+ * Reveal is the Live Board's to show.
+ */
+export function revealHref(shown: GradedWeek | null): string | null {
+  return shown?.complete ? `/leaderboard/reveal?week=${shown.week.weekNumber}` : null;
+}
