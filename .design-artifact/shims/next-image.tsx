@@ -1,7 +1,7 @@
-// design-sync shim: next/image needs the Next runtime (process.env.__NEXT_*), which a design
-// project doesn't have. Render the plain <img> the component asks for.
+// next/image needs the Next runtime (process.env.__NEXT_*), which the Artifact
+// design system page does not have. Render the plain <img> the component asks for.
 import * as React from "react";
-// The app serves /brand/mark.svg from public/; a design project has no such path, so inline it.
+// The app serves /brand/mark.svg from public/; the Artifact page has no such path, so inline it.
 // @ts-expect-error -- esbuild dataurl loader
 import markUrl from "../../public/brand/mark.svg";
 

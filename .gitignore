@@ -48,12 +48,7 @@ next-env.d.ts
 .idea/
 .claude/worktrees/
 
-# design-sync
-/.ds-sync/
-/ds-bundle/
-/.design-sync/.cache/
-/.design-sync/learnings/
-/.design-sync/node_modules
+# design-artifact: the Artifact copies read for a sync, and the build staged for it
+/.design-artifact/artifact/
+/.design-artifact/out/
 /.npm-ci.log
-/packages/*/.ds-compiled.css
-/.design-sync/.*.log
