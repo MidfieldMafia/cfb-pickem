@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, History, Lock, Radio, Trophy } from "lucide-react";
+import { ClipboardCheck, Lock, Radio, Trophy } from "lucide-react";
 
 const TABS = [
   { href: "/picks", label: "Picks", Icon: ClipboardCheck },
   { href: "/live", label: "Live Board", Icon: Radio },
-  { href: "/history", label: "History", Icon: History },
   { href: "/leaderboard", label: "Leaderboard", Icon: Trophy },
 ] as const;
 
 /**
- * The four tabs of the phone app, the same for every member — the Console
+ * The three tabs of the phone app, the same for every member — History merged
+ * into the Leaderboard's Week chips (#242), and Chat becomes the fourth in v3
+ * (#248). The Console
  * lives behind a header icon (`HeaderLinks`) rather than a tab now, since it is
  * only ever relevant to a commissioner. Fixed to the visual viewport (not
  * sticky), so it stays under the thumb through an iOS pinch-zoom or URL-bar
@@ -75,13 +76,13 @@ export function BottomNav({ locked, picksOpen }: { locked: boolean; picksOpen: b
     <>
       <div
         aria-hidden
-        className="invisible grid grid-cols-4 border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
+        className="invisible grid grid-cols-3 border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
       >
         {tiles}
       </div>
       <nav
         aria-label="App"
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-card pr-[env(safe-area-inset-right)] pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)]"
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-3 border-t border-border bg-card pr-[env(safe-area-inset-right)] pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)]"
       >
         {tiles}
       </nav>

@@ -10,8 +10,8 @@ import { requireMember } from "@/lib/members/current";
 import { seasonResult } from "@/lib/results/results";
 import { seasonChampion, seasonStatusLabel, weeklyWinSentence } from "@/lib/results/summary";
 import { MAX_WEEK_NUMBER, weekParam } from "@/lib/slate/slate";
-import { WeeklyScoreList } from "../history/results/weekly-score";
 import { LeaderboardTable } from "./leaderboard-table";
+import { WeeklyScoreList } from "./weekly-score";
 
 /**
  * The season standings, computed on every read: nothing here is stored, so a
@@ -56,7 +56,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
         right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
       />
 
-      {/* Plain links, as on the week results screen: a GET per view, nothing
+      {/* Plain links: a GET per view, nothing
           to hydrate, and the one on screen is the one the URL names. */}
       {played.length > 0 ? (
         <nav aria-label="Standings" className="flex flex-wrap gap-2 px-4">
@@ -102,9 +102,6 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
       <div className="flex flex-col px-4">
         <Link href="/rules" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
           How scoring and ties work
-        </Link>
-        <Link href="/history" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
-          See week-by-week history
         </Link>
       </div>
     </main>

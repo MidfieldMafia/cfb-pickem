@@ -16,7 +16,7 @@ import { managePath } from "./manage-state";
 export const GROUPS_PATH = "/console/groups";
 
 /** Every board a group's membership shows on, as `manage-route.ts` refreshes them. */
-const BOARDS = ["/leaderboard", "/live", "/history", "/history/results"];
+const BOARDS = ["/leaderboard", "/live"];
 
 const text = (fields: FormData, name: string) => String(fields.get(name) ?? "");
 

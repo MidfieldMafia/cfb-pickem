@@ -95,7 +95,7 @@ export function startFromForm(route: JoinRoute, fields: FormData): Promise<Outco
 }
 
 /** Everywhere a group's membership shows, as the Manage screen's edits refresh. */
-const BOARDS = ["/you", "/leaderboard", "/live", "/history", "/history/results"];
+const BOARDS = ["/you", "/leaderboard", "/live"];
 
 /** Leaving from the You screen. Signed out, there is nobody to leave anything. */
 export function leaveFromForm(route: JoinRoute, fields: FormData): Promise<Outcome> {

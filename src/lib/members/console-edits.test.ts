@@ -24,8 +24,6 @@ describe("a commissioner's member edit from the console", () => {
       "/console/members",
       "/console/picks",
       "/live",
-      "/history",
-      "/history/results",
       "/leaderboard",
     ]);
     expect(await db.query.members.findMany()).toHaveLength(1);

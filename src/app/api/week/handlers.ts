@@ -84,8 +84,8 @@ function weekStateEtag(state: WeekStateJson, group: number | null): string {
  * Deadline has passed, and the server clock. A poll carries the ETag it last
  * saw and gets a 304 with no body while the Week has not moved.
  *
- * The feed is pulled on the way through, on the same stale gate `/week` and
- * `/history/results` drive, so a phone polling every thirty seconds costs the quota
+ * The feed is pulled on the way through, on the same stale gate `/week`
+ * drives, so a phone polling every thirty seconds costs the quota
  * nothing beyond the one call per interval the gate allows — and a feed that
  * will not answer leaves the Week readable with the scores it had.
  *

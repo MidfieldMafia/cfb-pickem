@@ -46,7 +46,7 @@ export interface ManageRoute {
  * group's boards, renaming heads them, and a role change moves the header's
  * Manage icon, so every edit refreshes the lot rather than each guessing.
  */
-const BOARDS = ["/leaderboard", "/live", "/history", "/history/results"];
+const BOARDS = ["/leaderboard", "/live"];
 
 const id = (fields: Fields, name: string) => integerField(fields, name, (field) => new InvalidGroup(`Missing ${field}.`));
 

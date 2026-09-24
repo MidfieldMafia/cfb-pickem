@@ -25,8 +25,8 @@ import {
 } from "@/test/week-2";
 import { dropOverride, editResult, refreshResults, restoreResult, voidResult } from "./console-edits";
 
-/** Every result change shows on the console table and on the Reveal. */
-const BOTH = ["/console/results", "/history/results"];
+/** Every result change shows on the console table and on the Leaderboard. */
+const BOTH = ["/console/results", "/leaderboard"];
 
 async function setup() {
   const fixture: PublishedWeek2 = await publishWeek2();

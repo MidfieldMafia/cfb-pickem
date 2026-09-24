@@ -317,11 +317,11 @@ describe("the landing route (#91's states)", () => {
     expect(landingRoute(await familyWeek(db,grandma, SUNDAY, { graded: true }))).toBe("/live");
   });
 
-  test("goes to History once every non-void game is final", async () => {
+  test("goes to the Leaderboard once every non-void game is final", async () => {
     const { db, week, grandma } = await publishWeek2();
     await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
 
-    expect(landingRoute(await familyWeek(db,grandma, SUNDAY, { graded: true }))).toBe("/history");
+    expect(landingRoute(await familyWeek(db,grandma, SUNDAY, { graded: true }))).toBe("/leaderboard");
   });
 
   test("a member in no group lands on the Live Board, where the no-group screen is", async () => {

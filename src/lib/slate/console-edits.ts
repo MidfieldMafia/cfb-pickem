@@ -55,7 +55,7 @@ export function editVoidGame(route: ConsoleRoute, form: FormData): Promise<Actio
     await voidGame(db, actor, num(form, "gameId"), String(form.get("note") ?? ""), now);
     return {
       done: "Voided. It scores zero for everyone, and any Lock on it is dropped until the game is restored.",
-      revalidate: [SLATE_PATH, "/history/results"],
+      revalidate: [SLATE_PATH, "/leaderboard"],
     };
   });
 }
