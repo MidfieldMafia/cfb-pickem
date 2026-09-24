@@ -7,10 +7,10 @@ import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { eq } from "drizzle-orm";
 import { chatMessages } from "@/db/schema";
-import { manageGroup, removeFromGroup } from "@/lib/groups/manage";
+import { demoteInGroup, manageGroup, promoteInGroup, removeFromGroup } from "@/lib/groups/manage";
 import { addGroup, familyGroup, joinGroup, seedWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { postMessage } from "./chat";
-import { getChat, getChatUnread, postChat, postChatReaction, type ChatRoute } from "./http";
+import { getChat, getChatUnread, postChat, postChatDelete, postChatReaction, type ChatRoute } from "./http";
 import type { ChatStateJson } from "./json";
 
 function routeFor(db: Db, member: Member | null, group: number | null): ChatRoute {
@@ -168,5 +168,69 @@ describe("POST /api/chat/reactions", () => {
     expect((await postChatReaction(react({ ...body, group: undefined }), routeFor(db, grandma, family.id))).status).toBe(404);
     await removeFromGroup(db, await manageGroup(db, jonah, family.id), grandma.id, THURSDAY);
     expect((await postChatReaction(react(body), routeFor(db, grandma, family.id))).status).toBe(403);
+  });
+});
+
+describe("POST /api/chat/delete", () => {
+  const takeDown = (body: unknown) =>
+    new Request("http://test/api/chat/delete", { method: "POST", body: typeof body === "string" ? body : JSON.stringify(body) });
+
+  test("deletes your own and answers the thread with its placeholder, with a new ETag", async () => {
+    const { db, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, grandma, family.id, "Oops", THURSDAY);
+    const route = routeFor(db, grandma, family.id);
+    const before = (await getChat(get(family.id), route)).headers.get("etag")!;
+
+    const response = await postChatDelete(takeDown({ group: family.id, message: message.id }), route);
+    expect(response.status).toBe(200);
+    const state = (await response.json()) as ChatStateJson;
+    expect(state.messages).toEqual([expect.objectContaining({ id: message.id, text: "", gone: "deleted" })]);
+    expect(state.canRemove).toBe(false);
+    expect(response.headers.get("etag")).not.toBe(before);
+  });
+
+  test("a Member on someone else's message gets a 400, not the 403 that means out of the Group", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, jonah, family.id, "Bold Lock", THURSDAY);
+
+    const response = await postChatDelete(takeDown({ group: family.id, message: message.id }), routeFor(db, grandma, family.id));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Only the group's organizers can remove someone else's message." });
+  });
+
+  test("400 naming no message, 401 signed out, 404 naming no group, 403 once removed", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, grandma, family.id, "Oops", THURSDAY);
+    const body = { group: family.id, message: message.id };
+
+    expect((await postChatDelete(takeDown({ group: family.id }), routeFor(db, grandma, family.id))).status).toBe(400);
+    expect((await postChatDelete(takeDown(body), routeFor(db, null, family.id))).status).toBe(401);
+    expect((await postChatDelete(takeDown({ message: message.id }), routeFor(db, grandma, family.id))).status).toBe(404);
+    await removeFromGroup(db, await manageGroup(db, jonah, family.id), grandma.id, THURSDAY);
+    expect((await postChatDelete(takeDown(body), routeFor(db, grandma, family.id))).status).toBe(403);
+  });
+
+  test("the thread says who may remove, and becoming an Organizer reaches an open thread past its ETag", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    await postMessage(db, jonah, family.id, "Hi", THURSDAY);
+    const route = routeFor(db, grandma, family.id);
+
+    const first = await getChat(get(family.id), route);
+    expect(((await first.json()) as ChatStateJson).canRemove).toBe(false);
+    const etag = first.headers.get("etag")!;
+
+    const manager = await manageGroup(db, jonah, family.id);
+    await promoteInGroup(db, manager, grandma.id);
+    const promoted = await getChat(get(family.id, etag), route);
+    expect(promoted.status).toBe(200);
+    expect(((await promoted.json()) as ChatStateJson).canRemove).toBe(true);
+
+    await demoteInGroup(db, manager, grandma.id);
+    expect((await getChat(get(family.id, etag), route)).status).toBe(304);
+    expect(((await (await getChat(get(family.id), routeFor(db, jonah, family.id))).json()) as ChatStateJson).canRemove).toBe(true);
   });
 });

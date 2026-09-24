@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Ellipsis } from "lucide-react";
 import type { ChatMessageJson } from "@/lib/chat/json";
 import { CHAT_REACTION_LABELS, chatReactionKinds, type ChatReactionKind } from "@/lib/chat/reactions";
 
@@ -104,16 +105,24 @@ export function ReactionChips({ message, mine }: { message: ChatMessageJson; min
 
 /**
  * The tray under a tapped message: the four reactions, the viewer's own
- * filled. Escape closes it. It scrolls itself into view on opening, since the
- * message tapped is often the last one, with the composer just below.
+ * filled, then More when it has something in it (#250). The viewer's own
+ * message takes no reaction from them, so its tray is More alone. Escape
+ * closes it. It scrolls itself into view on opening, since the message tapped
+ * is often the last one, with the composer just below.
  */
 export function ReactionTray({
   message,
+  mine,
   onPick,
+  onMore,
   onClose,
 }: {
   message: ChatMessageJson;
+  /** The viewer's own message: no reactions, only More. */
+  mine: boolean;
   onPick: (kind: ChatReactionKind) => void;
+  /** Opens Delete or Remove; undefined when the viewer may do neither, and More is left out. */
+  onMore: (() => void) | undefined;
   onClose: () => void;
 }) {
   const tray = useRef<HTMLDivElement>(null);
@@ -126,29 +135,42 @@ export function ReactionTray({
     <div
       ref={tray}
       role="group"
-      aria-label="React to this message"
+      aria-label={mine ? "Your message" : "React to this message"}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
       }}
-      className="mt-0.5 flex gap-0.5 self-start rounded-[14px] border border-border bg-popover p-1"
+      className={`mt-0.5 flex gap-0.5 rounded-[14px] border border-border bg-popover p-1 ${mine ? "self-end" : "self-start"}`}
     >
-      {chatReactionKinds.map((kind) => {
-        const on = message.mine === kind;
-        return (
-          <button
-            key={kind}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onPick(kind)}
-            className={`flex h-12 w-[60px] flex-col items-center justify-center gap-0.5 rounded-md text-[11px] font-bold whitespace-nowrap ${
-              on ? "bg-primary text-primary-foreground" : "text-foreground"
-            }`}
-          >
-            <ReactionIcon kind={kind} size={18} on={on} />
-            {CHAT_REACTION_LABELS[kind]}
-          </button>
-        );
-      })}
+      {mine
+        ? null
+        : chatReactionKinds.map((kind) => {
+            const on = message.mine === kind;
+            return (
+              <button
+                key={kind}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onPick(kind)}
+                className={`flex h-12 w-[60px] flex-col items-center justify-center gap-0.5 rounded-md text-[11px] font-bold whitespace-nowrap ${
+                  on ? "bg-primary text-primary-foreground" : "text-foreground"
+                }`}
+              >
+                <ReactionIcon kind={kind} size={18} on={on} />
+                {CHAT_REACTION_LABELS[kind]}
+              </button>
+            );
+          })}
+      {onMore ? (
+        <button
+          type="button"
+          onClick={onMore}
+          aria-label={mine ? "More: delete this message" : "More: remove this message"}
+          className="flex h-12 w-[52px] flex-col items-center justify-center gap-0.5 rounded-md text-[11px] font-bold text-muted-foreground"
+        >
+          <Ellipsis size={18} aria-hidden />
+          More
+        </button>
+      ) : null}
     </div>
   );
 }

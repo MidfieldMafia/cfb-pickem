@@ -9,7 +9,7 @@ const MARCUS = 3;
 let nextId = 0;
 function msg(memberId: number, at: string, text = "…"): ChatMessageJson {
   nextId += 1;
-  return { id: nextId, memberId, text, createdAt: at, reactions: [], mine: null };
+  return { id: nextId, memberId, text, createdAt: at, reactions: [], mine: null, gone: null };
 }
 
 const shape = (rows: ReturnType<typeof threadRows>) => rows.map((r) => [r.message.memberId, r.mine, r.head, r.tail]);

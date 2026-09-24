@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send, Trash } from "lucide-react";
+import {
+  Button,
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@saturday-slate/design-system";
 import { Pennant } from "@/components/pennant";
-import type { ChatMessageJson, ChatStateJson } from "@/lib/chat/json";
+import { GONE_LABELS, type ChatMessageJson, type ChatStateJson } from "@/lib/chat/json";
 import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import { nextChatPollMs } from "@/lib/chat/poll";
 import { tapReaction, withReaction, type ChatReactionKind } from "@/lib/chat/reactions";
@@ -13,6 +22,7 @@ import { ReactionChips, ReactionTray } from "./reactions";
 
 const CHAT_PATH = "/api/chat";
 const REACTIONS_PATH = "/api/chat/reactions";
+const DELETE_PATH = "/api/chat/delete";
 
 /** How close to the foot of the thread still counts as reading the latest: a new message then scrolls into view. */
 const NEAR_BOTTOM_PX = 80;
@@ -117,6 +127,9 @@ export function ChatThread({
   const { state, gone, setGone, accept, revise } = useChatState(initial, groupId);
   /** The message whose reaction tray is open: one at a time. */
   const [trayFor, setTrayFor] = useState<number | null>(null);
+  /** The message More is asking about deleting or removing (board 3). */
+  const [confirming, setConfirming] = useState<ChatMessageJson | null>(null);
+  const [takingDown, setTakingDown] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -194,6 +207,32 @@ export function ChatThread({
     }
   };
 
+  /** Delete or Remove, confirmed: the server's answer is the thread with the placeholder in. */
+  const takeDown = async (message: ChatMessageJson) => {
+    if (gone || takingDown) return;
+    setTakingDown(true);
+    setError(null);
+    try {
+      const response = await fetch(DELETE_PATH, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ group: groupId, message: message.id }),
+      });
+      if (response.ok) {
+        accept((await response.json()) as ChatStateJson, response.headers.get("etag"));
+      } else {
+        const { error: sentence } = (await response.json().catch(() => ({ error: null }))) as { error: string | null };
+        if (response.status === 403 && sentence) setGone(sentence);
+        else setError(sentence ?? "That did not go through. Try again.");
+      }
+    } catch {
+      setError("That did not go through. Check your connection and try again.");
+    } finally {
+      setTakingDown(false);
+      setConfirming(null);
+    }
+  };
+
   return (
     <>
       {/* `relative` so the sr-only names, which are absolutely positioned, scroll inside this box rather than stretching the page. */}
@@ -209,8 +248,20 @@ export function ChatThread({
                 sender={senders.get(row.message.memberId)}
                 now={now}
                 trayOpen={trayFor === row.message.id}
-                onTray={gone ? undefined : () => setTrayFor((open) => (open === row.message.id ? null : row.message.id))}
+                onTray={
+                  gone || row.message.gone || (row.mine && !canTakeDown(row, state.canRemove))
+                    ? undefined
+                    : () => setTrayFor((open) => (open === row.message.id ? null : row.message.id))
+                }
                 onReact={(kind) => void react(row.message, kind)}
+                onMore={
+                  canTakeDown(row, state.canRemove)
+                    ? () => {
+                        setTrayFor(null);
+                        setConfirming(row.message);
+                      }
+                    : undefined
+                }
               />
             ))}
           </ol>
@@ -255,14 +306,29 @@ export function ChatThread({
           </p>
         ) : null}
       </form>
+
+      <TakeDownSheet
+        message={confirming}
+        sender={confirming ? senders.get(confirming.memberId) : undefined}
+        viewerId={viewer.id}
+        busy={takingDown}
+        onConfirm={(message) => void takeDown(message)}
+        onClose={() => setConfirming(null)}
+      />
     </>
   );
 }
 
+/** More has something in it: Delete on the viewer's own message, Remove on anyone's for an Organizer or Commissioner. */
+function canTakeDown(row: ThreadRow, canRemove: boolean): boolean {
+  return row.message.gone === null && (row.mine || canRemove);
+}
+
 /**
- * One message. Someone else's is a button that opens the reaction tray beneath
- * it (board 5); the viewer's own takes no reaction from them, only shows the
- * others'.
+ * One message. Tapping it opens the tray beneath it (board 5): someone else's
+ * to react, and More when there is something in it; the viewer's own for More
+ * alone, since they take no reaction from themselves. A deleted or removed
+ * message is a one-line placeholder in its place, with nothing to tap.
  */
 function Message({
   row,
@@ -271,28 +337,47 @@ function Message({
   trayOpen,
   onTray,
   onReact,
+  onMore,
 }: {
   row: ThreadRow;
   sender: MemberJson | undefined;
   now: Date;
   trayOpen: boolean;
-  /** Undefined once the member is out of the Group: the thread is still there to read, not to react to. */
+  /** Undefined when there is nothing to open: once the member is out of the Group, or on a message that is gone. */
   onTray: (() => void) | undefined;
   onReact: (kind: ChatReactionKind) => void;
+  /** Undefined when More has nothing in it. */
+  onMore: (() => void) | undefined;
 }) {
   const { message, mine, head, tail } = row;
   const time = chatTimeLabel(message.createdAt, now);
   const name = sender?.displayName ?? "Someone";
+  const tray = trayOpen ? (
+    <ReactionTray message={message} mine={mine} onPick={onReact} onMore={onMore} onClose={onTray ?? (() => {})} />
+  ) : null;
 
   if (mine) {
     return (
       <li className={`flex flex-col items-end gap-0.5 ${head ? "pt-2" : ""}`}>
         {head ? <span className="pr-3 text-xs text-muted-foreground">{time}</span> : null}
         <span className="sr-only">You:</span>
-        <p className="max-w-[270px] rounded-[14px] bg-primary px-3 py-2 text-base leading-[22px] break-words whitespace-pre-wrap text-primary-foreground">
-          {message.text}
-        </p>
+        {message.gone ? (
+          <Placeholder message={message} />
+        ) : (
+          <button
+            type="button"
+            onClick={onTray}
+            disabled={!onTray}
+            aria-expanded={onTray ? trayOpen : undefined}
+            className={`max-w-[270px] rounded-[14px] bg-primary px-3 py-2 text-left text-base leading-[22px] break-words whitespace-pre-wrap text-primary-foreground ${
+              trayOpen ? "ring-2 ring-ring ring-offset-2 ring-offset-background" : ""
+            }`}
+          >
+            {message.text}
+          </button>
+        )}
         <ReactionChips message={message} mine />
+        {tray}
       </li>
     );
   }
@@ -313,23 +398,94 @@ function Message({
         <div className="flex w-7 shrink-0" aria-hidden>
           {tail ? <Pennant avatarId={sender?.avatarId ?? null} name={name} size={28} /> : null}
         </div>
-        <button
-          type="button"
-          onClick={onTray}
-          disabled={!onTray}
-          aria-expanded={trayOpen}
-          className={`max-w-[270px] min-w-0 rounded-[14px] border bg-card px-3 py-2 text-left text-base leading-[22px] break-words whitespace-pre-wrap text-foreground ${
-            trayOpen ? "border-ring" : "border-settled-border"
-          }`}
-        >
-          {message.text}
-        </button>
+        {message.gone ? (
+          <Placeholder message={message} />
+        ) : (
+          <button
+            type="button"
+            onClick={onTray}
+            disabled={!onTray}
+            aria-expanded={trayOpen}
+            className={`max-w-[270px] min-w-0 rounded-[14px] border bg-card px-3 py-2 text-left text-base leading-[22px] break-words whitespace-pre-wrap text-foreground ${
+              trayOpen ? "border-ring" : "border-settled-border"
+            }`}
+          >
+            {message.text}
+          </button>
+        )}
       </div>
       <div className="flex min-w-0 flex-col gap-0.5 pl-9">
         <ReactionChips message={message} mine={false} />
-        {trayOpen ? <ReactionTray message={message} onPick={onReact} onClose={onTray ?? (() => {})} /> : null}
+        {tray}
       </div>
     </li>
+  );
+}
+
+/** Where a deleted or removed message was: one line, and no bubble. */
+function Placeholder({ message }: { message: ChatMessageJson }) {
+  return (
+    <p className="m-0 rounded-[14px] border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground italic">
+      {message.gone ? GONE_LABELS[message.gone] : null}
+    </p>
+  );
+}
+
+/**
+ * Board 3: More's question before a message goes. Delete for the viewer's
+ * own; Remove, under the power that allows it, for anyone else's. The sheet
+ * does not know which power that is, only that the server allowed it, so it
+ * names neither: the placeholder the thread keeps says who did it.
+ */
+function TakeDownSheet({
+  message,
+  sender,
+  viewerId,
+  busy,
+  onConfirm,
+  onClose,
+}: {
+  message: ChatMessageJson | null;
+  sender: MemberJson | undefined;
+  viewerId: number;
+  busy: boolean;
+  onConfirm: (message: ChatMessageJson) => void;
+  onClose: () => void;
+}) {
+  const own = message?.memberId === viewerId;
+  const name = sender?.displayName ?? "Someone";
+  return (
+    <Drawer open={message !== null} onOpenChange={(open) => (open ? null : onClose())}>
+      <DrawerContent className="mx-auto max-w-md">
+        {message ? (
+          <>
+            <DrawerHeader>
+              <DrawerTitle>{own ? "Delete your message?" : `Remove ${name}'s message?`}</DrawerTitle>
+              <DrawerDescription>
+                {own
+                  ? "It comes out of the chat for everyone. The thread keeps a line saying it was deleted."
+                  : "It comes out of the chat for every Member. The thread keeps a line saying who removed it."}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4">
+              <div className="flex items-center gap-2.5 rounded-md border border-settled-border bg-settled px-3 py-2.5">
+                <Pennant avatarId={sender?.avatarId ?? null} name={name} size={20} />
+                <span className="min-w-0 text-sm break-words">{message.text}</span>
+              </div>
+            </div>
+          </>
+        ) : null}
+        <DrawerFooter>
+          <Button type="button" variant="destructive" className="h-11" disabled={busy} onClick={() => message && onConfirm(message)}>
+            <Trash aria-hidden />
+            {own ? "Delete message" : "Remove message"}
+          </Button>
+          <Button type="button" variant="outline" className="h-11" onClick={onClose}>
+            Keep it
+          </Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
