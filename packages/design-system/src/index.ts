@@ -21,3 +21,4 @@ export * from "./team-logo";
 export * from "./member-chip";
 export * from "./member-menu";
 export * from "./standing-card";
+export * from "./bottom-nav";
