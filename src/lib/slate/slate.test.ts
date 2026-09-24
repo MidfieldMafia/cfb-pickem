@@ -20,8 +20,8 @@ import {
   setTiebreaker,
   slateFor,
   SlatePublished,
-  voidGame,
 } from "./slate";
+import { voidGame } from "@/lib/results/writes";
 
 const TUESDAY_BEFORE = new Date("2026-09-08T18:00:00Z");
 const THURSDAY_BEFORE = new Date("2026-09-10T20:00:00Z");

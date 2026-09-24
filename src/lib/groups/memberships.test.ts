@@ -16,7 +16,7 @@ import * as schema from "@/db/schema";
 import { groups, locks, memberships, membershipRemovals, members, picks, seasons, tiebreakerGuesses } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { Commissioner } from "@/lib/members/authority";
-import { seasonResult, ingestResults, weekResult } from "@/lib/results/results";
+import { seasonResult, weekResult } from "@/lib/results/results";
 import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
 import { createTestDb } from "@/test/db";
 import {
@@ -36,6 +36,7 @@ import { weekCandidates } from "@/lib/cfbd/candidates";
 import { recordedCfbd } from "@/lib/cfbd/recorded";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
 import { groupRoster, memberGroups, MABRY_FAMILY } from "./memberships";
+import { ingestResults } from "@/lib/results/writes";
 
 /** The member columns that existed before groups; later migrations only add to them. */
 const columnsThen = Object.fromEntries(

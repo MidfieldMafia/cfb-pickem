@@ -17,7 +17,8 @@ import { pillClass } from "../pill";
 import { fbsOnlyParam, filterParam, FILTERS, matches } from "./candidate-filter";
 import { dirParam, sortCandidates, sortParam, type SortDir } from "./candidate-sort";
 import { slateQuery } from "./slate-query";
-import { addGameAction, removeGameAction, setTiebreakerAction, voidGameAction } from "./actions";
+import { voidResultAction } from "../results/actions";
+import { addGameAction, removeGameAction, setTiebreakerAction } from "./actions";
 import { openMeteo } from "@/lib/weather/open-meteo";
 import { CandidateCheckbox } from "./candidate-checkbox";
 import { DeadlineForm } from "./deadline-form";
@@ -353,7 +354,7 @@ function SlateRow({
             Void
           </summary>
           <ActionForm
-            action={voidGameAction}
+            action={voidResultAction}
             hidden={{ gameId: game.id }}
             submit="Void"
             pendingLabel="Voiding…"

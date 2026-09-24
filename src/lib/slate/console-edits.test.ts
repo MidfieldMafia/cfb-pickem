@@ -1,14 +1,15 @@
 /**
- * The slate builder's seven edits over an injected `ConsoleRoute`. Only
- * `editVoidGame` was ever exercised, and that from another module's suite.
+ * The slate builder's six edits over an injected `ConsoleRoute`. Voiding a
+ * Game is not one of them: the slate console's Void posts to `voidResult`,
+ * which the results console shares, so it is tested with the result edits.
  *
  * The revalidate sets are the only thing these wrappers add over `slate.ts`,
  * so they are asserted on every edit. The other half of what is under test is
- * which wrapper each edit uses: the four on `consoleEdit` turn a refusal into
+ * which wrapper each edit uses: the three on `consoleEdit` turn a refusal into
  * a sentence for the screen, and the three on `consoleAction` deliberately do
  * not — the console disables those buttons, so reaching one means something is
  * wrong and the error page is the honest answer. `refreshSlate` is one of the
- * four for a different reason: a feed outage is nobody's mistake, screen or
+ * three for a different reason: a feed outage is nobody's mistake, screen or
  * commissioner, so it gets a sentence too.
  */
 import { describe, expect, test } from "vitest";

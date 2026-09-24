@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 import type { Member } from "@/db/schema";
 import { setMemberActive } from "@/lib/members/members";
-import { restoreGame } from "@/lib/results/results";
-import { openWeek, slateFor, voidGame } from "@/lib/slate/slate";
+import { openWeek, slateFor } from "@/lib/slate/slate";
 import { groupBoard } from "@/lib/groups/memberships";
 import { familyGroup, guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { DeadlinePassed, pickSheet, PicksHidden, weekPicks } from "./picks";
+import { restoreGame, voidGame } from "@/lib/results/writes";
 
 /**
  * The shared published Week 2, plus readers that re-read the Slate each time:

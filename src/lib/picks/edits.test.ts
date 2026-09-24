@@ -8,14 +8,15 @@
 import { describe, expect, test } from "vitest";
 import { asCommissioner, asMember } from "@/lib/members/authority";
 import { NotCommissioner } from "@/lib/members/members";
-import { editVoidGame } from "@/lib/slate/console-edits";
-import { slateFor, voidGame } from "@/lib/slate/slate";
+import { voidResult } from "@/lib/results/console-edits";
+import { slateFor } from "@/lib/slate/slate";
 import { form, routeFor } from "@/test/console";
 import { pickAs, publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
 import { pickAuditsFor } from "./console";
 import { editGuess, editLock, editPick } from "./console-edits";
 import { applyEdit, type PickEdit } from "./edits";
 import { DeadlinePassed } from "./picks";
+import { voidGame } from "@/lib/results/writes";
 
 describe("a member's own edit", () => {
   test("a pick saves and comes back on the sheet; after the Deadline it is refused", async () => {
@@ -325,15 +326,15 @@ describe("a commissioner's edit from the console", () => {
     const { db, jonah, miami } = await publishWeek2();
     const { route } = routeFor(db, jonah, SUNDAY);
 
-    expect(await editVoidGame(route, form({ gameId: miami.id, note: "   " }))).toEqual({
+    expect(await voidResult(route, form({ gameId: miami.id, note: "   " }))).toEqual({
       error: "Say why in the note.",
     });
-    expect(await editVoidGame(route, form({ gameId: miami.id, note: "x".repeat(201) }))).toEqual({
+    expect(await voidResult(route, form({ gameId: miami.id, note: "x".repeat(201) }))).toEqual({
       error: "Keep the note under 200 characters.",
     });
 
     // At the limit exactly, and it voids.
-    const done = await editVoidGame(route, form({ gameId: miami.id, note: "x".repeat(200) }));
+    const done = await voidResult(route, form({ gameId: miami.id, note: "x".repeat(200) }));
     expect(done.done).toMatch(/voided/i);
   });
 });

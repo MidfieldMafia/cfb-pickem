@@ -11,9 +11,7 @@ import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import type { Commissioner } from "@/lib/members/authority";
-import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
-import { logResultChange } from "@/lib/results/audit";
 import { effectiveResult } from "@/lib/results/result";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 
@@ -302,31 +300,6 @@ export async function removeGame(db: Db, actor: Commissioner, gameId: number): P
     await db.update(weeks).set({ tiebreakerGameId: null }).where(eq(weeks.id, game.weekId));
   }
   await db.delete(games).where(eq(games.id, gameId));
-}
-
-/**
- * Void: canceled or postponed after publish. Scores zero for everyone; stays
- * on the slate with the note. Logged.
- *
- * A Lock sitting on the game becomes a Dropped Lock: the row stays, the
- * scoring engine stops counting it (`LockResult.dropped`), and the screens
- * tell the member why. Deleting it here would be irreversible — `restoreGame`
- * could not put it back, and after the Deadline the member could not either.
- */
-export async function voidGame(db: Db, actor: Commissioner, gameId: number, note: string, now: Date = new Date()): Promise<Game> {
-  const game = await loadGame(db, gameId);
-  if (!game.week.published) throw new InvalidSlate("The slate is not published; remove the game instead.");
-  if (game.void) return game;
-  const invalid = noteError(note);
-  if (invalid) throw new InvalidSlate(invalid);
-  const voidNote = note.trim();
-  const [updated] = await db
-    .update(games)
-    .set({ void: true, voidNote, updatedAt: now })
-    .where(eq(games.id, gameId))
-    .returning();
-  await logResultChange(db, actor.id, "void", game, updated, voidNote, now);
-  return updated;
 }
 
 /**

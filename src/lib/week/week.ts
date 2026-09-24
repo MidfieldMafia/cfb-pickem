@@ -17,14 +17,9 @@ import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
-import {
-  gradedSeason,
-  playedWeeks,
-  refreshResultsIfStale,
-  weekResult,
-  type GradedWeekResult,
-} from "@/lib/results/results";
+import { gradedSeason, playedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
 import { seasonStanding, type SeasonStanding } from "@/lib/results/summary";
+import { refreshResultsIfStale } from "@/lib/results/writes";
 import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
 
 interface WeekBase {

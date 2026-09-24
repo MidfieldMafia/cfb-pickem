@@ -8,7 +8,6 @@ import {
   dropGame,
   editDeadline,
   editPublish,
-  editVoidGame,
   refreshSlate,
 } from "@/lib/slate/console-edits";
 import { openMeteo } from "@/lib/weather/open-meteo";
@@ -34,10 +33,6 @@ export async function setDeadlineAction(_prev: SlateActionState, formData: FormD
 
 export async function publishAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
   return editPublish(consoleRoute(), formData);
-}
-
-export async function voidGameAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {
-  return editVoidGame(consoleRoute(), formData);
 }
 
 export async function refreshAction(_prev: SlateActionState, formData: FormData): Promise<SlateActionState> {

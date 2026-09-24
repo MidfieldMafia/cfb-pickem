@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import type { CfbdScoreboardGame } from "@/lib/cfbd/types";
-import { possessionSide } from "./results";
+import { possessionSide } from "./writes";
 
 /**
  * Ohio State (194) at Texas (251), under way. `possession` is the one field

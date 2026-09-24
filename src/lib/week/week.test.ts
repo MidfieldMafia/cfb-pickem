@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { CfbdClient } from "@/lib/cfbd/types";
-import { ingestResults } from "@/lib/results/results";
-import { addGame, openWeek, publishSlate, setTiebreaker, slateFor, voidGame } from "@/lib/slate/slate";
+import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
 import {
   FAMU_AT_MIAMI,
   familyGroup,
@@ -31,6 +30,7 @@ import {
   type WeekContext,
   type WeekOptions,
 } from "./week";
+import { ingestResults, voidGame } from "@/lib/results/writes";
 
 /**
  * Every member these fixtures seed is in Mabry Family, so that is the board

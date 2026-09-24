@@ -11,7 +11,7 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { membershipRemovals } from "@/db/schema";
-import { ingestResults, seasonResult } from "@/lib/results/results";
+import { seasonResult } from "@/lib/results/results";
 import { slateFor } from "@/lib/slate/slate";
 import {
   addGroup,
@@ -29,6 +29,7 @@ import {
   THURSDAY,
   TUESDAY,
 } from "@/test/week-2";
+import { ingestResults } from "@/lib/results/writes";
 
 /** The Monday after Week 2, for a restore that lands once the week is settled. */
 const MONDAY = new Date("2026-09-14T12:00:00Z");

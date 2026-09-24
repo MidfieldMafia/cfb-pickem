@@ -5,8 +5,8 @@
  *
  * Kept free of database imports, like `picks/progress.ts` and
  * `members/limits.ts`, so `slate/json.ts` can build a `GameView` without
- * dragging the Drizzle schema into a browser bundle. The audit log, which does
- * write rows, stays next door in `audit.ts`.
+ * dragging the Drizzle schema into a browser bundle. Writing a result, and
+ * the audit row each commissioner change logs, is next door in `writes.ts`.
  */
 import type { Game, PossessionSide } from "@/db/schema";
 

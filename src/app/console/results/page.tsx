@@ -8,12 +8,12 @@ import { requireConsole } from "@/lib/members/current";
 import { MAX_NOTE } from "@/lib/notes";
 import {
   clockLabel,
-  MAX_SCORE,
   resultsConsole,
   type GameResult,
   type ResultAudit,
   type ResultLabel,
 } from "@/lib/results/results";
+import { MAX_SCORE } from "@/lib/results/writes";
 import { isVoid, type GameView } from "@/lib/slate/json";
 import { weekParam } from "@/lib/slate/slate";
 import {
