@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { AppHeader } from "@saturday-slate/design-system";
+import { AppHeader, LINK } from "@saturday-slate/design-system";
 
 import { cfbd } from "@/lib/cfbd";
 import { GroupSwitcher } from "@/components/group-switcher";
@@ -121,7 +121,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
       ) : null}
 
       <div className="flex flex-col px-4">
-        <Link href="/rules" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
+        <Link href="/rules" className={LINK}>
           How scoring and ties work
         </Link>
       </div>

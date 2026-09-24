@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, SECTION_LABEL, Wordmark } from "@saturday-slate/design-system";
+import { Card, SECTION_LABEL, Wordmark, LINK } from "@saturday-slate/design-system";
 
 /** Shown at /picks and /picks/review before a commissioner publishes a slate. */
 export function NoSlate() {
@@ -11,7 +11,7 @@ export function NoSlate() {
           <p className={SECTION_LABEL}>This week</p>
           <h1>The slate isn&rsquo;t posted yet</h1>
           <p className="text-muted-foreground">Check back once a commissioner publishes this week&rsquo;s games.</p>
-          <Link href="/" className="text-sm font-semibold underline underline-offset-4">
+          <Link href="/" className={LINK}>
             Back to this week
           </Link>
         </section>

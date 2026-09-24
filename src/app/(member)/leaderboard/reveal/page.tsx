@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { db } from "@/db";
-import { AppHeader, Card, SECTION_LABEL } from "@saturday-slate/design-system";
+import { AppHeader, Card, SECTION_LABEL, BackLink, LINK } from "@saturday-slate/design-system";
 
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
@@ -46,10 +45,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
             <p className="text-muted-foreground">
               A week&rsquo;s picks are revealed here once its deadline has passed and the games are under way.
             </p>
-            <Link
-              href="/leaderboard"
-              className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
-            >
+            <Link href="/leaderboard" className={LINK}>
               See the leaderboard
             </Link>
           </section>
@@ -78,13 +74,9 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
       />
 
       <div className="-mb-3 -mt-1 px-4">
-        <Link
-          href={`/leaderboard?week=${weekNumber}`}
-          className="tap inline-flex items-center gap-1 text-sm font-semibold no-underline"
-        >
-          <ChevronLeft size={18} aria-hidden />
+        <BackLink href={`/leaderboard?week=${weekNumber}`} className="text-sm">
           Week {weekNumber} standings
-        </Link>
+        </BackLink>
       </div>
 
       {won ? <p className="px-4 text-sm text-muted-foreground">{won}.</p> : null}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LocalTime, Button, Wordmark } from "@saturday-slate/design-system";
+import { LocalTime, Button, Wordmark, LINK } from "@saturday-slate/design-system";
 
 import { db } from "@/db";
 import { requireMember } from "@/lib/members/current";
@@ -33,7 +33,7 @@ export default async function Install() {
         <Button asChild size="lg" className="w-full">
           <Link href="/">Done, start picking</Link>
         </Button>
-        <Link href="/" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
+        <Link href="/" className={LINK}>
           Skip for now
         </Link>
         {slate?.deadline ? (

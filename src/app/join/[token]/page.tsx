@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { NewPersonFields } from "@/components/new-person-fields";
 import { TextMyLink } from "@/components/text-my-link";
-import { Button, Wordmark } from "@saturday-slate/design-system";
+import { Button, Wordmark, LINK } from "@saturday-slate/design-system";
 
 import { db } from "@/db";
 import { groupForJoinLink, joinStanding } from "@/lib/groups/join";
@@ -63,7 +63,7 @@ export default async function JoinLink({ params }: { params: Promise<{ token: st
       }
     >
       <JoinForm token={token} submit={`Join ${group.name}`} />
-      <Link href="/" className="tap mx-auto inline-flex items-center text-sm font-semibold underline underline-offset-4">
+      <Link href="/" className={`mx-auto ${LINK}`}>
         Not now
       </Link>
     </Screen>

@@ -3,7 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import { useActionState, useState } from "react";
 import { NewPersonFields } from "@/components/new-person-fields";
-import { SECTION_LABEL, Button, Input } from "@saturday-slate/design-system";
+import { SECTION_LABEL, Button, Input, LINK } from "@saturday-slate/design-system";
 
 import { cleanGroupName, MAX_GROUP_NAME } from "@/lib/groups/limits";
 import type { JoinState } from "@/lib/groups/join-state";
@@ -79,7 +79,7 @@ export function StartForm({ signedOut }: { signedOut: boolean }) {
           </Button>
         )}
         {onYou ? (
-          <button type="button" onClick={() => setStep("group")} className="tap text-sm font-semibold underline underline-offset-4">
+          <button type="button" onClick={() => setStep("group")} className={LINK}>
             Back
           </button>
         ) : null}

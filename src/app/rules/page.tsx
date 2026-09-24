@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Clock, Eye, ListChecks, Lock, Radio, Scale, Trophy, Users } from "lucide-react";
 import { db } from "@/db";
-import { AppHeader, Button, Card, SECTION_LABEL } from "@saturday-slate/design-system";
+import { AppHeader, Button, Card, SECTION_LABEL, LINK } from "@saturday-slate/design-system";
 
 import { BottomNav } from "@/components/bottom-nav";
 import { currentChatUnread } from "@/lib/chat/current";
@@ -172,7 +172,7 @@ export default async function HowToPlay({
             </Button>
           </div>
         ) : (
-          <Link href="/" className="mx-4 text-sm font-semibold underline underline-offset-4">
+          <Link href="/" className={`mx-4 ${LINK}`}>
             Back to this week
           </Link>
         )}
