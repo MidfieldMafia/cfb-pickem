@@ -87,7 +87,7 @@ README greps come back clean.
 
 ## 4. Render every preview
 
-`puppeteer-core` drives the machine's Chrome, as in `verify-running-app`:
+`puppeteer-core` drives the machine's Chrome, as in `verify-running-app/browser.md`:
 
 ```bash
 npm i puppeteer-core --prefix "$SCRATCH" --no-audit --no-fund

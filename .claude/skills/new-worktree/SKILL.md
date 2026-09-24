@@ -56,8 +56,8 @@ What each `warm.sh` step fills, and what its absence looks like:
 
 - **install**: `node_modules` is per-worktree. Without it Turbopack compiles
   nothing (every route 500s) and every server-seam test fails to import. Only
-  a real `npm ci` fixes it; `verify-running-app` explains why a junction or
-  symlink makes it worse.
+  a real `npm ci` fixes it: Turbopack panics on a symlink or junction to the
+  main checkout's `node_modules` ("points out of the filesystem root").
 - **env**: `.env.local` is gitignored. Without it `db()` throws
   `DATABASE_URL is not set`. The copy points at the shared Neon database, so a
   commissioner action you take here is a real write.
