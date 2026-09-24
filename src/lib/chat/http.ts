@@ -21,8 +21,9 @@ import { createHash } from "node:crypto";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { Refusal } from "@/lib/refusal";
-import { chatThread, markRead, NotInGroup, postMessage, unreadCount } from "./chat";
+import { chatThread, markRead, NotInGroup, postMessage, setReaction, unreadCount } from "./chat";
 import { toChatStateJson, type ChatStateJson, type ChatUnreadJson } from "./json";
+import { isChatReactionKind } from "./reactions";
 
 export interface ChatRoute {
   db: Db;
@@ -112,6 +113,27 @@ export async function postChat(request: Request, route: ChatRoute): Promise<Resp
   return withChatContext(route, () => group, async (context) => {
     if (typeof body.text !== "string") return refuse("Say something first.", 400);
     await postMessage(context.db, context.member, context.group, body.text, context.now);
+    return answerThread(null, context);
+  });
+}
+
+/**
+ * `POST /api/chat/reactions` with `{ group, message, kind }`: sets the member's
+ * reaction to that message, `kind` null taking it off, then answers the thread.
+ */
+export async function postChatReaction(request: Request, route: ChatRoute): Promise<Response> {
+  let body: { group?: unknown; message?: unknown; kind?: unknown } = {};
+  try {
+    body = ((await request.json()) as typeof body) ?? {};
+  } catch {
+    // Not JSON: refused below like any other post naming nothing.
+  }
+  const group = groupParam(body.group);
+  return withChatContext(route, () => group, async (context) => {
+    const message = groupParam(body.message);
+    if (message === null) return refuse("That message is gone.", 400);
+    if (body.kind !== null && !isChatReactionKind(body.kind)) return refuse("That is not a reaction.", 400);
+    await setReaction(context.db, context.member, context.group, message, body.kind, context.now);
     return answerThread(null, context);
   });
 }

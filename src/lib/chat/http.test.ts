@@ -10,7 +10,7 @@ import { chatMessages } from "@/db/schema";
 import { manageGroup, removeFromGroup } from "@/lib/groups/manage";
 import { addGroup, familyGroup, joinGroup, seedWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { postMessage } from "./chat";
-import { getChat, getChatUnread, postChat, type ChatRoute } from "./http";
+import { getChat, getChatUnread, postChat, postChatReaction, type ChatRoute } from "./http";
 import type { ChatStateJson } from "./json";
 
 function routeFor(db: Db, member: Member | null, group: number | null): ChatRoute {
@@ -118,5 +118,55 @@ describe("POST /api/chat", () => {
     expect(response.status).toBe(403);
     expect(await db.select().from(chatMessages).where(eq(chatMessages.groupId, family.id))).toEqual([]);
     expect(await db.select().from(chatMessages)).toEqual([]);
+  });
+});
+
+describe("POST /api/chat/reactions", () => {
+  const react = (body: unknown) =>
+    new Request("http://test/api/chat/reactions", { method: "POST", body: typeof body === "string" ? body : JSON.stringify(body) });
+
+  test("sets the reaction and answers the thread with its counts, with a new ETag", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, jonah, family.id, "Bold Lock", THURSDAY);
+    const route = routeFor(db, grandma, family.id);
+    const before = (await getChat(get(family.id), route)).headers.get("etag")!;
+
+    const response = await postChatReaction(react({ group: family.id, message: message.id, kind: "hot" }), route);
+    expect(response.status).toBe(200);
+    const state = (await response.json()) as ChatStateJson;
+    expect(state.messages).toEqual([expect.objectContaining({ reactions: [{ kind: "hot", count: 1 }], mine: "hot" })]);
+    expect(response.headers.get("etag")).not.toBe(before);
+    expect((await getChat(get(family.id, before), route)).status).toBe(200);
+
+    const off = await postChatReaction(react({ group: family.id, message: message.id, kind: null }), route);
+    expect(((await off.json()) as ChatStateJson).messages).toEqual([expect.objectContaining({ reactions: [], mine: null })]);
+  });
+
+  test.each([
+    ["an unknown kind", { kind: "love" }, "That is not a reaction."],
+    ["no kind", {}, "That is not a reaction."],
+    ["no message", { message: undefined, kind: "ha" }, "That message is gone."],
+    ["a message not in the thread", { message: 9999, kind: "ha" }, "That message is gone."],
+  ])("answers 400 for %s", async (_, body, error) => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, jonah, family.id, "Bold Lock", THURSDAY);
+
+    const response = await postChatReaction(react({ group: family.id, message: message.id, ...body }), routeFor(db, grandma, family.id));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error });
+  });
+
+  test("401 signed out, 404 naming no group, 403 once removed", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, jonah, family.id, "Bold Lock", THURSDAY);
+    const body = { group: family.id, message: message.id, kind: "ha" };
+
+    expect((await postChatReaction(react(body), routeFor(db, null, family.id))).status).toBe(401);
+    expect((await postChatReaction(react({ ...body, group: undefined }), routeFor(db, grandma, family.id))).status).toBe(404);
+    await removeFromGroup(db, await manageGroup(db, jonah, family.id), grandma.id, THURSDAY);
+    expect((await postChatReaction(react(body), routeFor(db, grandma, family.id))).status).toBe(403);
   });
 });

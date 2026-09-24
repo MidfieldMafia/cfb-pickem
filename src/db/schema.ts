@@ -21,6 +21,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
+import { chatReactionKinds } from "@/lib/chat/reactions";
 import type { GameDetail } from "@/lib/detail";
 import type { Rules } from "@/lib/scoring/types";
 
@@ -505,6 +506,26 @@ export const chatMessages = pgTable(
   ],
 );
 
+/**
+ * A Member's reaction to a Chat message (#249). The key is the message and the
+ * member, so each member has at most one reaction on a message: switching
+ * rewrites the kind, taking it off deletes the row.
+ */
+export const chatReactions = pgTable(
+  "chat_reactions",
+  {
+    messageId: integer("message_id")
+      .notNull()
+      .references(() => chatMessages.id),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    kind: text("kind", { enum: chatReactionKinds }).notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.memberId] }), index("chat_reactions_member_idx").on(t.memberId)],
+);
+
 export const seasonsRelations = relations(seasons, ({ many }) => ({ weeks: many(weeks) }));
 export const weeksRelations = relations(weeks, ({ one, many }) => ({
   season: one(seasons, { fields: [weeks.seasonId], references: [seasons.id] }),
@@ -528,3 +549,4 @@ export type Session = typeof sessions.$inferSelect;
 export type TextMessage = typeof textMessages.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export type ChatReaction = typeof chatReactions.$inferSelect;

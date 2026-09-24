@@ -3,13 +3,16 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { MessageCircle, Send } from "lucide-react";
 import { Pennant } from "@/components/pennant";
-import type { ChatStateJson } from "@/lib/chat/json";
+import type { ChatMessageJson, ChatStateJson } from "@/lib/chat/json";
 import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import { nextChatPollMs } from "@/lib/chat/poll";
+import { tapReaction, withReaction, type ChatReactionKind } from "@/lib/chat/reactions";
 import { chatTimeLabel, threadRows, type ThreadRow } from "@/lib/chat/thread";
 import type { MemberJson } from "@/lib/slate/json";
+import { ReactionChips, ReactionTray } from "./reactions";
 
 const CHAT_PATH = "/api/chat";
+const REACTIONS_PATH = "/api/chat/reactions";
 
 /** How close to the foot of the thread still counts as reading the latest: a new message then scrolls into view. */
 const NEAR_BOTTOM_PX = 80;
@@ -83,7 +86,17 @@ function useChatState(initial: ChatStateJson, groupId: number) {
     setState(next);
   };
 
-  return { state, gone, setGone, accept };
+  /**
+   * Shows a change before the server has it, as a reaction does the moment it
+   * is tapped. The ETag is dropped with it, so should the server never take
+   * the change, the next poll answers in full and puts the thread right.
+   */
+  const revise = (change: (message: ChatMessageJson) => ChatMessageJson) => {
+    etag.current = null;
+    setState((current) => ({ ...current, messages: current.messages.map(change) }));
+  };
+
+  return { state, gone, setGone, accept, revise };
 }
 
 /** Characters as the server counts them: code points, so an emoji is one. */
@@ -101,7 +114,9 @@ export function ChatThread({
   groupId: number;
   groupName: string;
 }) {
-  const { state, gone, setGone, accept } = useChatState(initial, groupId);
+  const { state, gone, setGone, accept, revise } = useChatState(initial, groupId);
+  /** The message whose reaction tray is open: one at a time. */
+  const [trayFor, setTrayFor] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +169,31 @@ export function ChatThread({
     }
   };
 
+  /** A tap in the tray: the counts move at once, and the server's answer is the thread with them in. */
+  const react = async (message: ChatMessageJson, tapped: ChatReactionKind) => {
+    if (gone) return;
+    const kind = tapReaction(message.mine, tapped);
+    setTrayFor(null);
+    setError(null);
+    revise((m) => (m.id === message.id ? withReaction(m, kind) : m));
+    try {
+      const response = await fetch(REACTIONS_PATH, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ group: groupId, message: message.id, kind }),
+      });
+      if (response.ok) {
+        accept((await response.json()) as ChatStateJson, response.headers.get("etag"));
+      } else {
+        const { error: sentence } = (await response.json().catch(() => ({ error: null }))) as { error: string | null };
+        if (response.status === 403 && sentence) setGone(sentence);
+        else setError(sentence ?? "That reaction did not save. Try again.");
+      }
+    } catch {
+      setError("That reaction did not save. Check your connection and try again.");
+    }
+  };
+
   return (
     <>
       {/* `relative` so the sr-only names, which are absolutely positioned, scroll inside this box rather than stretching the page. */}
@@ -163,7 +203,15 @@ export function ChatThread({
         ) : (
           <ol role="log" aria-label="Messages" className="mt-auto flex flex-col gap-1 px-4 py-3">
             {rows.map((row) => (
-              <Message key={row.message.id} row={row} sender={senders.get(row.message.memberId)} now={now} />
+              <Message
+                key={row.message.id}
+                row={row}
+                sender={senders.get(row.message.memberId)}
+                now={now}
+                trayOpen={trayFor === row.message.id}
+                onTray={gone ? undefined : () => setTrayFor((open) => (open === row.message.id ? null : row.message.id))}
+                onReact={(kind) => void react(row.message, kind)}
+              />
             ))}
           </ol>
         )}
@@ -211,7 +259,27 @@ export function ChatThread({
   );
 }
 
-function Message({ row, sender, now }: { row: ThreadRow; sender: MemberJson | undefined; now: Date }) {
+/**
+ * One message. Someone else's is a button that opens the reaction tray beneath
+ * it (board 5); the viewer's own takes no reaction from them, only shows the
+ * others'.
+ */
+function Message({
+  row,
+  sender,
+  now,
+  trayOpen,
+  onTray,
+  onReact,
+}: {
+  row: ThreadRow;
+  sender: MemberJson | undefined;
+  now: Date;
+  trayOpen: boolean;
+  /** Undefined once the member is out of the Group: the thread is still there to read, not to react to. */
+  onTray: (() => void) | undefined;
+  onReact: (kind: ChatReactionKind) => void;
+}) {
   const { message, mine, head, tail } = row;
   const time = chatTimeLabel(message.createdAt, now);
   const name = sender?.displayName ?? "Someone";
@@ -224,6 +292,7 @@ function Message({ row, sender, now }: { row: ThreadRow; sender: MemberJson | un
         <p className="max-w-[270px] rounded-[14px] bg-primary px-3 py-2 text-base leading-[22px] break-words whitespace-pre-wrap text-primary-foreground">
           {message.text}
         </p>
+        <ReactionChips message={message} mine />
       </li>
     );
   }
@@ -242,9 +311,19 @@ function Message({ row, sender, now }: { row: ThreadRow; sender: MemberJson | un
         ) : (
           <span className="sr-only">{name}:</span>
         )}
-        <p className="max-w-[270px] rounded-[14px] border border-settled-border bg-card px-3 py-2 text-base leading-[22px] break-words whitespace-pre-wrap">
+        <button
+          type="button"
+          onClick={onTray}
+          disabled={!onTray}
+          aria-expanded={trayOpen}
+          className={`max-w-[270px] self-start rounded-[14px] border bg-card px-3 py-2 text-left text-base leading-[22px] break-words whitespace-pre-wrap text-foreground ${
+            trayOpen ? "border-ring" : "border-settled-border"
+          }`}
+        >
           {message.text}
-        </p>
+        </button>
+        <ReactionChips message={message} mine={false} />
+        {trayOpen ? <ReactionTray message={message} onPick={onReact} onClose={onTray ?? (() => {})} /> : null}
       </div>
     </li>
   );
