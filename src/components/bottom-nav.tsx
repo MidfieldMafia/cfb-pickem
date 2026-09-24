@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BottomNav as BottomNavBar, type BottomNavTab } from "@saturday-slate/design-system";
 import { ClipboardCheck, Lock, MessageCircle, Radio, Trophy } from "lucide-react";
 import type { ChatUnreadJson } from "@/lib/chat/json";
 import { BADGE_POLL_MS } from "@/lib/chat/poll";
@@ -68,90 +68,48 @@ function useChatUnread(initial: number, onChat: boolean): number {
  * The four tabs of the phone app, the same for every member — History merged
  * into the Leaderboard's Week chips (#242), and Chat is the fourth (#248). The Console
  * lives behind a header icon (`HeaderLinks`) rather than a tab now, since it is
- * only ever relevant to a commissioner. Fixed to the visual viewport (not
- * sticky), so it stays under the thumb through an iOS pinch-zoom or URL-bar
- * transition instead of drifting with the layout viewport — see issue #99.
- *
- * Rendered twice: once `invisible` in normal flow, to reserve exactly the
- * space the real nav occupies so `main`'s `flex-1` still ends above it, and
- * once `fixed` on top for display. Two copies of the same markup keep that
- * space correct without hand-computing a height that content or font metrics
- * could drift out of sync with; `visibility: hidden` also drops the spacer's
- * copy out of the tab order and the accessibility tree, so only one `nav`
- * landmark is exposed.
+ * only ever relevant to a commissioner. The tab bar itself — tiles, dot, count,
+ * the fixed bar and its spacer — is the design system's `BottomNav`; this
+ * decides where each tab goes and what it says.
  */
 export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; picksOpen: boolean; chatUnread: number }) {
   const pathname = usePathname();
   const unread = useChatUnread(chatUnread, pathname === CHAT || pathname.startsWith(`${CHAT}/`));
 
-  const tiles = TABS.map(({ href, label, Icon }) => {
+  const tabs = TABS.map(({ href, label, Icon }): BottomNavTab => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
-    const isPicks = href === "/picks";
-    // Once the week locks there is nothing to enter, so the Picks tab goes
-    // straight to /picks/review rather than through /picks's redirect, which
-    // cost a second round trip (#262). The label stays "Picks" so the tab bar
-    // doesn't relabel mid-week, but the icon becomes a lock to say a tap now
-    // lands somewhere other than pick entry. See #116, #170.
-    const tabHref = isPicks && locked ? "/picks/review" : href;
-    const TabIcon = isPicks && locked ? Lock : Icon;
-    // The dot means something is still to do: it shows while picks are open and
-    // the member has not finished them, and clears once they have.
-    const showTodoDot = isPicks && !locked && picksOpen;
-    const badge = href === CHAT && unread > 0 ? unread : null;
-    return (
-      <Link
-        key={href}
-        href={tabHref}
-        aria-current={active ? "page" : undefined}
-        className="flex min-h-14 flex-col items-center justify-center gap-1 p-1.5 text-[11px] font-bold no-underline"
-      >
-        <span
-          className={`relative grid h-7 w-14 place-items-center rounded-full ${
-            active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-          }`}
-        >
-          <TabIcon size={18} />
-          {showTodoDot ? (
-            <span
-              aria-hidden
-              className={`absolute right-2.5 top-0 h-2 w-2 rounded-full ring-2 ${
-                active ? "bg-primary-foreground ring-primary" : "bg-primary ring-card"
-              }`}
-            />
-          ) : null}
-          {badge !== null ? (
-            <span
-              aria-hidden
-              className="absolute -top-1 right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[11px] leading-none font-bold text-primary-foreground tabular-nums ring-2 ring-card"
-            >
-              {badge > 9 ? "9+" : badge}
-            </span>
-          ) : null}
-        </span>
-        <span className={active ? "text-foreground" : "text-muted-foreground"}>
-          {label}
-          {isPicks && locked ? <span className="sr-only"> — picks are locked, tap to review</span> : null}
-          {showTodoDot ? <span className="sr-only"> — picks still to finish</span> : null}
-          {badge !== null ? <span className="sr-only">, {badge === 1 ? "1 new message" : `${badge} new messages`}</span> : null}
-        </span>
-      </Link>
-    );
+    if (href === "/picks") {
+      // Once the week locks there is nothing to enter, so the Picks tab goes
+      // straight to /picks/review rather than through /picks's redirect, which
+      // cost a second round trip (#262). The label stays "Picks" so the tab bar
+      // doesn't relabel mid-week, but the icon becomes a lock to say a tap now
+      // lands somewhere other than pick entry. See #116, #170.
+      if (locked) {
+        return { href: "/picks/review", label, icon: <Lock size={18} />, active, srNote: " — picks are locked, tap to review" };
+      }
+      // The dot means something is still to do: it shows while picks are open and
+      // the member has not finished them, and clears once they have.
+      return {
+        href,
+        label,
+        icon: <Icon size={18} />,
+        active,
+        dot: picksOpen,
+        srNote: picksOpen ? " — picks still to finish" : undefined,
+      };
+    }
+    if (href === CHAT && unread > 0) {
+      return {
+        href,
+        label,
+        icon: <Icon size={18} />,
+        active,
+        count: unread,
+        srNote: `, ${unread === 1 ? "1 new message" : `${unread} new messages`}`,
+      };
+    }
+    return { href, label, icon: <Icon size={18} />, active };
   });
 
-  return (
-    <>
-      <div
-        aria-hidden
-        className="invisible grid grid-cols-4 border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
-      >
-        {tiles}
-      </div>
-      <nav
-        aria-label="App"
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-card pr-[env(safe-area-inset-right)] pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)]"
-      >
-        {tiles}
-      </nav>
-    </>
-  );
+  return <BottomNavBar tabs={tabs} />;
 }
