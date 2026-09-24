@@ -21,6 +21,7 @@ import {
   seasonStatusLabel,
   standing,
   tiebreakerOutcome,
+  weeklyWinners,
   weeklyWinSentence,
 } from "./summary";
 
@@ -245,6 +246,15 @@ describe("how the weekly win is said", () => {
 
   test("nobody played the week", () => {
     expect(weeklyWinSentence(null, true)).toBeNull();
+  });
+
+  test("the badge waits for the week to be decided", () => {
+    expect(weeklyWinners(win(), false)).toEqual(new Set());
+    expect(weeklyWinners(win(), true)).toEqual(new Set([GRANDMA.id]));
+    expect(weeklyWinners(win({ winners: [GRANDMA, JONAH], decidedBy: "shared" }), true)).toEqual(
+      new Set([GRANDMA.id, JONAH.id]),
+    );
+    expect(weeklyWinners(null, true)).toEqual(new Set());
   });
 });
 
