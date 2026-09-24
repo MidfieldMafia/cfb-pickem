@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 import { db } from "@/db";
-import { Card, Input, SECTION_LABEL } from "@saturday-slate/design-system";
+import { Card, Input, SECTION_LABEL, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@saturday-slate/design-system";
 
 import { listGroups } from "@/lib/groups/console";
 import { leftWithoutGroupWarning } from "@/lib/groups/console-edits";
@@ -38,27 +38,27 @@ export default async function Groups() {
         </ActionForm>
       </Card>
 
-      <Card className="gap-0 overflow-x-auto rounded-md p-0">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-            <tr>
-              <th className="p-3">Group</th>
-              <th className="p-3">Members</th>
-              <th className="p-3">Organizers</th>
-              <th className="p-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      <Card className="gap-0 overflow-hidden rounded-md p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead variant="caps">Group</TableHead>
+              <TableHead variant="caps">Members</TableHead>
+              <TableHead variant="caps">Organizers</TableHead>
+              <TableHead variant="caps" className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {groups.map((group) => (
-              <tr key={group.id}>
-                <td className="p-3 font-semibold">
+              <TableRow key={group.id}>
+                <TableCell className="font-semibold">
                   <Link href={managePath(group.id)}>{group.name}</Link>
-                </td>
-                <td className="p-3 whitespace-nowrap">{group.members}</td>
-                <td className="p-3 text-muted-foreground">
+                </TableCell>
+                <TableCell>{group.members}</TableCell>
+                <TableCell className="whitespace-normal text-muted-foreground">
                   {group.organizers.length > 0 ? group.organizers.join(", ") : "None"}
-                </td>
-                <td className="p-3">
+                </TableCell>
+                <TableCell>
                   <div className="flex items-start justify-end gap-1">
                     <Link
                       href={managePath(group.id)}
@@ -84,11 +84,11 @@ export default async function Groups() {
                       </div>
                     </details>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </div>
   );

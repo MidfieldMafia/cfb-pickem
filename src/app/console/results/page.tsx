@@ -1,7 +1,7 @@
 import { Ban, Pencil, Radio } from "lucide-react";
 import type { VariantProps } from "class-variance-authority";
 import { db } from "@/db";
-import { Badge, badgeVariants, Card, CardDescription, CardHeader, CardTitle, Input, LocalTime } from "@saturday-slate/design-system";
+import { Badge, badgeVariants, Card, CardDescription, CardHeader, CardTitle, Input, LocalTime, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@saturday-slate/design-system";
 
 import { TeamLogo } from "@/components/team-logo";
 import { requireConsole } from "@/lib/members/current";
@@ -136,31 +136,31 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
             </Card>
           ) : null}
 
-          <Card className="gap-0 overflow-x-auto rounded-md p-0">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                <tr>
-                  <th className="p-3">Game</th>
-                  <th className="p-3">Kickoff</th>
-                  <th className="p-3 text-right">Away</th>
-                  <th className="p-3 text-right">Home</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Override</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+          <Card className="gap-0 overflow-hidden rounded-md p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead variant="caps">Game</TableHead>
+                  <TableHead variant="caps">Kickoff</TableHead>
+                  <TableHead variant="caps" className="text-right">Away</TableHead>
+                  <TableHead variant="caps" className="text-right">Home</TableHead>
+                  <TableHead variant="caps">Status</TableHead>
+                  <TableHead variant="caps">Override</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((row) => {
                   const { game, result, review: overdue } = row;
                   const voided = isVoid(row);
                   return (
-                    <tr key={game.id} className={`align-top ${voided ? "opacity-70" : ""}`}>
-                      <td className="p-3">
+                    <TableRow key={game.id} className={`[&>td]:align-top ${voided ? "opacity-70" : ""}`}>
+                      <TableCell className="whitespace-normal">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <Team name={game.awayTeam} rank={game.awayRank} />
                           <span className="text-muted-foreground">at</span>
                           <Team name={game.homeTeam} rank={game.homeRank} />
                           {game.id === week.tiebreakerGameId ? (
-                            <Badge className="bg-secondary text-secondary-foreground">Tiebreaker</Badge>
+                            <Badge variant="secondary">Tiebreaker</Badge>
                           ) : null}
                         </div>
                         {voided && result.note ? (
@@ -174,20 +174,20 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                               : " · feed has no final"}
                           </p>
                         ) : null}
-                      </td>
-                      <td className="p-3 whitespace-nowrap text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         <LocalTime at={game.kickoff} style="slot" />
-                      </td>
-                      <td className="p-3 text-right font-display text-lg font-black tabular-nums">
+                      </TableCell>
+                      <TableCell className="text-right font-display text-lg font-black tabular-nums">
                         {result.shown?.awayScore ?? "–"}
-                      </td>
-                      <td className="p-3 text-right font-display text-lg font-black tabular-nums">
+                      </TableCell>
+                      <TableCell className="text-right font-display text-lg font-black tabular-nums">
                         {result.shown?.homeScore ?? "–"}
-                      </td>
-                      <td className="p-3 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell>
                         <StatusBadge result={result} review={overdue} />
-                      </td>
-                      <td className="p-3">
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
                         {voided ? (
                           <ActionForm
                             action={restoreGameAction}
@@ -198,19 +198,19 @@ export default async function ResultOverrides({ searchParams }: { searchParams: 
                         ) : (
                           <OverrideCell row={row} />
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
                 {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-3 text-muted-foreground">
+                  <TableRow>
+                    <TableCell colSpan={6} className="whitespace-normal text-muted-foreground">
                       No games on this slate.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : null}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </Card>
 
           <Card asChild className="gap-0 rounded-md p-0">

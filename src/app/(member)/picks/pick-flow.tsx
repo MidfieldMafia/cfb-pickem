@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
+import { ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
 
@@ -83,30 +83,31 @@ function ProgressStrip({
   );
 }
 
-/** How each save state reads: its border, its icon, and its word. */
+/**
+ * How each save state reads: its Badge, its icon, and its word. `win` draws its
+ * own check; the outline states tint `pending`'s border and text.
+ */
 const CHIP = {
-  pending: { look: "border-border text-foreground", Icon: CircleDashed, iconProps: {}, label: "Pending" },
+  pending: { variant: "pending", look: "", Icon: CircleDashed, iconProps: {}, label: "Pending" },
   saving: {
-    look: "border-border text-muted-foreground",
+    variant: "pending",
+    look: "text-muted-foreground",
     Icon: LoaderCircle,
     iconProps: { className: "animate-spin" },
     label: "Saving",
   },
-  failed: { look: "border-destructive text-destructive", Icon: TriangleAlert, iconProps: {}, label: "Not saved" },
-  saved: { look: "border-win bg-win text-win-foreground", Icon: Check, iconProps: { strokeWidth: 3 }, label: "Saved" },
+  failed: { variant: "pending", look: "border-destructive text-destructive", Icon: TriangleAlert, iconProps: {}, label: "Not saved" },
+  saved: { variant: "win", look: "", Icon: null, iconProps: {}, label: "Saved" },
 } as const;
 
 /** One live region whose text changes, so screen readers announce the transition. */
 function StatusChip({ pick }: { pick: LocalPick | undefined }) {
-  const { look, Icon, iconProps, label } = CHIP[pick?.status ?? "pending"];
+  const { variant, look, Icon, iconProps, label } = CHIP[pick?.status ?? "pending"];
   return (
-    <span
-      aria-live="polite"
-      className={`inline-flex min-h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold ${look}`}
-    >
-      <Icon size={12} {...iconProps} />
+    <Badge aria-live="polite" variant={variant} className={`min-h-7 px-2.5 font-semibold ${look}`}>
+      {Icon ? <Icon aria-hidden {...iconProps} /> : null}
       {label}
-    </span>
+    </Badge>
   );
 }
 

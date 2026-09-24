@@ -1,7 +1,7 @@
 import { Bug, Check, ChevronRight, Lightbulb } from "lucide-react";
 import { db } from "@/db";
 import type { FeedbackKind } from "@/db/schema";
-import { Button, Card, SECTION_LABEL, LINK } from "@saturday-slate/design-system";
+import { Badge, Button, Card, SECTION_LABEL, LINK } from "@saturday-slate/design-system";
 
 import { Pennant } from "@/components/pennant";
 import { deviceLabel } from "@/lib/feedback/device";
@@ -109,14 +109,10 @@ const KIND_LABEL: Record<FeedbackKind, string> = { bug: "Bug", idea: "Idea" };
 function KindBadge({ kind }: { kind: FeedbackKind }) {
   const Icon = kind === "bug" ? Bug : Lightbulb;
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
-        kind === "bug" ? "bg-secondary text-secondary-foreground" : "bg-primary text-primary-foreground"
-      }`}
-    >
-      <Icon aria-hidden className="size-3" strokeWidth={2.5} />
+    <Badge variant={kind === "bug" ? "secondary" : "default"} className="font-bold">
+      <Icon aria-hidden strokeWidth={2.5} />
       {KIND_LABEL[kind]}
-    </span>
+    </Badge>
   );
 }
 

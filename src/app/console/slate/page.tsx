@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Check, X } from "lucide-react";
 import { db } from "@/db";
-import { Badge, Button, Card, Input, LocalTime, SECTION_LABEL, TeamName } from "@saturday-slate/design-system";
+import { Badge, Button, Card, Input, LocalTime, SECTION_LABEL, TeamName, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@saturday-slate/design-system";
 
 import { TeamLogo } from "@/components/team-logo";
 
@@ -74,7 +74,7 @@ export default async function SlateBuilder({
       {/* The slate rail takes the width it needs and no more; the candidates
           table gets the rest, because Spread is what a choice turns on and it
           was scrolling out of sight. */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card asChild className="gap-0 rounded-md p-0">
           <section>
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-3">
@@ -112,74 +112,72 @@ export default async function SlateBuilder({
               {feedError}
             </p>
           ) : null}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                <tr>
-                  <th className="px-2 py-3">
-                    <span className="sr-only">On the slate</span>
-                  </th>
-                  <th className="p-3">Game</th>
-                  <SortHeader label="Kickoff" active={sort === "kickoff"} dir={dir} href={view.sortedBy("kickoff").href()} />
-                  <th className="px-2 py-3">TV</th>
-                  <SortHeader label="Spread" active={sort === "spread"} dir={dir} href={view.sortedBy("spread").href()} />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {shown.map(({ candidate: c, onSlate: picked }) => (
-                  <tr key={c.cfbdGameId} className={picked ? "bg-muted" : ""}>
-                    <td className="px-2 align-middle">
-                      <form action={picked ? removeGameAction : addGameAction}>
-                        <input type="hidden" name="weekId" value={week.id} />
-                        {picked ? (
-                          <input type="hidden" name="gameId" value={picked.id} />
-                        ) : (
-                          <input type="hidden" name="cfbdGameId" value={c.cfbdGameId} />
-                        )}
-                        <CandidateCheckbox
-                          checked={Boolean(picked)}
-                          // A published Slate takes neither an add nor a
-                          // remove — `addGame` and `removeGame` both refuse —
-                          // so the boxes say so rather than throwing when
-                          // clicked.
-                          disabled={slate.week.published}
-                          label={`${c.awayTeam} at ${c.homeTeam} on the slate`}
-                        />
-                      </form>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <TeamLogo team={c.awayTeam} size={20} />
-                        <TeamName name={c.awayTeam} rank={c.awayRank} />
-                        <span className="font-sans font-normal text-muted-foreground">at</span>
-                        <TeamLogo team={c.homeTeam} size={20} />
-                        <TeamName name={c.homeTeam} rank={c.homeRank} />
-                      </div>
-                    </td>
-                    {/* The date, not just the weekday: a week runs Tuesday to
-                        Saturday and can cross a month, so "Sat 9:00 PM" above
-                        "Thu 5:00 PM" reads as a sorting bug. */}
-                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">
-                      {c.kickoffTbd ? "TBD · " : null}
-                      <LocalTime at={c.kickoff} />
-                    </td>
-                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{c.detail.tv ?? "TBD"}</td>
-                    {/* detail.spread, not c.spread: it falls back to the
-                        win-probability model when no book has posted, which
-                        is also what the Spread sort orders by. */}
-                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{c.detail.spread}</td>
-                  </tr>
-                ))}
-                {shown.length === 0 && !feedError ? (
-                  <tr>
-                    <td colSpan={5} className="p-3 text-muted-foreground">
-                      No games match.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead variant="caps">
+                  <span className="sr-only">On the slate</span>
+                </TableHead>
+                <TableHead variant="caps">Game</TableHead>
+                <SortHeader label="Kickoff" active={sort === "kickoff"} dir={dir} href={view.sortedBy("kickoff").href()} />
+                <TableHead variant="caps">TV</TableHead>
+                <SortHeader label="Spread" active={sort === "spread"} dir={dir} href={view.sortedBy("spread").href()} />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shown.map(({ candidate: c, onSlate: picked }) => (
+                <TableRow key={c.cfbdGameId} className={picked ? "bg-muted" : ""}>
+                  <TableCell className="py-0">
+                    <form action={picked ? removeGameAction : addGameAction}>
+                      <input type="hidden" name="weekId" value={week.id} />
+                      {picked ? (
+                        <input type="hidden" name="gameId" value={picked.id} />
+                      ) : (
+                        <input type="hidden" name="cfbdGameId" value={c.cfbdGameId} />
+                      )}
+                      <CandidateCheckbox
+                        checked={Boolean(picked)}
+                        // A published Slate takes neither an add nor a
+                        // remove — `addGame` and `removeGame` both refuse —
+                        // so the boxes say so rather than throwing when
+                        // clicked.
+                        disabled={slate.week.published}
+                        label={`${c.awayTeam} at ${c.homeTeam} on the slate`}
+                      />
+                    </form>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 whitespace-nowrap">
+                      <TeamLogo team={c.awayTeam} size={20} />
+                      <TeamName name={c.awayTeam} rank={c.awayRank} />
+                      <span className="font-sans font-normal text-muted-foreground">at</span>
+                      <TeamLogo team={c.homeTeam} size={20} />
+                      <TeamName name={c.homeTeam} rank={c.homeRank} />
+                    </div>
+                  </TableCell>
+                  {/* The date, not just the weekday: a week runs Tuesday to
+                      Saturday and can cross a month, so "Sat 9:00 PM" above
+                      "Thu 5:00 PM" reads as a sorting bug. */}
+                  <TableCell className="text-muted-foreground">
+                    {c.kickoffTbd ? "TBD · " : null}
+                    <LocalTime at={c.kickoff} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{c.detail.tv ?? "TBD"}</TableCell>
+                  {/* detail.spread, not c.spread: it falls back to the
+                      win-probability model when no book has posted, which
+                      is also what the Spread sort orders by. */}
+                  <TableCell className="text-muted-foreground">{c.detail.spread}</TableCell>
+                </TableRow>
+              ))}
+              {shown.length === 0 && !feedError ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="whitespace-normal text-muted-foreground">
+                    No games match.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
           </section>
         </Card>
 
@@ -195,7 +193,7 @@ export default async function SlateBuilder({
                 </p>
               </div>
               {slate.week.published ? (
-                <Badge className="bg-secondary text-secondary-foreground">Published</Badge>
+                <Badge variant="secondary">Published</Badge>
               ) : (
                 <Badge variant="outline">Draft</Badge>
               )}
@@ -257,7 +255,7 @@ function SortHeader({
   href: string;
 }) {
   return (
-    <th className="px-2 py-3">
+    <TableHead variant="caps">
       <Link href={href} className="flex items-center gap-1 no-underline hover:text-foreground" aria-label={`Sort by ${label}`}>
         {label}
         {active ? (
@@ -268,7 +266,7 @@ function SortHeader({
           )
         ) : null}
       </Link>
-    </th>
+    </TableHead>
   );
 }
 
