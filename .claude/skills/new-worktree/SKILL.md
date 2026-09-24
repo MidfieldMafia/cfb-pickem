@@ -1,95 +1,68 @@
 ---
 name: new-worktree
-description: Create an isolated worktree and warm it up before writing code. Use when starting a numbered issue, or when a task needs a checkout of its own.
+description: Create a worktree on origin/main and warm it before writing code. Use when starting a numbered issue or any task that needs its own checkout.
 ---
 
 # Start a worktree
 
-A new worktree is **cold**: git gives you tracked files and nothing else. Three
-things the repo needs are untracked or generated, so they are absent, and each
-one fails in a way that looks like a bug in your change rather than a missing
-setup step. Warm the checkout first, prove it green, then start work.
+A fresh worktree is **cold**: git checks out tracked files only, and each
+missing untracked piece fails in a way that looks like a bug in your change.
+Warm it, see it **green** on untouched code, then write code. Cleanup is
+`remove-worktree`.
 
-Cleanup is the other half and has its own skill — `remove-worktree`.
-
-## 1. Base it on `origin/main`, explicitly
-
-`main` moves while you work. Another session merges, and a worktree cut from a
-stale local `main` starts life behind, which surfaces later as a phantom
-conflict or a false "unmerged commits" reading.
-
-`origin/HEAD` is unset in this repo, so a bare `origin` does not resolve to a
-branch. Name `origin/main`:
+## 1. Cut it from `origin/main`
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 git fetch origin
 git worktree add -b <branch> .claude/worktrees/<name> origin/main
-cd .claude/worktrees/<name>
 ```
 
-`.claude/worktrees/` is gitignored, so worktrees live inside the repo without
-showing up as changes.
+Name `origin/main` in full: `origin/HEAD` is unset here, and local `main` lags
+behind merges from other sessions. `.claude/worktrees/` is gitignored.
 
-State the base branch in your first message about the work. A worktree whose
-base was never confirmed is the single cheapest thing to get wrong here.
+**Done when** your first message about the work names the base commit.
 
-## 2. Warm it up
+## 2. Warm it in the background
 
-Three commands, all from the worktree root:
+Start one background Bash call (`run_in_background: true`):
 
 ```bash
-npm ci --no-audit --no-fund
-cp "$(git rev-parse --git-common-dir)/../.env.local" .env.local
-npx next build
+cd .claude/worktrees/<name> && bash .claude/skills/new-worktree/warm.sh
 ```
 
-Each covers one cold gap:
+The script keeps every step's output in a log and prints a single line, so the
+install log, route table and test list stay out of your context for the rest of
+the session. Spend the ~2 minutes reading the ticket or asking design questions.
 
-- **`node_modules` is not shared.** Turbopack takes the worktree's own lockfile
-  as the workspace root, finds no `next` beneath it, and compiles nothing —
-  every route answers 500, and every server-seam test fails to import. A real
-  install is the only fix; `verify-running-app` has the errors and explains why
-  a junction or symlink makes it worse.
-- **`.env.local` is gitignored**, so `db()` throws `DATABASE_URL is not set` on
-  the first request. The copy points this checkout at the same shared Neon
-  database as every other — see `verify-running-app` for what that means before
-  you drive a commissioner screen.
-- **`.next/types` does not exist yet**, and until it does `npm run typecheck`
-  reports `Cannot find name 'LayoutProps'` in `src/app/layout.tsx`. That is the
-  cold checkout talking, not your diff. `npx next build` writes those types, and
-  applies no migrations, so it is safe to run here.
+For a small change, add `--skip-checks`: it stops after the build, and the push
+gate runs typecheck, test and eslint anyway.
 
-## 3. Prove it green before writing code
+**Done when** it prints `worktree warm: ... all green`. A failure prints the
+step name and its log tail; see [Cold gaps](#cold-gaps) and fix that setup step.
+On untouched code, a failure is always a cold gap, never a bug in `src`.
 
-```bash
-npm run typecheck && npm run test && npx eslint src
-```
+## 3. Claim a port before `next dev`
 
-All three pass on an untouched worktree. Run them now, while the tree still
-matches `origin/main`, so that the first failure you see afterwards belongs to
-your change. Diagnosing a cold-start failure as a code bug costs far more than
-this minute.
+`next dev` moves up silently when its port is taken, so a shared 3000 means one
+checkout serves the other's code. Pick a free port, hold it in a variable, and
+send every request there (`verify-running-app` step 1).
 
-Hold here until all three are green. If one fails on untouched code, the warm-up
-is incomplete — re-read step 2 rather than editing `src`.
+**Done when** the port is in a variable and nothing else is listening on it.
 
-## 4. Claim a port that is yours alone
+## Cold gaps
 
-`next dev` does not stop when its port is taken; it warns and moves up. So two
-checkouts both aiming at 3000 means one of them silently answers with the
-other's code, and the screen looks fine either way.
+What each `warm.sh` step fills, and what its absence looks like:
 
-Pick a free port, keep it in a variable, and hand the same one to every request.
-`verify-running-app` step 1 covers the trap and how to tell which checkout you
-are in.
-
-## 5. Note what running here writes
-
-This worktree shares the Neon database with everyone else. A commissioner action
-taken to check a screen is a real write other people see. Drive the console
-deliberately.
-
-Pushing from here runs the preflight gate in `.claude/hooks/preflight.sh` —
-`npx next build` then `npm run typecheck`, with the push blocked if either
-fails. Step 2 already leaves both warm, so the gate costs about ten seconds.
+- **install**: `node_modules` is per-worktree. Without it Turbopack compiles
+  nothing (every route 500s) and every server-seam test fails to import. Only
+  a real `npm ci` fixes it; `verify-running-app` explains why a junction or
+  symlink makes it worse.
+- **env**: `.env.local` is gitignored. Without it `db()` throws
+  `DATABASE_URL is not set`. The copy points at the shared Neon database, so a
+  commissioner action you take here is a real write.
+- **build**: `npx next build` writes `.next/types`. Without them `typecheck`
+  reports `Cannot find name 'LayoutProps'` in `src/app/layout.tsx`. It applies
+  no migrations, so it is safe here.
+- **typecheck / test / eslint**: all pass on `origin/main`, so a failure means
+  the steps above left a gap.
