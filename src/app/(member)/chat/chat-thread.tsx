@@ -298,30 +298,34 @@ function Message({
   }
 
   return (
-    <li className={`flex items-end gap-2 ${head ? "pt-2" : ""}`}>
-      <div className="flex w-7 shrink-0" aria-hidden>
-        {tail ? <Pennant avatarId={sender?.avatarId ?? null} name={name} size={28} /> : null}
-      </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        {head ? (
-          <div className="flex items-baseline gap-1.5 pl-3 text-xs">
-            <span className="font-bold">{name}</span>
-            <span className="text-muted-foreground">{time}</span>
-          </div>
-        ) : (
-          <span className="sr-only">{name}:</span>
-        )}
+    // The pennant shares a row with the bubble alone, so it stays level with the
+    // foot of the run's last bubble; the chips and tray hang below, indented past it.
+    <li className={`flex flex-col gap-0.5 ${head ? "pt-2" : ""}`}>
+      {head ? (
+        <div className="flex items-baseline gap-1.5 pl-12 text-xs">
+          <span className="font-bold">{name}</span>
+          <span className="text-muted-foreground">{time}</span>
+        </div>
+      ) : (
+        <span className="sr-only">{name}:</span>
+      )}
+      <div className="flex items-end gap-2">
+        <div className="flex w-7 shrink-0" aria-hidden>
+          {tail ? <Pennant avatarId={sender?.avatarId ?? null} name={name} size={28} /> : null}
+        </div>
         <button
           type="button"
           onClick={onTray}
           disabled={!onTray}
           aria-expanded={trayOpen}
-          className={`max-w-[270px] self-start rounded-[14px] border bg-card px-3 py-2 text-left text-base leading-[22px] break-words whitespace-pre-wrap text-foreground ${
+          className={`max-w-[270px] min-w-0 rounded-[14px] border bg-card px-3 py-2 text-left text-base leading-[22px] break-words whitespace-pre-wrap text-foreground ${
             trayOpen ? "border-ring" : "border-settled-border"
           }`}
         >
           {message.text}
         </button>
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5 pl-9">
         <ReactionChips message={message} mine={false} />
         {trayOpen ? <ReactionTray message={message} onPick={onReact} onClose={onTray ?? (() => {})} /> : null}
       </div>
