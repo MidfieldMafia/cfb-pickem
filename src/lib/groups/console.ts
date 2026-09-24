@@ -9,7 +9,7 @@
  */
 import "server-only";
 import { asc, eq, isNull } from "drizzle-orm";
-import { groups, membershipRemovals, members, memberships, type Group, type Member, type MembershipRole } from "@/db/schema";
+import { chatMessages, groups, membershipRemovals, members, memberships, type Group, type Member, type MembershipRole } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { Commissioner } from "@/lib/members/authority";
 import { newSecret, type NewMemberInput } from "@/lib/members/members";
@@ -119,7 +119,7 @@ export async function createGroup(db: Db, actor: Commissioner, name: string): Pr
 }
 
 /**
- * Deletes a group and every membership it has had. People are not touched: their
+ * Deletes a group, its Chat thread, and every membership it has had. People are not touched: their
  * rows, Picks and Magic Links stay, and anyone it was the last group of sees the
  * "not in a group yet" screen. Their other groups are untouched.
  *
@@ -138,6 +138,7 @@ export async function deleteGroup(
   const summary = (await listGroups(db, actor)).find((group) => group.id === groupId);
   if (!summary) throw new InvalidGroup("No such group.");
   if (confirm.trim() !== summary.name) throw new InvalidGroup(`Type ${summary.name} to delete it.`);
+  await db.delete(chatMessages).where(eq(chatMessages.groupId, groupId));
   await db.delete(membershipRemovals).where(eq(membershipRemovals.groupId, groupId));
   await db.delete(memberships).where(eq(memberships.groupId, groupId));
   await db.delete(groups).where(eq(groups.id, groupId));

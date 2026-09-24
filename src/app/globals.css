@@ -26,4 +26,10 @@
     html:not([data-launched]) .launch-screen { display: flex; }
   }
   @media (prefers-reduced-motion: reduce) { .launch-screen { transition: none; } }
+
+  /* A screen that scrolls a box of its own rather than the page — the Chat
+     thread (#248) — marks itself so, and the body is held to the viewport.
+     Its column can then shrink to fit between the header and the bottom nav,
+     and whatever it keeps below the box (the composer) stays put. */
+  body:has([data-own-scroll]) { height: 100%; }
 }

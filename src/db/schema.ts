@@ -20,6 +20,7 @@ import {
   uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import type { GameDetail } from "@/lib/detail";
 import type { Rules } from "@/lib/scoring/types";
 
@@ -229,6 +230,13 @@ export const memberships = pgTable(
     role: text("role", { enum: membershipRoles }).notNull().default("member"),
     /** A Week counts in this group only if its Deadline fell after this. Kept through a removal and restore. */
     joinedAt: utc("joined_at").notNull().defaultNow(),
+    /**
+     * The newest Chat message this member has seen in this group (#248): the
+     * unread badge counts what came after it. An id rather than a time, so the
+     * marker never disagrees with the order the thread shows. Null until they
+     * first open the thread.
+     */
+    chatReadId: integer("chat_read_id"),
   },
   (t) => [primaryKey({ columns: [t.groupId, t.memberId] }), index("memberships_member_idx").on(t.memberId)],
 );
@@ -468,6 +476,35 @@ export const feedbackScreenshots = pgTable("feedback_screenshots", {
   bytes: text("bytes").notNull(),
 });
 
+/**
+ * One message in a Group's Chat thread (#248). A thread is a Group's messages
+ * for one Season. `deletedAt` hides a message from everyone; `removedBy` is set
+ * when an Organizer or Commissioner took it down rather than its sender (#250).
+ */
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    seasonId: integer("season_id")
+      .notNull()
+      .references(() => seasons.id),
+    text: text("text").notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+    deletedAt: utc("deleted_at"),
+    removedBy: integer("removed_by").references(() => members.id),
+  },
+  (t) => [
+    index("chat_messages_thread_idx").on(t.groupId, t.seasonId, t.id),
+    check("chat_messages_text_length", sql`char_length(${t.text}) between 1 and ${sql.raw(String(MAX_CHAT_TEXT))}`),
+  ],
+);
+
 export const seasonsRelations = relations(seasons, ({ many }) => ({ weeks: many(weeks) }));
 export const weeksRelations = relations(weeks, ({ one, many }) => ({
   season: one(seasons, { fields: [weeks.seasonId], references: [seasons.id] }),
@@ -490,3 +527,4 @@ export type Membership = typeof memberships.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type TextMessage = typeof textMessages.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;

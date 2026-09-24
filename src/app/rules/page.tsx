@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { AppHeader, Button, Card, SECTION_LABEL } from "@saturday-slate/design-system";
 
 import { BottomNav } from "@/components/bottom-nav";
+import { currentChatUnread } from "@/lib/chat/current";
 
 import { MemberMenu } from "@/components/member-menu";
 
@@ -44,6 +45,7 @@ export default async function HowToPlay({
   const slate = inSetup ? null : await publishedSlate(database);
   const locked = slate ? deadlinePassed(slate.week, new Date()) : false;
   const picksOpen = slate && !locked ? await picksOpenFor(database, member, slate) : false;
+  const chatUnread = inSetup ? 0 : await currentChatUnread(member);
 
   return (
     <>
@@ -175,7 +177,7 @@ export default async function HowToPlay({
           </Link>
         )}
       </main>
-      {inSetup ? null : <BottomNav locked={locked} picksOpen={picksOpen} />}
+      {inSetup ? null : <BottomNav locked={locked} picksOpen={picksOpen} chatUnread={chatUnread} />}
     </>
   );
 }

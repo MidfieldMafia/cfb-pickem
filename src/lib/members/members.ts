@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
 import { inOneBatch } from "@/db/batch";
 import {
+  chatMessages,
   feedback,
   feedbackScreenshots,
   locks,
@@ -232,7 +233,7 @@ export async function pickCountByMember(db: Db, actor: Commissioner): Promise<Ma
  *
  * Every row that names them goes in one batch with the member, so a failure
  * leaves them whole rather than half deleted. That includes their Feedback
- * and its screenshots (#237).
+ * and its screenshots (#237), and their Chat messages (#248).
  */
 export async function removeMember(db: Db, actor: Commissioner, memberId: number): Promise<Member> {
   if (memberId === actor.id) throw new InvalidMember("You cannot delete yourself.");
@@ -257,9 +258,12 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     tx.delete(memberPhotos).where(eq(memberPhotos.memberId, memberId)),
     tx.delete(feedbackScreenshots).where(inArray(feedbackScreenshots.feedbackId, theirFeedback)),
     tx.delete(feedback).where(eq(feedback.memberId, memberId)),
+    tx.delete(chatMessages).where(eq(chatMessages.memberId, memberId)),
+    // A message they took down stays down; it just no longer names who did it.
+    tx.update(chatMessages).set({ removedBy: null }).where(eq(chatMessages.removedBy, memberId)),
     tx.delete(members).where(eq(members.id, memberId)).returning(),
   ]);
-  const [deleted] = writes[11];
+  const [deleted] = writes[13];
   return deleted;
 }
 
