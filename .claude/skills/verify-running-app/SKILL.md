@@ -11,7 +11,7 @@ sees the server's first pass. Anything the browser settles (a control that
 reacts, a layout that resolves, a target big enough to hit) needs step 5.
 
 Every screen except `/expired` needs a session, and the only way in is a Magic
-Link minted from the database by a commissioner. Jonah issues them; you ask.
+Link minted from the database by a commissioner. You ask for one.
 
 Alex works on Windows and Jonah on macOS. Steps that differ say which is which.
 
@@ -84,8 +84,11 @@ serving your current source.
 
 ## 3. Get a session
 
-Ask the user for a Magic Link. It looks like `http://localhost:3000/m/<token>`;
-the token is what matters, so send it to your own `$BASE`:
+Ask the user for a Magic Link, naming the member state the check needs (a
+commissioner, a member who has not picked). They arrive fast, and a member who
+is already in that state turns a write into a read. A link looks like
+`https://slate.midfield-mafia.com/m/<token>`; the token is what matters, so
+send it to your own `$BASE`:
 
 ```bash
 curl -s -i "$BASE/m/<token>" | head -6
