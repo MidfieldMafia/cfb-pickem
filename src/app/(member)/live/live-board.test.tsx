@@ -294,6 +294,8 @@ describe("the viewer's own rank", () => {
 describe("the freshness line (#95)", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   test("says how long ago the scores were confirmed, and when the next check is due", () => {
@@ -324,6 +326,23 @@ describe("the freshness line (#95)", () => {
     expect(screen.getByText(/Updated 12s ago/)).not.toBeNull();
     // Live cadence: a game is under way, so the next check is thirty seconds out.
     expect(screen.getByText(/next check in 18s/)).not.toBeNull();
+  });
+
+  test("holds still between ticks, even when a render outlasts a millisecond", () => {
+    // Fake timers freeze the clock, which hides this; a slow render does not.
+    // A clock that moves on every read is the slow render's view of it.
+    let now = new Date(state().serverNow).getTime();
+    vi.spyOn(Date, "now").mockImplementation(() => (now += 1));
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+
+    render(
+      <LiveBoard
+        initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null })}
+        viewer={VIEWER}
+      />,
+    );
+
+    expect(screen.getByText(/Updated/)).not.toBeNull();
   });
 
   test("says nothing once the Week is complete — there is nothing left to go stale", () => {

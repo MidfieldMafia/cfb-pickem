@@ -107,7 +107,11 @@ function FreshnessLine({ serverNow, nextPollAt }: { serverNow: string; nextPollA
   // `nextPollAt` is stamped on the phone's own clock, so ticking this against
   // it needs no server-offset correction — just a re-render every second,
   // read the sanctioned way rather than calling `Date.now()` in the render body.
-  const clientNow = useSyncExternalStore(subscribeEverySecond, () => Date.now(), () => 0);
+  // Whole seconds, as in `useDeadlineClock`: React re-reads the snapshot after
+  // every commit and renders again if it moved, so a raw `Date.now()` loops
+  // for as long as each render outlasts a millisecond, until "Maximum update
+  // depth exceeded".
+  const clientNow = useSyncExternalStore(subscribeEverySecond, () => Math.floor(Date.now() / 1000) * 1000, () => 0);
   const dueInMs = nextPollAt === null ? null : Math.max(0, nextPollAt - clientNow);
   return (
     <p className="flex items-center gap-1 text-xs text-muted-foreground">
