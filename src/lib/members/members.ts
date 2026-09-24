@@ -4,6 +4,7 @@ import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
 import { inOneBatch } from "@/db/batch";
 import {
   chatMessages,
+  chatReactions,
   feedback,
   feedbackScreenshots,
   locks,
@@ -233,7 +234,8 @@ export async function pickCountByMember(db: Db, actor: Commissioner): Promise<Ma
  *
  * Every row that names them goes in one batch with the member, so a failure
  * leaves them whole rather than half deleted. That includes their Feedback
- * and its screenshots (#237), and their Chat messages (#248).
+ * and its screenshots (#237), their Chat messages (#248), their reactions and
+ * everyone's reactions to their messages (#249).
  */
 export async function removeMember(db: Db, actor: Commissioner, memberId: number): Promise<Member> {
   if (memberId === actor.id) throw new InvalidMember("You cannot delete yourself.");
@@ -246,6 +248,7 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     );
   }
   const theirFeedback = db.select({ id: feedback.id }).from(feedback).where(eq(feedback.memberId, memberId));
+  const theirMessages = db.select({ id: chatMessages.id }).from(chatMessages).where(eq(chatMessages.memberId, memberId));
   const writes = await inOneBatch(db, (tx) => [
     tx.delete(sessions).where(eq(sessions.memberId, memberId)),
     tx.delete(textMessages).where(eq(textMessages.memberId, memberId)),
@@ -258,12 +261,14 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     tx.delete(memberPhotos).where(eq(memberPhotos.memberId, memberId)),
     tx.delete(feedbackScreenshots).where(inArray(feedbackScreenshots.feedbackId, theirFeedback)),
     tx.delete(feedback).where(eq(feedback.memberId, memberId)),
+    tx.delete(chatReactions).where(eq(chatReactions.memberId, memberId)),
+    tx.delete(chatReactions).where(inArray(chatReactions.messageId, theirMessages)),
     tx.delete(chatMessages).where(eq(chatMessages.memberId, memberId)),
     // A message they took down stays down; it just no longer names who did it.
     tx.update(chatMessages).set({ removedBy: null }).where(eq(chatMessages.removedBy, memberId)),
     tx.delete(members).where(eq(members.id, memberId)).returning(),
   ]);
-  const [deleted] = writes[13];
+  const [deleted] = writes[15];
   return deleted;
 }
 

@@ -3,7 +3,8 @@
  * component and its poll read these, the server builds them.
  */
 import type { MemberJson } from "@/lib/slate/json";
-import type { Thread } from "./chat";
+import type { ReactionCount, Thread } from "./chat";
+import type { ChatReactionKind } from "./reactions";
 
 export interface ChatMessageJson {
   id: number;
@@ -11,6 +12,10 @@ export interface ChatMessageJson {
   text: string;
   /** ISO 8601. */
   createdAt: string;
+  /** Each kind anyone has reacted with, in the tray's order; none at zero. */
+  reactions: ReactionCount[];
+  /** The viewer's own reaction. */
+  mine: ChatReactionKind | null;
 }
 
 export interface ChatStateJson {
@@ -23,7 +28,14 @@ export interface ChatStateJson {
 
 export function toChatStateJson(thread: Thread, now: Date): ChatStateJson {
   return {
-    messages: thread.messages.map((m) => ({ id: m.id, memberId: m.memberId, text: m.text, createdAt: m.createdAt.toISOString() })),
+    messages: thread.messages.map((m) => ({
+      id: m.id,
+      memberId: m.memberId,
+      text: m.text,
+      createdAt: m.createdAt.toISOString(),
+      reactions: m.reactions,
+      mine: m.mine,
+    })),
     senders: thread.senders,
     serverNow: now.toISOString(),
   };

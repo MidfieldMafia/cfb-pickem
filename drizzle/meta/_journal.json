@@ -85,6 +85,13 @@
       "when": 1790220171635,
       "tag": "0011_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790260537099,
+      "tag": "0012_chat-reactions",
+      "breakpoints": true
     }
   ]
 }

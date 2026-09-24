@@ -6,15 +6,19 @@
  *
  * The unread count behind the tab's badge is counted from a marker on the
  * membership: the id of the newest message the member has seen there.
+ *
+ * Reactions (#249) ride on the thread: each message carries its counts and the
+ * reader's own, so the poll that brings new messages brings new reactions too.
  */
 import "server-only";
 import { and, asc, count, desc, eq, gt, inArray, isNull, ne, notExists, or, sql } from "drizzle-orm";
-import { chatMessages, membershipRemovals, memberships, members, seasons, type Member } from "@/db/schema";
+import { chatMessages, chatReactions, membershipRemovals, memberships, members, seasons, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { memberGroups } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import { toMemberJson, type MemberJson } from "@/lib/slate/json";
 import { MAX_CHAT_TEXT } from "./limits";
+import { chatReactionKinds, type ChatReactionKind } from "./reactions";
 
 export class InvalidChat extends Refusal {}
 
@@ -39,9 +43,21 @@ export interface ThreadMessage {
   createdAt: Date;
 }
 
+export interface ReactionCount {
+  kind: ChatReactionKind;
+  count: number;
+}
+
+export interface ThreadEntry extends ThreadMessage {
+  /** Each kind anyone has reacted with, in the tray's order; none at zero. */
+  reactions: ReactionCount[];
+  /** The reader's own reaction. */
+  mine: ChatReactionKind | null;
+}
+
 export interface Thread {
   /** Oldest first. */
-  messages: ThreadMessage[];
+  messages: ThreadEntry[];
   /** Everyone who wrote one of `messages`, for the names and pennants. Removed members included. */
   senders: MemberJson[];
 }
@@ -96,13 +112,74 @@ export async function chatThread(db: Db, member: Pick<Member, "id">, groupId: nu
     .where(and(eq(chatMessages.groupId, groupId), eq(chatMessages.seasonId, seasonId), isNull(chatMessages.deletedAt)))
     .orderBy(desc(chatMessages.id))
     .limit(THREAD_LIMIT);
-  const messages = newestFirst.reverse();
+  const reactions = await reactionsTo(db, member.id, newestFirst.map((m) => m.id));
+  const messages = newestFirst.reverse().map((m) => ({ ...m, ...(reactions.get(m.id) ?? { reactions: [], mine: null }) }));
   const ids = [...new Set(messages.map((m) => m.memberId))];
   const senders =
     ids.length === 0
       ? []
       : (await db.select().from(members).where(inArray(members.id, ids)).orderBy(asc(members.id))).map(toMemberJson);
   return { messages, senders };
+}
+
+/** The counts and the reader's own reaction for each of `messageIds` that has any. */
+async function reactionsTo(
+  db: Db,
+  readerId: number,
+  messageIds: number[],
+): Promise<Map<number, Pick<ThreadEntry, "reactions" | "mine">>> {
+  const byMessage = new Map<number, Pick<ThreadEntry, "reactions" | "mine">>();
+  if (messageIds.length === 0) return byMessage;
+  const rows = await db
+    .select({ messageId: chatReactions.messageId, memberId: chatReactions.memberId, kind: chatReactions.kind })
+    .from(chatReactions)
+    .where(inArray(chatReactions.messageId, messageIds));
+  const counts = new Map<number, Map<ChatReactionKind, number>>();
+  for (const row of rows) {
+    const kinds = counts.get(row.messageId) ?? new Map<ChatReactionKind, number>();
+    kinds.set(row.kind, (kinds.get(row.kind) ?? 0) + 1);
+    counts.set(row.messageId, kinds);
+    if (row.memberId === readerId) byMessage.set(row.messageId, { reactions: [], mine: row.kind });
+  }
+  for (const [messageId, kinds] of counts) {
+    const reactions = chatReactionKinds.filter((kind) => kinds.has(kind)).map((kind) => ({ kind, count: kinds.get(kind)! }));
+    byMessage.set(messageId, { reactions, mine: byMessage.get(messageId)?.mine ?? null });
+  }
+  return byMessage;
+}
+
+/**
+ * Sets the member's reaction to a message in the Group's thread: `kind` puts
+ * it on or switches it, null takes it off. The phone sends the reaction it
+ * wants rather than "toggle", so a tap sent twice lands where one would.
+ *
+ * Only a message still showing in the active Season's thread takes one.
+ */
+export async function setReaction(
+  db: Db,
+  member: Pick<Member, "id">,
+  groupId: number,
+  messageId: number,
+  kind: ChatReactionKind | null,
+  now: Date = new Date(),
+): Promise<void> {
+  await requireInGroup(db, member.id, groupId);
+  const [message] = await db
+    .select({ id: chatMessages.id })
+    .from(chatMessages)
+    .innerJoin(seasons, and(eq(seasons.id, chatMessages.seasonId), eq(seasons.active, true)))
+    .where(and(eq(chatMessages.id, messageId), eq(chatMessages.groupId, groupId), isNull(chatMessages.deletedAt)))
+    .limit(1);
+  if (!message) throw new InvalidChat("That message is gone.");
+  const mine = and(eq(chatReactions.messageId, messageId), eq(chatReactions.memberId, member.id));
+  if (kind === null) {
+    await db.delete(chatReactions).where(mine);
+    return;
+  }
+  await db
+    .insert(chatReactions)
+    .values({ messageId, memberId: member.id, kind, createdAt: now })
+    .onConflictDoUpdate({ target: [chatReactions.messageId, chatReactions.memberId], set: { kind, createdAt: now } });
 }
 
 /**
