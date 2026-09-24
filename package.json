@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "preflight": "bash .claude/hooks/preflight-checks.sh",
     "test:watch": "vitest",
     "migrate": "drizzle-kit migrate",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
