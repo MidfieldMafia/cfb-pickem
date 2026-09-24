@@ -151,6 +151,7 @@ describe("the states a Saturday passes through", () => {
     expect(screen.getByText(/Picks lock/)).not.toBeNull();
     expect(screen.getByText(/Everyone.s picks show here once they do/)).not.toBeNull();
     expect(screen.queryByText(/of 12/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /on the Leaderboard/ })).toBeNull();
   });
 
   test("a game in progress shows its period and clock", () => {
@@ -271,6 +272,14 @@ describe("the viewer's own rank", () => {
     expect(screen.getByText("3–0 so far")).not.toBeNull();
   });
 
+  test("opens that Week's standings on the Leaderboard (#245)", () => {
+    render(<LiveBoard initial={state({ scores: [score(FAMILY[0], 30), ...FAMILY.slice(1).map((m) => score(m, 10))] })} viewer={VIEWER} />);
+
+    const link = screen.getByRole("link", { name: /Open Week 2 on the Leaderboard/ });
+    expect(link.getAttribute("href")).toBe("/leaderboard?week=2");
+    expect(link.getAttribute("aria-label")).toBe("You are 1st of 12 in Week 2 with 30 pts. Open Week 2 on the Leaderboard");
+  });
+
   test("tells a member who joined after the Deadline that the week does not count", () => {
     // On neither board: no weekly score at all.
     const joiner: MemberJson = { id: 99, displayName: "Cousin Em", avatarId: null };
@@ -278,6 +287,7 @@ describe("the viewer's own rank", () => {
 
     expect(screen.getByText(/joined after this week.s deadline/)).not.toBeNull();
     expect(screen.queryByText(/You · Week/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /on the Leaderboard/ })).toBeNull();
   });
 });
 

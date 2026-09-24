@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, Scale, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AppHeader, LocalTime, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@saturday-slate/design-system";
 
@@ -147,18 +148,28 @@ function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson 
       </Card>
     );
   }
+  // Counted, so the Week has standings to open (boards 6 and 8): the whole card
+  // is the way to them. The other two states have none, and stay plain.
+  const week = state.week.weekNumber;
   return (
-    <Card className="flex-row items-center border-transparent bg-primary text-primary-foreground">
-      <Pennant avatarId={viewer.avatarId} name={viewer.displayName} size={40} />
-      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5">
-        <span className="text-xs font-bold uppercase tracking-[0.08em] opacity-85">You · Week {state.week.weekNumber}</span>
-        <span className="text-right text-xs font-bold uppercase tracking-[0.08em] tabular-nums opacity-85">
-          {record(mine.correct, mine.incorrect)} so far
-        </span>
-        <span className="font-display text-2xl font-black">{place.label}</span>
-        <span className="text-right font-display text-2xl font-black tabular-nums">{mine.points} pts</span>
-      </div>
-    </Card>
+    <Link
+      href={`/leaderboard?week=${week}`}
+      aria-label={`You are ${place.label} in Week ${week} with ${mine.points} pts. Open Week ${week} on the Leaderboard`}
+      className="block rounded-xl no-underline"
+    >
+      <Card className="flex-row items-center border-transparent bg-primary text-primary-foreground">
+        <Pennant avatarId={viewer.avatarId} name={viewer.displayName} size={40} />
+        <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5">
+          <span className="text-xs font-bold uppercase tracking-[0.08em] opacity-85">You · Week {week}</span>
+          <span className="text-right text-xs font-bold uppercase tracking-[0.08em] tabular-nums opacity-85">
+            {record(mine.correct, mine.incorrect)} so far
+          </span>
+          <span className="font-display text-2xl font-black">{place.label}</span>
+          <span className="text-right font-display text-2xl font-black tabular-nums">{mine.points} pts</span>
+        </div>
+        <ChevronRight size={18} aria-hidden className="shrink-0 opacity-85" />
+      </Card>
+    </Link>
   );
 }
 
