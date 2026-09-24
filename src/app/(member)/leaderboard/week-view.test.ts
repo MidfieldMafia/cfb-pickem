@@ -6,7 +6,7 @@
 import { describe, expect, test } from "vitest";
 import type { GameResult } from "@/lib/results/result";
 import type { GradedWeek, LeaderboardRow, WeeklyScore } from "@/lib/results/results";
-import { gamesLeftLabel, SEASON_PARAM, selectedWeek, stripTiles, weekInProgress } from "./week-view";
+import { gamesLeftLabel, revealHref, SEASON_PARAM, selectedWeek, stripTiles, weekInProgress } from "./week-view";
 
 const ME = 1;
 
@@ -150,5 +150,16 @@ describe("the games left in a Week in progress", () => {
   test("says 'game' once, on whichever half comes first", () => {
     expect(gamesLeftLabel([live])).toBe("1 game live");
     expect(gamesLeftLabel([toCome, toCome])).toBe("2 games to kick off");
+  });
+});
+
+describe("the Reveal card under a Week's standings", () => {
+  test("a finished Week links to its own Reveal", () => {
+    expect(revealHref(week(2, true))).toBe("/leaderboard/reveal?week=2");
+  });
+
+  test("Season and a Week in progress have no card", () => {
+    expect(revealHref(null)).toBeNull();
+    expect(revealHref(week(3, false))).toBeNull();
   });
 });

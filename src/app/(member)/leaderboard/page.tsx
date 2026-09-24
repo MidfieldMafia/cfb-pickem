@@ -13,8 +13,8 @@ import { seasonChampion, seasonStatusLabel, weeklyWinSentence } from "@/lib/resu
 import { MAX_WEEK_NUMBER } from "@/lib/slate/slate";
 import { freshSlate } from "@/lib/week/week";
 import { LeaderboardTable } from "./leaderboard-table";
-import { gamesLeftLabel, selectedWeek, stripTiles, weekInProgress } from "./week-view";
-import { LiveWeekCard, WeekStrip } from "./week-strip";
+import { gamesLeftLabel, revealHref, selectedWeek, stripTiles, weekInProgress } from "./week-view";
+import { LiveWeekCard, RevealCard, WeekStrip } from "./week-strip";
 import { WeeklyScoreList } from "./weekly-score";
 
 /**
@@ -30,7 +30,8 @@ import { WeeklyScoreList } from "./weekly-score";
  * feeds cannot disagree, and choosing a week costs no further query. Without
  * one — or with a Week that has not been played — it opens on the Week in
  * progress while there is one, and on Season otherwise (#243);
- * `?week=season` asks for Season outright.
+ * `?week=season` asks for Season outright. A finished Week ends in a card to
+ * its Reveal (#244), which has a screen of its own at `reveal/`.
  *
  * While a Week is in progress the feed is pulled first, on the Live Board's
  * stale gate, so the standings and the games-left card read the same scores.
@@ -56,6 +57,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
   // Null when nobody played the Week, which is not the same as an empty
   // sentence: interpolating it straight into the footnote puts "null" on the board.
   const won = shown ? weeklyWinSentence(shown.weeklyWin, shown.complete) : null;
+  const reveal = revealHref(shown);
   // Movement is measured against the board before the latest played Week. With
   // one week played there is no such board, so there are no arrows to explain.
   const movedSince = played.length > 1 ? played[played.length - 2].week.weekNumber : null;
@@ -111,6 +113,12 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
           </>
         )}
       </section>
+
+      {shown && reveal ? (
+        <div className="px-4">
+          <RevealCard href={reveal} weekNumber={shown.week.weekNumber} />
+        </div>
+      ) : null}
 
       <div className="flex flex-col px-4">
         <Link href="/rules" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">

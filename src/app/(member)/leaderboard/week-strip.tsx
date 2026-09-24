@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Radio } from "lucide-react";
+import { ChevronRight, Eye, Radio } from "lucide-react";
 
 import type { StripTile } from "./week-view";
 
@@ -98,6 +98,27 @@ export function LiveWeekCard({ left }: { left: string }) {
     >
       <Radio size={20} aria-hidden className="shrink-0" />
       <p className="grow text-sm font-bold">{left}</p>
+      <ChevronRight size={16} aria-hidden className="shrink-0 text-muted-foreground" />
+    </Link>
+  );
+}
+
+/**
+ * Under a finished Week's standings (board 9): the way into that Week's
+ * Reveal, every Member's pick game by game, which has its own screen so the
+ * standings stay short.
+ */
+export function RevealCard({ href, weekNumber }: { href: string; weekNumber: number }) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-14 items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2 text-foreground no-underline"
+    >
+      <Eye size={20} aria-hidden className="shrink-0" />
+      <span className="flex grow flex-col">
+        <span className="text-sm font-bold">Week {weekNumber} Reveal</span>
+        <span className="text-xs text-muted-foreground">Your picks, and every Member&rsquo;s, game by game</span>
+      </span>
       <ChevronRight size={16} aria-hidden className="shrink-0 text-muted-foreground" />
     </Link>
   );
