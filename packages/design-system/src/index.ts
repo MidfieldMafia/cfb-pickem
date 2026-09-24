@@ -9,6 +9,7 @@ export * from "./progress";
 export * from "./table";
 export * from "./drawer";
 export * from "./section-label";
+export * from "./link";
 export * from "./team-name";
 export * from "./wordmark";
 export * from "./header-links";

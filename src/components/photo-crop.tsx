@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronLeft, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { useRef, useState } from "react";
-import { Button, SECTION_LABEL } from "@saturday-slate/design-system";
+import { Button, SECTION_LABEL, BackLink } from "@saturday-slate/design-system";
 
 import { clampCrop, cropBox, FIT, MAX_ZOOM, sourceSquare, type Crop, type ImageSize } from "@/lib/crop";
 
@@ -97,10 +97,7 @@ export function PhotoCrop({
           the clock sits over the top edge and the home indicator over the bottom one. */}
       <div className="mx-auto flex min-h-full w-full max-w-md flex-col gap-4 px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
         <div className="flex h-14 items-center">
-          <button type="button" onClick={onCancel} className="-ml-2 flex items-center gap-1 px-2 font-semibold">
-            <ChevronLeft aria-hidden className="size-5" />
-            Cancel
-          </button>
+          <BackLink onClick={onCancel}>Cancel</BackLink>
         </div>
         <div className="space-y-1 text-center">
           <h2 id="photo-crop-title" className="font-display text-[28px] leading-8">

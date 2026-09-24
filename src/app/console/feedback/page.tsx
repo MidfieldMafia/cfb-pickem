@@ -1,7 +1,7 @@
 import { Bug, Check, ChevronRight, Lightbulb } from "lucide-react";
 import { db } from "@/db";
 import type { FeedbackKind } from "@/db/schema";
-import { Button, Card, SECTION_LABEL } from "@saturday-slate/design-system";
+import { Button, Card, SECTION_LABEL, LINK } from "@saturday-slate/design-system";
 
 import { Pennant } from "@/components/pennant";
 import { deviceLabel } from "@/lib/feedback/device";
@@ -90,7 +90,7 @@ export default async function FeedbackScreen() {
                 <form action={markFeedbackAction} className="shrink-0">
                   <input type="hidden" name="feedbackId" value={item.id} />
                   <input type="hidden" name="done" value="false" />
-                  <button type="submit" className="tap inline-flex items-center px-1 text-sm font-semibold underline underline-offset-4">
+                  <button type="submit" className={`px-1 ${LINK}`}>
                     Not done
                   </button>
                 </form>

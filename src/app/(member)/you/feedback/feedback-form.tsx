@@ -3,7 +3,7 @@
 import { Bug, CircleCheck, ImageIcon, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
-import { Button, Card, SECTION_LABEL, Textarea } from "@saturday-slate/design-system";
+import { Button, Card, SECTION_LABEL, Textarea, LINK } from "@saturday-slate/design-system";
 
 import {
   MAX_FEEDBACK_TEXT,
@@ -80,11 +80,11 @@ export function FeedbackForm() {
               setShotError(null);
               setDismissed(state.sent);
             }}
-            className={QUIET_LINK}
+            className={LINK}
           >
             Send another
           </button>
-          <Link href="/you" className={QUIET_LINK}>
+          <Link href="/you" className={LINK}>
             Back to You
           </Link>
         </div>
@@ -181,7 +181,7 @@ export function FeedbackForm() {
             />
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Screenshot added</span>
-              <button type="button" onClick={() => setShot(null)} className={`self-start ${QUIET_LINK}`}>
+              <button type="button" onClick={() => setShot(null)} className={`self-start ${LINK}`}>
                 Remove
               </button>
             </div>
@@ -207,9 +207,6 @@ export function FeedbackForm() {
     </form>
   );
 }
-
-const QUIET_LINK =
-  "tap inline-flex items-center text-sm font-semibold underline underline-offset-4";
 
 /**
  * One of the two kinds, as a tile: a real radio inside a label, so the whole

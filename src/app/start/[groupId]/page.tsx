@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CopyButton, SECTION_LABEL, Button, Card, Wordmark } from "@saturday-slate/design-system";
+import { CopyButton, SECTION_LABEL, Button, Card, Wordmark, LINK } from "@saturday-slate/design-system";
 
 import { db } from "@/db";
 import { appUrl } from "@/lib/app-url";
@@ -64,7 +64,7 @@ export default async function Started({
           <Link href={inSetup ? "/install" : "/"}>{inSetup ? "Next" : `Go to ${manager.group.name}`}</Link>
         </Button>
         {inSetup ? null : (
-          <Link href={managePath(manager.group.id)} className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
+          <Link href={managePath(manager.group.id)} className={LINK}>
             Manage {manager.group.name}
           </Link>
         )}

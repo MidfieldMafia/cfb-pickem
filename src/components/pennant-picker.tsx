@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { Camera, ChevronLeft, ChevronRight, CircleAlert, ImageIcon } from "lucide-react";
+import { Camera, ChevronRight, CircleAlert, ImageIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buttonVariants, Card, Pennant, SECTION_LABEL } from "@saturday-slate/design-system";
+import { buttonVariants, Card, Pennant, SECTION_LABEL, BackLink } from "@saturday-slate/design-system";
 
 import { avatars, findAvatar, NEW_PHOTO, teamAvatarConferences, type Avatar } from "@/lib/avatars";
 import { PhotoCrop } from "./photo-crop";
@@ -216,10 +216,9 @@ function Level({ title, onBack, children }: { title: string; onBack: () => void;
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-1">
-        <button type="button" onClick={onBack} className="tap -ml-2 flex items-center gap-1 pr-2 pl-1 font-semibold">
-          <ChevronLeft aria-hidden className="size-5" />
+        <BackLink onClick={onBack}>
           <span className="sr-only">Back</span>
-        </button>
+        </BackLink>
         <span className="font-semibold">{title}</span>
       </div>
       {children}

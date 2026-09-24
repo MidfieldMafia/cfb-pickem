@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { HEADER_TOP, HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL } from "@saturday-slate/design-system";
+import { HEADER_TOP, HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
@@ -356,7 +356,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             {lockError}
           </p>
         ) : null}
-        <Link href="/rules" className="mt-1 inline-block text-sm font-semibold underline underline-offset-4">
+        <Link href="/rules" className={LINK}>
           See how to play
         </Link>
       </section>
@@ -397,7 +397,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         </form>
       </section>
 
-      <Link href="/" className="pt-2 text-sm font-semibold underline underline-offset-4">
+      <Link href="/" className={LINK}>
         Back to this week
       </Link>
 

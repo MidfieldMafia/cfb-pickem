@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime } from "@saturday-slate/design-system";
+import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
 
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
@@ -366,7 +366,7 @@ export function PickFlow({
             <>
               <Link
                 href="/picks/review"
-                className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
+                className={LINK}
               >
                 Review
               </Link>

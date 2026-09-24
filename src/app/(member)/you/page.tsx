@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { MessageSquare } from "lucide-react";
-import { AppHeader, CopyButton, SECTION_LABEL, Badge, Button, Card } from "@saturday-slate/design-system";
+import { AppHeader, CopyButton, SECTION_LABEL, Badge, Button, Card, LINK } from "@saturday-slate/design-system";
 import { MemberMenu } from "@/components/member-menu";
 
 import { Pennant } from "@/components/pennant";
@@ -51,7 +51,7 @@ export default async function You() {
             <Pennant avatarId={member.avatarId} name={member.displayName} size={56} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-2xl">{member.displayName}</p>
-              <Link href="/welcome" className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4">
+              <Link href="/welcome" className={LINK}>
                 Edit name and pennant
               </Link>
             </div>
@@ -99,7 +99,7 @@ export default async function You() {
                     {entry.role === "organizer" ? (
                       <Link
                         href={managePath(entry.group.id)}
-                        className="tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
+                        className={LINK}
                       >
                         Manage {entry.group.name}
                       </Link>

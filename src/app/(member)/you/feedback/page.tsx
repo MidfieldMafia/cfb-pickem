@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { BackLink } from "@saturday-slate/design-system";
 import { requireMember } from "@/lib/members/current";
 import { FeedbackForm } from "./feedback-form";
 
@@ -15,10 +14,7 @@ export default async function SendFeedback() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-8">
       <div className="flex h-14 items-center">
-        <Link href="/you" className="tap -ml-2 flex items-center gap-1 px-2 font-semibold no-underline">
-          <ChevronLeft aria-hidden className="size-5" />
-          You
-        </Link>
+        <BackLink href="/you">You</BackLink>
       </div>
       <div className="space-y-1">
         <h1 className="font-display">Send feedback</h1>
