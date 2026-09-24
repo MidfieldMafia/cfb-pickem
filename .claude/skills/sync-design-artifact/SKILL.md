@@ -74,6 +74,11 @@ Then, per kind of change:
   README, and its card shows only its name and props.
 - **A token** (`packages/design-system/tokens/*.css`): change that entry's value in
   `tokens.json`, keeping its `usage`, and send the file whole. The page regenerates `tokens.css`.
+- **A type style** in `tokens.json`: name it unlike any class in `bundle.css` (`h1`, `body`,
+  `caps-label`, never `text-sm`). The page compiles each style into an unlayered `.<name>` rule,
+  which beats Tailwind's layered utilities, so a style named `text-xs` strips the weight and face
+  off every `text-xs font-bold` in every preview. Until 2026-09-24 it did: Wordmark, TeamName,
+  StandingCard and every caps label rendered as light Manrope. `render.mjs` fails on a collision.
 - **A brand mark, pennant or logo file**: upload it as an asset and record it in the index's
   `assetGroups`, as the type's instructions say.
 - **Behaviour the brand book describes**: grep `README.md` and `assets/*/README.md` for claims the
@@ -95,8 +100,14 @@ node .design-artifact/render.mjs --artifact .design-artifact/artifact --shots "$
 ```
 
 It renders each preview as the page does, once with the Artifact's current bundle (`old`) and
-once with the staged files (`new`), and exits non-zero on any error or missing export. Then Read
-the `new` screenshot of every preview you staged or whose component changed, beside its `old`.
+once with the staged files (`new`), full height, as the page grows a card to fit. It exits
+non-zero on any error, missing export or type-style collision (step 3). Then Read the `new`
+screenshot of every preview you staged or whose component changed, beside its `old`.
+
+A clean run proves only that nothing threw: a wrong face or weight renders without an error. Each
+sync, check the tells: `Wordmark`, `TeamName` and `StandingCard`'s figures in Chivo Black, and
+every caps label bold with wide tracking.
+
 Done when the run prints `every new render is clean` and each screenshot you read shows the change
 and nothing else.
 
@@ -121,8 +132,12 @@ changed.
 
 - The page writes the `api/` cards, `manifest.json`, `tokens.css` and the README's generated
   Index only when someone saves in it, never on a publish from here. A card that still shows an
-  old description after a sync is waiting for that save.
-- The page's generated `tokens.css` defines `.text-lg`/`.text-2xl` with `font-family: var(--font-sans)`,
-  which beats `TeamName`'s display face in previews. It is the page's file; leave it.
+  old description after a sync is waiting for that save. After a sync that sends `tokens.json`,
+  ask Alex to make one save in the page: until then previews render with the old `tokens.css`.
+  `render.mjs` stands in for that save by dropping the rules the staged `tokens.json` no longer has.
+- A preview drawn at a fixed layout width (the Cover, at 960) needs `width=<px>` on its `@dsCard`
+  line; without it the page crops the layout instead of scaling it down.
+- The index's `source` carries a `map` key, so the type's "clean-up" for systems migrated from
+  claude.ai/design changes nothing here and the missing `upgraded` mark is expected.
 - The claude.ai/design project `13ff5b45-b28a-4add-8ab7-10ba929c294d` is retired. `/design-sync`
   writes only there and never reaches this Artifact.

@@ -8,7 +8,7 @@ import { cn } from "cn"
  * `tap` lifts an anchor to the 44px target (a button gets it from the base
  * layer) and `inline-flex items-center` keeps the label centred in it. For a
  * link that stands on its own line; a link inside running text wants none of
- * this. `Button variant="link"` is shadcn's rust hover-underline, not this.
+ * this. `Button variant="link"` is shadcn's pine hover-underline, not this.
  */
 export const LINK = "tap inline-flex items-center text-sm font-semibold underline underline-offset-4"
 
