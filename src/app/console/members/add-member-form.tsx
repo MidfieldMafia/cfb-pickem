@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { UserPlus } from "lucide-react";
-import { SECTION_LABEL, Button, Card, Input } from "@saturday-slate/design-system";
+import { SECTION_LABEL, Button, Card, Input, Select } from "@saturday-slate/design-system";
 
 import { MAX_DISPLAY_NAME, MAX_PHONE } from "@/lib/members/limits";
 import { ActionMessage, type ActionState } from "../action-form";
@@ -27,11 +27,10 @@ export function AddMemberForm({ groups }: { groups: { id: number; name: string }
         </label>
         <label className="space-y-1 text-sm font-semibold">
           Group
-          <select
+          <Select
             name="groupId"
             required
             defaultValue={groups.length === 1 ? groups[0].id : ""}
-            className="block h-9 w-full rounded-md border border-input bg-card px-3 text-sm"
           >
             <option value="" disabled>
               Choose a group
@@ -41,7 +40,7 @@ export function AddMemberForm({ groups }: { groups: { id: number; name: string }
                 {group.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <Button type="submit" disabled={pending}>
           <UserPlus size={16} aria-hidden />

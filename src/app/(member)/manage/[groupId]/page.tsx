@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { AppHeader, SECTION_LABEL, CopyButton, Badge, Card, Input } from "@saturday-slate/design-system";
+import { AppHeader, SECTION_LABEL, CopyButton, Badge, Card, Input, Select } from "@saturday-slate/design-system";
 
 import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
@@ -136,12 +136,11 @@ export default async function Manage({ params }: { params: Promise<{ groupId: st
           <section>
             <p className={SECTION_LABEL}>Add someone already playing</p>
             <ManageForm action={addExistingAction} hidden={group} submit="Add to group" pendingLabel="Adding…">
-              <select
+              <Select
                 name="memberId"
                 required
                 defaultValue=""
                 aria-label="Who to add"
-                className="block h-9 w-full rounded-md border border-input bg-card px-3 text-sm"
               >
                 <option value="" disabled>
                   Choose someone
@@ -151,7 +150,7 @@ export default async function Manage({ params }: { params: Promise<{ groupId: st
                     {person.displayName}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="text-xs text-muted-foreground">
                 Only weeks from today on count for them here. Someone removed from this group is restored below instead.
               </p>
