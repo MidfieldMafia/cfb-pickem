@@ -27,8 +27,6 @@ const SHOWN: string[] = [
   MEMBERS_PATH,
   "/console/picks",
   "/live",
-  "/history",
-  "/history/results",
   "/leaderboard",
 ];
 

@@ -12,7 +12,7 @@ import { addGroup, joinAt, joinGroup, publishWeek2, THURSDAY, TUESDAY } from "@/
 import { addPersonToGroup, createGroupEdit, deleteGroupEdit, leftWithoutGroupWarning } from "./console-edits";
 import { memberGroups } from "./memberships";
 
-const BOARDS = ["/leaderboard", "/live", "/history", "/history/results"];
+const BOARDS = ["/leaderboard", "/live"];
 
 describe("a commissioner's group edit from the console", () => {
   test("creating answers with the sentence and refreshes the Groups list", async () => {

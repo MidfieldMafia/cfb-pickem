@@ -257,7 +257,7 @@ describe("a commissioner's edit from the console", () => {
       `/console/picks/${grandma.id}`,
       "/picks",
       "/picks/review",
-      "/history/results",
+      "/leaderboard",
     ]);
   });
 
@@ -282,7 +282,7 @@ describe("a commissioner's edit from the console", () => {
       `/console/picks/${grandma.id}`,
       "/picks",
       "/picks/review",
-      "/history/results",
+      "/leaderboard",
     ]);
 
     // An empty field is the console's clear; a typo is a refusal, not a clear.

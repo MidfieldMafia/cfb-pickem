@@ -26,10 +26,10 @@ const optional = (fields: Fields, name: string) =>
  * Every screen one member's pick edit shows up on: the console table, that
  * member's own console page, the two member screens that read a sheet, and
  * the Reveal a played week's edit moves — the Deadline binds a member and not
- * a commissioner, so this can land on a week already in History.
+ * a commissioner, so this can land on a week already final.
  */
 function pickPaths(memberId: number): string[] {
-  return [PICKS_PATH, `${PICKS_PATH}/${memberId}`, "/picks", "/picks/review", "/history/results"];
+  return [PICKS_PATH, `${PICKS_PATH}/${memberId}`, "/picks", "/picks/review", "/leaderboard"];
 }
 
 export function editPick(route: ConsoleRoute, form: FormData): Promise<ActionState> {

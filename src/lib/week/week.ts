@@ -198,7 +198,7 @@ export async function currentWeek(
 /**
  * Where a member lands, in the order the states resolve. No published Week is
  * Leaderboard; past the Deadline and still grading is the Live Board; past it
- * with every game final is History.
+ * with every game final is the Leaderboard.
  *
  * Short of the Deadline is #91's Picks split in two. Entry while Picks are
  * still open, review once they are all in: the entry flow has no control for
@@ -213,13 +213,13 @@ export async function currentWeek(
  */
 export function landingRoute(
   week: GradedWeekContext | null,
-): "/leaderboard" | "/picks" | "/picks/review" | "/live" | "/history" {
+): "/leaderboard" | "/picks" | "/picks/review" | "/live" {
   if (!week) return "/leaderboard";
   switch (week.state) {
     case "open":
       return picksComplete(week.sheet.progress) ? "/picks/review" : "/picks";
     case "settled":
-      return "/history";
+      return "/leaderboard";
     case "live":
     case "ungrouped":
       return "/live";
