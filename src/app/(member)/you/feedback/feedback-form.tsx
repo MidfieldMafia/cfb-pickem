@@ -3,7 +3,7 @@
 import { Bug, CircleCheck, ImageIcon, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
-import { Button, Card, SECTION_LABEL } from "@saturday-slate/design-system";
+import { Button, Card, SECTION_LABEL, Textarea } from "@saturday-slate/design-system";
 
 import {
   MAX_FEEDBACK_TEXT,
@@ -138,7 +138,7 @@ export function FeedbackForm() {
         <label htmlFor="feedback-text" className={SECTION_LABEL}>
           In your words
         </label>
-        <textarea
+        <Textarea
           id="feedback-text"
           name="text"
           rows={6}
@@ -147,7 +147,7 @@ export function FeedbackForm() {
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder={PLACEHOLDER[kind]}
-          className="min-h-37 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2.5 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="min-h-37"
         />
         <p className="self-end text-xs text-muted-foreground">
           {text.length} / {MAX_FEEDBACK_TEXT}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { Badge, Card, Input, LocalTime } from "@saturday-slate/design-system";
+import { Badge, Card, Input, LocalTime, Select } from "@saturday-slate/design-system";
 
 import { Pennant } from "@/components/pennant";
 import { requireConsole } from "@/lib/members/current";
@@ -119,11 +119,11 @@ export default async function MemberPicks({
         <section>
         <h2>Lock of the Week</h2>
         <ActionForm action={overrideLockAction} hidden={hidden} submit="Save Lock" pendingLabel="Saving…">
-          <select
+          <Select
             name="gameId"
             defaultValue={sheet.lockGameId ?? ""}
             aria-label="Lock of the Week"
-            className="h-9 rounded-md border border-input bg-card px-3 text-sm"
+            className="w-auto"
           >
             <option value="">No Lock</option>
             {pickedGames.map(({ game }) => (
@@ -131,7 +131,7 @@ export default async function MemberPicks({
                 {teamName(game, pickFor.get(game.id)!)} ({game.awayTeam} at {game.homeTeam})
               </option>
             ))}
-          </select>
+          </Select>
         </ActionForm>
         <p className="text-xs text-muted-foreground">
           {sheet.lockDropped
