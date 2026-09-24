@@ -1,9 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
-import { ingestResults, seasonResult } from "@/lib/results/results";
+import { seasonResult } from "@/lib/results/results";
 import { seasonStanding } from "@/lib/results/summary";
 import { slateFor } from "@/lib/slate/slate";
 import { familyGroup, feedWith, OKLAHOMA_AT_MICHIGAN, pickAs, publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
 import { currentWeek } from "./week";
+import { ingestResults } from "@/lib/results/writes";
 
 /**
  * How many times a request grades. Both counters wrap the real function, so

@@ -18,7 +18,6 @@ import {
   removeGame,
   setDeadline,
   setTiebreaker,
-  voidGame,
 } from "./slate";
 
 export const SLATE_PATH = "/console/slate";
@@ -43,20 +42,6 @@ export function editPublish(route: ConsoleRoute, form: FormData): Promise<Action
     // reach by pinning the moment.
     await publishSlate(db, actor, num(form, "weekId"), now);
     return { done: "Published. Members can see the slate now.", revalidate: slateOnly };
-  });
-}
-
-/**
- * Voiding takes a note a commissioner types, so its refusals — blank, or
- * longer than the limit — are messages for the screen rather than faults.
- */
-export function editVoidGame(route: ConsoleRoute, form: FormData): Promise<ActionState> {
-  return consoleEdit(route, async ({ db, actor, now }) => {
-    await voidGame(db, actor, num(form, "gameId"), String(form.get("note") ?? ""), now);
-    return {
-      done: "Voided. It scores zero for everyone, and any Lock on it is dropped until the game is restored.",
-      revalidate: [SLATE_PATH, "/leaderboard"],
-    };
   });
 }
 

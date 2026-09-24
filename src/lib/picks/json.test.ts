@@ -6,10 +6,11 @@
  */
 import { describe, expect, test } from "vitest";
 import { pickSheet } from "@/lib/picks/picks";
-import { slateFor, voidGame } from "@/lib/slate/slate";
+import { slateFor } from "@/lib/slate/slate";
 import { guessAs, lockAs, pickAs, publishWeek2, SUNDAY, THURSDAY } from "@/test/week-2";
 import { teamName } from "@/lib/slate/json";
 import { toSheetJson } from "./json";
+import { voidGame } from "@/lib/results/writes";
 
 /** Grandma's Week 2 sheet, serialized, at a given moment. */
 async function sheetAt(now = THURSDAY) {

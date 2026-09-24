@@ -1,9 +1,9 @@
 /**
  * The results console's five edits over an injected `ConsoleRoute` — the seam
  * `route.ts` was built for and this module never cashed in. What these
- * wrappers add over `results.ts` is the form parse, the sentence, and the
- * revalidate set, so that is what is asserted here; the rules underneath are
- * `results.test.ts`'s job.
+ * wrappers add over `writes.ts` is the form parse, the sentence, and the
+ * revalidate set, so that is what is asserted here; which state a Game can
+ * move to is `writes.test.ts`'s job.
  *
  * The note handling is the bug class `route.ts` names outright: before the
  * route existed, two actions caught nothing at all, so a blank note threw past
@@ -25,8 +25,8 @@ import {
 } from "@/test/week-2";
 import { dropOverride, editResult, refreshResults, restoreResult, voidResult } from "./console-edits";
 
-/** Every result change shows on the console table and on the Leaderboard. */
-const BOTH = ["/console/results", "/leaderboard"];
+/** Every result change shows on both consoles and on the Leaderboard. */
+const SHOWN = ["/console/results", "/console/slate", "/leaderboard"];
 
 async function setup() {
   const fixture: PublishedWeek2 = await publishWeek2();
@@ -49,7 +49,7 @@ describe("a commissioner's result edit from the console", () => {
     );
 
     expect(state).toEqual({ done: "Score set. It beats the feed until you clear it." });
-    expect(revalidated).toEqual(BOTH);
+    expect(revalidated).toEqual(SHOWN);
     // The message is not the evidence: the row has to carry it.
     expect(await reload(michigan.id)).toMatchObject({
       overrideAwayScore: 24,
@@ -90,7 +90,7 @@ describe("a commissioner's result edit from the console", () => {
     // The bounds themselves are good, and 0-0 is a real score.
     expect((await set({ awayScore: 0, homeScore: 0 })).done).toMatch(/beats the feed/);
     expect((await set({ awayScore: 250, homeScore: 27 })).done).toMatch(/beats the feed/);
-    expect(revalidated).toEqual([...BOTH, ...BOTH]);
+    expect(revalidated).toEqual([...SHOWN, ...SHOWN]);
   });
 
   /**
@@ -145,7 +145,7 @@ describe("a commissioner's result edit from the console", () => {
     expect(revalidated).toEqual([]);
   });
 
-  test("an override has to exist before it can be cleared, and clearing it moves both screens", async () => {
+  test("an override has to exist before it can be cleared, and clearing it moves every screen it shows on", async () => {
     const { route, revalidated, michigan, reload } = await setup();
 
     expect(await dropOverride(route, form({ gameId: michigan.id }))).toEqual({ error: "That game has no override." });
@@ -157,15 +157,16 @@ describe("a commissioner's result edit from the console", () => {
     expect(await dropOverride(route, form({ gameId: michigan.id }))).toEqual({
       done: "Override cleared; the feed's score counts again.",
     });
-    expect(revalidated).toEqual(BOTH);
+    expect(revalidated).toEqual(SHOWN);
     expect(await reload(michigan.id)).toMatchObject({ overrideAwayScore: null, overrideNote: null });
   });
 
   /**
-   * Voiding is reachable from the results console as well as the slate
-   * builder, and this is the copy of it with its own revalidate set.
+   * Voiding is reachable from the results console and the slate builder, and
+   * both post here: there used to be a copy per console, each refreshing only
+   * its own, so a Void from one left the other showing the Game live.
    */
-  test("voiding takes a note, blocks a score, and restoring undoes it", async () => {
+  test("voiding takes a note and moves both consoles, and restoring undoes it", async () => {
     const { route, revalidated, michigan, reload } = await setup();
 
     expect(await voidResult(route, form({ gameId: michigan.id, note: "  " }))).toEqual({
@@ -174,21 +175,13 @@ describe("a commissioner's result edit from the console", () => {
 
     const voided = await voidResult(route, form({ gameId: michigan.id, note: "Cancelled for weather." }));
     expect(voided.done).toMatch(/^Voided\./);
-    expect(revalidated).toEqual(BOTH);
+    expect(revalidated).toEqual(SHOWN);
     expect(await reload(michigan.id)).toMatchObject({ void: true, voidNote: "Cancelled for weather." });
-
-    // A void game takes no score until it is restored.
-    expect(await editResult(route, form({ gameId: michigan.id, awayScore: 24, homeScore: 27, note: "why" }))).toEqual({
-      error: "That game is void; restore it before setting a score.",
-    });
 
     revalidated.length = 0;
     expect((await restoreResult(route, form({ gameId: michigan.id }))).done).toMatch(/^Restored\./);
-    expect(revalidated).toEqual(BOTH);
+    expect(revalidated).toEqual(SHOWN);
     expect(await reload(michigan.id)).toMatchObject({ void: false, voidNote: null });
-
-    // Twice is a refusal, not a second restore.
-    expect(await restoreResult(route, form({ gameId: michigan.id }))).toEqual({ error: "That game is not void." });
   });
 
   test("the feed check says what changed, and counts one game as one", async () => {
@@ -198,7 +191,7 @@ describe("a commissioner's result edit from the console", () => {
 
     // The recording carries no scores, so the first pass moves nothing.
     expect(await check({})).toEqual({ done: "Checked the feed; nothing changed." });
-    expect(revalidated).toEqual(BOTH);
+    expect(revalidated).toEqual(SHOWN);
 
     expect(await check({ [FAMU_AT_MIAMI]: [7, 45], [OKLAHOMA_AT_MICHIGAN]: [24, 27] })).toEqual({
       done: "Checked the feed; 2 games updated.",

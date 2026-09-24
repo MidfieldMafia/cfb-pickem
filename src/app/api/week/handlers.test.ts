@@ -10,7 +10,6 @@ import type { Member } from "@/db/schema";
 import { put } from "@/lib/picks/client";
 import type { ApiError, PickRoute } from "@/lib/picks/http";
 import type { SheetJson } from "@/lib/picks/json";
-import { ingestResults } from "@/lib/results/results";
 import { slateFor } from "@/lib/slate/slate";
 import type { WeekStateJson } from "@/lib/week/json";
 import { createTestDb } from "@/test/db";
@@ -29,6 +28,7 @@ import {
   TUESDAY,
 } from "@/test/week-2";
 import { getSheet, getWeekState, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
+import { ingestResults } from "@/lib/results/writes";
 
 /** A PUT the routes would receive, with the body as JSON on the wire. */
 function request(body: unknown): Request {

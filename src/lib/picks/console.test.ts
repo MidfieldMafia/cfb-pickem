@@ -8,10 +8,10 @@
 import { describe, expect, test } from "vitest";
 import { asCommissioner } from "@/lib/members/authority";
 import { setMemberActive } from "@/lib/members/members";
-import { voidGame } from "@/lib/slate/slate";
 import { guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { memberSheet, pickAuditsFor, reminderText, whoHasntPicked } from "./console";
 import { applyEdit } from "./edits";
+import { voidGame } from "@/lib/results/writes";
 
 /** The shared published Week 2, plus the moment just after its Deadline. */
 async function setup() {
