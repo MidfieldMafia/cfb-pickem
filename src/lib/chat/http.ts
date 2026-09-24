@@ -21,7 +21,7 @@ import { createHash } from "node:crypto";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { Refusal } from "@/lib/refusal";
-import { chatThread, markRead, NotInGroup, postMessage, setReaction, unreadCount } from "./chat";
+import { chatThread, markRead, NotInGroup, postMessage, setReaction, takeDown, unreadCount } from "./chat";
 import { toChatStateJson, type ChatStateJson, type ChatUnreadJson } from "./json";
 import { isChatReactionKind } from "./reactions";
 
@@ -44,10 +44,12 @@ const NO_STORE = { "cache-control": "no-store" };
  * A digest of the thread but not the clock, which moves on every request. The
  * group is in it for the reason it is in the week state's: two threads can
  * read alike, and a phone switching between them must not be handed a 304.
+ * `canRemove` is in it so that becoming or ceasing to be an Organizer reaches
+ * an open thread on its next poll.
  */
 function chatEtag(state: ChatStateJson, group: number): string {
   const digest = createHash("sha1")
-    .update(JSON.stringify({ messages: state.messages, senders: state.senders, group }))
+    .update(JSON.stringify({ messages: state.messages, senders: state.senders, canRemove: state.canRemove, group }))
     .digest("hex");
   return `W/"${digest.slice(0, 20)}"`;
 }
@@ -134,6 +136,28 @@ export async function postChatReaction(request: Request, route: ChatRoute): Prom
     if (message === null) return refuse("That message is gone.", 400);
     if (body.kind !== null && !isChatReactionKind(body.kind)) return refuse("That is not a reaction.", 400);
     await setReaction(context.db, context.member, context.group, message, body.kind, context.now);
+    return answerThread(null, context);
+  });
+}
+
+/**
+ * `POST /api/chat/delete` with `{ group, message }`: deletes the member's own
+ * message, or removes someone else's for an Organizer or Commissioner, then
+ * answers the thread with its placeholder in. A member without the right is
+ * refused with a 400, not a 403, which the screen reads as being out of the Group.
+ */
+export async function postChatDelete(request: Request, route: ChatRoute): Promise<Response> {
+  let body: { group?: unknown; message?: unknown } = {};
+  try {
+    body = ((await request.json()) as typeof body) ?? {};
+  } catch {
+    // Not JSON: refused below like any other post naming nothing.
+  }
+  const group = groupParam(body.group);
+  return withChatContext(route, () => group, async (context) => {
+    const message = groupParam(body.message);
+    if (message === null) return refuse("That message is gone.", 400);
+    await takeDown(context.db, context.member, context.group, message, context.now);
     return answerThread(null, context);
   });
 }

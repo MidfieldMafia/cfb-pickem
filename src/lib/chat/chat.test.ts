@@ -127,7 +127,7 @@ describe("the thread", () => {
     expect(thread.senders.map((s) => s.displayName).sort()).toEqual(["Grandma", "Jonah"]);
   });
 
-  test("leaves out deleted messages and last season's", async () => {
+  test("keeps a deleted message's place without its text, and leaves out last season's", async () => {
     const { db, grandma } = await seedWeek2();
     const family = await familyGroup(db);
     const old = await postMessage(db, grandma, family.id, "Last year", at(0));
@@ -141,7 +141,10 @@ describe("the thread", () => {
     await db.update(chatMessages).set({ seasonId: lastYear.id }).where(eq(chatMessages.id, old.id));
 
     const thread = await chatThread(db, grandma, family.id);
-    expect(thread.messages.map((m) => m.text)).toEqual(["Kept"]);
+    expect(thread.messages.map((m) => [m.text, m.gone])).toEqual([
+      ["", "deleted"],
+      ["Kept", null],
+    ]);
   });
 
   test("still names a sender who has since been removed from the Group", async () => {
@@ -160,7 +163,7 @@ describe("the thread", () => {
     const family = await familyGroup(db);
     await db.update(seasons).set({ active: false });
 
-    expect(await chatThread(db, grandma, family.id)).toEqual({ messages: [], senders: [] });
+    expect(await chatThread(db, grandma, family.id)).toEqual({ messages: [], senders: [], canRemove: false });
   });
 });
 

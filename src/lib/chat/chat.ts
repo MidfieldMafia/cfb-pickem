@@ -9,11 +9,18 @@
  *
  * Reactions (#249) ride on the thread: each message carries its counts and the
  * reader's own, so the poll that brings new messages brings new reactions too.
+ *
+ * Nobody edits a message (#250). Its sender deletes it; an Organizer of the
+ * Group or a Commissioner removes anyone's. Either way the row stays, with
+ * `deletedAt` set and, for a removal, `removedBy`, and the thread keeps a
+ * one-line placeholder where it was without serving its text.
  */
 import "server-only";
 import { and, asc, count, desc, eq, gt, inArray, isNull, ne, notExists, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { chatMessages, chatReactions, membershipRemovals, memberships, members, seasons, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { manageGroup, NotOrganizer } from "@/lib/groups/manage";
 import { memberGroups } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import { toMemberJson, type MemberJson } from "@/lib/slate/json";
@@ -48,7 +55,16 @@ export interface ReactionCount {
   count: number;
 }
 
+/**
+ * Why a message is no longer shown: its sender deleted it, or someone removed
+ * it, named by the power they used. A Commissioner who also organizes the
+ * Group removes as a Commissioner, as they manage it as one.
+ */
+export type GoneReason = "deleted" | "organizer" | "commissioner";
+
 export interface ThreadEntry extends ThreadMessage {
+  /** Null while it shows. Once gone, `text` is empty and `reactions` none. */
+  gone: GoneReason | null;
   /** Each kind anyone has reacted with, in the tray's order; none at zero. */
   reactions: ReactionCount[];
   /** The reader's own reaction. */
@@ -60,6 +76,8 @@ export interface Thread {
   messages: ThreadEntry[];
   /** Everyone who wrote one of `messages`, for the names and pennants. Removed members included. */
   senders: MemberJson[];
+  /** The reader may remove other people's messages here (`canRemoveIn`). */
+  canRemove: boolean;
 }
 
 async function activeSeasonId(db: Db): Promise<number | null> {
@@ -97,29 +115,93 @@ export async function postMessage(db: Db, member: Member, groupId: number, raw: 
   return row;
 }
 
+/** Whoever removed a message, beside the message's sender. */
+const remover = alias(members, "remover");
+
 /**
- * The Group's thread for the active Season, without deleted messages. Empty
+ * The Group's thread for the active Season. A deleted or removed message keeps
+ * its place with its text left out, so the thread can say it was there. Empty
  * rather than refused when no Season is active: the screen still has somewhere
  * to land between seasons.
  */
-export async function chatThread(db: Db, member: Pick<Member, "id">, groupId: number): Promise<Thread> {
+export async function chatThread(db: Db, member: Member, groupId: number): Promise<Thread> {
   await requireInGroup(db, member.id, groupId);
   const seasonId = await activeSeasonId(db);
-  if (seasonId === null) return { messages: [], senders: [] };
+  if (seasonId === null) return { messages: [], senders: [], canRemove: false };
   const newestFirst = await db
-    .select({ id: chatMessages.id, memberId: chatMessages.memberId, text: chatMessages.text, createdAt: chatMessages.createdAt })
+    .select({
+      id: chatMessages.id,
+      memberId: chatMessages.memberId,
+      text: chatMessages.text,
+      createdAt: chatMessages.createdAt,
+      deletedAt: chatMessages.deletedAt,
+      removedBy: chatMessages.removedBy,
+      removerIsCommissioner: remover.isCommissioner,
+    })
     .from(chatMessages)
-    .where(and(eq(chatMessages.groupId, groupId), eq(chatMessages.seasonId, seasonId), isNull(chatMessages.deletedAt)))
+    .leftJoin(remover, eq(remover.id, chatMessages.removedBy))
+    .where(and(eq(chatMessages.groupId, groupId), eq(chatMessages.seasonId, seasonId)))
     .orderBy(desc(chatMessages.id))
     .limit(THREAD_LIMIT);
-  const reactions = await reactionsTo(db, member.id, newestFirst.map((m) => m.id));
-  const messages = newestFirst.reverse().map((m) => ({ ...m, ...(reactions.get(m.id) ?? { reactions: [], mine: null }) }));
+  const shown = newestFirst.filter((m) => m.deletedAt === null).map((m) => m.id);
+  const reactions = await reactionsTo(db, member.id, shown);
+  const messages: ThreadEntry[] = newestFirst.reverse().map((m) => {
+    const base = { id: m.id, memberId: m.memberId, createdAt: m.createdAt };
+    if (m.deletedAt !== null) {
+      const gone: GoneReason = m.removedBy === null ? "deleted" : m.removerIsCommissioner ? "commissioner" : "organizer";
+      return { ...base, text: "", gone, reactions: [], mine: null };
+    }
+    return { ...base, text: m.text, gone: null, ...(reactions.get(m.id) ?? { reactions: [], mine: null }) };
+  });
   const ids = [...new Set(messages.map((m) => m.memberId))];
   const senders =
     ids.length === 0
       ? []
       : (await db.select().from(members).where(inArray(members.id, ids)).orderBy(asc(members.id))).map(toMemberJson);
-  return { messages, senders };
+  return { messages, senders, canRemove: await canRemoveIn(db, member, groupId) };
+}
+
+/**
+ * Whether the member may remove other people's messages in the Group: an
+ * Organizer of it in good standing, or a Commissioner. The screen offers
+ * Remove on that alone; `takeDown` checks it again.
+ */
+export async function canRemoveIn(db: Db, member: Member, groupId: number): Promise<boolean> {
+  try {
+    await manageGroup(db, member, groupId);
+    return true;
+  } catch (error) {
+    if (error instanceof NotOrganizer) return false;
+    throw error;
+  }
+}
+
+/**
+ * Takes a message out of the Group's thread: deletes it when it is the
+ * member's own, removes it when it is someone else's and they may
+ * (`canRemoveIn`). Only a message still showing in the active Season's thread
+ * can go; one already gone is refused, so the first of two taps wins and its
+ * placeholder stands.
+ */
+export async function takeDown(db: Db, member: Member, groupId: number, messageId: number, now: Date = new Date()): Promise<void> {
+  await requireInGroup(db, member.id, groupId);
+  const [message] = await db
+    .select({ id: chatMessages.id, memberId: chatMessages.memberId })
+    .from(chatMessages)
+    .innerJoin(seasons, and(eq(seasons.id, chatMessages.seasonId), eq(seasons.active, true)))
+    .where(and(eq(chatMessages.id, messageId), eq(chatMessages.groupId, groupId), isNull(chatMessages.deletedAt)))
+    .limit(1);
+  if (!message) throw new InvalidChat("That message is gone.");
+  const own = message.memberId === member.id;
+  if (!own && !(await canRemoveIn(db, member, groupId))) {
+    throw new InvalidChat("Only the group's organizers can remove someone else's message.");
+  }
+  const [taken] = await db
+    .update(chatMessages)
+    .set(own ? { deletedAt: now } : { deletedAt: now, removedBy: member.id })
+    .where(and(eq(chatMessages.id, messageId), isNull(chatMessages.deletedAt)))
+    .returning({ id: chatMessages.id });
+  if (!taken) throw new InvalidChat("That message is gone.");
 }
 
 /** The counts and the reader's own reaction for each of `messageIds` that has any. */
