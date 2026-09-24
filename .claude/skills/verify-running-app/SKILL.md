@@ -118,6 +118,29 @@ Every checkout then points at the same shared Neon database. Fine for reading a
 screen. It also means a commissioner action taken in a worktree is a real write
 that everyone else sees — so drive the console deliberately, not idly.
 
+### A design-system change is invisible until you rebuild the package
+
+The app imports `@saturday-slate/design-system` from its built `dist/`, not
+from `packages/design-system/src`. `dist/` is written by tsup in the root
+`postinstall` and nowhere else, so `next dev` goes on serving the old component
+after you edit its source. It raises no error and does not hot-reload. The
+screen just looks unchanged, or half changed if the old markup meets freshly
+generated CSS. Rebuild after every edit to the package:
+
+```bash
+npm run build --workspace @saturday-slate/design-system
+```
+
+(or leave `npm run dev --workspace @saturday-slate/design-system` watching). Then
+confirm the served markup carries your change before you read a screenshot:
+
+```bash
+curl -s "$BASE/<route>" | grep -c '<a string only your change produces>'
+```
+
+A before/after pair that looks identical is a stale server until this says
+otherwise, not evidence that the change does nothing.
+
 ## 3. Ask for a Magic Link
 
 Ask the user for one; Jonah issues them. It looks like:
