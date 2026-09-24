@@ -87,10 +87,12 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
   const tiles = TABS.map(({ href, label, Icon }) => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
     const isPicks = href === "/picks";
-    // The Picks tab silently redirects to /picks/review once the week locks
-    // (src/app/(member)/picks/page.tsx) — the label stays "Picks" so the tab
-    // bar doesn't relabel mid-week, but the icon becomes a lock to say a tap now
+    // Once the week locks there is nothing to enter, so the Picks tab goes
+    // straight to /picks/review rather than through /picks's redirect, which
+    // cost a second round trip (#262). The label stays "Picks" so the tab bar
+    // doesn't relabel mid-week, but the icon becomes a lock to say a tap now
     // lands somewhere other than pick entry. See #116, #170.
+    const tabHref = isPicks && locked ? "/picks/review" : href;
     const TabIcon = isPicks && locked ? Lock : Icon;
     // The dot means something is still to do: it shows while picks are open and
     // the member has not finished them, and clears once they have.
@@ -99,7 +101,7 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
     return (
       <Link
         key={href}
-        href={href}
+        href={tabHref}
         aria-current={active ? "page" : undefined}
         className="flex min-h-14 flex-col items-center justify-center gap-1 p-1.5 text-[11px] font-bold no-underline"
       >
