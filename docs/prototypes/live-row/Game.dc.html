@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Game row</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 358px; font-family: Manrope, sans-serif; color: #241F1A; font-size: 16px; line-height: 24px;">
+<button type="button" aria-label="{{label}}" style="{{cardStyle}}">
+
+<div style="display: flex; align-items: center; gap: 8px; min-height: 20px; min-width: 0;">
+<sc-if value="{{showSituation}}" hint-placeholder-val="{{ true }}">
+<span style="flex-grow: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; line-height: 16px; font-weight: 700; color: #241F1A; font-variant-numeric: tabular-nums;">{{g.situation}}</span>
+</sc-if>
+<sc-if value="{{showTopText}}" hint-placeholder-val="{{ false }}">
+<span style="flex-grow: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; line-height: 16px; color: #6F6152;">{{topText}}</span>
+</sc-if>
+<sc-if value="{{showBadge}}" hint-placeholder-val="{{ true }}">
+<span style="display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; margin-left: auto; overflow: hidden; border-radius: 9999px; padding: 2px 8px; font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; background: #D26A12; color: #241F1A; font-variant-numeric: tabular-nums;"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49"></path><path d="M4.93 19.07a10 10 0 0 1 0-14.14"></path><path d="M7.76 16.24a6 6 0 0 1 0-8.49"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{badge}}</span></span>
+</sc-if>
+<sc-if value="{{showEarned}}" hint-placeholder-val="{{ false }}">
+<span style="border-radius: 9999px; padding: 2px 8px; background: #6A9449; color: #241F1A; font-family: Chivo, sans-serif; font-weight: 900; font-size: 12px; line-height: 16px;">+{{g.earned}}</span>
+</sc-if>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6F6152" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m9 18 6-6-6-6"></path></svg>
+</div>
+
+<sc-for list="{{sides}}" as="s" hint-placeholder-count="2">
+<div style="{{s.rowStyle}}">
+<sc-if value="{{dotColumn}}" hint-placeholder-val="{{ false }}">
+<span style="{{s.dotStyle}}"></span>
+</sc-if>
+<img src="{{s.logo}}" alt="" style="{{s.logoStyle}}">
+<span style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+<sc-if value="{{s.hasRank}}" hint-placeholder-val="{{ true }}">
+<span style="flex-shrink: 0; font-size: 12px; line-height: 16px; font-weight: 700; color: #6F6152; font-variant-numeric: tabular-nums;">#{{s.rank}}</span>
+</sc-if>
+<span style="{{s.teamStyle}}">{{s.team}}</span>
+<sc-if value="{{s.pickOpen}}" hint-placeholder-val="{{ false }}">
+<span style="flex-shrink: 0; display: grid; place-items: center; width: 20px; height: 20px; box-sizing: border-box; border-radius: 9999px; border: 2px solid #1F4034; color: #1F4034;"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+</sc-if>
+<sc-if value="{{s.pickWon}}" hint-placeholder-val="{{ false }}">
+<span style="flex-shrink: 0; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 9999px; background: #6A9449; color: #241F1A;"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+</sc-if>
+<sc-if value="{{s.lock}}" hint-placeholder-val="{{ false }}">
+<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A94B17" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+</sc-if>
+<sc-if value="{{s.football}}" hint-placeholder-val="{{ false }}">
+<svg role="img" aria-label="Has the ball" width="16" height="16" viewBox="0 0 24 24" style="flex-shrink: 0;"><title>Has the ball</title><ellipse cx="12" cy="12" rx="10.5" ry="6.2" transform="rotate(-35 12 12)" fill="#A94B17"></ellipse><path d="M8.7 14.3 15.3 9.7M9.8 12.1l1.4 2M11.3 11l1.4 2M12.8 9.9l1.4 2" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round" fill="none"></path></svg>
+</sc-if>
+</span>
+<span style="{{s.scoreStyle}}">{{s.score}}</span>
+</div>
+</sc-for>
+
+<sc-if value="{{showPlay}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: baseline; gap: 8px; min-width: 0; min-height: 16px; font-size: 12px; line-height: 16px; color: #6F6152;">
+<span style="flex-grow: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">{{g.lastPlay}}</span>
+<sc-if value="{{showAge}}" hint-placeholder-val="{{ false }}">
+<span style="{{ageStyle}}">{{g.age}}</span>
+</sc-if>
+</div>
+</sc-if>
+
+<span role="img" aria-label="{{splitLabel}}" style="{{splitStyle}}"><span style="{{splitAwayStyle}}"></span><span style="flex-grow: 1; background: #A94B17;"></span></span>
+</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"gid":{"editor":"enum","options":["bama","clem","ore","tex","posonly","long","lsu","hou"],"default":"bama"},"variant":{"editor":"enum","options":["mix","today","ticker","scorebug","age"],"default":"mix"},"sit":{"editor":"enum","options":["badge","left"],"default":"badge"},"ball":{"editor":"enum","options":["football","dot"],"default":"football"},"$preview":{"width":358,"height":180}}'>
+class Component extends DCLogic {
+  fixtures() {
+const L = {
+  alabama: '/_blob/ba06fec6fdbf54ed2681d8589c804981',
+  georgia: '/_blob/440f6829c7e039cab6e31946456f4d54',
+  oregon: '/_blob/1259752961a11d7e05715c120935b24e',
+  pennState: '/_blob/4fa46ccaa7245f5f61f11ec82f21ec34',
+  clemson: '/_blob/1a323715e8364c8c864b2d3f462142c0',
+  unc: '/_blob/6b0fabc6653bda7fe784ba7f6eb5e0c2',
+  texas: '/_blob/bef97d40ce2686363f830fa2c5d26507',
+  michigan: '/_blob/4701b1c9de8ed86a817c70144401e90d',
+  lsu: '/_blob/1dfac461214e9e8f79bdb010b196bac9',
+  tennessee: '/_blob/776748cd606e3847dbcbbaeac0dc600f',
+  houston: '/_blob/95dc67df0457660e70195e160fcac0bf',
+  ttu: '/_blob/875302fb8687a529d7f0f28ef13c456f'
+};
+
+const FX = {
+  bama: {
+    status: 'live', clock: 'Q3 · 8:12', situation: '3rd & 7 at UGA 35', ball: 'away',
+    lastPlay: 'J.Milroe pass complete to R.Williams for 12 yds to the UGA 35', age: '40s ago', stale: false,
+    away: { team: 'Alabama', logo: L.alabama, rank: 4, score: 17 },
+    home: { team: 'Georgia', logo: L.georgia, rank: 2, score: 21 },
+    pick: { side: 'home', lock: true, result: 'open' }, split: [5, 7]
+  },
+  clem: {
+    status: 'live', clock: 'Q4 · 8:11', situation: '2nd & 4 at CLEM 29', ball: 'home',
+    lastPlay: 'Timeout North Carolina, clock 08:11', age: '34m ago', stale: true,
+    away: { team: 'Clemson', logo: L.clemson, rank: 9, score: 21 },
+    home: { team: 'North Carolina', logo: L.unc, rank: 12, score: 20 },
+    pick: { side: 'home', lock: true, result: 'open' }, split: [8, 4]
+  },
+  ore: {
+    status: 'live', clock: 'Q2 · 0:00', situation: null, ball: null,
+    lastPlay: 'End of 2nd quarter.', age: '6m ago', stale: false,
+    away: { team: 'Oregon', logo: L.oregon, rank: 8, score: 14 },
+    home: { team: 'Penn State', logo: L.pennState, rank: 6, score: 10 },
+    pick: { side: 'away', lock: false, result: 'open' }, split: [6, 6]
+  },
+  tex: {
+    status: 'live', clock: 'Q1 · 11:40', situation: null, ball: null,
+    lastPlay: null, age: null, stale: false,
+    away: { team: 'Texas', logo: L.texas, rank: 3, score: 0 },
+    home: { team: 'Michigan', logo: L.michigan, rank: null, score: 7 },
+    pick: { side: 'away', lock: false, result: 'open' }, split: [9, 3]
+  },
+  posonly: {
+    status: 'live', clock: 'Q1 · 14:52', situation: '1st & 10 at TEX 25', ball: 'away',
+    lastPlay: null, age: null, stale: false,
+    away: { team: 'Texas', logo: L.texas, rank: 3, score: 0 },
+    home: { team: 'Michigan', logo: L.michigan, rank: null, score: 0 },
+    pick: { side: 'away', lock: false, result: 'open' }, split: [9, 3]
+  },
+  long: {
+    status: 'live', clock: 'Q2 · 0:29', situation: '1st & 10 at TTU 2', ball: 'home',
+    lastPlay: '(00:29) #25 R.Graziano kickoff 63 yards to the TTU02 fair catch by #6 C.Newman at TTU02', age: '1m ago', stale: false,
+    away: { team: 'Houston', logo: L.houston, rank: null, score: 10 },
+    home: { team: 'Texas Tech', logo: L.ttu, rank: 22, score: 13 },
+    pick: { side: 'home', lock: false, result: 'open' }, split: [3, 9]
+  },
+  lsu: {
+    status: 'scheduled', kickoff: 'Sat 7:30 PM',
+    away: { team: 'LSU', logo: L.lsu, rank: 10, spread: '+3.5' },
+    home: { team: 'Tennessee', logo: L.tennessee, rank: 14, spread: '-3.5' },
+    favored: 'home', pick: { side: 'away', lock: false, result: 'open' }, split: [7, 5]
+  },
+  hou: {
+    status: 'final', winner: 'home', earned: 1,
+    away: { team: 'Houston', logo: L.houston, rank: null, score: 24 },
+    home: { team: 'Texas Tech', logo: L.ttu, rank: 22, score: 31 },
+    pick: { side: 'home', lock: false, result: 'won' }, split: [3, 9]
+  }
+};
+return FX;
+  }
+
+  renderVals() {
+    const v = this.props.variant ?? 'mix';
+    const sit = this.props.sit ?? 'badge';
+    const ballMode = this.props.ball ?? 'football';
+    const FX = this.fixtures();
+    const g = FX[this.props.gid ?? 'bama'] || FX.bama;
+    const live = g.status === 'live';
+    const final = g.status === 'final';
+    const shows = v === 'ticker' || v === 'age' || v === 'mix';
+    const showSituation = live && !!g.situation && (v === 'ticker' || v === 'age' || (v === 'mix' && sit === 'left'));
+    const topText = g.status === 'scheduled' ? g.kickoff : final ? 'Final' : '';
+    const shortSit = g.situation ? g.situation.replace(/\s+at\s+.*$/, '') : null;
+    const badge = !live ? '' : v === 'scorebug' && shortSit ? g.clock + ' · ' + shortSit : v === 'mix' && sit === 'badge' && g.situation ? g.clock + ' · ' + g.situation : g.clock;
+    const dotColumn = ballMode === 'dot' && v !== 'today';
+    const side = (key) => {
+      const t = g[key];
+      const lost = final && g.winner && g.winner !== key;
+      const quiet = lost || final;
+      const mine = g.pick && g.pick.side === key;
+      const hasBall = live && v !== 'today' && g.ball === key;
+      let score, scoreStyle;
+      if (g.status === 'scheduled') {
+        score = t.spread;
+        scoreStyle = 'min-width: 32px; text-align: right; font-family: Chivo, sans-serif; font-weight: 900; font-size: 17px; line-height: 22px; font-variant-numeric: tabular-nums; color: ' + (g.favored === key ? '#241F1A' : '#6F6152') + ';';
+      } else {
+        score = String(t.score);
+        scoreStyle = 'min-width: 32px; text-align: right; font-family: Chivo, sans-serif; font-size: 24px; line-height: 28px; font-variant-numeric: tabular-nums; ' +
+          (final ? 'font-weight: 700; color: #6F6152;' : 'font-weight: 900; color: ' + (lost ? '#6F6152' : '#241F1A') + ';');
+      }
+      return {
+        team: t.team, logo: t.logo, rank: t.rank, hasRank: !!t.rank,
+        rowStyle: 'display: grid; grid-template-columns: ' + (dotColumn ? '6px ' : '') + 'auto minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 32px;',
+        dotStyle: 'width: 6px; height: 6px; border-radius: 9999px; background: ' + (ballMode === 'dot' && hasBall ? '#A94B17' : 'transparent') + ';',
+        logoStyle: 'width: 22px; height: 22px; object-fit: contain;' + (quiet ? ' opacity: 0.5;' : ''),
+        teamStyle: 'min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: Chivo, sans-serif; font-weight: 900; font-size: 17px; line-height: 22px; color: ' + (quiet ? '#6F6152' : '#241F1A') + ';',
+        pickOpen: mine && g.pick.result === 'open',
+        pickWon: mine && g.pick.result === 'won',
+        lock: mine && g.pick.lock,
+        football: ballMode === 'football' && hasBall,
+        score, scoreStyle
+      };
+    };
+    const total = (g.split[0] + g.split[1]) || 1;
+    return {
+      g,
+      label: g.away.team + ' at ' + g.home.team + ', details',
+      cardStyle: 'display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; width: 100%; box-sizing: border-box; padding: 12px; border-radius: 6px; text-align: left; font: inherit; color: inherit; cursor: pointer; ' +
+        (final ? 'border: 1px solid rgba(156, 132, 95, 0.5); background: rgba(234, 224, 204, 0.3);' : 'border: 1px solid #9C845F; background: #FBF6EC;'),
+      showSituation,
+      showTopText: !showSituation && topText !== '',
+      topText,
+      showBadge: live,
+      badge,
+      showEarned: final && !!g.earned,
+      dotColumn,
+      sides: [side('away'), side('home')],
+      showPlay: live && shows && !!g.lastPlay,
+      showAge: (v === 'age' || v === 'mix') && !!g.age,
+      ageStyle: 'flex-shrink: 0; white-space: nowrap; font-variant-numeric: tabular-nums; ' + (g.stale ? 'font-weight: 700; color: #A94B17;' : 'color: #6F6152;'),
+      splitLabel: g.split[0] + ' picks on ' + g.away.team + ', ' + g.split[1] + ' on ' + g.home.team,
+      splitStyle: 'display: flex; height: 4px; overflow: hidden; border-radius: 9999px; background: #9C845F;' + (final ? ' opacity: 0.5;' : ''),
+      splitAwayStyle: 'background: #1F4034; width: ' + (g.split[0] / total * 100) + '%;'
+    };
+  }
+}
+</script>
+</body>
+</html>

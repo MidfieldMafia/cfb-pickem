@@ -1,0 +1,138 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Game.dc.html": {
+      "h": 180,
+      "title": "The row (component)",
+      "w": 358,
+      "x": 940,
+      "y": 1420
+    },
+    "Main.dc.html": {
+      "h": 1300,
+      "title": "Today (for reference)",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Mixed.dc.html": {
+      "h": 1300,
+      "title": "The mix: A's ticker + C's age + B's badge (Tweaks: where the down goes)",
+      "w": 390,
+      "x": 2300,
+      "y": 0
+    },
+    "OptionA.dc.html": {
+      "h": 1300,
+      "title": "A \u00b7 Ticker line",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "OptionB.dc.html": {
+      "h": 1300,
+      "title": "B \u00b7 In the badge, play in the sheet",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "OptionC.dc.html": {
+      "h": 1300,
+      "title": "C \u00b7 Ticker line + the play's age",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "Sheet.dc.html": {
+      "h": 844,
+      "title": "Tap a game: the sheet",
+      "w": 390,
+      "x": 470,
+      "y": 1420
+    },
+    "SheetFinal.dc.html": {
+      "h": 1900,
+      "title": "Tap a final: team stats + leaders",
+      "w": 390,
+      "x": 3240,
+      "y": 0
+    },
+    "SheetLive.dc.html": {
+      "h": 1300,
+      "title": "Tap a live game: press Play (Tweaks: a drive that ends in a punt, one that ends in a touchdown, or one play)",
+      "w": 390,
+      "x": 2770,
+      "y": 0,
+      "is_interactive": true
+    },
+    "States.dc.html": {
+      "h": 1720,
+      "title": "Every state (Tweaks: option, ball mark)",
+      "w": 390,
+      "x": 0,
+      "y": 1420
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-23T23:52:52Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "age": {
+      "fill": "orange",
+      "text": "C needs one new column: when the last play last changed. The board only knows when it last polled, not when the play happened.",
+      "w": 280,
+      "x": 1880,
+      "y": 0
+    },
+    "round2": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Round 2: the mix and a richer sheet",
+      "w": 240,
+      "x": 2300,
+      "y": -260
+    },
+    "tier": {
+      "fill": "teal",
+      "text": "We're on CFBD Tier 3 ($10/mo, 75,000 calls, confirmed 2026-09-23): live play-by-play and drives are available, so the play type, the play's start spot and the drive come from the feed, not from guesses.\n\nThe field ships behind a flag until Jonah is confident in it. PostHog flags are off (they leaked join tokens), so the flag needs another mechanism.",
+      "w": 300,
+      "x": 3710,
+      "y": 0
+    },
+    "title": {
+      "kind": "title1",
+      "maxW": 1800,
+      "text": "Live Board: down-and-distance, last play, who has the ball",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "anim": {
+      "x": 3710,
+      "y": 480,
+      "w": 300,
+      "fill": "blue",
+      "text": "Press Play on this board to watch an Alabama drive: kickoff, run, pass, a run for a loss, pass, sack, punt. Each play animates first; the drive band, down, spot and clock update only once the ball lands.\n\nArcs now stay inside the field. A play that loses yards draws in red, so it reads apart from the drive band below it."
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "OptionA.dc.html",
+    "OptionB.dc.html",
+    "OptionC.dc.html",
+    "States.dc.html",
+    "Sheet.dc.html",
+    "Game.dc.html",
+    "Mixed.dc.html",
+    "SheetLive.dc.html",
+    "SheetFinal.dc.html"
+  ],
+  "pages": [],
+  "title": "Live Board: last play and possession"
+}

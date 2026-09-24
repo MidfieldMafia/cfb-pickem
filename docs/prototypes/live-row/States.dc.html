@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Every state</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 1720px; box-sizing: border-box; padding: 24px 16px 32px; display: flex; flex-direction: column; gap: 20px; background: #F7F1E3; color: #241F1A; font-family: Manrope, sans-serif; font-size: 16px; line-height: 24px;">
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 22px; line-height: 28px;">Every state of one row</h1>
+<sc-for list="{{cases}}" as="c" hint-placeholder-count="8">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<p style="margin: 0; font-size: 12px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #A94B17;">{{c.label}}</p>
+<dc-import name="Game" gid="{{c.gid}}" variant="{{variant}}" ball="{{ball}}" sit="{{sit}}" hint-size="358px,140px"></dc-import>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["mix","ticker","scorebug","age","today"],"default":"mix"},"sit":{"editor":"enum","options":["badge","left"],"default":"badge"},"ball":{"editor":"enum","options":["football","dot"],"default":"football"},"$preview":{"width":390,"height":1720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      variant: this.props.variant ?? 'mix',
+      sit: this.props.sit ?? 'badge',
+      ball: this.props.ball ?? 'football',
+      cases: [
+        { gid: 'bama', label: 'Everything reported' },
+        { gid: 'posonly', label: 'Down-and-distance and ball, no play text yet' },
+        { gid: 'tex', label: 'Feed silent mid-game: looks like today' },
+        { gid: 'ore', label: 'Halftime: no situation, no ball' },
+        { gid: 'long', label: 'A long play: one line, cut with an ellipsis' },
+        { gid: 'clem', label: 'Crowded: long name, rank, Lock and the ball. Stale' },
+        { gid: 'lsu', label: 'Before kickoff: nothing new' },
+        { gid: 'hou', label: 'Final: nothing new' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
