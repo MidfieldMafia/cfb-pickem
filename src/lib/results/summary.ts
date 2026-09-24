@@ -165,6 +165,16 @@ export function weeklyWinSentence(win: WeeklyWin | null, complete: boolean): str
   }
 }
 
+/**
+ * Who wears the Weekly Win badge on the week's board: nobody until the Week is
+ * complete. Mid-Saturday the engine's winners are only the leaders, and
+ * `weeklyWinSentence` already says "leads with" for them — a badge would
+ * crown them early, which is why the season Trophy waits for `seasonChampion`.
+ */
+export function weeklyWinners(win: WeeklyWin | null, complete: boolean): Set<number> {
+  return new Set(complete ? (win?.winners.map((m) => m.id) ?? []) : []);
+}
+
 /** One member tied for the week's lead by points: their Guess and its error, once the Tiebreaker Game is final. */
 export interface TiebreakerContender {
   member: ScoredMember;
