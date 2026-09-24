@@ -1,18 +1,16 @@
 ---
 name: new-worktree
-description: Create an isolated worktree and warm it up before writing code. Use when starting a numbered issue, or when a task needs a checkout of its own.
+description: Create a worktree on origin/main and warm it before writing code. Use when starting a numbered issue or any task that needs its own checkout.
 ---
 
 # Start a worktree
 
-A new worktree is **cold**: git gives you tracked files only. Warm it and prove
-it green before writing code, or a missing setup step will look like a bug in
-your change. Cleanup has its own skill, `remove-worktree`.
+A fresh worktree is **cold**: git checks out tracked files only, and each
+missing untracked piece fails in a way that looks like a bug in your change.
+Warm it, see it **green** on untouched code, then write code. Cleanup is
+`remove-worktree`.
 
-## 1. Base it on `origin/main`, explicitly
-
-`origin/HEAD` is unset here, so name `origin/main`. A worktree cut from a stale
-local `main` starts behind and shows phantom conflicts later.
+## 1. Cut it from `origin/main`
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -20,54 +18,51 @@ git fetch origin
 git worktree add -b <branch> .claude/worktrees/<name> origin/main
 ```
 
-`.claude/worktrees/` is gitignored. State the base commit in your first message
-about the work.
+Name `origin/main` in full: `origin/HEAD` is unset here, and local `main` lags
+behind merges from other sessions. `.claude/worktrees/` is gitignored.
 
-## 2. Warm it and prove it green, in the background
+**Done when** your first message about the work names the base commit.
 
-Run this as one **background** Bash call (`run_in_background: true`), from the
-worktree:
+## 2. Warm it in the background
+
+Start one background Bash call (`run_in_background: true`):
 
 ```bash
 cd .claude/worktrees/<name> && bash .claude/skills/new-worktree/warm.sh
 ```
 
-Don't run the steps inline. The script sends all output to logs and prints one
-line on success, or the tail of the failing step's log. Inline output (install
-log, route table, a line per test file) stays in context for the whole session.
-Use the ~2 minutes it takes to read the ticket or ask design questions.
+The script keeps every step's output in a log and prints a single line, so the
+install log, route table and test list stay out of your context for the rest of
+the session. Spend the ~2 minutes reading the ticket or asking design questions.
 
-It runs, in order:
+For a small change, add `--skip-checks`: it stops after the build, and the push
+gate runs typecheck, test and eslint anyway.
 
-- `npm ci`, because **`node_modules` is not shared.** Without it Turbopack
-  compiles nothing (every route 500s) and every server-seam test fails to
-  import. A junction or symlink makes it worse; see `verify-running-app`.
-- A copy of `.env.local`, which is **gitignored**. Without it `db()` throws
-  `DATABASE_URL is not set`. The copy points at the shared Neon database.
-- `npx next build`, which writes **`.next/types`**. Without it `typecheck`
+**Done when** it prints `worktree warm: ... all green`. A failure prints the
+step name and its log tail; see [Cold gaps](#cold-gaps) and fix that setup step.
+On untouched code, a failure is always a cold gap, never a bug in `src`.
+
+## 3. Claim a port before `next dev`
+
+`next dev` moves up silently when its port is taken, so a shared 3000 means one
+checkout serves the other's code. Pick a free port, hold it in a variable, and
+send every request there (`verify-running-app` step 1).
+
+**Done when** the port is in a variable and nothing else is listening on it.
+
+## Cold gaps
+
+What each `warm.sh` step fills, and what its absence looks like:
+
+- **install**: `node_modules` is per-worktree. Without it Turbopack compiles
+  nothing (every route 500s) and every server-seam test fails to import. Only
+  a real `npm ci` fixes it; `verify-running-app` explains why a junction or
+  symlink makes it worse.
+- **env**: `.env.local` is gitignored. Without it `db()` throws
+  `DATABASE_URL is not set`. The copy points at the shared Neon database, so a
+  commissioner action you take here is a real write.
+- **build**: `npx next build` writes `.next/types`. Without them `typecheck`
   reports `Cannot find name 'LayoutProps'` in `src/app/layout.tsx`. It applies
   no migrations, so it is safe here.
-- `typecheck`, `vitest --reporter=dot` and `eslint src`. They all pass on
-  untouched `origin/main`, so the first failure afterwards belongs to your
-  change.
-
-Pass `--skip-checks` to stop after the build. That's fine for a small change,
-because the push gate runs the checks anyway.
-
-If it fails on untouched code, the warm-up is incomplete, not `src`: fix that
-setup step, don't edit code.
-
-## 3. Claim a port that is yours alone
-
-`next dev` doesn't stop when its port is taken. It warns and moves up, so two
-checkouts aimed at 3000 means one silently serves the other's code. Pick a free
-port, keep it in a variable, and use it for every request
-(`verify-running-app` step 1).
-
-## 4. Note what running here writes
-
-The database is shared, so a commissioner action taken to check a screen is a
-real write other people see.
-
-`git push` runs `.claude/hooks/preflight.sh`: build, typecheck, test and eslint,
-with the push blocked on failure. After step 2 it takes about ten seconds.
+- **typecheck / test / eslint**: all pass on `origin/main`, so a failure means
+  the steps above left a gap.
