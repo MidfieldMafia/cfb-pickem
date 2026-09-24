@@ -46,6 +46,27 @@ for (const need of ["tokens.css", "components/lib/react.production.min.js", "com
   }
 }
 
+// The page compiles every type style in tokens.json into a `.<name>` class in tokens.css, setting
+// family, weight and tracking. Those rules are unlayered, and bundle.css is Tailwind 4, whose
+// utilities sit in `@layer utilities`: an unlayered rule wins whatever the order. A style named
+// like a class the bundle uses (`text-xs`, `text-2xl`) strips `font-bold` / `font-display` off
+// every element that carries both, silently. So a collision fails the run.
+const typeStyles = (file) =>
+  fs.existsSync(file) ? (JSON.parse(txt(file)).type?.groups ?? []).flatMap((g) => (g.styles ?? []).map((s) => s.name)) : [];
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const definesClass = (css, name) => new RegExp(`\\.${escapeRe(name)}(?![A-Za-z0-9_\\\\-])`).test(css);
+const newStyles = typeStyles(pick("tokens.json", true));
+const collisions = newStyles.filter((n) => definesClass(txt(pick("components/bundle.css", true)), n));
+for (const n of collisions) console.log(`COLLISION: tokens.json type style "${n}" is also a class in bundle.css; rename the style`);
+
+// tokens.css is regenerated only by a save in the page, so the served copy lags a staged
+// tokens.json. For "new", drop the type-style rules the staged tokens.json no longer has, which
+// is what that save will do.
+const carriedTokens = txt(path.join(carried, "tokens.css"));
+const stagedTokens = fs.existsSync(path.join(staged, "tokens.json"))
+  ? carriedTokens.replace(/\n\.([A-Za-z0-9_-]+) \{[^}]*\}/g, (rule, n) => (newStyles.includes(n) ? rule : ""))
+  : carriedTokens;
+
 const names = new Set();
 for (const root of [carried, staged]) {
   const dir = path.join(root, "components");
@@ -69,7 +90,7 @@ for (const name of [...names].sort()) {
     const width = Number(card.match(/width=(\d+)/)?.[1] ?? 720);
     const height = Number(card.match(/height=(\d+)/)?.[1] ?? 300);
     const html = `<!doctype html><html><head><meta charset="utf-8">
-<style>${txt(path.join(carried, "tokens.css"))}</style>
+<style>${useNew ? stagedTokens : carriedTokens}</style>
 <style>${txt(pick("components/bundle.css", useNew))}</style>
 <style>body{margin:0;background:var(--background)}</style>
 <script>${txt(path.join(carried, "components/lib/react.production.min.js"))}</script>
@@ -87,7 +108,8 @@ for (const name of [...names].sort()) {
     await page.setContent(html, { waitUntil: "load", timeout: 20000 });
     await new Promise((r) => setTimeout(r, 500));
     const text = await page.evaluate(() => document.body.innerText.slice(0, 80).replace(/\s+/g, " "));
-    await page.screenshot({ path: path.join(shots, `${name}.${side}.png`) });
+    // fullPage: the page grows a card to fit its content, so a viewport-sized shot crops what it shows.
+    await page.screenshot({ path: path.join(shots, `${name}.${side}.png`), fullPage: true });
     await page.close();
     const missing = text.startsWith("Missing from bundle");
     if (useNew && (errors.length || missing)) failed++;
@@ -95,6 +117,7 @@ for (const name of [...names].sort()) {
   }
 }
 await browser.close();
+failed += collisions.length;
 console.log(failed ? `${failed} new render(s) failed` : "every new render is clean");
 // puppeteer can leave the process alive on Windows; exit explicitly.
 process.exit(failed ? 1 : 0);
