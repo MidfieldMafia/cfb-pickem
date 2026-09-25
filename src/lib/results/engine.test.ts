@@ -45,6 +45,7 @@ function game(overrides: Partial<Game> = {}): Game {
     possession: null,
     lastPlay: null,
     situation: null,
+    liveFeed: null,
     void: false,
     voidNote: null,
     overrideHomeScore: null,

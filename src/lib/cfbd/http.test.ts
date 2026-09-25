@@ -20,9 +20,9 @@ const WEEK = { year: 2026, week: 2 } as const;
  * the params rather than on string order.
  */
 function spyFetch(body: unknown = [], init: { ok?: boolean; status?: number } = {}) {
-  const calls: { url: URL; headers: Headers }[] = [];
+  const calls: { url: URL; headers: Headers; signal: AbortSignal | null | undefined }[] = [];
   const impl = (async (input: URL | RequestInfo, options?: RequestInit) => {
-    calls.push({ url: new URL(String(input)), headers: new Headers(options?.headers) });
+    calls.push({ url: new URL(String(input)), headers: new Headers(options?.headers), signal: options?.signal });
     return {
       ok: init.ok ?? true,
       status: init.status ?? 200,
@@ -46,6 +46,18 @@ async function refusalOf(run: () => Promise<unknown>): Promise<CfbdError> {
 }
 
 describe("the request the live client builds", () => {
+  test("livePlays asks for one game, and gives up rather than hold a member's request", async () => {
+    const fetch = spyFetch({ drives: [] });
+    await httpCfbd("secret", fetch.impl).livePlays(401869941);
+
+    const { url, signal } = fetch.only();
+    expect(url.pathname).toBe("/live/plays");
+    expect(paramsOf(url)).toEqual({ gameId: "401869941" });
+    // A timeout signal: the one call here a slow answer from a single game could otherwise stall.
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+  });
+
   test("games asks for the FBS regular season for one week", async () => {
     const fetch = spyFetch();
     await httpCfbd("secret", fetch.impl).games(WEEK);

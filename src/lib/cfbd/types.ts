@@ -173,6 +173,84 @@ export interface CfbdScoreboardGame {
   awayTeam: CfbdScoreboardTeam;
 }
 
+/**
+ * One play in GET /live/plays. `homeScore`/`awayScore` are the score *after*
+ * the play, extra point included; `clock` is the game clock after it, "3:05"
+ * with no leading zero; `wallClock` is when the play was logged upstream, not
+ * when it was snapped, and it moves when the play is revised in place.
+ * `yardsToGoal` is the play's start spot, measured from `teamId`, which is the
+ * offense on a snap and the kicking team on a kick. See
+ * docs/research/cfbd-live-plays.md.
+ */
+export interface CfbdLivePlay {
+  id: string;
+  homeScore: number;
+  awayScore: number;
+  period: number;
+  clock: string;
+  /** ISO 8601. */
+  wallClock: string;
+  teamId: number;
+  team: string;
+  down: number | null;
+  distance: number | null;
+  yardsToGoal: number | null;
+  yardsGained: number | null;
+  playTypeId: number;
+  playType: string;
+  epa: number | null;
+  garbageTime: boolean;
+  success: boolean;
+  rushPass: string;
+  downType: string;
+  playText: string;
+}
+
+/** One drive in GET /live/plays. Its `plays` start with the kickoff or punt that began it. The metadata is loose; never draw from it. */
+export interface CfbdLiveDrive {
+  id: string;
+  offenseId: number;
+  offense: string;
+  defenseId: number;
+  defense: string;
+  playCount: number;
+  yards: number;
+  startPeriod: number | null;
+  startClock: string | null;
+  startYardsToGoal: number | null;
+  endPeriod: number | null;
+  endClock: string | null;
+  endYardsToGoal: number | null;
+  duration: string | null;
+  scoringOpportunity: boolean;
+  result: string;
+  pointsGained: number;
+  plays: CfbdLivePlay[];
+}
+
+/**
+ * GET /live/plays for one game: the whole game so far in one response, every
+ * drive with its plays, never incremental. The header's `down`, `distance`
+ * and `yardsToGoal` are the end state of the newest play; its `possession` is
+ * a team *name*, and the team that ran the newest play, so it is the kicking
+ * team after a kick. `teams[]` carries CFBD's advanced metrics, which nothing
+ * here reads.
+ */
+export interface CfbdLiveGame {
+  id: number;
+  /** Title-case prose: "In Progress", "End of Period", "Halftime", "Final". */
+  status: string;
+  period: number | null;
+  clock: string;
+  possession: string;
+  /** 1–4; 0 after a timeout, -1 after a touchdown, null once final. */
+  down: number | null;
+  distance: number | null;
+  yardsToGoal: number | null;
+  teams: unknown[];
+  drives: CfbdLiveDrive[];
+}
+
 export interface WeekQuery {
   year: number;
   week: number;
@@ -191,6 +269,11 @@ export interface CfbdClient {
    * stale gate on `weeks.scoreboard_fetched_at` is its whole bound.
    */
   scoreboard(): Promise<CfbdScoreboardGame[]>;
+  /**
+   * GET /live/plays for one game. Metered per call, a 304 included, so the
+   * stale gate's claim is its one caller: see `ingestResults`.
+   */
+  livePlays(gameId: number): Promise<CfbdLiveGame>;
   /** GET /rankings for a season: every poll week published so far. */
   rankings(year: number): Promise<CfbdPollWeek[]>;
   /** GET /lines for a regular-season week. */

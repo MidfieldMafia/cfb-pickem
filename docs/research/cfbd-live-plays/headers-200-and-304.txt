@@ -1,0 +1,46 @@
+## lp-20260925T002052Z-r01.h
+HTTP/2 200 
+date: Fri, 25 Sep 2026 00:20:52 GMT
+content-type: application/json; charset=utf-8
+content-length: 20673
+server: cloudflare
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=31536000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+x-calllimit-remaining: 74794
+etag: W/"50c1-SKNdzTjM4yago+vm+A/7Mys5/no"
+cf-cache-status: DYNAMIC
+cf-ray: a405dd946fe2dce5-ATL
+alt-svc: h3=":443"; ma=86400
+
+## lp-20260925T002056Z-r02-inm.h
+HTTP/2 304 
+date: Fri, 25 Sep 2026 00:20:57 GMT
+server: cloudflare
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=31536000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+x-calllimit-remaining: 74793
+etag: W/"50c1-SKNdzTjM4yago+vm+A/7Mys5/no"
+cf-cache-status: DYNAMIC
+cf-ray: a405ddb03bfd2080-ATL
+alt-svc: h3=":443"; ma=86400
+

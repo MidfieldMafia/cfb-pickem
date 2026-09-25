@@ -9,6 +9,7 @@
  * the audit row each commissioner change logs, is next door in `writes.ts`.
  */
 import type { Game, PossessionSide } from "@/db/schema";
+import { newerScore, type LiveFeed } from "./live-feed";
 
 export type ResultStatus = "pending" | "final" | "void";
 
@@ -21,7 +22,11 @@ export interface Score {
   awayScore: number;
 }
 
-/** The running score, and where in the game it stands. */
+/**
+ * The running score, and where in the game it stands. The score is the live
+ * play-by-play's newest play's whenever that is newer than the scoreboard's
+ * (`newerScore`); everything else here but `feed` is the scoreboard's.
+ */
 export interface LiveScore extends Score {
   /** The quarter, 5 and up for overtime. Null when the feed has not said. */
   period: number | null;
@@ -38,6 +43,12 @@ export interface LiveScore extends Score {
   lastPlay: string | null;
   /** The down-and-distance, "3rd & 7". Null when the feed has not said. */
   situation: string | null;
+  /**
+   * The live play-by-play's newest play and the next snap's down, distance
+   * and spot. Null when the feed carries no play for the game, and a screen
+   * then falls back to `lastPlay`, `situation` and `possession` above.
+   */
+  feed: LiveFeed | null;
 }
 
 /**
@@ -146,13 +157,16 @@ export function effectiveResult(game: Game): GameResult {
   const live: LiveScore | null =
     game.status === "in_progress" && game.homeScore !== null && game.awayScore !== null
       ? {
-          homeScore: game.homeScore,
-          awayScore: game.awayScore,
+          ...newerScore(
+            { homeScore: game.homeScore, awayScore: game.awayScore, period: game.period, clock: game.clock },
+            game.liveFeed,
+          ),
           period: game.period,
           clock: game.clock,
           possession: game.possession,
           lastPlay: game.lastPlay,
           situation: game.situation,
+          feed: game.liveFeed,
         }
       : null;
   return {
