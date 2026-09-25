@@ -37,7 +37,7 @@ _Avoid_: Avatar, icon
 ### Time
 
 **Season**:
-One college football year, e.g. 2026. Holds weeks and the season leaderboard. Only one season is active at a time.
+One college football year, e.g. 2026. Holds weeks and the season leaderboard. Only one season is active at a time. Starting the next season carries over the Rules and deletes every Group's Chat from the last.
 
 **Week**:
 One round of the game inside a season, matching a CollegeFootballData week number. Carries a slate, a deadline, and a weekly result.
