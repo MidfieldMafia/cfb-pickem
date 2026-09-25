@@ -4,18 +4,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { HEADER_TOP, HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
 
 import { track } from "@/lib/analytics/analytics";
-import { put } from "@/lib/picks/client";
 import { formatCountdown } from "@/lib/picks/clock";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
-import { firstOpenGame, liveGames, remainingLabel } from "@/lib/picks/progress";
+import { firstOpenGame, liveGames, lockGameOf, remainingLabel } from "@/lib/picks/progress";
 import { usePickSheet } from "@/lib/picks/use-pick-sheet";
 import { plural } from "@/lib/plural";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
@@ -68,47 +67,29 @@ function StepRow({
  */
 export function Review({ initial }: { initial: SheetJson }) {
   const router = useRouter();
-  const { sheet, progress, locked, remainingMs, patch, apply, receive } = usePickSheet(initial);
+  // Re-read on arrival so the countdown starts from a fresh server clock.
+  const { sheet, progress, locked, remainingMs, status, setLock, setGuess } = usePickSheet(initial, { refetch: true });
 
   const [lockOpen, setLockOpen] = useState(false);
-  const [lockError, setLockError] = useState<string | null>(null);
-  const [lockPending, setLockPending] = useState(false);
+  const lockPending = status.lock.state === "saving";
+  const lockError = status.lock.state === "failed" ? status.lock.error : null;
 
-  const [guess, setGuess] = useState(initial.tiebreakerGuess === null ? "" : String(initial.tiebreakerGuess));
-  const [guessState, setGuessState] = useState<{ error?: string; saved?: boolean; pending?: boolean }>({});
-
-  // What the member has changed on this screen; a later refetch must not write over it.
-  const touched = useRef({ lock: false, guess: false });
-
-  // Re-read the sheet from the API on arrival so the countdown starts from a fresh server clock.
-  useEffect(() => {
-    let stale = false;
-    fetch("/api/week/picks", { cache: "no-store" })
-      .then((response) => (response.ok ? (response.json() as Promise<SheetJson>) : null))
-      .then((fresh) => {
-        if (!fresh || stale) return;
-        receive(fresh, (current) => ({
-          ...(touched.current.lock && { lockGameId: current.lockGameId, lockDropped: current.lockDropped }),
-          ...(touched.current.guess && { tiebreakerGuess: current.tiebreakerGuess }),
-        }));
-        setGuess((current) =>
-          current === "" && !touched.current.guess && fresh.tiebreakerGuess !== null ? String(fresh.tiebreakerGuess) : current,
-        );
-      })
-      .catch(() => {
-        // The server-rendered sheet stands until the network is back.
-      });
-    return () => {
-      stale = true;
-    };
-    // Runs once on arrival; `receive` is stable enough for that.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // What the member has typed, or null to show the Guess the sheet holds.
+  const [typed, setTyped] = useState<string | null>(null);
+  const guess = typed ?? (sheet.tiebreakerGuess === null ? "" : String(sheet.tiebreakerGuess));
+  const [guessInvalid, setGuessInvalid] = useState<string | null>(null);
+  const [edited, setEdited] = useState(false);
+  const guessPending = status.guess.state === "saving";
+  const guessError = guessInvalid ?? (status.guess.state === "failed" ? status.guess.error : null);
+  // "Saved." stands until the member types again.
+  const guessSaved = status.guess.state === "saved" && !edited;
 
   const pickFor = (gameId: number) => sheet.picks.find((p) => p.gameId === gameId);
   const picked = (gameId: number) => pickFor(gameId) !== undefined;
   const open = progress.liveGames - progress.picksMade;
-  const lockGame = sheet.games.find((g) => g.game.id === sheet.lockGameId)?.game;
+  const lockGameId = lockGameOf(sheet.lock);
+  const lockDropped = sheet.lock.state === "dropped";
+  const lockGame = sheet.games.find((g) => g.game.id === lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
   const tiebreakerGame = sheet.games.find((g) => g.game.id === sheet.tiebreakerGameId)?.game;
   const steps = progress.liveGames + 2;
@@ -120,40 +101,21 @@ export function Review({ initial }: { initial: SheetJson }) {
     : "Combined final score of the Tiebreaker Game";
 
   const chooseLock = async (gameId: number | null) => {
-    setLockPending(true);
-    setLockError(null);
-    touched.current.lock = true;
-    // Optimistic in `lockGameId` alone — the field the member just chose. Whether
-    // that leaves a Dropped Lock is the server's to answer, and it answers with
-    // the whole sheet; this screen used to assert `lockDropped: false` here while
-    // that answer went unread.
-    patch((s) => ({ ...s, lockGameId: gameId }));
-    const result = await put<SheetJson>("/api/week/lock", { gameId });
-    setLockPending(false);
-    apply(result);
-    if (result.ok) {
-      track("lock_set", { cleared: gameId === null });
-      setLockOpen(false);
-      return;
-    }
-    setLockError(result.error);
+    const outcome = await setLock(gameId);
+    if (outcome.state !== "saved") return;
+    track("lock_set", { cleared: gameId === null });
+    setLockOpen(false);
   };
 
   const saveGuess = async (event: FormEvent) => {
     event.preventDefault();
     const value = Number(guess);
     const invalid = guess.trim() === "" ? "Enter a guess first." : tiebreakerGuessError(value);
-    if (invalid) {
-      setGuessState({ error: invalid });
-      return;
-    }
-    setGuessState({ pending: true });
-    touched.current.guess = true;
-    const result = await put<SheetJson>("/api/week/tiebreaker", { guess: value });
-    // On success the stored Guess as the server has it, rather than the value sent to it.
-    apply(result);
-    setGuessState(result.ok ? { saved: true } : { error: result.error });
-    if (result.ok) track("tiebreaker_saved");
+    setGuessInvalid(invalid);
+    if (invalid) return;
+    setTyped(guess);
+    setEdited(false);
+    if ((await setGuess(value)).state === "saved") track("tiebreaker_saved");
   };
 
   const pickRow = (view: SheetGameJson) => {
@@ -182,7 +144,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             </span>
           )}
         </span>
-        {sheet.lockGameId === game.id ? (
+        {lockGameId === game.id ? (
           <Badge variant="secondary">
             <Lock /> Lock
           </Badge>
@@ -273,7 +235,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           label="Lock of the Week"
           detail={
             lockGame && lockPick
-              ? sheet.lockDropped
+              ? lockDropped
                 ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
                 : `${teamName(lockGame, lockPick.teamId)} counts ${sheet.lockMultiplier}×`
               : `One pick counts ${sheet.lockMultiplier}×`
@@ -330,7 +292,7 @@ export function Review({ initial }: { initial: SheetJson }) {
                 <>
                   <span className="font-display text-lg leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
                   <span className="text-xs text-muted-foreground">
-                    {sheet.lockDropped
+                    {lockDropped
                       ? locked
                         ? "That game is void, so no Lock counts this week"
                         : "That game is void and scores zero; choose another Lock"
@@ -375,21 +337,22 @@ export function Review({ initial }: { initial: SheetJson }) {
               disabled={locked}
               aria-label="Tiebreaker Guess"
               onChange={(e) => {
-                setGuess(e.target.value.replace(/\D/g, ""));
-                setGuessState({});
+                setTyped(e.target.value.replace(/\D/g, ""));
+                setGuessInvalid(null);
+                setEdited(true);
               }}
               className={progress.guessSet ? "" : "border-secondary"}
             />
-            <Button type="submit" variant="outline" disabled={locked || guessState.pending}>
-              {guessState.pending ? "Saving…" : "Save"}
+            <Button type="submit" variant="outline" disabled={locked || guessPending}>
+              {guessPending ? "Saving…" : "Save"}
             </Button>
           </div>
-          {guessState.error ? (
+          {guessError ? (
             <p role="alert" className="text-sm font-semibold text-destructive">
-              {guessState.error}
+              {guessError}
             </p>
           ) : null}
-          {guessState.saved ? (
+          {guessSaved ? (
             <p role="status" className="text-sm text-muted-foreground">
               Saved.
             </p>
@@ -416,7 +379,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             {liveGames(sheet.games).map(({ game }) => {
               const pick = pickFor(game.id);
               if (!pick) return null;
-              const on = sheet.lockGameId === game.id;
+              const on = lockGameId === game.id;
               return (
                 <button
                   key={game.id}

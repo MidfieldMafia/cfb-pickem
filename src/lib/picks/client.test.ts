@@ -1,5 +1,5 @@
 /**
- * The one PUT helper the pick flow and the review screen share. It never
+ * The one PUT helper every save in `usePickSheet` goes through. It never
  * throws, because every caller is a tap on a phone that has to keep working:
  * the failure paths below are the whole point of the module.
  */

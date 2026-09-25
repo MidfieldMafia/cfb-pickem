@@ -13,33 +13,22 @@ import { WeatherPill } from "@/components/picks/weather-pill";
 
 import { track } from "@/lib/analytics/analytics";
 import { matchupColors } from "@/lib/matchup-colors";
-import { put } from "@/lib/picks/client";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { firstOpenGame } from "@/lib/picks/progress";
-import { usePickSheet } from "@/lib/picks/use-pick-sheet";
+import { usePickSheet, type ShownPick } from "@/lib/picks/use-pick-sheet";
 import { isVoid, voidNote } from "@/lib/slate/json";
-
-type Status = "saved" | "saving" | "failed";
-
-interface LocalPick {
-  teamId: number;
-  status: Status;
-  error?: string;
-}
-
-/** Saves the sheet does not hold yet: in flight, or refused. Everything else is on the sheet. */
-type Unsettled = Record<number, LocalPick | undefined>;
-
-type LocalPicks = Record<number, LocalPick | undefined>;
 
 /** How long the Saved chip shows before the flow moves on. */
 const ADVANCE_DELAY_MS = 400;
 
-const isSaved = (pick: LocalPick | undefined) => pick?.status === "saved";
+const isSaved = (pick: ShownPick | undefined) => pick?.state === "saved";
+
+/** One game's Pick as the flow shows it: the server's, or a save it has not taken yet. */
+type Picks = (gameId: number) => ShownPick | undefined;
 
 /** Where the flow opens: the first game still to pick, or the top of the slate. */
-function firstUnpicked(games: SheetGameJson[], picks: LocalPicks): number {
-  const open = firstOpenGame(games, (gameId) => isSaved(picks[gameId]));
+function firstUnpicked(games: SheetGameJson[], picks: Picks): number {
+  const open = firstOpenGame(games, (gameId) => isSaved(picks(gameId)));
   return open ? games.indexOf(open) : 0;
 }
 
@@ -53,14 +42,14 @@ function ProgressStrip({
   onJump,
 }: {
   games: SheetGameJson[];
-  picks: LocalPicks;
+  picks: Picks;
   current: number;
   onJump: (index: number) => void;
 }) {
   return (
     <nav aria-label="Games" className="flex gap-1 px-4">
       {games.map((g, i) => {
-        const done = isSaved(picks[idOf(g)]);
+        const done = isSaved(picks(idOf(g)));
         const cur = i === current;
         return (
           <button
@@ -101,8 +90,8 @@ const CHIP = {
 } as const;
 
 /** One live region whose text changes, so screen readers announce the transition. */
-function StatusChip({ pick }: { pick: LocalPick | undefined }) {
-  const { variant, look, Icon, iconProps, label } = CHIP[pick?.status ?? "pending"];
+function StatusChip({ pick }: { pick: ShownPick | undefined }) {
+  const { variant, look, Icon, iconProps, label } = CHIP[pick?.state ?? "pending"];
   return (
     <Badge aria-live="polite" variant={variant} className={`min-h-7 px-2.5 font-semibold ${look}`}>
       {Icon ? <Icon aria-hidden {...iconProps} /> : null}
@@ -126,24 +115,16 @@ export function PickFlow({
   startGameId?: number;
 }) {
   const router = useRouter();
-  const { sheet: held, locked, apply } = usePickSheet(initial);
-  const games = held.games;
-  const [unsettled, setUnsettled] = useState<Unsettled>({});
-  // What the server holds, overlaid with the saves it has not answered yet. Only
-  // the server's part counts as picked: an in-flight or failed save leaves its
+  // Only a saved Pick counts as picked: an in-flight or failed save leaves its
   // game open here just as it does on the sheet.
-  const picks: LocalPicks = {
-    ...Object.fromEntries(held.picks.map((p) => [p.gameId, { teamId: p.teamId, status: "saved" as const }])),
-    ...unsettled,
-  };
+  const { sheet: held, locked, lateError, pick: picks, savePick } = usePickSheet(initial);
+  const games = held.games;
   const [index, setIndex] = useState(() => {
     const requested = games.findIndex((g) => idOf(g) === startGameId);
     return requested === -1 ? firstUnpicked(games, picks) : requested;
   });
-  const [lateError, setLateError] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const attempts = useRef(new Map<number, number>());
 
   useEffect(() => () => clearTimeout(advanceTimer.current), []);
 
@@ -151,14 +132,14 @@ export function PickFlow({
   const { game, detail } = view;
   const voided = isVoid(view);
   const why = voidNote(view);
-  const pick = picks[game.id];
+  const pick = picks(game.id);
   const tiebreaker = game.id === held.tiebreakerGameId;
   const last = index + 1 >= games.length;
   // What the end of the slate still owes, counting this game as picked: `advance`
   // runs from the post-save timeout, whose closure caught `picks` before the save
   // landed, so without that the game just saved reads as open and sends the flow
   // back to itself.
-  const openAfterThis = firstOpenGame(games, (gameId) => gameId === game.id || isSaved(picks[gameId]));
+  const openAfterThis = firstOpenGame(games, (gameId) => gameId === game.id || isSaved(picks(gameId)));
 
   const goTo = (i: number) => {
     clearTimeout(advanceTimer.current);
@@ -178,34 +159,12 @@ export function PickFlow({
   const choose = async (teamId: number) => {
     if (locked || voided) return;
     const gameId = game.id;
-    const attemptId = (attempts.current.get(gameId) ?? 0) + 1;
-    attempts.current.set(gameId, attemptId);
     clearTimeout(advanceTimer.current);
     setFlash(false);
-    setUnsettled((u) => ({ ...u, [gameId]: { teamId, status: "saving" } }));
-
-    const result = await put<SheetJson>("/api/week/picks", { gameId, teamId });
-    // A newer tap on this same game supersedes this answer; other games are unaffected.
-    if (attempts.current.get(gameId) !== attemptId) return;
-
-    // A save takes only its own game onto the sheet: answers to different games
-    // can arrive out of order, and the older must not roll back the newer. A 423
-    // is the exception the hook handles: the Deadline passed under us, what the
-    // server holds is what counts, and its refusal carries the sheet that says so.
-    const now = apply(result, (h, body) => ({
-      ...h,
-      picks: [...h.picks.filter((p) => p.gameId !== gameId), { gameId, teamId, updatedAt: body.serverNow }],
-    }));
-    if (!result.ok && result.locked) setLateError(result.error);
-    const failed = !result.ok && !result.locked;
-    if (result.ok) track("pick_saved");
-    // Settled saves leave the overlay, or its `undefined` would hide the sheet's own pick.
-    setUnsettled((u) => {
-      const rest = { ...u };
-      delete rest[gameId];
-      return failed ? { ...rest, [gameId]: { teamId, status: "failed", error: result.error } } : rest;
-    });
-    if (!failed && now.picks.some((p) => p.gameId === gameId) && games[index]?.game.id === gameId) {
+    const outcome = await savePick(gameId, teamId);
+    if (outcome.state !== "saved") return;
+    track("pick_saved");
+    if (games[index]?.game.id === gameId) {
       setFlash(true);
       advanceTimer.current = setTimeout(() => {
         setFlash(false);
@@ -318,7 +277,7 @@ export function PickFlow({
           </p>
         ) : null}
 
-        {pick?.status === "failed" ? (
+        {pick?.state === "failed" ? (
           <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive p-2 text-sm">
             <span className="flex-1 font-semibold text-destructive">{pick.error}</span>
             {locked ? null : (

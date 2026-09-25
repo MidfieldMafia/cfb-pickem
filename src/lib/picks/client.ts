@@ -1,6 +1,7 @@
 /**
- * The browser side of the pick entry API: one PUT helper the pick flow and
- * the review screen share, and the error shape the route handlers send.
+ * The browser side of the pick entry API: the one PUT helper, which
+ * `usePickSheet` sends every save through, and the error shape the route
+ * handlers send.
  * Client-safe: no database imports.
  */
 
