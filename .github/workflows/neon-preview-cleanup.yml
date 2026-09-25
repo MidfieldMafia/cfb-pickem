@@ -1,8 +1,15 @@
-# Deletes a PR's Neon preview branch when the PR closes, merged or not.
+# Deletes the Neon preview branches of closed PRs.
 #
 # The Vercel-Neon integration creates `preview/<git branch>` for every preview
 # deployment and never removes it, so closed PRs pile up until Neon's cap turns
 # every new preview red (PR #294, 2026-09-24).
+#
+# Three triggers, one rule. Closing a PR deletes its own preview branch; the
+# weekly sweep and a manual run check every `preview/*` branch, so a close event
+# that failed (every one did while NEON_PROJECT_ID was a secret rather than a
+# variable) is caught up later. A branch is stale when its git branch has a
+# closed PR and no open one: a branch with no PR yet may be a preview someone
+# is still looking at, so the sweep leaves it alone.
 #
 # Plain API calls rather than neondatabase/delete-branch-action: a PR that
 # never got a preview, or whose branch was already cleared by hand, has nothing
@@ -14,26 +21,90 @@ name: Neon preview cleanup
 on:
   pull_request:
     types: [closed]
+  schedule:
+    - cron: "23 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List the stale preview branches without deleting them
+        type: boolean
+        default: false
 
-permissions: {}
+permissions:
+  pull-requests: read
+
+concurrency:
+  group: neon-preview-cleanup
+  cancel-in-progress: false
 
 jobs:
-  delete-preview-branch:
+  delete-preview-branches:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      HEAD_REF: ${{ github.head_ref }}
+      DRY_RUN: ${{ inputs.dry_run || false }}
     steps:
-      - name: Delete preview/${{ github.head_ref }}
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-          BRANCH: preview/${{ github.head_ref }}
+      - name: Check the Neon settings
+        run: |
+          missing=()
+          [ -n "$NEON_API_KEY" ] || missing+=("secret NEON_API_KEY")
+          [ -n "$NEON_PROJECT_ID" ] || missing+=("variable NEON_PROJECT_ID")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repo ${missing[*]} (Settings > Secrets and variables > Actions). NEON_PROJECT_ID must be a variable, not a secret."
+            exit 1
+          fi
+
+      - name: Delete stale preview branches
         run: |
           set -euo pipefail
           api="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches"
-          auth="Authorization: Bearer $NEON_API_KEY"
-          id=$(curl -sSf -H "$auth" "$api" | jq -r --arg name "$BRANCH" '.branches[] | select(.name == $name) | .id')
-          if [ -z "$id" ]; then
-            echo "No Neon branch named $BRANCH; nothing to delete."
-            exit 0
+
+          # Prints the response body, or fails with Neon's error message in it.
+          neon() {
+            local body
+            if ! body=$(curl -sS --fail-with-body -H "Authorization: Bearer $NEON_API_KEY" -H "Accept: application/json" "$@"); then
+              echo "::error::Neon API call failed: $body" >&2
+              return 1
+            fi
+            printf '%s\n' "$body"
+          }
+
+          # "<name><TAB><id>" for every preview branch. Neon returns every match
+          # when no limit is given, so there is no page to follow.
+          previews=$(neon -G "$api" --data-urlencode "search=preview/" |
+            jq -r '.branches[] | select(.name | startswith("preview/")) | [.name, .id] | @tsv')
+
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            previews=$(awk -F'\t' -v name="preview/$HEAD_REF" '$1 == name' <<< "$previews")
+            if [ -z "$previews" ]; then
+              echo "No Neon branch named preview/$HEAD_REF; nothing to delete."
+              exit 0
+            fi
           fi
-          curl -sSf -X DELETE -H "$auth" "$api/$id" > /dev/null
-          echo "Deleted Neon branch $BRANCH ($id)."
+
+          deleted=0 kept=0
+          while IFS=$'\t' read -r name id; do
+            [ -n "$name" ] || continue
+            head=${name#preview/}
+            open=$(gh pr list --head "$head" --state open --json number --jq length)
+            closed=$(gh pr list --head "$head" --state closed --json number --jq length)
+            if [ "$open" -gt 0 ] || [ "$closed" -eq 0 ]; then
+              echo "Keeping $name: $open open PR(s), $closed closed."
+              kept=$((kept + 1))
+            elif [ "$DRY_RUN" = true ]; then
+              echo "Would delete $name ($id)."
+              deleted=$((deleted + 1))
+            else
+              neon -X DELETE "$api/$id" > /dev/null
+              echo "Deleted $name ($id)."
+              deleted=$((deleted + 1))
+            fi
+          done <<< "$previews"
+
+          verb=$([ "$DRY_RUN" = true ] && echo "Would delete" || echo "Deleted")
+          echo "$verb $deleted preview branch(es); kept $kept." | tee -a "$GITHUB_STEP_SUMMARY"
