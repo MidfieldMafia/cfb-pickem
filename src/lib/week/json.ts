@@ -12,7 +12,6 @@
  * and imports this module.
  */
 import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/results";
-import type { SeasonStanding } from "@/lib/results/summary";
 import { toGameView, toWeekJson, type WeekJson } from "@/lib/slate/json";
 import type { WeekContext } from "./week";
 
@@ -38,19 +37,6 @@ export interface WeekStateJson {
    */
   scores: WeeklyScore[] | null;
   weeklyWin: WeeklyWin | null;
-  /**
-   * The viewer's own place and total across the season, this Week's
-   * provisional points included: the card at the top of the Live Board. Null
-   * before the Deadline, and for a member the season board does not carry at
-   * all — one deactivated with no Picks all season. A member who has played no
-   * Week yet is on that board at zero and has a place to show.
-   *
-   * The viewer's standing rather than the whole Leaderboard, because that card
-   * is the only thing on this screen that reads the season, and shipping every
-   * member's season row down a thirty-second poll to render one line would be
-   * paying for the Leaderboard on the Live Board's budget.
-   */
-  season: SeasonStanding | null;
 }
 
 /**
@@ -61,9 +47,7 @@ export interface WeekStateJson {
  */
 export function toWeekStateJson(week: WeekContext): WeekStateJson {
   const { slate, sheet } = week;
-  const graded = week.state === "live" || week.state === "settled" ? week : null;
-  const result = graded?.result ?? null;
-  const season = graded?.season ?? null;
+  const result = week.state === "live" || week.state === "settled" ? week.result : null;
   return {
     week: toWeekJson(slate.week),
     year: slate.season.year,
@@ -75,6 +59,5 @@ export function toWeekStateJson(week: WeekContext): WeekStateJson {
     games: result ? result.reveal.games : slate.games.map((game) => ({ ...toGameView(game), picks: [] })),
     scores: result?.scores ?? null,
     weeklyWin: result?.weeklyWin ?? null,
-    season,
   };
 }

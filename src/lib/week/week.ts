@@ -17,8 +17,7 @@ import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
-import { gradedSeason, playedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
-import { seasonStanding, type SeasonStanding } from "@/lib/results/summary";
+import { playedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
 import { refreshResultsIfStale } from "@/lib/results/writes";
 import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
 
@@ -54,13 +53,6 @@ export interface UngroupedWeek extends WeekBase {
 interface GradedBase extends WeekBase {
   /** The Week graded: the Reveal board, everyone's Weekly Score, and the Weekly Win. */
   result: GradedWeekResult;
-  /**
-   * Where the member stands in the season, this Week's provisional points
-   * included. Null for the screens that did not ask for it — the season costs a
-   * grading pass over every played Week, not just this one — and for a member
-   * the season board does not carry at all.
-   */
-  season: SeasonStanding | null;
 }
 
 /** Past the Deadline, graded, and a game still to finish. */
@@ -85,14 +77,13 @@ export type GradedWeekContext = Exclude<WeekContext, LockedWeek>;
 
 export interface WeekOptions {
   /**
-   * The group whose board to grade against, and the reason `graded` and
-   * `season` below are not enough on their own: a Weekly Score, a place and a
-   * Weekly Win only mean anything inside a group, so there is no such thing as
-   * grading this Week in general.
+   * The group whose board to grade against, and the reason `graded` below is
+   * not enough on its own: a Weekly Score, a place and a Weekly Win only mean
+   * anything inside a group, so there is no such thing as grading this Week in
+   * general.
    *
    * Null — or absent — for a member who is in no group. There is no board to
-   * grade, so `result` and `season` come back null however the flags are set,
-   * and the member lands on the "not in a group yet" screen rather than on an
+   * grade, so there is no `result` however `graded` is set, and the member lands on the "not in a group yet" screen rather than on an
    * empty Leaderboard. Pick entry passes no group at all, deliberately: a
    * Pick is one person's and counts in every group they play in.
    */
@@ -102,13 +93,6 @@ export interface WeekOptions {
    * scores arrive together from one pass, so asking for either is this flag.
    */
   graded?: boolean;
-  /**
-   * Grade the season as well, for the Live Board's own card: the member's
-   * place and total across every played Week. Separate from `graded` because
-   * it is a pass over the whole season rather than this Week, and only the
-   * Live Board wants it — the Leaderboard reads `seasonResult` directly.
-   */
-  season?: boolean;
   /**
    * Keep the scores fresh: member traffic schedules the feed, and a visit
    * after the Deadline pulls CollegeFootballData when a game is past kickoff
@@ -177,29 +161,16 @@ export async function currentWeek(
   // `ungrouped` state, rather than the read inventing a site-wide board that no
   // longer exists.
   const group = options.group ?? null;
-  const wantsGrading = Boolean(options.graded || options.season);
-  // Once locked, the season's played Weeks include this one, so asking for the
-  // standing as well as the Week is one grading pass with the Week cut out of
-  // it — not `weekResult` and `seasonResult` each grading it again.
-  const grading = locked && wantsGrading && group !== null;
-  const [sheet, graded] = await Promise.all([
+  const grading = locked && options.graded && group !== null;
+  const [sheet, result] = await Promise.all([
     pickSheet(db, actor, slate, now),
-    !grading
-      ? null
-      : options.season
-        ? gradedSeason(db, group, slate, now)
-        : weekResult(db, group, slate, now).then((result) => ({ result, season: null })),
+    grading ? weekResult(db, group, slate, now) : null,
   ]);
   const base = { slate, sheet };
   if (!locked) return { ...base, state: "open" };
-  if (!wantsGrading) return { ...base, state: "locked" };
-  if (!graded) return { ...base, state: "ungrouped" };
-  return {
-    ...base,
-    state: graded.result.complete ? "settled" : "live",
-    result: graded.result,
-    season: options.season && graded.season ? seasonStanding(graded.season.leaderboard, actor.id) : null,
-  };
+  if (!options.graded) return { ...base, state: "locked" };
+  if (!result) return { ...base, state: "ungrouped" };
+  return { ...base, state: result.complete ? "settled" : "live", result };
 }
 
 /**

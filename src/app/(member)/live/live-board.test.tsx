@@ -127,7 +127,6 @@ function state(over: Partial<WeekStateJson> = {}): WeekStateJson {
     games: [game(FINAL)],
     scores: FAMILY.map((m) => score(m, 30)),
     weeklyWin: null,
-    season: null,
     ...over,
   };
 }

@@ -21,7 +21,7 @@ import {
 import type { Db } from "@/db/types";
 import { groupBoard, type BoardMember } from "@/lib/groups/memberships";
 import type { Commissioner } from "@/lib/members/authority";
-import { seasonPicks, weekPicks, type MemberPicks } from "@/lib/picks/picks";
+import { seasonPicks, weekPicks } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
 import type * as engine from "@/lib/scoring/types";
@@ -454,9 +454,6 @@ export async function playedWeeks(db: Db, season: Season, now: Date = new Date()
 /** One grading pass over the season, before it is cut into the views screens ask for. */
 interface SeasonPass {
   season: Season;
-  group: BoardMember[];
-  /** The played Weeks with the rows each was graded from, keyed by week id. */
-  boards: Map<number, MemberPicks[]>;
   played: Week[];
   /** Every member the pass graded: `group`'s active members plus anyone since deactivated who still has Picks. */
   rows: BoardMember[];
@@ -488,7 +485,7 @@ async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPa
     weekGames.map(({ week, games: slateGames }) => toEngineWeek(week, slateGames, boards.get(week.id)!)),
     rows.map(toEngineMember),
   );
-  return { season, group, boards, played, rows, graded };
+  return { season, played, rows, graded };
 }
 
 /** The Leaderboard and the played Weeks, as the read models screens take. */
@@ -519,32 +516,4 @@ function seasonView({ season, played, rows, graded }: SeasonPass): SeasonResult 
  */
 export async function seasonResult(db: Db, groupId: number, now: Date = new Date()): Promise<SeasonResult> {
   return seasonView(await gradeSeason(db, groupId, now));
-}
-
-/**
- * The season and the Week the caller is standing in, graded in one pass. Once
- * the Deadline has passed the season's played Weeks include the current one,
- * so `result` is that Week cut out of the pass rather than a second grading of
- * it: the Live Board, which wants both, pays for one read of the board and one
- * of the picks instead of two, and the two cannot disagree.
- *
- * `slate` is the one the caller already holds, for `weekResult`'s reason � a
- * visit may have pulled the feed first, and the Reveal is drawn from those
- * rows. It must be a Week the season has played, which a published Slate past
- * its Deadline is; anything else is a caller bug and throws.
- */
-export async function gradedSeason(
-  db: Db,
-  groupId: number,
-  slate: Slate,
-  now: Date = new Date(),
-): Promise<{ season: SeasonResult; result: GradedWeekResult }> {
-  const pass = await gradeSeason(db, groupId, now);
-  const graded = pass.graded.weeks.find((w) => w.weekNumber === slate.week.weekNumber);
-  const board = pass.boards.get(slate.week.id);
-  if (!graded || !board) throw new Error("That Week is not one the season has played.");
-  return {
-    season: seasonView(pass),
-    result: gradedWeekResult(slate, boardRows(pass.group, board), graded),
-  };
 }
