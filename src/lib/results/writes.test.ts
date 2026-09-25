@@ -438,7 +438,7 @@ describe("live play-by-play", () => {
     expect(Object.keys(stored!).sort()).toEqual(["drives", "fetchedAt", "gameId"]);
     expect(stored!.drives[0]).not.toHaveProperty("teams");
     expect(effectiveResult(await reload(texas.id)).live?.feed).toMatchObject({
-      play: { type: "Rush", team: "Liberty", clock: "8:42", wallClock: "2026-09-25T00:52:07.000Z" },
+      play: { type: "Rush", team: "Ohio State", clock: "8:42", wallClock: "2026-09-25T00:52:07.000Z" },
       down: 2,
       distance: 7,
       yardsToGoal: 31,

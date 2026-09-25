@@ -7,6 +7,7 @@ import { asc, eq } from "drizzle-orm";
 import { groups, members, memberships, seasons, type Group, type MembershipRole } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
+import week2Games from "@/lib/cfbd/fixtures/2026-week-2/games.json";
 import { LIBERTY_AT_COASTAL_Q2, noPlays, recordedCfbd, recordings, scoreboardOf } from "@/lib/cfbd/recorded";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
@@ -220,16 +221,32 @@ export type Live = Record<
 /**
  * A `/live/plays` response for a recorded Week 2 game: the recorded mid-game
  * response, its newest play moved to `period` and `clock` with the score
- * `[away, home]`. The rest of the drive is Liberty's and Coastal's; a suite
+ * `[away, home]`. The drive is Liberty's at Coastal's, recast as the Week 2
+ * game's away and home teams, so the plays read as that game's; the text
+ * still says LIB and CCU, which the field reads from the plays alone. A suite
  * reading the row's slice reads the newest play and the header, which is what
  * this sets.
  */
 export function playsAt(gameId: number, [away, home]: [away: number, home: number], period: number, clock: string): CfbdLiveGame {
+  const game = week2Games.find((candidate) => candidate.id === gameId);
+  if (!game) throw new Error(`No Week 2 game ${gameId}`);
+  // Liberty was away and Coastal Carolina home.
+  const recast = (teamId: number) =>
+    teamId === 2335 ? { id: game.awayId, name: game.awayTeam } : { id: game.homeId, name: game.homeTeam };
   const [drive] = LIBERTY_AT_COASTAL_Q2.drives;
-  const plays = drive.plays.map((play, i) =>
-    i === drive.plays.length - 1 ? { ...play, period, clock, awayScore: away, homeScore: home } : play,
-  );
-  return { ...LIBERTY_AT_COASTAL_Q2, id: gameId, period, clock, drives: [{ ...drive, plays }] };
+  const plays = drive.plays.map((play, i) => ({
+    ...play,
+    teamId: recast(play.teamId).id,
+    team: recast(play.teamId).name,
+    ...(i === drive.plays.length - 1 ? { period, clock, awayScore: away, homeScore: home } : {}),
+  }));
+  const teams = {
+    offenseId: recast(drive.offenseId).id,
+    offense: recast(drive.offenseId).name,
+    defenseId: recast(drive.defenseId).id,
+    defense: recast(drive.defenseId).name,
+  };
+  return { ...LIBERTY_AT_COASTAL_Q2, id: gameId, period, clock, possession: recast(2335).name, drives: [{ ...drive, ...teams, plays }] };
 }
 
 /** How many times each feed endpoint answered. */

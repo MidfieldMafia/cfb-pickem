@@ -201,7 +201,7 @@ async function ingestPlays(db: Db, cfbd: CfbdClient, live: Game[], now: Date): P
       reads.set(game.id, { ok: false });
       return;
     }
-    reads.set(game.id, { ok: true, feed: toLiveFeed(outcome.value) });
+    reads.set(game.id, { ok: true, feed: toLiveFeed(outcome.value, game) });
     rows.push({ gameId: game.id, drives: outcome.value.drives, fetchedAt: now });
   });
   if (rows.length > 0) {

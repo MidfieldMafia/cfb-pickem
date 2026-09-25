@@ -8,6 +8,7 @@ import stats2026 from "./fixtures/2026-week-2/stats.json";
 import venues from "./fixtures/2026-week-2/venues.json";
 import weather2026w2 from "./fixtures/2026-week-2/weather.json";
 import wp2026w2 from "./fixtures/2026-week-2/win-probability.json";
+import libertyAtCoastalFinal from "./fixtures/live-plays/401869941-final.json";
 import libertyAtCoastalQ2 from "./fixtures/live-plays/401869941-q2.json";
 import type {
   CfbdBettingGame,
@@ -82,6 +83,13 @@ export function scoreboardOf(feedGames: CfbdGame[]): CfbdScoreboardGame[] {
  * puts it on a slate game says so, and nothing replays it by default.
  */
 export const LIBERTY_AT_COASTAL_Q2 = libertyAtCoastalQ2 as CfbdLiveGame;
+
+/**
+ * The same game's whole feed at the final whistle, all 181 plays, from
+ * docs/research/cfbd-live-plays/. Liberty (2335) is away, Coastal Carolina
+ * (324) home; the text calls them LIB and CCU.
+ */
+export const LIBERTY_AT_COASTAL_FINAL = libertyAtCoastalFinal as CfbdLiveGame;
 
 /**
  * What `/live/plays` has for a game with nothing logged yet: the header and no
