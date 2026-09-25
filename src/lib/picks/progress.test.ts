@@ -3,6 +3,8 @@ import type { GameView } from "@/lib/slate/json";
 import {
   firstOpenGame,
   liveGames,
+  lockOn,
+  NO_LOCK,
   picksComplete,
   remainingLabel,
   sheetProgress,
@@ -27,8 +29,7 @@ function countFor(pickedIds: number[], over: Over = {}): SheetProgress {
   return sheetProgress({
     games: SLATE,
     picked: (gameId) => pickedIds.includes(gameId),
-    lockGameId: null,
-    lockDropped: false,
+    lock: NO_LOCK,
     tiebreakerGuess: null,
     ...over,
   });
@@ -43,9 +44,9 @@ describe("what is left before the deadline", () => {
   });
 
   test("open picks are one thing however many games are open", () => {
-    expect(countFor([], { lockGameId: 1, tiebreakerGuess: 52 }).remaining).toBe(1);
-    expect(countFor([1], { lockGameId: 1, tiebreakerGuess: 52 }).remaining).toBe(1);
-    expect(countFor([1, 3], { lockGameId: 1, tiebreakerGuess: 52 }).remaining).toBe(0);
+    expect(countFor([], { lock: lockOn(SLATE, 1), tiebreakerGuess: 52 }).remaining).toBe(1);
+    expect(countFor([1], { lock: lockOn(SLATE, 1), tiebreakerGuess: 52 }).remaining).toBe(1);
+    expect(countFor([1, 3], { lock: lockOn(SLATE, 1), tiebreakerGuess: 52 }).remaining).toBe(0);
   });
 
   test("every pick but no Lock has one thing left", () => {
@@ -55,22 +56,21 @@ describe("what is left before the deadline", () => {
   });
 
   test("a Dropped Lock is a Lock still to set", () => {
-    const progress = countFor([1, 3], { lockGameId: 2, lockDropped: true, tiebreakerGuess: 52 });
+    const progress = countFor([1, 3], { lock: lockOn(SLATE, 2), tiebreakerGuess: 52 });
     expect(progress.lockSet).toBe(false);
     expect(progress.remaining).toBe(1);
   });
 
   test("a save the server never took leaves its game open", () => {
     // The pick flow reports only saved picks, so a failed save on game 3 is not one.
-    expect(countFor([1], { lockGameId: 1, tiebreakerGuess: 52 })).toMatchObject({ picksMade: 1, remaining: 1 });
+    expect(countFor([1], { lock: lockOn(SLATE, 1), tiebreakerGuess: 52 })).toMatchObject({ picksMade: 1, remaining: 1 });
   });
 
   test("a wholly voided slate leaves no Lock to set", () => {
     const progress = sheetProgress({
       games: [view(1, true)],
       picked: () => false,
-      lockGameId: null,
-      lockDropped: false,
+      lock: NO_LOCK,
       tiebreakerGuess: 52,
     });
     expect(progress).toEqual({ liveGames: 0, picksMade: 0, lockSet: false, guessSet: true, lockOpen: false, remaining: 0 });
@@ -78,7 +78,7 @@ describe("what is left before the deadline", () => {
 
   test("the label reads the same wherever it is shown", () => {
     expect(remainingLabel(countFor([]), 2, false)).toBe("3 things left before the deadline");
-    expect(remainingLabel(countFor([1, 3], { lockGameId: 1, tiebreakerGuess: 52 }), 2, false)).toBe(
+    expect(remainingLabel(countFor([1, 3], { lock: lockOn(SLATE, 1), tiebreakerGuess: 52 }), 2, false)).toBe(
       "You're all set for Week 2",
     );
     // Past the Deadline nothing is left to do, whatever the counts say.
@@ -102,11 +102,18 @@ describe("whether the entry half of the week is done", () => {
     const progress = sheetProgress({
       games: [view(1, true)],
       picked: () => false,
-      lockGameId: null,
-      lockDropped: false,
+      lock: NO_LOCK,
       tiebreakerGuess: null,
     });
     expect(picksComplete(progress)).toBe(true);
+  });
+});
+
+describe("the state of a Lock", () => {
+  test("none, counting on a live game, or dropped on a Void one, which still names its game", () => {
+    expect(lockOn(SLATE, null)).toEqual({ state: "none" });
+    expect(lockOn(SLATE, 1)).toEqual({ state: "counts", gameId: 1 });
+    expect(lockOn(SLATE, 2)).toEqual({ state: "dropped", gameId: 2 });
   });
 });
 

@@ -103,12 +103,12 @@ describe("a commissioner's edit", () => {
       );
     }
     const set = await applyEdit(db, asMember(grandma), slate, { kind: "lock", gameId: michigan.id }, THURSDAY);
-    expect(set.lockGameId).toBe(michigan.id);
+    expect(set.lock).toEqual({ state: "counts", gameId: michigan.id });
 
     const moved = await applyEdit(db, asCommissioner(jonah, grandma.id), slate, { kind: "lock", gameId: texas.id }, SUNDAY);
-    expect(moved.lockGameId).toBe(texas.id);
+    expect(moved.lock).toEqual({ state: "counts", gameId: texas.id });
     const cleared = await applyEdit(db, asCommissioner(jonah, grandma.id), slate, { kind: "lock", gameId: null }, SUNDAY);
-    expect(cleared.lockGameId).toBeNull();
+    expect(cleared.lock).toEqual({ state: "none" });
 
     const log = await pickAuditsFor(db, jonah, week.id);
     expect(log.map((e) => [e.kind, e.previousValue, e.newValue])).toEqual([

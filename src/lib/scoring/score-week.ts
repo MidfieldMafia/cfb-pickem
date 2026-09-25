@@ -94,7 +94,7 @@ function scoreMember(
   });
   // A Dropped Lock, for graded screens. `void` reaches the engine already
   // folded through `effectiveResult` by `toEngineGame`, so this is the same
-  // derivation the ungraded screens get from `isDroppedLock` — not a second
+  // derivation the ungraded screens get from `lockOn` — not a second
   // opinion. The engine holds no database row, which is why it cannot share
   // the function itself.
   const lockResult: LockResult | null =

@@ -35,6 +35,43 @@ export interface SheetProgress {
   remaining: number;
 }
 
+/**
+ * A member's Lock of the Week, in the three states every screen tells apart.
+ * One shape, so no reader re-derives "dropped" from a Game and a flag that can
+ * drift apart: a Dropped Lock still names its game, because the member keeps
+ * it and restoring the game restores it.
+ */
+export type LockState =
+  | { state: "none" }
+  | { state: "counts"; gameId: number }
+  | { state: "dropped"; gameId: number };
+
+export const NO_LOCK: LockState = { state: "none" };
+
+/**
+ * The state of a Lock sitting on `gameId`, read from the slate it is on: the
+ * one place a Lock on a Void game becomes a Dropped Lock for the read path.
+ *
+ * It reads a `GameView`, whose result `toGameView` has already folded through
+ * `effectiveResult`, rather than the `void` column: a second opinion on what
+ * Void means beside the seam that holds the only one would reach some screens
+ * and miss others. A Lock naming a game off the slate counts, as it always has.
+ *
+ * Graded screens get this from the engine's own `LockResult.dropped` instead,
+ * which reads the same folded `void` across `toEngineGame`: one derivation
+ * across a bridge, not two.
+ */
+export function lockOn(games: readonly GameView[], gameId: number | null): LockState {
+  if (gameId === null) return NO_LOCK;
+  const view = games.find((g) => g.game.id === gameId);
+  return view && isVoid(view) ? { state: "dropped", gameId } : { state: "counts", gameId };
+}
+
+/** The game a Lock sits on, counting or dropped; null when there is none. */
+export function lockGameOf(lock: LockState): number | null {
+  return lock.state === "none" ? null : lock.gameId;
+}
+
 /** The games that still count. The Void rule is applied here, not on the screens. */
 export function liveGames<G extends GameView>(games: readonly G[]): G[] {
   return games.filter((g) => !isVoid(g));
@@ -61,7 +98,7 @@ export function picksComplete(progress: SheetProgress): boolean {
 /**
  * The counts behind every "how much is left" line in the app.
  *
- * A Pick counts only once the server has it: `pickSheet` counts the rows the
+ * A Pick counts only once the server has it: `weekEntries` counts the rows the
  * database holds, and the pick flow reports only its saved local picks, so a
  * save still in flight — or one that failed — leaves its Game open on every
  * screen rather than on just the one that noticed.
@@ -69,19 +106,17 @@ export function picksComplete(progress: SheetProgress): boolean {
 export function sheetProgress({
   games,
   picked,
-  lockGameId,
-  lockDropped,
+  lock,
   tiebreakerGuess,
 }: {
   games: readonly GameView[];
   picked: (gameId: number) => boolean;
-  lockGameId: number | null;
-  lockDropped: boolean;
+  lock: LockState;
   tiebreakerGuess: number | null;
 }): SheetProgress {
   const live = liveGames(games);
   const picksMade = live.filter((g) => picked(g.game.id)).length;
-  const lockSet = lockGameId !== null && !lockDropped;
+  const lockSet = lock.state === "counts";
   const guessSet = tiebreakerGuess !== null;
   // A Lock needs a live game to sit on, so a wholly voided slate leaves none to set.
   const lockOpen = live.length > 0 && !lockSet;

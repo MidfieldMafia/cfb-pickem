@@ -10,7 +10,7 @@ import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
 import { planReminders, textBudget, UNREACHED } from "@/lib/messaging/texts";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
-import { consoleWeek } from "@/lib/slate/slate";
+import { consoleWeek, isPublished } from "@/lib/slate/slate";
 import { ActionForm } from "../action-form";
 import { textRemindersAction } from "./actions";
 import { DeadlineCountdown } from "./deadline-countdown";
@@ -47,13 +47,13 @@ function Progress({ row, needed, weekNumber }: { row: MemberProgress; needed: nu
         </div>
       </TableCell>
       <TableCell>
-        <PickDots picked={row.picked} needed={needed} />
+        <PickDots picked={row.progress.picksMade} needed={needed} />
       </TableCell>
       <TableCell>
         {row.lockTeam ? (
           <Badge variant="secondary">{row.lockTeam}</Badge>
         ) : (
-          <Badge variant="outline">{row.lockDropped ? "Dropped (game void)" : "Not set"}</Badge>
+          <Badge variant="outline">{row.lock.state === "dropped" ? "Dropped (game void)" : "Not set"}</Badge>
         )}
       </TableCell>
       <TableCell className="tabular-nums">
@@ -88,8 +88,7 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
   const database = db();
   const { week, slate } = await consoleWeek(database, commissioner, params.week);
   const weekNumber = week.weekNumber;
-  const published = slate.week.published && slate.week.deadline !== null;
-  const [report, log] = published
+  const [report, log] = isPublished(slate.week)
     ? await Promise.all([whoHasntPicked(database, commissioner, week.id), pickAuditsFor(database, commissioner, week.id)])
     : [null, []];
   // What the Text button will do, planned from the same rows it sends from, so

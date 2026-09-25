@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PutResult } from "./client";
 import { useDeadlineClock } from "./clock";
 import type { SheetJson } from "./json";
-import { sheetProgress } from "./progress";
+import { lockOn, sheetProgress } from "./progress";
 
 /** What the screen has on show, and what the server last confirmed. They differ while a save is optimistic. */
 interface Held {
@@ -27,13 +27,16 @@ const adopt: Accept = (_held, body) => body;
 /** The Deadline has passed for good: nothing on this sheet is editable any more. */
 const lockedSheet = (sheet: SheetJson): SheetJson => (sheet.locked ? sheet : { ...sheet, locked: true });
 
-/** Recounted from the sheet in hand: an optimistic change has to move these before the server answers. */
+/**
+ * Recounted from the sheet in hand: an optimistic change has to move these
+ * before the server answers. The Lock's state is read off the games rather
+ * than `lockDropped`, which an optimistic Lock move does not update.
+ */
 const progressOf = (sheet: SheetJson) =>
   sheetProgress({
     games: sheet.games,
     picked: (gameId) => sheet.picks.some((p) => p.gameId === gameId),
-    lockGameId: sheet.lockGameId,
-    lockDropped: sheet.lockDropped,
+    lock: lockOn(sheet.games, sheet.lockGameId),
     tiebreakerGuess: sheet.tiebreakerGuess,
   });
 

@@ -28,9 +28,8 @@ import {
   type NewMemberInput,
 } from "@/lib/members/members";
 import { owed, weekProgress } from "@/lib/picks/console";
-import { publishedDeadline } from "@/lib/picks/picks";
 import { Refusal } from "@/lib/refusal";
-import { deadlinePassed, publishedSlate } from "@/lib/slate/slate";
+import { publishedSlate } from "@/lib/slate/slate";
 import { cleanGroupName, MAX_GROUP_NAME } from "./limits";
 import { groupRoster, memberGroups, type Absence, type RosterEntry } from "./memberships";
 
@@ -147,9 +146,16 @@ export async function manageView(db: Db, manager: Manager, now: Date = new Date(
   // Someone who left can be added back; someone removed is restored from the Removed list.
   const inGroup = new Set(entries.filter((entry) => openAbsence(entry)?.kind !== "left").map((entry) => entry.member.id));
   const current = entries.filter((entry) => !stillOut(entry));
-  const players = current.filter((entry) => entry.member.active).map((entry) => entry.member);
-  const progress = slate ? await weekProgress(db, slate, players) : [];
-  const progressOf = new Map(progress.map((row) => [row.member.id, row]));
+  // The membership's joined-at and removals, not the person's: the Week counts
+  // whoever was in this group at its Deadline, and nobody else is chased here.
+  const players = current.map((entry) => ({
+    id: entry.member.id,
+    active: entry.member.active,
+    joinedAt: entry.joinedAt,
+    removals: entry.removals,
+  }));
+  const progress = slate ? await weekProgress(db, slate, players, now) : null;
+  const progressOf = new Map((progress?.members ?? []).map((row) => [row.member.id, row]));
 
   const rows = current.map(({ member, role }): ManagedMember => {
     const row = progressOf.get(member.id);
@@ -177,13 +183,14 @@ export async function manageView(db: Db, manager: Manager, now: Date = new Date(
 
   return {
     group: { id: manager.group.id, name: manager.group.name },
-    week: slate
-      ? {
-          number: slate.week.weekNumber,
-          deadline: publishedDeadline(slate.week),
-          locked: deadlinePassed(slate.week, now),
-        }
-      : null,
+    week:
+      slate && progress
+        ? {
+            number: slate.week.weekNumber,
+            deadline: progress.deadline,
+            locked: progress.locked,
+          }
+        : null,
     members: rows,
     // Only removals: someone who left rejoins through the Join Link, so there is
     // nothing here for an organizer to restore (#136).

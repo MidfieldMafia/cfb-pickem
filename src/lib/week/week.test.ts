@@ -102,7 +102,7 @@ describe("the current week", () => {
     expect(current.slate.games).toHaveLength(3);
     expect(current.sheet.locked).toBe(false);
     expect(current.sheet.picks.map((p) => p.gameId)).toEqual([michigan.id]);
-    expect(current.sheet.lockGameId).toBe(michigan.id);
+    expect(current.sheet.lock).toEqual({ state: "counts", gameId: michigan.id });
     expect(current.sheet.tiebreakerGuess).toBe(55);
     expect(current.slate.week.tiebreakerGameId).toBe(texas.id);
 

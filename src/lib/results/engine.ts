@@ -7,7 +7,8 @@
  */
 import type { Game, Week } from "@/db/schema";
 import type { RemovalPeriod } from "@/lib/groups/memberships";
-import type { MemberPicks } from "@/lib/picks/picks";
+import type { Entry } from "@/lib/picks/picks";
+import { lockGameOf } from "@/lib/picks/progress";
 import type * as engine from "@/lib/scoring/types";
 import { effectiveResult } from "./result";
 
@@ -24,8 +25,15 @@ export function toEngineGame(game: Game): engine.Game {
   };
 }
 
-/** A published Week with everyone's picks, ready for `scoreWeek`. The Deadline must be frozen (published). */
-export function toEngineWeek(week: Week, games: Game[], memberPicks: MemberPicks[]): engine.Week {
+/** What the engine reads of one member's entry. */
+export type EngineEntry = Pick<Entry<{ id: number }>, "member" | "picks" | "lock" | "tiebreakerGuess">;
+
+/**
+ * A published Week with everyone's picks, ready for `scoreWeek`. The Deadline
+ * must be frozen (published). A Dropped Lock goes in on its game like any
+ * other: the engine drops it itself, from the Void it is handed.
+ */
+export function toEngineWeek(week: Week, games: Game[], entries: readonly EngineEntry[]): engine.Week {
   if (!week.deadline) throw new Error("A week without a deadline cannot be scored.");
   return {
     weekNumber: week.weekNumber,
@@ -33,14 +41,15 @@ export function toEngineWeek(week: Week, games: Game[], memberPicks: MemberPicks
     published: week.published,
     tiebreakerGameId: week.tiebreakerGameId === null ? null : String(week.tiebreakerGameId),
     games: games.map(toEngineGame),
-    picks: memberPicks.flatMap((m) =>
-      m.picks.map((p) => ({ memberId: String(m.memberId), gameId: String(p.gameId), team: String(p.teamId) })),
+    picks: entries.flatMap((m) =>
+      m.picks.map((p) => ({ memberId: String(m.member.id), gameId: String(p.gameId), team: String(p.teamId) })),
     ),
-    locks: memberPicks.flatMap((m) =>
-      m.lockGameId === null ? [] : [{ memberId: String(m.memberId), gameId: String(m.lockGameId) }],
-    ),
-    tiebreakerGuesses: memberPicks.flatMap((m) =>
-      m.tiebreakerGuess === null ? [] : [{ memberId: String(m.memberId), guess: m.tiebreakerGuess }],
+    locks: entries.flatMap((m) => {
+      const gameId = lockGameOf(m.lock);
+      return gameId === null ? [] : [{ memberId: String(m.member.id), gameId: String(gameId) }];
+    }),
+    tiebreakerGuesses: entries.flatMap((m) =>
+      m.tiebreakerGuess === null ? [] : [{ memberId: String(m.member.id), guess: m.tiebreakerGuess }],
     ),
   };
 }
