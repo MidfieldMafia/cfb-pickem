@@ -1,0 +1,154 @@
+[
+ {
+  "firstChangedAtFetch": "20260925T005215Z",
+  "id": "401869941179",
+  "changes": {
+   "playText": {
+    "before": "(01:42) Shotgun #2 D.Bailey pass incomplete short left to #1 R.Washington thrown to LIB40 broken up by #34 E.Alloway",
+    "after": "(01:42) Shotgun #2 D.Bailey pass incomplete short left to #1 R.Washington thrown to LIB40 broken up by #94 N.Pirolli"
+   }
+  }
+ },
+ {
+  "firstChangedAtFetch": "20260925T005255Z",
+  "id": "401869941243",
+  "changes": {
+   "clock": {
+    "before": "10:49",
+    "after": "10:58"
+   },
+   "wallClock": {
+    "before": "2026-09-25T00:50:45.000Z",
+    "after": "2026-09-25T00:51:32.000Z"
+   },
+   "yardsGained": {
+    "before": -4,
+    "after": 10
+   },
+   "playTypeId": {
+    "before": 7,
+    "after": 8
+   },
+   "playType": {
+    "before": "Sack",
+    "after": "Penalty"
+   },
+   "epa": {
+    "before": -2.578,
+    "after": null
+   },
+   "success": {
+    "before": false,
+    "after": true
+   },
+   "rushPass": {
+    "before": "pass",
+    "after": "other"
+   },
+   "playText": {
+    "before": "(10:58) No Huddle-Shotgun #5 D.Purdie sacked for loss of 8 yards to the LIB48 (#11 B.Starnes, #50 M.Toney)",
+    "after": "(10:58) No Huddle-Shotgun #5 D.Purdie sacked for loss of 8 yards to the LIB48 (#11 B.Starnes, #50 M.Toney) PENALTY CCU Holding 10 yards from CCU44 to CCU34, 1ST DOWN. NO PLAY"
+   }
+  }
+ },
+ {
+  "firstChangedAtFetch": "20260925T005616Z",
+  "id": "401869941253",
+  "changes": {
+   "epa": {
+    "before": 0.479,
+    "after": 0.621
+   },
+   "playText": {
+    "before": "(09:57) No Huddle-Shotgun #5 D.Purdie pass complete short right to #88 Z.Wimbush caught at CCU26, for 8 yards to the CCU23 (#25 B.Rose; #92 A.Poole), 1ST DOWN",
+    "after": "(09:57) No Huddle-Shotgun #5 D.Purdie pass complete short right to #88 Z.Wimbush caught at CCU26, for 8 yards to the CCU23 (#25 B.Rose; #92 A.Poole), 1ST DOWN, PENALTY CCU Roughing The Passer (#4 M.Pulliam) 12 yards from CCU23 to CCU11, 1ST DOWN"
+   }
+  }
+ },
+ {
+  "firstChangedAtFetch": "20260925T014215Z",
+  "id": "401869941409",
+  "changes": {
+   "playText": {
+    "before": "(00:24) #29 L.Liptak kickoff 65 yards to the LIB00 #10 J.Monteiro return 24 yards to the LIB24 (#11 B.Starnes; #44 K.Sapp) PENALTY LIB Holding 10 yards from LIB20 to LIB10",
+    "after": "(00:24) #29 L.Liptak kickoff 65 yards to the LIB00 #10 J.Monteiro return 24 yards to the LIB24 (#11 B.Starnes; #44 K.Sapp) PENALTY LIB Holding (#84 B.Kirby) 10 yards from LIB20 to LIB10"
+   }
+  }
+ },
+ {
+  "firstChangedAtFetch": "20260925T030129Z",
+  "id": "401869941640",
+  "changes": {
+   "playText": {
+    "before": "(10:01) Shotgun #2 D.Bailey pass incomplete short left to #5 G.Lawrence PENALTY CCU Illegal Forward Pass (#2 D.Bailey) 5 yards from CCU19 to CCU14",
+    "after": "(10:01) Shotgun #2 D.Bailey pass incomplete short left to #5 G.Lawrence thrown to CCU23 PENALTY CCU Illegal Forward Pass (#2 D.Bailey) 5 yards from CCU21 to CCU16"
+   }
+  }
+ },
+ {
+  "firstChangedAtFetch": "20260925T030831Z",
+  "id": "401869941662",
+  "changes": {
+   "wallClock": {
+    "before": "2026-09-25T02:57:29.000Z",
+    "after": "2026-09-25T02:59:39.000Z"
+   },
+   "yardsGained": {
+    "before": 6,
+    "after": 5
+   },
+   "playTypeId": {
+    "before": 69,
+    "after": 29
+   },
+   "playType": {
+    "before": "Fumble",
+    "after": "Fumble Recovery (Opponent)"
+   },
+   "epa": {
+    "before": null,
+    "after": -2.255
+   },
+   "rushPass": {
+    "before": "other",
+    "after": "rush"
+   },
+   "playText": {
+    "before": "(08:30) No Huddle-Shotgun #7 P.Jones rush middle for 6 yards gain to the CCU40 (#4 M.Pulliam; #94 D.Grayson)",
+    "after": "(08:30) No Huddle-Shotgun #7 P.Jones rush middle for 5 yards gain to the CCU41 fumbled by #7 P.Jones at CCU40 forced by #94 D.Grayson recovered by CCU #19 S.McDowell at CCU41, End Of Play"
+   }
+  }
+ },
+ {
+  "firstChangedAtFetch": "20260925T032933Z",
+  "id": "401869941743",
+  "changes": {
+   "wallClock": {
+    "before": "2026-09-25T03:20:26.000Z",
+    "after": "2026-09-25T03:22:26.000Z"
+   },
+   "yardsGained": {
+    "before": 0,
+    "after": -20
+   },
+   "epa": {
+    "before": 1.129,
+    "after": 4.589
+   },
+   "playText": {
+    "before": "D. Bailey sacked",
+    "after": "(01:59) Shotgun #2 D.Bailey sacked for loss of 20 yards to the CCU20 (#20 K.Bailey) PENALTY CCU Intentional Grounding (#2 D.Bailey), TURNOVER ON DOWNS"
+   }
+  }
+ },
+ {
+  "firstChangedAtFetch": "20260925T034334Z",
+  "id": "401869941716",
+  "changes": {
+   "playText": {
+    "before": "(03:40) Shotgun #2 D.Bailey pass incomplete short to #0 K.English thrown to CCU45",
+    "after": "(03:40) Shotgun #2 D.Bailey pass incomplete short right to #0 K.English thrown to CCU45"
+   }
+  }
+ }
+]
