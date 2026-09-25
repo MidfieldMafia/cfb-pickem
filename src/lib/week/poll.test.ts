@@ -6,7 +6,7 @@ import { IDLE_POLL_MS, LIVE_POLL_MS, nextPollMs } from "./poll";
 
 const IN_PROGRESS: GameResult = {
   ...MICHIGAN.result,
-  live: { awayScore: 7, homeScore: 3, period: 2, clock: "04:10", possession: null, lastPlay: null, situation: null },
+  live: { awayScore: 7, homeScore: 3, period: 2, clock: "04:10", possession: null, lastPlay: null, situation: null, feed: null },
   shown: { awayScore: 7, homeScore: 3 },
   label: "In progress",
 };

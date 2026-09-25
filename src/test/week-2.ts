@@ -7,10 +7,10 @@ import { asc, eq } from "drizzle-orm";
 import { groups, members, memberships, seasons, type Group, type MembershipRole } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { weekCandidates, type CandidateGame } from "@/lib/cfbd/candidates";
-import { recordedCfbd, recordings, scoreboardOf } from "@/lib/cfbd/recorded";
+import { LIBERTY_AT_COASTAL_Q2, noPlays, recordedCfbd, recordings, scoreboardOf } from "@/lib/cfbd/recorded";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import { recordedOpenMeteo } from "@/lib/weather/recorded";
-import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
+import type { CfbdClient, CfbdGame, CfbdLiveGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
 import { asMember, type Commissioner } from "@/lib/members/authority";
 import { addMember } from "@/lib/groups/console";
 import { bootstrapCommissioner } from "@/lib/members/members";
@@ -217,11 +217,34 @@ export type Live = Record<
   ]
 >;
 
+/**
+ * A `/live/plays` response for a recorded Week 2 game: the recorded mid-game
+ * response, its newest play moved to `period` and `clock` with the score
+ * `[away, home]`. The rest of the drive is Liberty's and Coastal's; a suite
+ * reading the row's slice reads the newest play and the header, which is what
+ * this sets.
+ */
+export function playsAt(gameId: number, [away, home]: [away: number, home: number], period: number, clock: string): CfbdLiveGame {
+  const [drive] = LIBERTY_AT_COASTAL_Q2.drives;
+  const plays = drive.plays.map((play, i) =>
+    i === drive.plays.length - 1 ? { ...play, period, clock, awayScore: away, homeScore: home } : play,
+  );
+  return { ...LIBERTY_AT_COASTAL_Q2, id: gameId, period, clock, drives: [{ ...drive, plays }] };
+}
+
 /** How many times each feed endpoint answered. */
 export interface FeedReads {
   games: number;
   scoreboard: number;
+  livePlays: number;
 }
+
+/**
+ * What `/live/plays` answers for a recorded game id: a response, or an error
+ * to throw — a timeout, a 500 — for the suite that asks how one game's failure
+ * spreads. A game left out answers with no plays.
+ */
+export type Plays = Record<number, CfbdLiveGame | Error>;
 
 export type Feed = CfbdClient & {
   /** Every feed read, whichever endpoint: what the stale gate is judged on. */
@@ -242,9 +265,14 @@ export type Feed = CfbdClient & {
  *
  * `offBoard` drops games from the scoreboard while `/games` still carries
  * them: the board is the week being played, and a game can be missing from it
- * either side of its own week.
+ * either side of its own week. `plays` is what each game's live play-by-play
+ * says, by recorded id.
  */
-export function feedWith(finals: Finals, live: Live = {}, { offBoard = [] as number[] } = {}): Feed {
+export function feedWith(
+  finals: Finals,
+  live: Live = {},
+  { offBoard = [] as number[], plays = {} as Plays } = {},
+): Feed {
   const recorded = recordings["2026-week-2"].games;
   const feedGames: CfbdGame[] = recorded.map((g) => {
     const final = finals[g.id];
@@ -280,7 +308,7 @@ export function feedWith(finals: Finals, live: Live = {}, { offBoard = [] as num
   const client: Feed = {
     ...inner,
     calls: 0,
-    reads: { games: 0, scoreboard: 0 },
+    reads: { games: 0, scoreboard: 0, livePlays: 0 },
     games: async (q: { year: number; week: number }) => {
       client.calls += 1;
       client.reads.games += 1;
@@ -290,6 +318,13 @@ export function feedWith(finals: Finals, live: Live = {}, { offBoard = [] as num
       client.calls += 1;
       client.reads.scoreboard += 1;
       return inner.scoreboard();
+    },
+    livePlays: async (gameId: number) => {
+      client.calls += 1;
+      client.reads.livePlays += 1;
+      const answer = plays[gameId] ?? noPlays(gameId);
+      if (answer instanceof Error) throw answer;
+      return answer;
     },
   };
   return client;

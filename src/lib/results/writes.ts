@@ -19,14 +19,24 @@
  * of them can skip the log.
  */
 import "server-only";
-import { and, eq, isNull, lte, or } from "drizzle-orm";
-import { games, resultAudits, weeks, type Game, type PossessionSide, type ResultAuditKind, type Week } from "@/db/schema";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
+import {
+  games,
+  liveFeeds,
+  resultAudits,
+  weeks,
+  type Game,
+  type PossessionSide,
+  type ResultAuditKind,
+  type Week,
+} from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
 import type { Commissioner } from "@/lib/members/authority";
 import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
 import { applyGamePatches, gameWithWeek, slateFor, type Slate } from "@/lib/slate/slate";
+import { toLiveFeed, type LiveFeed } from "./live-feed";
 import { describeResult, effectiveResult } from "./result";
 
 /** Every refusal a result write makes, whichever of the four changes or the form in front of it. */
@@ -39,23 +49,31 @@ export class InvalidResult extends Refusal {}
  */
 export const REFRESH_INTERVAL_MS = 5 * 60_000;
 /**
- * How long it holds while a slate game is in progress. Ninety seconds is
- * about 480 calls over a Saturday and about 3,300 over a five-Saturday month
- * on the 5,000-call tier; sixty would be about 4,600, which leaves nothing
- * for the slate builder, and a score ninety seconds old is still a live one.
+ * How long it holds while a slate game is in progress. `/scoreboard` is free,
+ * so this is priced in `/live/plays` calls: one per live game per claim, about
+ * 6,300 on a fifteen-game Saturday and 32,000 over a month on the 75,000-call
+ * tier. The Saturday check measures the time between plays and says whether
+ * to move it (see #269, #304).
  */
-export const LIVE_REFRESH_INTERVAL_MS = 90_000;
+export const LIVE_REFRESH_INTERVAL_MS = 30_000;
 /** The highest score the override form accepts. The record is 222; nobody needs more. */
 export const MAX_SCORE = 250;
 
 /** The columns a feed read owns on a `games` row. */
 type FeedColumns = Pick<
   Game,
-  "status" | "homeScore" | "awayScore" | "period" | "clock" | "possession" | "lastPlay" | "situation"
+  "status" | "homeScore" | "awayScore" | "period" | "clock" | "possession" | "lastPlay" | "situation" | "liveFeed"
 >;
 
-/** The five live-detail columns, all null: a game not under way has none of them. */
-const NOT_LIVE = { period: null, clock: null, possession: null, lastPlay: null, situation: null } as const;
+/** The live-detail columns, all null: a game not under way has none of them. */
+const NOT_LIVE = {
+  period: null,
+  clock: null,
+  possession: null,
+  lastPlay: null,
+  situation: null,
+  liveFeed: null,
+} as const;
 
 const NOT_STARTED: FeedColumns = { status: "scheduled", homeScore: null, awayScore: null, ...NOT_LIVE };
 
@@ -110,6 +128,8 @@ function boardResult(board: CfbdScoreboardGame): FeedColumns {
       possession: possessionSide(board),
       lastPlay: board.lastPlay,
       situation: board.situation,
+      // The play-by-play's slice is its own read; `ingestResults` lays it over this.
+      liveFeed: null,
     };
   }
   return NOT_STARTED;
@@ -141,8 +161,59 @@ function sameColumns(next: FeedColumns, game: Game): boolean {
     next.clock === game.clock &&
     next.possession === game.possession &&
     next.lastPlay === game.lastPlay &&
-    next.situation === game.situation
+    next.situation === game.situation &&
+    sameFeed(next.liveFeed, game.liveFeed)
   );
+}
+
+/**
+ * Whether two row slices say the same thing. Not a plain `JSON.stringify`
+ * comparison: `jsonb` hands keys back in its own order, not the order they
+ * were written, so every pass would count a game under way as changed.
+ */
+function sameFeed(a: LiveFeed | null, b: LiveFeed | null): boolean {
+  if (a === null || b === null) return a === b;
+  // Every key either side has, in one order: the replacer writes both in it.
+  const keys = [...new Set([a, a.play, b, b.play].flatMap((level) => Object.keys(level)))].sort();
+  return JSON.stringify(a, keys) === JSON.stringify(b, keys);
+}
+
+/** What one game's play-by-play fetch came back with: the row's slice, or the reason there is none. */
+type PlaysRead = { ok: true; feed: LiveFeed | null } | { ok: false };
+
+/**
+ * Fetches `/live/plays` for each game and stores what comes back, one game at
+ * a time as far as failure goes: a game whose call errors or times out is
+ * logged and left with the plays it last stored, and the rest are written
+ * regardless. Each response overwrites the game's `live_feeds` row whole, so a
+ * play revised in place is just the newer copy. Returns each game's read, by
+ * `games.id`.
+ */
+async function ingestPlays(db: Db, cfbd: CfbdClient, live: Game[], now: Date): Promise<Map<number, PlaysRead>> {
+  const settled = await Promise.allSettled(live.map((game) => cfbd.livePlays(game.cfbdGameId)));
+  const reads = new Map<number, PlaysRead>();
+  const rows: (typeof liveFeeds.$inferInsert)[] = [];
+  settled.forEach((outcome, i) => {
+    const game = live[i];
+    if (outcome.status === "rejected") {
+      const reason = outcome.reason instanceof Error ? outcome.reason.message : outcome.reason;
+      console.warn(`Live plays skipped for game ${game.cfbdGameId}:`, reason);
+      reads.set(game.id, { ok: false });
+      return;
+    }
+    reads.set(game.id, { ok: true, feed: toLiveFeed(outcome.value) });
+    rows.push({ gameId: game.id, drives: outcome.value.drives, fetchedAt: now });
+  });
+  if (rows.length > 0) {
+    await db
+      .insert(liveFeeds)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: liveFeeds.gameId,
+        set: { drives: sql`excluded.drives`, fetchedAt: sql`excluded.fetched_at` },
+      });
+  }
+  return reads;
 }
 
 /**
@@ -162,6 +233,14 @@ function sameColumns(next: FeedColumns, game: Game): boolean {
  * `/games` read for the week is the backstop. It is applied only to the games
  * the board left out, so a cached `/games` answer can never write over a
  * score the board gave in the same pass.
+ *
+ * Every game the scoreboard puts under way — kicked off, not final, not Void
+ * or overridden — then has its live play-by-play fetched and stored
+ * (`ingestPlays`), and its row takes the newest play and down-and-distance
+ * from it. This, reached through the stale gate or "Check the feed now", is
+ * the only caller of `/live/plays`, and it is metered per call: the gate's
+ * live interval is what the quota is priced on. A game whose fetch fails
+ * keeps the row slice it had.
  *
  * Deliberately does not touch `weeks.scoreboard_fetched_at`: that column is
  * the stale gate's claim, and `refreshResultsIfStale` is its only writer.
@@ -192,15 +271,29 @@ export async function ingestResults(
   const feed = new Map(
     unlisted.size ? (await cfbd.games({ year: slate.season.year, week: slate.week.weekNumber })).map((g) => [g.id, g]) : [],
   );
+  const nextOf = new Map<number, FeedColumns>();
+  for (const game of slate.games) {
+    const listed = board.get(game.cfbdGameId);
+    const backstop = unlisted.has(game.cfbdGameId) ? feed.get(game.cfbdGameId) : undefined;
+    const next = listed ? boardResult(listed) : backstop ? feedResult(backstop) : null;
+    if (next !== null) nextOf.set(game.id, next);
+  }
+  // Live is what this pass leaves under way, not what the rows walked in
+  // with: a game kicking off now is fetched now, and one going final is not.
+  const live = slate.games.filter(
+    (game) => nextOf.get(game.id)?.status === "in_progress" && effectiveResult(game).status === "pending",
+  );
+  const plays = await ingestPlays(db, cfbd, live, now);
   return {
     changed: await applyGamePatches(
       db,
       slate.games,
       (game) => {
-        const listed = board.get(game.cfbdGameId);
-        const backstop = unlisted.has(game.cfbdGameId) ? feed.get(game.cfbdGameId) : undefined;
-        const next = listed ? boardResult(listed) : backstop ? feedResult(backstop) : null;
-        return next === null || sameColumns(next, game) ? null : next;
+        const next = nextOf.get(game.id);
+        if (next === undefined) return null;
+        const read = plays.get(game.id);
+        const withPlays = read ? { ...next, liveFeed: read.ok ? read.feed : game.liveFeed } : next;
+        return sameColumns(withPlays, game) ? null : withPlays;
       },
       now,
     ),

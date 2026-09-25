@@ -8,12 +8,14 @@ import stats2026 from "./fixtures/2026-week-2/stats.json";
 import venues from "./fixtures/2026-week-2/venues.json";
 import weather2026w2 from "./fixtures/2026-week-2/weather.json";
 import wp2026w2 from "./fixtures/2026-week-2/win-probability.json";
+import libertyAtCoastalQ2 from "./fixtures/live-plays/401869941-q2.json";
 import type {
   CfbdBettingGame,
   CfbdClient,
   CfbdGame,
   CfbdGameMedia,
   CfbdGameWeather,
+  CfbdLiveGame,
   CfbdPollWeek,
   CfbdPregameWinProbability,
   CfbdScoreboardGame,
@@ -74,6 +76,34 @@ export function scoreboardOf(feedGames: CfbdGame[]): CfbdScoreboardGame[] {
 }
 
 /**
+ * GET /live/plays recorded mid-game: Liberty at Coastal Carolina, Q2 10:27 on
+ * 2026-09-25, trimmed to the drive in progress and its last four plays. Not a
+ * Week 2 game — no Week 2 play-by-play was ever recorded — so a suite that
+ * puts it on a slate game says so, and nothing replays it by default.
+ */
+export const LIBERTY_AT_COASTAL_Q2 = libertyAtCoastalQ2 as CfbdLiveGame;
+
+/**
+ * What `/live/plays` has for a game with nothing logged yet: the header and no
+ * drives. The default replay, so a suite that puts a game in play without
+ * saying what its feed carries sees a game the feed has no plays for.
+ */
+export function noPlays(gameId: number): CfbdLiveGame {
+  return {
+    id: gameId,
+    status: "In Progress",
+    period: null,
+    clock: "",
+    possession: "",
+    down: null,
+    distance: null,
+    yardsToGoal: null,
+    teams: [],
+    drives: [],
+  };
+}
+
+/**
  * Responses recorded from the live API with the project key. Rankings hold
  * the season's poll weeks so far; other-division polls were dropped. The
  * season-wide responses (records, stats, season games, venues) are trimmed
@@ -84,6 +114,7 @@ export const recordings = {
   "2026-week-2": {
     games: games2026w2 as CfbdGame[],
     scoreboard: scoreboardOf(games2026w2 as CfbdGame[]),
+    livePlays: noPlays(0),
     rankings: rankings2026 as CfbdPollWeek[],
     lines: lines2026w2 as CfbdBettingGame[],
     seasonGames: seasonGames2026 as CfbdGame[],
@@ -123,6 +154,13 @@ export function recordedCfbd(name: RecordingName, overrides: Partial<Recording> 
   return {
     games: replay("games"),
     scoreboard: replay("scoreboard"),
+    // The one replay that reads its argument: a game's plays are its own, and
+    // the default recording carries none, so the answer is for the game asked.
+    livePlays: async (gameId) => {
+      calls += 1;
+      const recorded = recording.livePlays;
+      return recorded.drives.length === 0 ? noPlays(gameId) : recorded;
+    },
     rankings: replay("rankings"),
     lines: replay("lines"),
     seasonGames: replay("seasonGames"),

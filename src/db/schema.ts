@@ -22,7 +22,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import { chatReactionKinds } from "@/lib/chat/reactions";
+import type { CfbdLiveDrive } from "@/lib/cfbd/types";
 import type { GameDetail } from "@/lib/detail";
+import type { LiveFeed } from "@/lib/results/live-feed";
 import type { Rules } from "@/lib/scoring/types";
 
 const utc = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
@@ -137,6 +139,17 @@ export const games = pgTable(
     possession: text("possession", { enum: possessionSides }),
     lastPlay: text("last_play"),
     situation: text("situation"),
+    /**
+     * The live play-by-play's slice for this row: the newest play and the
+     * header's down, distance and yards to goal, from the same fetch that
+     * wrote this game's `live_feeds` row. Null before the feed has logged a
+     * play and once the game is no longer under way, like the columns above;
+     * a failed fetch leaves it as the last one that answered. The running
+     * score `effectiveResult` shows takes the newest play's score when it is
+     * newer than the scoreboard's (`newerScore`), so the score columns stay
+     * the scoreboard's own.
+     */
+    liveFeed: jsonb("live_feed").$type<LiveFeed>(),
     /** Canceled or postponed after publish: scores 0 for everyone. */
     void: boolean("void").notNull().default(false),
     voidNote: text("void_note"),
@@ -156,6 +169,23 @@ export const games = pgTable(
     ),
   ],
 );
+
+/**
+ * CFBD's live play-by-play for one Game: every drive, each with its plays, as
+ * the newest fetch returned them, overwritten on every fetch so a play revised
+ * in place needs no handling of its own. Written by the stale gate's claim
+ * while the Game is under way and read by the Game sheet; `teams[]` is not
+ * kept. Nothing deletes a row after the final.
+ */
+export const liveFeeds = pgTable("live_feeds", {
+  gameId: integer("game_id")
+    .primaryKey()
+    .references(() => games.id),
+  drives: jsonb("drives").$type<CfbdLiveDrive[]>().notNull(),
+  fetchedAt: utc("fetched_at").notNull(),
+});
+
+export type LiveFeedRow = typeof liveFeeds.$inferSelect;
 
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),

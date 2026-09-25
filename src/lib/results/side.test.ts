@@ -17,7 +17,7 @@ const SCHEDULED: GameResult = {
 
 const live = (awayScore: number, homeScore: number): GameResult => ({
   ...SCHEDULED,
-  live: { awayScore, homeScore, period: 2, clock: "05:00", possession: null, lastPlay: null, situation: null },
+  live: { awayScore, homeScore, period: 2, clock: "05:00", possession: null, lastPlay: null, situation: null, feed: null },
   shown: { awayScore, homeScore },
   label: "In progress",
 });

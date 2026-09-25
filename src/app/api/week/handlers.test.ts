@@ -22,12 +22,14 @@ import {
   OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   pickAs,
+  playsAt,
   publishWeek2,
   SUNDAY,
   THURSDAY,
   TUESDAY,
 } from "@/test/week-2";
-import { getSheet, getWeekState, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
+import type { GamePlaysJson } from "@/lib/results/live-feed";
+import { getGamePlays, getSheet, getWeekState, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
 import { ingestResults } from "@/lib/results/writes";
 
 /** A PUT the routes would receive, with the body as JSON on the wire. */
@@ -298,8 +300,9 @@ describe("the week state", () => {
 
     const state = await json<WeekStateJson>(await getWeekState(poll(), { ...asGrandma(SUNDAY), cfbd: () => feed }));
 
-    // The poll drove the feed on the way through, once, and read what it wrote.
-    expect(feed.calls).toBe(1);
+    // The poll drove the feed on the way through, once — the scoreboard and
+    // Texas's play-by-play — and read what it wrote.
+    expect(feed.reads).toEqual({ scoreboard: 1, games: 0, livePlays: 1 });
     expect(state.locked).toBe(true);
     expect(state.complete).toBe(false);
     expect(state.members.map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
@@ -322,6 +325,7 @@ describe("the week state", () => {
       possession: "home",
       situation: "2nd & 8",
       lastPlay: "Arch Manning rush for 2 yards",
+      feed: null,
     });
     expect(texasRow.picks.map((p) => [p.memberId, p.outcome])).toEqual([[jonah.id, "pending"]]);
     // Provisional: Texas is not final, so Jonah's pick there counts nothing yet.
@@ -394,5 +398,91 @@ describe("the week state", () => {
 
     const empty: PickRoute = { db: await createTestDb(), currentMember: async () => ({ id: 1 }) as Member };
     expect((await getWeekState(poll(), empty)).status).toBe(404);
+  });
+});
+
+describe("a game's plays, for the Game sheet", () => {
+  const get = (etag?: string) =>
+    new Request("https://slate.test/api/week/games/1/plays", { headers: etag ? { "if-none-match": etag } : {} });
+
+  /** Texas under way, with its play-by-play ingested the way the stale gate would. */
+  async function texasLive() {
+    const fixture = await setup();
+    const { db, week } = fixture;
+    const feed = feedWith(
+      {},
+      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"] },
+      { plays: { [OHIO_STATE_AT_TEXAS]: playsAt(OHIO_STATE_AT_TEXAS, [3, 7], 1, "6:10") } },
+    );
+    await ingestResults(db, feed, await slateFor(db, week.id), SUNDAY);
+    return fixture;
+  }
+
+  test("answers what the gate stored, and a poll that has it already gets a 304", async () => {
+    const { asGrandma, texas } = await texasLive();
+    // A feed that fails the test if reached: the sheet's poll never calls CollegeFootballData.
+    const cfbd = vi.fn(() => {
+      throw new Error("The plays route reached the feed.");
+    });
+    const route = { ...asGrandma(SUNDAY), cfbd };
+
+    const response = await getGamePlays(get(), route, String(texas.id));
+    const plays = await json<GamePlaysJson>(response);
+
+    expect(response.status).toBe(200);
+    expect(plays.gameId).toBe(texas.id);
+    expect(plays.fetchedAt).toBe(SUNDAY.toISOString());
+    expect(plays.drives.flatMap((d) => d.plays).at(-1)).toMatchObject({ playType: "Rush", homeScore: 7, clock: "6:10" });
+    expect(response.headers.get("cache-control")).toBe("no-store");
+
+    const again = await getGamePlays(get(response.headers.get("etag")!), route, String(texas.id));
+    expect(again.status).toBe(304);
+    expect(cfbd).not.toHaveBeenCalled();
+  });
+
+  test("a slate game the feed has never been read for has no drives", async () => {
+    const { asGrandma, miami } = await setup();
+
+    const plays = await json<GamePlaysJson>(await getGamePlays(get(), asGrandma(SUNDAY), String(miami.id)));
+
+    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [] });
+  });
+
+  test("a game off the published slate, or no game id at all, is a 404, and signed out is a 401", async () => {
+    const { asGrandma, route, texas } = await texasLive();
+
+    for (const id of [String(texas.id + 1000), "abc", "0", "-1", `${texas.id}.5`]) {
+      const response = await getGamePlays(get(), asGrandma(SUNDAY), id);
+      expect(response.status).toBe(404);
+      expect((await json<ApiError>(response)).error).toBe("That game is not on this week's slate.");
+    }
+    expect((await getGamePlays(get(), route(null, SUNDAY), String(texas.id))).status).toBe(401);
+  });
+
+  test("the week state carries the newest play and the next snap for the Live Board row", async () => {
+    const { asGrandma, texas } = await texasLive();
+
+    const state = await json<WeekStateJson>(await getWeekState(new Request("https://slate.test/api/week/state"), asGrandma(SUNDAY)));
+    const texasRow = state.games.find((g) => g.game.id === texas.id)!;
+
+    expect(texasRow.result.live?.feed).toEqual({
+      play: {
+        id: "401869941249",
+        text: "(10:31) No Huddle-Shotgun #4 K.Davis rush middle for 3 yards gain to the CCU31 (#92 A.Poole; #4 M.Pulliam)",
+        type: "Rush",
+        teamId: 2335,
+        team: "Liberty",
+        period: 1,
+        clock: "6:10",
+        wallClock: "2026-09-25T00:52:07.000Z",
+        homeScore: 7,
+        awayScore: 3,
+      },
+      down: 2,
+      distance: 7,
+      yardsToGoal: 31,
+    });
+    // The feed is ahead of the scoreboard's 3–0, so the row shows the feed's score.
+    expect(texasRow.result.shown).toEqual({ awayScore: 3, homeScore: 7 });
   });
 });

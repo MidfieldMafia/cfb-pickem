@@ -17,6 +17,7 @@ import { applyEdit, type PickEdit } from "@/lib/picks/edits";
 import { integer, readBody, withPickContext, type ApiError, type PickRoute } from "@/lib/picks/http";
 import { toSheetJson } from "@/lib/picks/json";
 import { pickSheet } from "@/lib/picks/picks";
+import { gamePlays } from "@/lib/results/plays";
 import { toWeekStateJson, type WeekStateJson } from "@/lib/week/json";
 import { currentWeek } from "@/lib/week/week";
 
@@ -109,4 +110,30 @@ export async function getWeekState(request: Request, route: PickRoute): Promise<
   const headers = { etag, "cache-control": "no-store" };
   if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
   return Response.json(state, { headers });
+}
+
+/**
+ * One game's live play-by-play for the Game sheet, which polls this every
+ * thirty seconds while it is open and the game is live. It reads what the
+ * stale gate last stored and never calls CollegeFootballData, so it costs the
+ * quota nothing however many sheets are open.
+ *
+ * The ETag is the stored fetch's time: the row is only ever rewritten whole,
+ * by a fetch, so an unchanged `fetchedAt` is an unchanged body, and a poll
+ * between the gate's claims gets a 304 instead of ninety kilobytes. A game the
+ * feed has never been read for answers with no drives, for the sheet to hide
+ * its plays; a game not on the published Slate, or no game at all, is a 404.
+ */
+export function getGamePlays(request: Request, route: PickRoute, gameIdParam: string): Promise<Response> {
+  const gameId = /^[1-9]\d{0,9}$/.test(gameIdParam) ? Number(gameIdParam) : null;
+  return withPickContext(route, async ({ db, slate }) => {
+    const plays = gameId === null ? null : await gamePlays(db, slate, gameId);
+    if (!plays) {
+      return Response.json({ error: "That game is not on this week's slate." } satisfies ApiError, { status: 404 });
+    }
+    const etag = `W/"plays-${gameId}-${plays.fetchedAt ?? "none"}"`;
+    const headers = { etag, "cache-control": "no-store" };
+    if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
+    return Response.json(plays, { headers });
+  });
 }

@@ -37,6 +37,8 @@ export function cachingCfbd(inner: CfbdClient, ttlMs: number, now: () => number 
      * and it is the only one — see `refreshResultsIfStale`.
      */
     scoreboard: () => inner.scoreboard(),
+    /** Never cached, for the reason `scoreboard` is not: the stale gate's claim is the bound. */
+    livePlays: (gameId) => inner.livePlays(gameId),
     rankings: (year) => remember(`rankings:${year}`, () => inner.rankings(year)),
     lines: (q) => remember(weekKey("lines", q), () => inner.lines(q)),
     seasonGames: (year) => remember(`seasonGames:${year}`, () => inner.seasonGames(year)),

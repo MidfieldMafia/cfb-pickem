@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
-import { games, weeks } from "@/db/schema";
+import { games, liveFeeds, weeks } from "@/db/schema";
 import { sharedFeed } from "@/lib/cfbd/cache";
 import { recordedCfbd } from "@/lib/cfbd/recorded";
 import type { CfbdClient } from "@/lib/cfbd/types";
@@ -10,6 +10,7 @@ import {
   feedWith,
   lockAs,
   pickAs,
+  playsAt,
   OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   publishWeek2,
@@ -74,7 +75,8 @@ describe("results ingest", () => {
 
     expect(await ingest(feed, SATURDAY_EVENING)).toEqual({ changed: 3 });
     // One scoreboard read covers the slate; every game was on it, so `/games` was never needed.
-    expect(feed.reads).toEqual({ scoreboard: 1, games: 0 });
+    // The one game under way has its play-by-play read; the finals do not.
+    expect(feed.reads).toEqual({ scoreboard: 1, games: 0, livePlays: 1 });
 
     expect(await reload(miami.id)).toMatchObject({ status: "final", awayScore: 7, homeScore: 45, period: null, clock: null });
     expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
@@ -104,6 +106,8 @@ describe("results ingest", () => {
         possession: "home",
         situation: "1st & 10",
         lastPlay: "Quintrevion Wisner rush for 4 yards",
+        // The play-by-play has logged nothing for it, so the row falls back to the scoreboard's detail above.
+        feed: null,
       },
       // A running score is what to put on screen; it is still not what counts.
       shown: { awayScore: 3, homeScore: 0 },
@@ -296,8 +300,8 @@ describe("results ingest", () => {
       );
 
     expect(await ingest(feed, SATURDAY_EVENING)).toEqual({ changed: 2 });
-    // One board read, and one `/games` read for the game it left out.
-    expect(feed.reads).toEqual({ scoreboard: 1, games: 1 });
+    // One board read, one `/games` read for the game it left out, and Miami's play-by-play.
+    expect(feed.reads).toEqual({ scoreboard: 1, games: 1, livePlays: 1 });
     expect(await reload(michigan.id)).toMatchObject({ status: "final", awayScore: 24, homeScore: 27 });
     // Miami was on the board, so the board's word stands over the feed's final.
     expect(await reload(miami.id)).toMatchObject({ status: "in_progress", awayScore: 7, homeScore: 38, period: 4 });
@@ -306,10 +310,10 @@ describe("results ingest", () => {
 
     // Michigan is final now, so the next pass has nothing unlisted to chase.
     await ingest(feed, SUNDAY);
-    expect(feed.reads).toEqual({ scoreboard: 2, games: 1 });
+    expect(feed.reads).toEqual({ scoreboard: 2, games: 1, livePlays: 2 });
   });
 
-  test("the gate holds ninety seconds while a game is under way and five minutes between games", async () => {
+  test("the gate holds thirty seconds while a game is under way and five minutes between games", async () => {
     const { michigan, reload, refresh } = await setup();
     const kickoff = new Date("2026-09-12T16:05:00Z");
     const at = (seconds: number) => new Date(kickoff.getTime() + seconds * 1000);
@@ -319,16 +323,17 @@ describe("results ingest", () => {
     expect(await refresh(live, kickoff)).toBe("refreshed");
     expect(await reload(michigan.id)).toMatchObject({ status: "in_progress", period: 1 });
 
-    // Michigan is under way now, so the gate reopens after ninety seconds rather than five minutes.
-    expect(await refresh(live, at(60))).toBe("fresh");
-    expect(await refresh(live, at(90))).toBe("refreshed");
-    expect(live.calls).toBe(2);
+    // Michigan is under way now, so the gate reopens after thirty seconds rather than five minutes.
+    expect(await refresh(live, at(29))).toBe("fresh");
+    expect(await refresh(live, at(30))).toBe("refreshed");
+    // Each claim is a scoreboard read and one play-by-play read for the one live game.
+    expect(live.reads).toEqual({ scoreboard: 2, games: 0, livePlays: 2 });
 
     // Michigan ends. Miami is still pending past kickoff, so the gate stays open — on the slower tier.
     const done = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] });
     expect(await refresh(done, at(180))).toBe("refreshed");
     expect(await reload(michigan.id)).toMatchObject({ status: "final", period: null, clock: null });
-    expect(await refresh(done, at(180 + 90))).toBe("fresh");
+    expect(await refresh(done, at(180 + 30))).toBe("fresh");
     expect(await refresh(done, at(180 + 299))).toBe("fresh");
     expect(await refresh(done, at(180 + 300))).toBe("refreshed");
     expect(done.calls).toBe(2);
@@ -401,6 +406,138 @@ describe("results ingest", () => {
     // the commissioner's. The stamp inside the ingest used to push it out,
     // which is exactly the five minutes of member traffic it cost.
     expect(await refresh(feed, new Date(friday.getTime() + 5 * 60_000))).toBe("refreshed");
+  });
+});
+
+describe("live play-by-play", () => {
+  /** A game's stored feed row, or undefined before its first fetch. */
+  const storedFeed = (db: Awaited<ReturnType<typeof setup>>["db"], gameId: number) =>
+    db.query.liveFeeds.findFirst({ where: eq(liveFeeds.gameId, gameId) });
+
+  test("each live game's feed is stored, and its row carries the newest play and the next snap", async () => {
+    const { db, texas, michigan, miami, reload, ingest } = await setup();
+    const feed = feedWith(
+      { [FAMU_AT_MIAMI]: [7, 45] },
+      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"], [OKLAHOMA_AT_MICHIGAN]: [0, 0, 1, "15:00"] },
+      { plays: { [OHIO_STATE_AT_TEXAS]: playsAt(OHIO_STATE_AT_TEXAS, [3, 0], 1, "8:42") } },
+    );
+
+    await ingest(feed, SATURDAY_EVENING);
+
+    // Both games under way are fetched; the final is not.
+    expect(feed.reads.livePlays).toBe(2);
+    const stored = await storedFeed(db, texas.id);
+    expect(stored?.fetchedAt).toEqual(SATURDAY_EVENING);
+    expect(stored?.drives.flatMap((d) => d.plays).map((p) => p.playType)).toEqual([
+      "Pass Incompletion",
+      "Timeout",
+      "Penalty",
+      "Rush",
+    ]);
+    // The drives, each with its plays, and when: `teams[]` is CFBD's advanced metrics, and nothing keeps it.
+    expect(Object.keys(stored!).sort()).toEqual(["drives", "fetchedAt", "gameId"]);
+    expect(stored!.drives[0]).not.toHaveProperty("teams");
+    expect(effectiveResult(await reload(texas.id)).live?.feed).toMatchObject({
+      play: { type: "Rush", team: "Liberty", clock: "8:42", wallClock: "2026-09-25T00:52:07.000Z" },
+      down: 2,
+      distance: 7,
+      yardsToGoal: 31,
+    });
+    // Michigan's feed has logged nothing yet: a row is stored, and the Live Board falls back to the scoreboard.
+    expect((await storedFeed(db, michigan.id))?.drives).toEqual([]);
+    expect(effectiveResult(await reload(michigan.id)).live?.feed).toBeNull();
+    expect(await storedFeed(db, miami.id)).toBeUndefined();
+
+    // The same feed again rewrites the stored plays, but no row: its slice came back from `jsonb` unchanged.
+    expect(await ingest(feed, SUNDAY)).toEqual({ changed: 0 });
+    expect((await storedFeed(db, texas.id))?.fetchedAt).toEqual(SUNDAY);
+  });
+
+  test("while a game is live its score is the feed's when the feed is ahead, and its final is only ever the scoreboard's", async () => {
+    const { db, texas, reload, ingest } = await setup();
+    // The scoreboard is still at 3–0 in the first quarter; the feed has Texas scoring since.
+    const ahead = feedWith(
+      {},
+      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"] },
+      { plays: { [OHIO_STATE_AT_TEXAS]: playsAt(OHIO_STATE_AT_TEXAS, [3, 7], 1, "6:10") } },
+    );
+
+    await ingest(ahead, SATURDAY_EVENING);
+
+    const row = await reload(texas.id);
+    // The row keeps the scoreboard's own score; the shown score is the feed's.
+    expect(row).toMatchObject({ status: "in_progress", awayScore: 3, homeScore: 0 });
+    const result = effectiveResult(row);
+    expect(result.live).toMatchObject({ awayScore: 3, homeScore: 7, period: 1, clock: "08:42" });
+    // `shown` is what the "currently winning" colours read.
+    expect(result.shown).toEqual({ awayScore: 3, homeScore: 7 });
+    expect(result.status).toBe("pending");
+
+    // The feed's last word before the final disagrees with the scoreboard's final; the scoreboard grades.
+    const final = feedWith(
+      { [OHIO_STATE_AT_TEXAS]: [31, 28] },
+      {},
+      { plays: { [OHIO_STATE_AT_TEXAS]: playsAt(OHIO_STATE_AT_TEXAS, [31, 35], 4, "0:00") } },
+    );
+    await ingest(final, SUNDAY);
+    expect(final.reads.livePlays).toBe(0);
+    const graded = await reload(texas.id);
+    expect(effectiveResult(graded)).toMatchObject({ status: "final", awayScore: 31, homeScore: 28, live: null });
+    // A final clears the row's slice; the stored plays stay.
+    expect(graded.liveFeed).toBeNull();
+    expect((await storedFeed(db, texas.id))?.drives).toHaveLength(1);
+  });
+
+  test("one game's failed fetch keeps its last plays and fails nothing else", async () => {
+    const { db, texas, michigan, reload, ingest } = await setup();
+    const first = feedWith(
+      {},
+      { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"], [OKLAHOMA_AT_MICHIGAN]: [0, 0, 1, "15:00"] },
+      {
+        plays: {
+          [OHIO_STATE_AT_TEXAS]: playsAt(OHIO_STATE_AT_TEXAS, [3, 0], 1, "8:42"),
+          [OKLAHOMA_AT_MICHIGAN]: playsAt(OKLAHOMA_AT_MICHIGAN, [0, 0], 1, "15:00"),
+        },
+      },
+    );
+    await ingest(first, SATURDAY_EVENING);
+    const texasBefore = await reload(texas.id);
+
+    // Next pass: Texas's call times out; Michigan's answers, and the scoreboard moves both.
+    const later = new Date(SATURDAY_EVENING.getTime() + 30_000);
+    const second = feedWith(
+      {},
+      { [OHIO_STATE_AT_TEXAS]: [10, 0, 1, "05:00"], [OKLAHOMA_AT_MICHIGAN]: [0, 7, 1, "11:00"] },
+      {
+        plays: {
+          [OHIO_STATE_AT_TEXAS]: new DOMException("The operation was aborted due to timeout", "TimeoutError"),
+          [OKLAHOMA_AT_MICHIGAN]: playsAt(OKLAHOMA_AT_MICHIGAN, [0, 7], 1, "11:00"),
+        },
+      },
+    );
+    expect(await ingest(second, later)).toEqual({ changed: 2 });
+
+    // Texas keeps the plays and slice it had; the scoreboard's word still lands.
+    expect((await storedFeed(db, texas.id))?.fetchedAt).toEqual(SATURDAY_EVENING);
+    const texasAfter = await reload(texas.id);
+    expect(texasAfter.liveFeed).toEqual(texasBefore.liveFeed);
+    expect(texasAfter).toMatchObject({ awayScore: 10, clock: "05:00" });
+    // Its stored play is from earlier in the game than the scoreboard now is, so the scoreboard's score shows.
+    expect(effectiveResult(texasAfter).shown).toEqual({ awayScore: 10, homeScore: 0 });
+    // Michigan is untouched by Texas's failure.
+    expect((await storedFeed(db, michigan.id))?.fetchedAt).toEqual(later);
+    expect(effectiveResult(await reload(michigan.id)).live?.feed?.play).toMatchObject({ clock: "11:00", homeScore: 7 });
+  });
+
+  test("a Void or overridden game is never fetched, whatever the scoreboard says", async () => {
+    const { db, jonah, texas, michigan, ingest } = await setup();
+    await voidGame(db, jonah, texas.id, "Hurricane");
+    await overrideResult(db, jonah, michigan.id, { awayScore: 24, homeScore: 27, note: "Feed stuck" });
+    const feed = feedWith({}, { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"], [OKLAHOMA_AT_MICHIGAN]: [0, 0, 1, "15:00"] });
+
+    await ingest(feed, SATURDAY_EVENING);
+
+    expect(feed.reads.livePlays).toBe(0);
   });
 });
 
