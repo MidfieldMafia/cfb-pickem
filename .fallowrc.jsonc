@@ -19,6 +19,11 @@
   "ignoreDependencies": ["shadcn", "react-dom"],
 
   "health": {
+    // Written by `npm run test:coverage`. Without it fallow estimates CRAP
+    // scores from export references; with it they are exact per function.
+    // Rerun the coverage before a health report, or the scores are stale.
+    "coverage": "coverage/coverage-final.json",
+
     // Test suites are one long `describe` callback, which reads as a very
     // large function. Keep complexity and size findings to shipped code.
     "ignore": [
