@@ -22,7 +22,6 @@ export default async function Live() {
   if (choice === null) return <NoGroup member={member} />;
   const week = await currentWeek(db(), member, new Date(), {
     graded: true,
-    season: true,
     cfbd,
     group: choice.current.id,
   });

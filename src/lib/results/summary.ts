@@ -107,35 +107,6 @@ export function standing(scores: WeeklyScore[], memberId: number): Standing | nu
   return { place, of: scores.length, label: `${ordinal(place)} of ${scores.length}` };
 }
 
-/** Where a member stands in the season, and what they have scored getting there. */
-export interface SeasonStanding extends Standing {
-  /**
-   * Season total. A Week whose Deadline has passed is a played Week even while
-   * its games are going (`playedWeeks`), so on a Saturday this already carries
-   * the Week in progress at its provisional value — which is the whole point
-   * of showing it on the Live Board: it is the figure that moves.
-   */
-  points: number;
-}
-
-/**
- * One member's place in the season, read off the Leaderboard the engine has
- * already ranked rather than ranked again here. The season tiebreaks are
- * `scoreSeason`'s to apply, and applying them a second time in a helper is how
- * the board and this card would come to disagree.
- *
- * Null for a member the board does not carry at all — one deactivated with no
- * Picks anywhere in the season. A member who has simply played no Week yet is
- * on the board at zero and gets their place like anyone else, which is what
- * keeps them from vanishing the moment they skip a week.
- */
-export function seasonStanding(leaderboard: LeaderboardRow[], memberId: number): SeasonStanding | null {
-  const mine = leaderboard.find((row) => row.member.id === memberId);
-  if (!mine) return null;
-  const of = leaderboard.length;
-  return { place: mine.rank, of, label: `${ordinal(mine.rank)} of ${of}`, points: mine.totalPoints };
-}
-
 /**
  * The one line about who won the Week: how the engine decided it, in words.
  *

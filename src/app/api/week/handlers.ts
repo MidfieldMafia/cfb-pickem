@@ -99,7 +99,6 @@ export async function getWeekState(request: Request, route: PickRoute): Promise<
   const group = (await route.currentGroup?.()) ?? null;
   const week = await currentWeek(route.db, actor, route.now?.() ?? new Date(), {
     graded: true,
-    season: true,
     cfbd: route.cfbd,
     group,
   });
