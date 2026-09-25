@@ -433,6 +433,15 @@ describe("a game's plays, for the Game sheet", () => {
     expect(plays.gameId).toBe(texas.id);
     expect(plays.fetchedAt).toBe(SUNDAY.toISOString());
     expect(plays.drives.flatMap((d) => d.plays).at(-1)).toMatchObject({ playType: "Rush", homeScore: 7, clock: "6:10" });
+    // Each play drawn, the newest resting on the header's next snap: "rush middle for 3 yards gain to the CCU31", Ohio State's ball.
+    expect(plays.descriptions.map((d) => d.id)).toEqual(plays.drives.flatMap((d) => d.plays).map((p) => p.id));
+    expect(plays.descriptions.at(-1)).toMatchObject({
+      id: "401869941249",
+      start: 66,
+      side: "away",
+      segments: [{ kind: "ground", from: 66, to: 69 }, { kind: "score" }],
+      rest: { spot: 69, side: "away", down: 2, distance: 7 },
+    });
     expect(response.headers.get("cache-control")).toBe("no-store");
 
     const again = await getGamePlays(get(response.headers.get("etag")!), route, String(texas.id));
@@ -445,7 +454,7 @@ describe("a game's plays, for the Game sheet", () => {
 
     const plays = await json<GamePlaysJson>(await getGamePlays(get(), asGrandma(SUNDAY), String(miami.id)));
 
-    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [] });
+    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [] });
   });
 
   test("a game off the published slate, or no game id at all, is a 404, and signed out is a 401", async () => {
@@ -470,8 +479,8 @@ describe("a game's plays, for the Game sheet", () => {
         id: "401869941249",
         text: "(10:31) No Huddle-Shotgun #4 K.Davis rush middle for 3 yards gain to the CCU31 (#92 A.Poole; #4 M.Pulliam)",
         type: "Rush",
-        teamId: 2335,
-        team: "Liberty",
+        teamId: 194,
+        team: "Ohio State",
         period: 1,
         clock: "6:10",
         wallClock: "2026-09-25T00:52:07.000Z",
@@ -481,6 +490,8 @@ describe("a game's plays, for the Game sheet", () => {
       down: 2,
       distance: 7,
       yardsToGoal: 31,
+      // Ohio State, recast from Liberty's run, kept the ball.
+      ball: "away",
     });
     // The feed is ahead of the scoreboard's 3–0, so the row shows the feed's score.
     expect(texasRow.result.shown).toEqual({ awayScore: 3, homeScore: 7 });

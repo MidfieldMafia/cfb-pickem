@@ -11,6 +11,7 @@
  * docs/research/cfbd-live-plays.md.
  */
 import type { CfbdLiveDrive, CfbdLiveGame, CfbdLivePlay } from "@/lib/cfbd/types";
+import { ballSide, type FieldTeams, type PlayDescription, type Side } from "./field";
 
 /** The newest play, as the Live Board row reads it. Text, type and team are the feed's own words. */
 export interface LivePlay {
@@ -48,6 +49,14 @@ export interface LiveFeed {
    * turnover. Which side of the field it is on is not this module's to say.
    */
   yardsToGoal: number | null;
+  /**
+   * The team with the ball once the newest play is over, read from its words
+   * (`ballSide`): the receiving team after a kick, the other team after a
+   * turnover. Null at a break — a period's end, halftime, the final — and when
+   * the feed names neither team. The Live Board's football, and the side of
+   * the field `yardsToGoal` is counted towards.
+   */
+  ball: Side | null;
 }
 
 /** The newest play in the response. Plays are in `wallClock` order within and across drives, never in id order. */
@@ -60,10 +69,15 @@ export function newestPlay(drives: readonly CfbdLiveDrive[]): CfbdLivePlay | nul
 }
 
 /** The row's slice of one response. Null when the feed has logged no play for the game yet. */
-export function toLiveFeed(feed: CfbdLiveGame): LiveFeed | null {
+export function toLiveFeed(feed: CfbdLiveGame, teams: FieldTeams): LiveFeed | null {
   const play = newestPlay(feed.drives);
   if (play === null) return null;
   const hasDown = feed.down !== null && feed.down >= 1 && feed.down <= 4;
+  const header = {
+    down: hasDown ? feed.down : null,
+    distance: hasDown ? feed.distance : null,
+    yardsToGoal: feed.yardsToGoal,
+  };
   return {
     play: {
       id: play.id,
@@ -77,9 +91,12 @@ export function toLiveFeed(feed: CfbdLiveGame): LiveFeed | null {
       homeScore: play.homeScore,
       awayScore: play.awayScore,
     },
-    down: hasDown ? feed.down : null,
-    distance: hasDown ? feed.distance : null,
-    yardsToGoal: feed.yardsToGoal,
+    ...header,
+    ball: ballSide(
+      feed.drives.flatMap((drive) => drive.plays),
+      teams,
+      header,
+    ),
   };
 }
 
@@ -123,12 +140,16 @@ export function newerScore(board: BoardMoment, feed: LiveFeed | null): { homeSco
 
 /**
  * What the Game sheet polls for one game: every drive with its plays as the
- * newest fetch stored them, and when that fetch was. `fetchedAt` is null and
- * `drives` empty for a game the feed has never been read for.
+ * newest fetch stored them, when that fetch was, and every play's drawable
+ * description for the field, in the order the plays were logged.
+ * `fetchedAt` is null and `drives` and `descriptions` empty for a game the
+ * feed has never been read for.
  */
 export interface GamePlaysJson {
   gameId: number;
   /** ISO 8601. */
   fetchedAt: string | null;
   drives: CfbdLiveDrive[];
+  /** One per play across `drives`, matched by `id`. Worked out on every request; nothing of it is stored. */
+  descriptions: PlayDescription[];
 }
