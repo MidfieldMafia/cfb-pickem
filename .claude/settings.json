@@ -11,7 +11,8 @@
       "Bash(git fetch *)",
       "Bash(git merge-base *)",
       "Bash(git merge-tree *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(npx -y fallow*)"
     ]
   },
   "hooks": {
@@ -28,5 +29,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "fallow@fallow-skills": true
   }
 }

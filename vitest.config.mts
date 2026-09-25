@@ -31,5 +31,15 @@ export default defineConfig({
      * default 5s turned a loaded machine into a wall of unrelated timeouts.
      */
     testTimeout: 20_000,
+    /**
+     * Off unless `npm run test:coverage` asks for it. Istanbul rather than v8
+     * because fallow reads only Istanbul's `coverage-final.json`, which it
+     * uses for exact per-function CRAP scores (`.fallowrc.jsonc`).
+     */
+    coverage: {
+      provider: "istanbul",
+      reporter: ["json", "text-summary"],
+      include: ["src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
+    },
   },
 });
