@@ -101,12 +101,12 @@ describe("pick entry routes", () => {
     await putPick(request({ gameId: michigan.id, teamId: michigan.homeTeamId }), asGrandma());
 
     const locked = await json<SheetJson>(await putLock(request({ gameId: michigan.id }), asGrandma()));
-    expect(locked.lockGameId).toBe(michigan.id);
+    expect(locked.lock).toEqual({ state: "counts", gameId: michigan.id });
     const guessed = await json<SheetJson>(await putTiebreaker(request({ guess: 55 }), asGrandma()));
     expect(guessed.tiebreakerGuess).toBe(55);
 
     const sheet = await json<SheetJson>(await getSheet(asGrandma()));
-    expect(sheet.lockGameId).toBe(michigan.id);
+    expect(sheet.lock).toEqual({ state: "counts", gameId: michigan.id });
     expect(sheet.tiebreakerGuess).toBe(55);
   });
 
@@ -117,8 +117,8 @@ describe("pick entry routes", () => {
 
     const cleared = await json<SheetJson>(await putLock(request({ gameId: null }), asGrandma()));
 
-    expect(cleared.lockGameId).toBe(null);
-    expect((await json<SheetJson>(await getSheet(asGrandma()))).lockGameId).toBe(null);
+    expect(cleared.lock).toEqual({ state: "none" });
+    expect((await json<SheetJson>(await getSheet(asGrandma()))).lock).toEqual({ state: "none" });
   });
 
   test("a write answers the whole sheet, progress and games included", async () => {

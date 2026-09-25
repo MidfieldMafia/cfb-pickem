@@ -7,7 +7,7 @@
 import type { GameDetail } from "@/lib/detail";
 import { toGameView, type GameView } from "@/lib/slate/json";
 import type { PickSheet } from "./picks";
-import { lockGameOf, type SheetProgress } from "./progress";
+import type { LockState, SheetProgress } from "./progress";
 
 /** The Game-and-result pair every screen shares, plus the detail only the pick screen shows. */
 export interface SheetGameJson extends GameView {
@@ -32,9 +32,8 @@ export interface SheetJson {
   tiebreakerGameId: number | null;
   games: SheetGameJson[];
   picks: PickJson[];
-  lockGameId: number | null;
-  /** True when the Lock sits on a Void game: a Dropped Lock. Scores nothing; movable until the Deadline. */
-  lockDropped: boolean;
+  /** The Lock of the Week. A Dropped Lock sits on a Void game: it scores nothing, and is movable until the Deadline. */
+  lock: LockState;
   /** The season's Lock of the Week multiplier, so a screen never states it as fixed copy. */
   lockMultiplier: number;
   tiebreakerGuess: number | null;
@@ -57,8 +56,7 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     tiebreakerGameId: sheet.week.tiebreakerGameId,
     games: sheet.games.map((g) => ({ ...toGameView(g), detail: g.detail })),
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
-    lockGameId: lockGameOf(sheet.lock),
-    lockDropped: sheet.lock.state === "dropped",
+    lock: sheet.lock,
     lockMultiplier: sheet.season.rules.lockMultiplier,
     tiebreakerGuess: sheet.tiebreakerGuess,
     progress: sheet.progress,

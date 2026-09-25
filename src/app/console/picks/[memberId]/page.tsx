@@ -9,7 +9,7 @@ import { InvalidMember } from "@/lib/members/members";
 import { memberSheet } from "@/lib/picks/console";
 import { toSheetJson } from "@/lib/picks/json";
 import { MAX_TIEBREAKER_GUESS } from "@/lib/picks/limits";
-import { liveGames } from "@/lib/picks/progress";
+import { lockGameOf, liveGames } from "@/lib/picks/progress";
 import { safeInteger } from "@/lib/parse";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
 import { consoleWeek, isPublished } from "@/lib/slate/slate";
@@ -93,7 +93,7 @@ export default async function MemberPicks({
                 <span>
                   <LocalTime at={game.kickoff} style="slot" />
                   {game.id === sheet.tiebreakerGameId ? " · Tiebreaker Game" : ""}
-                  {sheet.lockGameId === game.id ? (sheet.lockDropped ? " · Dropped Lock" : " · Lock of the Week") : ""}
+                  {lockGameOf(sheet.lock) === game.id ? (sheet.lock.state === "dropped" ? " · Dropped Lock" : " · Lock of the Week") : ""}
                 </span>
                 {voided ? <Badge variant="void">Void{why ? `: ${why}` : ""}</Badge> : null}
               </div>
@@ -121,7 +121,7 @@ export default async function MemberPicks({
         <ActionForm action={overrideLockAction} hidden={hidden} submit="Save Lock" pendingLabel="Saving…">
           <Select
             name="gameId"
-            defaultValue={sheet.lockGameId ?? ""}
+            defaultValue={lockGameOf(sheet.lock) ?? ""}
             aria-label="Lock of the Week"
             className="w-auto"
           >
@@ -134,7 +134,7 @@ export default async function MemberPicks({
           </Select>
         </ActionForm>
         <p className="text-xs text-muted-foreground">
-          {sheet.lockDropped
+          {sheet.lock.state === "dropped"
             ? "The Lock sits on a void game, so it counts for nothing until it is moved to a live pick. "
             : ""}
           Only picked games can carry the Lock. Save with “No Lock” to clear it.

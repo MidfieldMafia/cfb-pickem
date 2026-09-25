@@ -76,8 +76,7 @@ describe("toSheetJson", () => {
       { gameId: michigan.id, teamId: michigan.homeTeamId, updatedAt: THURSDAY.toISOString() },
       { gameId: texas.id, teamId: texas.awayTeamId, updatedAt: THURSDAY.toISOString() },
     ]);
-    expect(json.lockGameId).toBe(michigan.id);
-    expect(json.lockDropped).toBe(false);
+    expect(json.lock).toEqual({ state: "counts", gameId: michigan.id });
     expect(json.tiebreakerGuess).toBe(55);
   });
 
@@ -85,9 +84,8 @@ describe("toSheetJson", () => {
     const { json } = await sheetAt();
 
     expect(json.picks).toEqual([]);
-    expect(json.lockGameId).toBe(null);
+    expect(json.lock).toEqual({ state: "none" });
     expect(json.tiebreakerGuess).toBe(null);
-    expect(json.lockDropped).toBe(false);
   });
 
   test("the progress count travels with the sheet, so no screen counts it again", async () => {
@@ -126,8 +124,7 @@ describe("toSheetJson", () => {
 
     const json = await read(THURSDAY);
 
-    expect(json.lockGameId).toBe(michigan.id);
-    expect(json.lockDropped).toBe(true);
+    expect(json.lock).toEqual({ state: "dropped", gameId: michigan.id });
     expect(json.games.find((g) => g.game.id === michigan.id)!.result).toMatchObject({
       status: "void",
       label: "Void",
