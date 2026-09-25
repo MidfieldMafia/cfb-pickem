@@ -1,0 +1,279 @@
+{
+ "20260925T002052Z": {
+  "id": 401869941,
+  "startDate": "2026-09-24T23:30:00.000Z",
+  "startTimeTBD": false,
+  "tv": "ESPN",
+  "neutralSite": false,
+  "conferenceGame": false,
+  "status": "in_progress",
+  "period": 1,
+  "clock": "03:05",
+  "situation": null,
+  "possession": null,
+  "lastPlay": "(C. Reeves KICK)",
+  "venue": {
+   "name": "Brooks Stadium (SC)",
+   "city": "Conway",
+   "state": "SC"
+  },
+  "homeTeam": {
+   "id": 324,
+   "name": "Coastal Carolina Chanticleers",
+   "conference": "Sun Belt",
+   "classification": "fbs",
+   "points": 3,
+   "lineScores": [
+    3
+   ],
+   "winProbability": 0.551
+  },
+  "awayTeam": {
+   "id": 2335,
+   "name": "Liberty Flames",
+   "conference": "Conference USA",
+   "classification": "fbs",
+   "points": 10,
+   "lineScores": [
+    10
+   ],
+   "winProbability": 0.449
+  },
+  "weather": {
+   "temperature": 65.5,
+   "description": "Light Rain",
+   "windSpeed": 12.6,
+   "windDirection": 356
+  },
+  "betting": {
+   "spread": 2.5,
+   "overUnder": 50.5,
+   "homeMoneyline": 120,
+   "awayMoneyline": -140
+  }
+ },
+ "20260925T005255Z": {
+  "id": 401869941,
+  "startDate": "2026-09-24T23:30:00.000Z",
+  "startTimeTBD": false,
+  "tv": "ESPN",
+  "neutralSite": false,
+  "conferenceGame": false,
+  "status": "in_progress",
+  "period": 2,
+  "clock": "10:50",
+  "situation": "4th & 9 at LIB 48",
+  "possession": "away",
+  "lastPlay": "(10:58) No Huddle-Shotgun #5 D.Purdie sacked for loss of 8 yards to the LIB48 (#11 B.Starnes, #50 M.Toney)",
+  "venue": {
+   "name": "Brooks Stadium (SC)",
+   "city": "Conway",
+   "state": "SC"
+  },
+  "homeTeam": {
+   "id": 324,
+   "name": "Coastal Carolina Chanticleers",
+   "conference": "Sun Belt",
+   "classification": "fbs",
+   "points": 3,
+   "lineScores": [
+    3,
+    0
+   ],
+   "winProbability": 0.271
+  },
+  "awayTeam": {
+   "id": 2335,
+   "name": "Liberty Flames",
+   "conference": "Conference USA",
+   "classification": "fbs",
+   "points": 10,
+   "lineScores": [
+    10,
+    0
+   ],
+   "winProbability": 0.729
+  },
+  "weather": {
+   "temperature": 65.5,
+   "description": "Light Rain",
+   "windSpeed": 12.6,
+   "windDirection": 356
+  },
+  "betting": {
+   "spread": 2.5,
+   "overUnder": 50.5,
+   "homeMoneyline": 120,
+   "awayMoneyline": -140
+  }
+ },
+ "20260925T012112Z": {
+  "id": 401869941,
+  "startDate": "2026-09-24T23:30:00.000Z",
+  "startTimeTBD": false,
+  "tv": "ESPN",
+  "neutralSite": false,
+  "conferenceGame": false,
+  "status": "in_progress",
+  "period": 2,
+  "clock": "01:33",
+  "situation": "4th & 26 at CCU 34",
+  "possession": "away",
+  "lastPlay": "(01:41) No Huddle-Shotgun #5 D.Purdie sacked for loss of 8 yards to the CCU34 (#1 I.Diawara, #7 D.Wesolak)",
+  "venue": {
+   "name": "Brooks Stadium (SC)",
+   "city": "Conway",
+   "state": "SC"
+  },
+  "homeTeam": {
+   "id": 324,
+   "name": "Coastal Carolina Chanticleers",
+   "conference": "Sun Belt",
+   "classification": "fbs",
+   "points": 10,
+   "lineScores": [
+    3,
+    7
+   ],
+   "winProbability": 0.522
+  },
+  "awayTeam": {
+   "id": 2335,
+   "name": "Liberty Flames",
+   "conference": "Conference USA",
+   "classification": "fbs",
+   "points": 10,
+   "lineScores": [
+    10,
+    0
+   ],
+   "winProbability": 0.478
+  },
+  "weather": {
+   "temperature": 65.5,
+   "description": "Light Rain",
+   "windSpeed": 12.6,
+   "windDirection": 356
+  },
+  "betting": {
+   "spread": 2.5,
+   "overUnder": 50.5,
+   "homeMoneyline": 120,
+   "awayMoneyline": -140
+  }
+ },
+ "20260925T014215Z": {
+  "id": 401869941,
+  "startDate": "2026-09-24T23:30:00.000Z",
+  "startTimeTBD": false,
+  "tv": "ESPN",
+  "neutralSite": false,
+  "conferenceGame": false,
+  "status": "in_progress",
+  "period": 2,
+  "clock": "00:00",
+  "situation": null,
+  "possession": null,
+  "lastPlay": "End of 2nd quarter.",
+  "venue": {
+   "name": "Brooks Stadium (SC)",
+   "city": "Conway",
+   "state": "SC"
+  },
+  "homeTeam": {
+   "id": 324,
+   "name": "Coastal Carolina Chanticleers",
+   "conference": "Sun Belt",
+   "classification": "fbs",
+   "points": 17,
+   "lineScores": [
+    3,
+    14
+   ],
+   "winProbability": 0.586
+  },
+  "awayTeam": {
+   "id": 2335,
+   "name": "Liberty Flames",
+   "conference": "Conference USA",
+   "classification": "fbs",
+   "points": 10,
+   "lineScores": [
+    10,
+    0
+   ],
+   "winProbability": 0.414
+  },
+  "weather": {
+   "temperature": 65.5,
+   "description": "Light Rain",
+   "windSpeed": 12.6,
+   "windDirection": 356
+  },
+  "betting": {
+   "spread": 2.5,
+   "overUnder": 50.5,
+   "homeMoneyline": 120,
+   "awayMoneyline": -140
+  }
+ },
+ "20260925T034334Z": {
+  "id": 401869941,
+  "startDate": "2026-09-24T23:30:00.000Z",
+  "startTimeTBD": false,
+  "tv": "ESPN",
+  "neutralSite": false,
+  "conferenceGame": false,
+  "status": "completed",
+  "period": null,
+  "clock": null,
+  "situation": null,
+  "possession": null,
+  "lastPlay": "End of 4th quarter.",
+  "venue": {
+   "name": "Brooks Stadium (SC)",
+   "city": "Conway",
+   "state": "SC"
+  },
+  "homeTeam": {
+   "id": 324,
+   "name": "Coastal Carolina Chanticleers",
+   "conference": "Sun Belt",
+   "classification": "fbs",
+   "points": 17,
+   "lineScores": [
+    3,
+    14,
+    0,
+    0
+   ],
+   "winProbability": null
+  },
+  "awayTeam": {
+   "id": 2335,
+   "name": "Liberty Flames",
+   "conference": "Conference USA",
+   "classification": "fbs",
+   "points": 34,
+   "lineScores": [
+    10,
+    0,
+    10,
+    14
+   ],
+   "winProbability": null
+  },
+  "weather": {
+   "temperature": 65.5,
+   "description": "Light Rain",
+   "windSpeed": 12.6,
+   "windDirection": 356
+  },
+  "betting": {
+   "spread": 2.5,
+   "overUnder": 50.5,
+   "homeMoneyline": 120,
+   "awayMoneyline": -140
+  }
+ }
+}
