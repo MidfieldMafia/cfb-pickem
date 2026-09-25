@@ -1,8 +1,11 @@
 {
   // Config for fallow (https://docs.fallow.tools), a maintainability analyzer:
   // `npx fallow health`, `npx fallow dead-code`, `npx fallow dupes`.
-  // Next.js entry points (pages, layouts, routes, proxy) and the packages/*
-  // workspace are detected without configuration, so neither is listed here.
+  // Next.js entry points (pages, layouts, routes, proxy, instrumentation,
+  // next.config) come from fallow's built-in `nextjs` plugin, which switches
+  // on because package.json depends on `next`; no config key can pin it, so
+  // `npx fallow list --plugins` is the check that it is active. The packages/*
+  // workspace is detected too, so neither is listed here.
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "minimumVersion": "3.28.0",
 
