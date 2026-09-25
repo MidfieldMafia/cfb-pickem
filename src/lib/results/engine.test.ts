@@ -12,7 +12,7 @@
  */
 import { describe, expect, test } from "vitest";
 import type { Game, Member, Week } from "@/db/schema";
-import type { MemberPicks } from "@/lib/picks/picks";
+import type { EngineEntry } from "./engine";
 import { rules2026 } from "@/lib/scoring/fixtures/build";
 import { scoreWeek } from "@/lib/scoring";
 import { toEngineGame, toEngineMember, toEngineWeek } from "./engine";
@@ -88,7 +88,7 @@ function member(overrides: Partial<Member> = {}): Member {
   };
 }
 
-const noPicks: MemberPicks = { memberId: 1, picks: [], lockGameId: null, tiebreakerGuess: null };
+const noPicks: EngineEntry = { member: { id: 1 }, picks: [], lock: { state: "none" }, tiebreakerGuess: null };
 
 describe("a game on its way to the engine", () => {
   test("carries the feed's final score, with the teams as ids", () => {
@@ -156,8 +156,8 @@ describe("a week on its way to the engine", () => {
 
   test("flattens every member's picks, lock and guess, and leaves out the ones nobody set", () => {
     const built = toEngineWeek(week(), [game(), game({ id: 8, homeTeamId: 61, awayTeamId: 99 })], [
-      { memberId: 1, picks: [{ gameId: 7, teamId: 130, updatedAt: KICKOFF }], lockGameId: 7, tiebreakerGuess: 51 },
-      { memberId: 2, picks: [{ gameId: 8, teamId: 99, updatedAt: KICKOFF }], lockGameId: null, tiebreakerGuess: null },
+      { member: { id: 1 }, picks: [{ gameId: 7, teamId: 130, updatedAt: KICKOFF }], lock: { state: "counts", gameId: 7 }, tiebreakerGuess: 51 },
+      { member: { id: 2 }, picks: [{ gameId: 8, teamId: 99, updatedAt: KICKOFF }], lock: { state: "none" }, tiebreakerGuess: null },
     ]);
 
     expect(built).toMatchObject({ weekNumber: 2, published: true, tiebreakerGameId: "7" });
@@ -227,8 +227,8 @@ describe("a week on its way to the engine", () => {
 });
 
 describe("the bridge under the engine", () => {
-  const picked: MemberPicks[] = [
-    { memberId: 1, picks: [{ gameId: 7, teamId: 130, updatedAt: KICKOFF }], lockGameId: 7, tiebreakerGuess: 51 },
+  const picked: EngineEntry[] = [
+    { member: { id: 1 }, picks: [{ gameId: 7, teamId: 130, updatedAt: KICKOFF }], lock: { state: "counts", gameId: 7 }, tiebreakerGuess: 51 },
   ];
   const graders = [toEngineMember(member())];
 

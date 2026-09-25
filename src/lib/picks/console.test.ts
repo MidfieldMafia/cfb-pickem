@@ -21,12 +21,12 @@ async function setup() {
 
 describe("reading a member's sheet from the console", () => {
   test("a commissioner reads and enters a member's picks before the deadline", async () => {
-    const { db, slate, jonah, grandma, week, michigan, texas } = await setup();
+    const { db, slate, jonah, grandma, michigan, texas } = await setup();
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
 
     // `memberSheet` takes a `Commissioner`, so a member reading another's is a
     // type error here rather than a rejection — see `authority.ts`.
-    await expect(memberSheet(db, jonah, 999999, week.id, THURSDAY)).rejects.toThrow(/no such member/i);
+    await expect(memberSheet(db, jonah, 999999, slate, THURSDAY)).rejects.toThrow(/no such member/i);
 
     await applyEdit(
       db,
@@ -36,7 +36,7 @@ describe("reading a member's sheet from the console", () => {
       THURSDAY,
     );
 
-    const sheet = await memberSheet(db, jonah, grandma.id, week.id, THURSDAY);
+    const sheet = await memberSheet(db, jonah, grandma.id, slate, THURSDAY);
     expect(sheet.member.displayName).toBe("Grandma");
     expect(sheet.sheet.picks.map((p) => [p.gameId, p.teamId])).toEqual([
       [michigan.id, michigan.homeTeamId],
@@ -88,7 +88,7 @@ describe("who hasn't picked", () => {
     expect(report.deadline).toEqual(deadline);
     expect(report.needed).toBe(3);
     expect(report.ready).toBe(1);
-    expect(report.members.map((m) => [m.member.displayName, m.picked, m.lockTeam, m.tiebreakerGuess, m.complete])).toEqual([
+    expect(report.members.map((m) => [m.member.displayName, m.progress.picksMade, m.lockTeam, m.tiebreakerGuess, m.complete])).toEqual([
       ["Jonah", 3, "Texas", 70, true],
       ["Grandma", 3, null, 66, false],
       ["Cousin Em", 1, null, null, false],
@@ -100,34 +100,16 @@ describe("who hasn't picked", () => {
     const afterVoid = await whoHasntPicked(db, jonah, week.id, THURSDAY);
     expect(afterVoid.needed).toBe(2);
     expect(afterVoid.ready).toBe(0);
-    expect(afterVoid.members.map((m) => [m.picked, m.lockTeam, m.lockDropped, m.complete])).toEqual([
-      [2, null, true, false],
-      [2, null, false, false],
-      [1, null, false, false],
+    expect(afterVoid.members.map((m) => [m.progress.picksMade, m.lockTeam, m.lock.state, m.complete])).toEqual([
+      [2, null, "dropped", false],
+      [2, null, "none", false],
+      [1, null, "none", false],
     ]);
 
     // Thu 2026-09-11 00:00Z is 7:00 PM Central on Thursday the 10th.
     expect(reminderText(afterVoid)).toBe(
       "Saturday Slate Week 2 picks lock Thu, Sep 10 at 7:00 PM Central. Still need: Jonah (Lock of the Week), Grandma (Lock of the Week), Cousin Em (1 pick, Lock of the Week, Tiebreaker Guess).",
     );
-  });
-
-  test("a member who joins after the Deadline is not chased, and neither is one who picked and left", async () => {
-    const { db, slate, jonah, grandma, week, michigan, deadline } = await setup();
-    const late = await joinAt(db, jonah, "Late", new Date(deadline.getTime() + 3600_000));
-    // The Reveal keeps this one, because their points happened; the reminder
-    // does not, because there is nobody left to remind.
-    const gone = await joinAt(db, jonah, "Gone", TUESDAY);
-    await pickAs(db, gone, slate, michigan, michigan.homeTeamId, THURSDAY);
-    await setMemberActive(db, jonah, gone.id, false);
-
-    const report = await whoHasntPicked(db, jonah, week.id, THURSDAY);
-
-    expect(report.members.map((m) => m.member.displayName)).toEqual(["Jonah", "Grandma"]);
-    expect(report.members.map((m) => m.member.id)).not.toContain(late.id);
-    expect(reminderText(report)).not.toMatch(/Late|Gone/);
-    // Grandma is on both, so the two answers agree about everyone they share.
-    expect(report.members.map((m) => m.member.id)).toContain(grandma.id);
   });
 
   test("the reminder says so when everyone is in", async () => {

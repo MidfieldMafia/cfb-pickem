@@ -9,11 +9,10 @@ import { InvalidMember } from "@/lib/members/members";
 import { memberSheet } from "@/lib/picks/console";
 import { toSheetJson } from "@/lib/picks/json";
 import { MAX_TIEBREAKER_GUESS } from "@/lib/picks/limits";
-import { InvalidPick } from "@/lib/picks/picks";
 import { liveGames } from "@/lib/picks/progress";
 import { safeInteger } from "@/lib/parse";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
-import { consoleWeek } from "@/lib/slate/slate";
+import { consoleWeek, isPublished } from "@/lib/slate/slate";
 import { ActionForm } from "../../action-form";
 import { overrideLockAction, overrideTiebreakerAction } from "../actions";
 import { GamePickForm } from "./game-pick-form";
@@ -30,26 +29,27 @@ export default async function MemberPicks({
   if (memberId === null) notFound();
   const query = await searchParams;
   const database = db();
-  const { season, week } = await consoleWeek(database, commissioner, query.week);
+  const { season, week, slate } = await consoleWeek(database, commissioner, query.week);
   const weekNumber = week.weekNumber;
+
+  if (!isPublished(slate.week)) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        <BackLink weekNumber={weekNumber} />
+        <Card asChild className="rounded-md text-sm">
+          <p role="status">
+            Week {weekNumber} is not published, so there are no picks to enter yet.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   let loaded;
   try {
-    loaded = await memberSheet(database, commissioner, memberId, week.id);
+    loaded = await memberSheet(database, commissioner, memberId, slate);
   } catch (error) {
     if (error instanceof InvalidMember) notFound();
-    if (error instanceof InvalidPick) {
-      return (
-        <div className="mx-auto max-w-3xl space-y-4">
-          <BackLink weekNumber={weekNumber} />
-          <Card asChild className="rounded-md text-sm">
-            <p role="status">
-              Week {weekNumber} is not published, so there are no picks to enter yet.
-            </p>
-          </Card>
-        </div>
-      );
-    }
     throw error;
   }
   const { member } = loaded;

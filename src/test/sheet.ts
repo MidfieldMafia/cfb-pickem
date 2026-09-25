@@ -10,7 +10,7 @@
  */
 import type { GameResult } from "@/lib/results/result";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
-import { sheetProgress } from "@/lib/picks/progress";
+import { lockOn, sheetProgress } from "@/lib/picks/progress";
 
 /** Friday's Miami kickoff: the Deadline in the Week 2 fixture. */
 export const DEADLINE = "2026-09-11T00:00:00.000Z";
@@ -91,5 +91,11 @@ export function sheet(over: Partial<SheetJson> = {}): SheetJson {
     ...over,
   };
   const picked = new Set(base.picks.map((p) => p.gameId));
-  return { ...base, progress: sheetProgress({ ...base, picked: (gameId) => picked.has(gameId) }) };
+  const progress = sheetProgress({
+    games: base.games,
+    picked: (gameId) => picked.has(gameId),
+    lock: lockOn(base.games, base.lockGameId),
+    tiebreakerGuess: base.tiebreakerGuess,
+  });
+  return { ...base, progress };
 }

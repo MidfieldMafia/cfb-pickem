@@ -128,7 +128,7 @@ export async function freshSlate(db: Db, cfbd: () => CfbdClient, now: Date = new
 /**
  * The Week this member is in right now, or null when no Week in the active
  * season has been published. The Slate arrives published by construction, so
- * the "not published" throws inside `pickSheet` and `weekPicks` are
+ * the "not published" throw inside `weekEntries` is
  * unreachable from here: null is the only way "there is no Week" comes back.
  *
  * Asking for `graded` narrows the answer to `GradedWeekContext`, which has no

@@ -7,7 +7,7 @@
 import type { GameDetail } from "@/lib/detail";
 import { toGameView, type GameView } from "@/lib/slate/json";
 import type { PickSheet } from "./picks";
-import type { SheetProgress } from "./progress";
+import { lockGameOf, type SheetProgress } from "./progress";
 
 /** The Game-and-result pair every screen shares, plus the detail only the pick screen shows. */
 export interface SheetGameJson extends GameView {
@@ -57,8 +57,8 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     tiebreakerGameId: sheet.week.tiebreakerGameId,
     games: sheet.games.map((g) => ({ ...toGameView(g), detail: g.detail })),
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
-    lockGameId: sheet.lockGameId,
-    lockDropped: sheet.lockDropped,
+    lockGameId: lockGameOf(sheet.lock),
+    lockDropped: sheet.lock.state === "dropped",
     lockMultiplier: sheet.season.rules.lockMultiplier,
     tiebreakerGuess: sheet.tiebreakerGuess,
     progress: sheet.progress,

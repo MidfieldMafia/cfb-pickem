@@ -133,13 +133,21 @@ function effectiveDeadline(week: Week, slateGames: Game[]): Date | null {
 }
 
 /**
+ * True for a Week members can see: published, with its Deadline frozen. The
+ * two are one condition, stated once so no screen checks half of it.
+ */
+export function isPublished<W extends Pick<Week, "published" | "deadline">>(week: W): week is W & { deadline: Date } {
+  return week.published && week.deadline !== null;
+}
+
+/**
  * True once the server clock has reached a published Slate's frozen Deadline:
  * one comparison, so pick entry, the Reveal, and the screens cannot disagree
  * about whether the Week is closed. An unpublished Slate never locks — its
  * Deadline still floats.
  */
 export function deadlinePassed(week: Pick<Week, "published" | "deadline">, now: Date): boolean {
-  return week.published && week.deadline !== null && now.getTime() >= week.deadline.getTime();
+  return isPublished(week) && now.getTime() >= week.deadline.getTime();
 }
 
 /**

@@ -12,28 +12,18 @@
  * tests can sit on either side of the Deadline.
  */
 import "server-only";
-import { asc, eq, inArray } from "drizzle-orm";
-import {
-  locks,
-  members,
-  pickAudits,
-  picks,
-  tiebreakerGuesses,
-  type Member,
-  type Season,
-  type Week,
-} from "@/db/schema";
+import { asc, eq } from "drizzle-orm";
+import { members, pickAudits, type Member, type Season, type Week } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
 import type { Commissioner } from "@/lib/members/authority";
 import { InvalidMember, joinedOrder } from "@/lib/members/members";
-import { roster } from "@/lib/members/roster";
+import type { RosterMember } from "@/lib/members/roster";
 import { plural } from "@/lib/plural";
-import { isDroppedLock } from "@/lib/results/result";
 import { teamName, toGameView } from "@/lib/slate/json";
 import { slateFor, type Slate } from "@/lib/slate/slate";
-import { pickSheet, publishedDeadline, type PickSheet } from "./picks";
-import { liveGames, sheetProgress, type SheetProgress } from "./progress";
+import { pickSheet, weekEntries, type Entry, type PickSheet } from "./picks";
+import { liveGames } from "./progress";
 
 async function loadMember(db: Db, memberId: number): Promise<Member> {
   const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
@@ -45,30 +35,23 @@ async function loadMember(db: Db, memberId: number): Promise<Member> {
  * One member's sheet as a commissioner sees it in the console, before or
  * after the Deadline. The console is the one place another member's picks
  * are readable early: a commissioner entering picks for someone has to see
- * what is already there. `weekPicks`, the Reveal, stays hidden for everyone.
+ * what is already there. The Reveal stays hidden for everyone.
  */
 export async function memberSheet(
   db: Db,
   actor: Commissioner,
   memberId: number,
-  weekId: number,
+  slate: Slate,
   now: Date = new Date(),
 ): Promise<{ member: Member; sheet: PickSheet }> {
   const member = await loadMember(db, memberId);
-  return { member, sheet: await pickSheet(db, member, await slateFor(db, weekId), now) };
+  return { member, sheet: await pickSheet(db, member, slate, now) };
 }
 
-export interface MemberProgress {
-  member: Member;
-  /** The same count the member's own screens show, from `sheetProgress`. */
-  progress: SheetProgress;
-  /** Picks on live (non-void) games; `progress.picksMade`, named for the table. */
-  picked: number;
-  /** The team a counting Lock of the Week sits on; null when not set or when it is a Dropped Lock. */
+/** One member's entry as the who-hasn't-picked table shows it. */
+export interface MemberProgress<M = Member> extends Entry<M> {
+  /** The team a counting Lock of the Week sits on; null when there is none or it is a Dropped Lock. */
   lockTeam: string | null;
-  /** True when the Lock sits on a Void game, so the member has a Lock to move rather than one to set. */
-  lockDropped: boolean;
-  tiebreakerGuess: number | null;
   /** Nothing left: every live game picked, a Lock that counts, and a Tiebreaker Guess. */
   complete: boolean;
 }
@@ -87,10 +70,10 @@ export interface PickReport {
 }
 
 /**
- * Who hasn't picked. The table is `roster`'s answer, the same one the Reveal
- * and the scoring path read: nobody who joined after the Deadline, because the
- * week was never theirs to finish. No picks are passed, so the deactivated
- * stay off it — there is nothing to chase them about.
+ * Who hasn't picked, across everyone in the app. The table is `roster`'s
+ * answer, the same one the Reveal and the scoring path read: nobody who joined
+ * after the Deadline, because the week was never theirs to finish, and nobody
+ * deactivated, because there is nothing to chase them about.
  */
 export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number, now: Date = new Date()): Promise<PickReport> {
   return pickReport(db, weekId, now);
@@ -102,9 +85,8 @@ export async function whoHasntPicked(db: Db, actor: Commissioner, weekId: number
  */
 export async function pickReport(db: Db, weekId: number, now: Date = new Date()): Promise<PickReport> {
   const slate = await slateFor(db, weekId);
-  const deadline = publishedDeadline(slate.week);
   const everyone = await db.query.members.findMany({ orderBy: joinedOrder });
-  const progress = await weekProgress(db, slate, roster(everyone, slate.week));
+  const { deadline, members: progress } = await weekProgress(db, slate, everyone, now);
   return {
     week: slate.week,
     season: slate.season,
@@ -117,53 +99,33 @@ export async function pickReport(db: Db, weekId: number, now: Date = new Date())
 }
 
 /**
- * Where each of `people` stands on one Week's sheet, in the order given. The
- * one count behind the console's table and a group's Manage screen, so the two
- * can never disagree about who still owes a pick. It reads teams and guesses,
- * so it answers only to a caller that decides what of them to pass on.
+ * Where each of `people` the Week counts stands on its sheet, in the order
+ * given: `weekEntries` read for chasing. The one count behind the console's
+ * table and a group's Manage screen, so the two can never disagree about who
+ * still owes a pick. It reads teams and guesses, so it answers only to a
+ * caller that decides what of them to pass on.
  */
-export async function weekProgress<M extends Member>(db: Db, slate: Slate, people: M[]): Promise<(MemberProgress & { member: M })[]> {
-  const views = slate.games.map(toGameView);
-  const liveIds = liveGames(views).map((v) => v.game.id);
+export async function weekProgress<M extends { id: number }>(
+  db: Db,
+  slate: Slate,
+  people: readonly (M & RosterMember)[],
+  now: Date = new Date(),
+): Promise<{ deadline: Date; locked: boolean; members: MemberProgress<M>[] }> {
+  const { deadline, locked, entries } = await weekEntries(db, slate, { chasing: people }, now);
   const byGame = new Map(slate.games.map((g) => [g.id, g]));
-  const weekId = slate.week.id;
-  const [pickRows, lockRows, guessRows] = await Promise.all([
-    liveIds.length ? db.query.picks.findMany({ where: inArray(picks.gameId, liveIds) }) : [],
-    db.query.locks.findMany({ where: eq(locks.weekId, weekId) }),
-    db.query.tiebreakerGuesses.findMany({ where: eq(tiebreakerGuesses.weekId, weekId) }),
-  ]);
-  const pickedBy = new Map<number, Map<number, number>>();
-  for (const p of pickRows) {
-    let own = pickedBy.get(p.memberId);
-    if (!own) pickedBy.set(p.memberId, (own = new Map()));
-    own.set(p.gameId, p.teamId);
-  }
-  const lockOf = new Map(lockRows.map((l) => [l.memberId, l.gameId]));
-  const guessOf = new Map(guessRows.map((g) => [g.memberId, g.guess]));
-  return people.map((member) => {
-    const own = pickedBy.get(member.id) ?? new Map<number, number>();
-    const lockGameId = lockOf.get(member.id) ?? null;
-    const lockGame = lockGameId === null ? undefined : byGame.get(lockGameId);
-    const lockDropped = isDroppedLock(lockGame);
-    const lockedTeam = lockGame && !lockDropped ? own.get(lockGame.id) : undefined;
-    const tiebreakerGuess = guessOf.get(member.id) ?? null;
-    const progress = sheetProgress({
-      games: views,
-      picked: (gameId) => own.has(gameId),
-      lockGameId,
-      lockDropped,
-      tiebreakerGuess,
-    });
-    return {
-      member,
-      progress,
-      picked: progress.picksMade,
-      lockTeam: lockGame && lockedTeam !== undefined ? teamName(lockGame, lockedTeam) : null,
-      lockDropped,
-      tiebreakerGuess,
-      complete: progress.remaining === 0,
-    };
-  });
+  return {
+    deadline,
+    locked,
+    members: entries.map((entry) => {
+      const lockGame = entry.lock.state === "counts" ? byGame.get(entry.lock.gameId) : undefined;
+      const lockedTeam = lockGame && entry.picks.find((p) => p.gameId === lockGame.id)?.teamId;
+      return {
+        ...entry,
+        lockTeam: lockGame && lockedTeam !== undefined ? teamName(lockGame, lockedTeam) : null,
+        complete: entry.progress.remaining === 0,
+      };
+    }),
+  };
 }
 
 /** "Thu, Sep 10 at 7:00 PM Central": the group chat is in one time zone, so the reminder names it. */
@@ -174,7 +136,7 @@ export function deadlineInCentral(deadline: Date): string {
 }
 
 /** What one member still owes, for the reminder: "2 picks, Lock of the Week, Tiebreaker Guess". */
-export function owed(row: MemberProgress): string[] {
+export function owed(row: Pick<MemberProgress<unknown>, "progress">): string[] {
   const missing: string[] = [];
   const picksLeft = row.progress.liveGames - row.progress.picksMade;
   if (picksLeft > 0) missing.push(plural(picksLeft, "pick"));

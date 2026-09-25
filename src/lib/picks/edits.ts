@@ -147,7 +147,7 @@ async function writePick(
  *
  * A Commissioner is not bound by the Deadline (`applyEdit` checks
  * `by.as === "member"`), so they can still move a member's Lock afterwards.
- * Restoring the Game is the other way back: `isDroppedLock` reads the Game's
+ * Restoring the Game is the other way back: `lockOn` reads the Game's
  * effective result, so the Lock counts again with no write here.
  */
 async function writeLock(

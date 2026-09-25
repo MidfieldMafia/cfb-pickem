@@ -21,7 +21,7 @@ import {
 import type { Db } from "@/db/types";
 import { groupBoard, type BoardMember } from "@/lib/groups/memberships";
 import type { Commissioner } from "@/lib/members/authority";
-import { seasonPicks, weekPicks } from "@/lib/picks/picks";
+import { seasonEntries, weekEntries } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
 import { scoreSeason, scoreWeek } from "@/lib/scoring";
 import type * as engine from "@/lib/scoring/types";
@@ -36,6 +36,7 @@ import {
 import {
   activeSeason,
   consoleWeek,
+  deadlinePassed,
   slateOrder,
   type Slate,
 } from "@/lib/slate/slate";
@@ -397,9 +398,9 @@ function revealFrom(slate: Slate, rows: readonly BoardMember[], graded: engine.W
  * first, and the board must grade the rows that pull left behind, not a
  * third re-read of them.
  *
- * Refused before the Deadline (see `weekPicks`), for everyone — the grading
- * itself takes no actor, because nothing here turns on who is asking:
- * `weekPicks`' Deadline gate is not keyed to a caller, commissioner included.
+ * Refused before the Deadline (see `weekEntries`), for everyone — the grading
+ * itself takes no actor, because nothing here turns on who is asking: a
+ * board's Deadline gate is not keyed to a caller, commissioner included.
  */
 export async function weekResult(
   db: Db,
@@ -412,16 +413,10 @@ export async function weekResult(
   // different dates for the same person. It replaces the `joinedOrder` read
   // this used to do over every member in the app.
   const group = await groupBoard(db, groupId);
-  const memberPicks = await weekPicks(db, group, slate, now);
-  const rows = boardRows(group, memberPicks);
-  const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, memberPicks), rows.map(toEngineMember));
+  const { entries } = await weekEntries(db, slate, { board: group }, now);
+  const rows = entries.map((entry) => entry.member);
+  const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, entries), rows.map(toEngineMember));
   return gradedWeekResult(slate, rows, graded);
-}
-
-/** Who a Week's board holds: the group's members that `weekPicks` or `seasonPicks` gave a row. */
-function boardRows(group: readonly BoardMember[], memberPicks: readonly { memberId: number }[]): BoardMember[] {
-  const ids = new Set(memberPicks.map((m) => m.memberId));
-  return group.filter((m) => ids.has(m.id));
 }
 
 /** One graded Week and its Reveal, from a grading that has already happened. */
@@ -436,7 +431,7 @@ function gradedWeekResult(slate: Slate, rows: readonly BoardMember[], graded: en
  * Both halves matter, and both are easy to lose. An unpublished Week has no
  * frozen Deadline and no Slate anyone has seen. A published Week still open
  * scores zero for everyone, and counting it would drag every average down as
- * a week played (see `@/lib/scoring`) — and `weekPicks` would refuse the read
+ * a week played (see `@/lib/scoring`) — and `weekEntries` would refuse the read
  * anyway, because the Reveal is what the Deadline gates.
  *
  * Stated once here because three screens now turn on it: the Leaderboard adds
@@ -448,7 +443,7 @@ export async function playedWeeks(db: Db, season: Season, now: Date = new Date()
     where: and(eq(weeks.seasonId, season.id), eq(weeks.published, true)),
     orderBy: [asc(weeks.weekNumber)],
   });
-  return published.filter((w) => w.deadline !== null && w.deadline.getTime() <= now.getTime());
+  return published.filter((w) => deadlinePassed(w, now));
 }
 
 /** One grading pass over the season, before it is cut into the views screens ask for. */
@@ -471,13 +466,13 @@ async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPa
     games: slateOrder(gameRows.filter((g) => g.weekId === week.id)),
   }));
 
-  const boards = await seasonPicks(db, group, weekGames, now);
-  // `seasonPicks` has already applied `roster` a Week at a time, so this is not a
+  const boards = await seasonEntries(db, group, weekGames, now);
+  // `seasonEntries` has already applied `roster` a Week at a time, so this is not a
   // fourth answer to who is on the board � it is the season-wide superset of those
   // boards, within this group: its active members plus anyone since deactivated
   // who still has Picks, so the grading has a name for every id it hands back,
   // and an empty season is a table of zeroes rather than an empty screen.
-  const onABoard = new Set(weekGames.flatMap(({ week }) => boards.get(week.id)!.map((m) => m.memberId)));
+  const onABoard = new Set(weekGames.flatMap(({ week }) => boards.get(week.id)!.map((m) => m.member.id)));
   const rows = group.filter((m) => m.active || onABoard.has(m.id));
 
   const graded = scoreSeason(
