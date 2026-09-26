@@ -25,21 +25,21 @@
     },
     "OptionA.dc.html": {
       "h": 1300,
-      "title": "A \u00b7 Ticker line",
+      "title": "A · Ticker line",
       "w": 390,
       "x": 470,
       "y": 0
     },
     "OptionB.dc.html": {
       "h": 1300,
-      "title": "B \u00b7 In the badge, play in the sheet",
+      "title": "B · In the badge, play in the sheet",
       "w": 390,
       "x": 940,
       "y": 0
     },
     "OptionC.dc.html": {
       "h": 1300,
-      "title": "C \u00b7 Ticker line + the play's age",
+      "title": "C · Ticker line + the play's age",
       "w": 390,
       "x": 1410,
       "y": 0
@@ -72,6 +72,13 @@
       "w": 390,
       "x": 0,
       "y": 1420
+    },
+    "SheetPre.dc.html": {
+      "x": 4090,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Tap a game before kickoff (Tweaks: before/after the deadline, how far off the game is, your pick)"
     }
   },
   "createdOnFiles": {
@@ -131,7 +138,8 @@
     "Game.dc.html",
     "Mixed.dc.html",
     "SheetLive.dc.html",
-    "SheetFinal.dc.html"
+    "SheetFinal.dc.html",
+    "SheetPre.dc.html"
   ],
   "pages": [],
   "title": "Live Board: last play and possession"
