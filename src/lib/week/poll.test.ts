@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { GameResult } from "@/lib/results/result";
-import type { RevealGame } from "@/lib/results/results";
 import { MICHIGAN, TEXAS, VOIDED } from "@/test/sheet";
+import type { LiveGameJson } from "./json";
 import { IDLE_POLL_MS, LIVE_POLL_MS, nextPollMs } from "./poll";
 
 const IN_PROGRESS: GameResult = {
@@ -21,7 +21,7 @@ const FINAL: GameResult = {
   label: "Final",
 };
 
-const row = (result: GameResult): RevealGame => ({ game: MICHIGAN.game, result, picks: [] });
+const row = (result: GameResult): LiveGameJson => ({ game: MICHIGAN.game, result, picks: [], detail: null });
 
 describe("the Live Board's polling cadence", () => {
   test("polls every thirty seconds while a game is under way", () => {

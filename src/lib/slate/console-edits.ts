@@ -86,8 +86,8 @@ export function refreshSlate(
   client: CfbdClient,
   rain: RainChanceSource,
 ): Promise<ActionState> {
-  return consoleEdit(route, async ({ db, actor }) => {
-    await refreshFromFeed(db, actor, client, num(form, "weekId"), rain);
+  return consoleEdit(route, async ({ db, actor, now }) => {
+    await refreshFromFeed(db, actor, client, num(form, "weekId"), rain, now);
     return { revalidate: slateOnly };
   });
 }
