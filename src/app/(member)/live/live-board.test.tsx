@@ -13,14 +13,15 @@
  * `@testing-library/jest-dom` is not a dependency here, and its matchers fail
  * as invalid Chai properties rather than as missing ones.
  *
- * No `fetch` stub and no timers outside the freshness-line and live-sheet
- * blocks, bar one spy proving a final sheet asks for nothing. Most fixtures are `complete`, which is `nextPollMs`'s own "nothing
+ * No `fetch` stub and no timers outside the freshness-line, live-sheet and
+ * final-sheet blocks. Most fixtures are `complete`, which is `nextPollMs`'s own "nothing
  * left to learn" and leaves the polling effect unarmed; the rest end before
- * their first poll is due, and only a live game's sheet asks for its plays.
+ * their first poll is due, and only a live or final game's sheet asks for its plays.
  * The poll cadence is tested in `week/poll.test.ts`.
  */
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import type { FinalStats } from "@/lib/results/box-score";
 import type { GameResult } from "@/lib/results/result";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import type { MemberJson } from "@/lib/slate/json";
@@ -319,17 +320,119 @@ describe("the sheet a tap opens", () => {
     expect(screen.getByText(/A padlock marks/)).not.toBeNull();
   });
 
-  test("a final game's header reads Final, and there is no Recent plays to ask for", () => {
+  test("a void game's sheet asks for nothing", () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
+    render(<LiveBoard initial={state({ games: [game(VOIDED)] })} viewer={VIEWER} />);
+
+    openGame();
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("the final sheet (#309)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  const value = (display: string, v: number) => ({ display, value: v });
+  const STATS: FinalStats = {
+    colors: { away: "#F56600", home: "#BA0C2F" },
+    teamStats: [
+      { key: "totalYards", label: "Total yards", away: value("356", 356), home: value("421", 421) },
+      { key: "turnovers", label: "Turnovers", away: value("2", 2), home: value("0", 0) },
+      { key: "firstDowns", label: "1st downs", away: value("19", 19), home: value("24", 24) },
+      { key: "penalties", label: "Penalties", away: value("6-55", 55), home: value("4-30", 30) },
+      { key: "thirdDown", label: "3rd down", away: value("4/12", 4 / 12), home: value("7/13", 7 / 13) },
+      { key: "fourthDown", label: "4th down", away: value("0/0", 0), home: value("0/0", 0) },
+      { key: "possession", label: "Possession", away: value("27:10", 1630), home: value("32:50", 1970) },
+    ],
+    leaders: [
+      {
+        key: "passing",
+        label: "Passing yards",
+        away: { playerId: "1", name: "Cade Klubnik", position: "QB", value: "248", detail: "22/34, 1 TD" },
+        home: { playerId: "2", name: "Gunner Stockton", position: null, value: "262", detail: "24/33, 2 TD" },
+      },
+      { key: "rushing", label: "Rushing yards", away: null, home: null },
+      { key: "receiving", label: "Receiving yards", away: null, home: null },
+      {
+        key: "sacks",
+        label: "Sacks",
+        away: null,
+        home: { playerId: "3", name: "Jalon Walker", position: "LB", value: "1.5", detail: null },
+      },
+      { key: "tackles", label: "Tackles", away: null, home: null },
+    ],
+  };
+
+  /** The plays endpoint for a final game: no drives it matters for, and `final` as given. */
+  function serving(final: FinalStats | null) {
+    const fetch = vi.fn(async (path: string) =>
+      path.endsWith("/plays")
+        ? Response.json({ gameId: 1, fetchedAt: null, drives: [], descriptions: [], recap: null, final })
+        : new Response(null, { status: 304 }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    return fetch;
+  }
+
+  test("the header reads Final, and Team stats and Game leaders sit under the picks, with no Recent plays", async () => {
+    serving(STATS);
     render(<LiveBoard initial={state()} viewer={VIEWER} />);
 
     openGame();
     expect(screen.getAllByText("Final").length).toBeGreaterThan(1);
     expect(screen.getAllByText("34")).toHaveLength(2);
+    expect(await screen.findByText("Team stats")).not.toBeNull();
     expect(screen.queryByText("Recent plays")).toBeNull();
-    expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+
+    const bar = screen.getByRole("img", { name: "Total yards: Clemson 356, Georgia 421" });
+    const [away, home] = Array.from(bar.children) as HTMLElement[];
+    expect(away.style.width).toBe("45.8%");
+    expect(away.style.background).toBe("rgb(245, 102, 0)");
+    expect(home.style.background).toBe("rgb(186, 12, 47)");
+    // No 4th-down tries on either side splits the bar evenly.
+    expect((screen.getByRole("img", { name: /^4th down/ }).children[0] as HTMLElement).style.width).toBe("50%");
+    expect(screen.getAllByRole("img", { name: /: Clemson .*, Georgia / })).toHaveLength(7);
+  });
+
+  test("a leader shows name, position and detail; a missing position is left off, and an empty side says so", async () => {
+    serving(STATS);
+    render(<LiveBoard initial={state()} viewer={VIEWER} />);
+
+    openGame();
+    expect(await screen.findByText("Game leaders")).not.toBeNull();
+    expect(screen.getByText("Cade Klubnik").textContent).toBe("Cade Klubnik QB");
+    expect(screen.getByText("22/34, 1 TD")).not.toBeNull();
+    expect(screen.getByText("Gunner Stockton").textContent).toBe("Gunner Stockton");
+    expect(screen.getByText("Jalon Walker").textContent).toBe("Jalon Walker LB");
+    expect(screen.getByText("1.5")).not.toBeNull();
+    expect(screen.getByText("No sacks")).not.toBeNull();
+    expect(screen.queryByRole("img", { name: /Klubnik|Stockton/ })).toBeNull();
+  });
+
+  test("before the stats are published, one line says they are coming, and they show when they arrive", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    serving(null);
+    render(<LiveBoard initial={state()} viewer={VIEWER} />);
+
+    openGame();
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+    expect(screen.getByText("Stats arrive shortly after the final.")).not.toBeNull();
+    expect(screen.queryByText("Team stats")).toBeNull();
+
+    // The next poll finds them published.
+    const published = serving(STATS);
+    await act(async () => void (await vi.advanceTimersByTimeAsync(30_000)));
+    expect(screen.getByText("Team stats")).not.toBeNull();
+    expect(screen.queryByText(/Stats arrive/)).toBeNull();
+
+    // A box score never changes once stored, so the sheet stops asking.
+    await act(async () => void (await vi.advanceTimersByTimeAsync(90_000)));
+    expect(published.mock.calls.filter(([path]) => String(path).endsWith("/plays"))).toHaveLength(1);
   });
 });
 

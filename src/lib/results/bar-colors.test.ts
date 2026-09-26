@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { findLogo, type TeamColors } from "@/lib/logos";
-import { barColors, BLACK, CARD, ciede2000, contrast, deltaE2000, LIGHT_GRAY, MIN_CONTRAST, tooAlike } from "./bar-colors";
+import { barColors, BLACK, CARD, ciede2000, contrast, DARK, deltaE2000, LIGHT_GRAY, MIN_CONTRAST, tooAlike } from "./bar-colors";
 
 const colors = (school: string): TeamColors => {
   const logo = findLogo(school);
@@ -28,9 +28,12 @@ describe("the measures", () => {
     // Texas orange and Ohio State red, at 16, fall on the cautious side of the cut-off.
     expect(deltaE2000("#BF5700", "#BB0000")).toBeCloseTo(16.4, 1);
     expect(tooAlike("#BF5700", "#BB0000")).toBe(true);
-    // Michigan navy counts as dark beside black; Georgia red does not.
-    expect(tooAlike("#00274C", BLACK)).toBe(true);
-    expect(tooAlike("#BA0C2F", BLACK)).toBe(false);
+    // Black by a navy reads as one bar: Southern Miss and BYU, at 22, are too alike.
+    expect(tooAlike(BLACK, "#002E5D")).toBe(true);
+    // Michigan navy and Florida State garnet count as dark beside black; Georgia red does not.
+    expect(deltaE2000("#00274C", BLACK)).toBeLessThan(DARK);
+    expect(deltaE2000("#782F40", BLACK)).toBeLessThan(DARK);
+    expect(deltaE2000("#BA0C2F", BLACK)).toBeGreaterThan(DARK);
   });
 });
 
@@ -62,10 +65,10 @@ describe("bar colours", () => {
     expect(pair("UTEP", "Michigan")).toEqual({ away: LIGHT_GRAY, home: "#00274C" });
   });
 
-  test("a school missing from logos.ts takes the fallback: black beside a bar that isn't dark", () => {
-    // Florida A&M is FCS. Miami's orange fails 3:1, so its green stands, and green is not dark enough for gray.
-    expect(pair(undefined, "Miami")).toEqual({ away: BLACK, home: "#005030" });
+  test("a school missing from logos.ts takes the fallback: black beside a bar that isn't dark, light gray beside one that is", () => {
     expect(pair("Georgia", undefined)).toEqual({ away: "#BA0C2F", home: BLACK });
+    // Florida A&M is FCS. Miami's orange fails 3:1, so its green stands, and that green is dark.
+    expect(pair(undefined, "Miami")).toEqual({ away: LIGHT_GRAY, home: "#005030" });
   });
 
   test("when neither side has a usable colour, home is black and away light gray", () => {
