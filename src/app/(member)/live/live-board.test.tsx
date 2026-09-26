@@ -514,6 +514,207 @@ describe("the live sheet", () => {
   });
 });
 
+describe("the On the field card", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const play = (id: string, clock: string, text: string, home: number, yardsToGoal: number) => ({
+    id,
+    homeScore: home,
+    awayScore: 10,
+    period: 3,
+    clock,
+    wallClock: "2026-09-12T23:44:00.000Z",
+    teamId: GEORGIA,
+    team: "Georgia",
+    down: 1,
+    distance: 10,
+    yardsToGoal,
+    yardsGained: 20,
+    playTypeId: 1,
+    playType: "Rush",
+    epa: null,
+    garbageTime: false,
+    success: true,
+    rushPass: "rush",
+    downType: "standard",
+    playText: text,
+  });
+
+  /**
+   * Georgia (home, attacking towards 0) runs 20 yards to the Clemson 60, then
+   * 60 yards for a touchdown with the kick good. `touchdown` is the second
+   * play's drawing, so a revision can change it.
+   */
+  function feed(touchdown = [{ kind: "ground", from: 60, to: 0 }]) {
+    return {
+      gameId: 1,
+      fetchedAt: "2026-09-12T23:45:00.000Z",
+      drives: [
+        {
+          id: "d1",
+          offenseId: GEORGIA,
+          offense: "Georgia",
+          defenseId: CLEMSON,
+          defense: "Clemson",
+          playCount: 2,
+          yards: 80,
+          startPeriod: 3,
+          startClock: "9:00",
+          startYardsToGoal: 80,
+          endPeriod: 3,
+          endClock: "8:12",
+          endYardsToGoal: 0,
+          duration: "0:48",
+          scoringOpportunity: true,
+          result: "",
+          pointsGained: 7,
+          plays: [
+            play("p1", "8:40", "C.Back run for 20 yds to the GA40", 21, 80),
+            play("p2", "08:12", "C.Back run for 60 yds for a TOUCHDOWN (kick attempt good)", 28, 60),
+          ],
+        },
+      ],
+      descriptions: [
+        {
+          id: "p1",
+          start: 80,
+          side: "home",
+          segments: [{ kind: "ground", from: 80, to: 60 }],
+          rest: { spot: 60, side: "home", down: 1, distance: 10 },
+        },
+        {
+          id: "p2",
+          start: 60,
+          side: "home",
+          segments: [
+            ...touchdown,
+            { kind: "flash", label: "Touchdown" },
+            { kind: "score", home: 27, away: 10 },
+            { kind: "arc", from: 3, to: -10 },
+            { kind: "score", home: 28, away: 10 },
+          ],
+          rest: { spot: null, side: "home", down: null, distance: null },
+        },
+      ],
+      recap: null,
+      final: null,
+    };
+  }
+
+  /** Answers the plays endpoint from `plays()` on every poll; the week state has nothing new. */
+  function serving(plays: () => unknown) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string) =>
+        path.endsWith("/plays") ? Response.json(plays()) : new Response(null, { status: 304 }),
+      ),
+    );
+  }
+
+  const home = () => screen.getByText(/^(21|22|23|24|25|26|27|28)$/, { selector: "p span" });
+  const listed = (text: RegExp) => screen.queryAllByRole("listitem").some((li) => text.test(li.textContent ?? ""));
+  const advance = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
+
+  test("with the switch off, the sheet has no card and no gap", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    serving(() => feed());
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
+
+    openGame();
+    await advance(0);
+    expect(screen.queryByText("On the field")).toBeNull();
+    expect(listed(/TOUCHDOWN/)).toBe(true);
+  });
+
+  test("on open, the last play animates, and nothing is spoiled until the ball lands", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    serving(() => feed());
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} fieldCard />);
+
+    openGame();
+    await advance(0);
+    expect(screen.getByText("On the field")).not.toBeNull();
+    expect(screen.getByText("Play in progress")).not.toBeNull();
+    // The strip, the list and the header all stand where the run left them.
+    expect(screen.getByText("1st & 10")).not.toBeNull();
+    // No abbreviation placed for Clemson yet, so Georgia goes by name.
+    expect(screen.getByText("Georgia 40")).not.toBeNull();
+    expect(listed(/TOUCHDOWN/)).toBe(false);
+    // The board row already showed the score, so the replay on open leaves the header be.
+    expect(home().textContent).toBe("28");
+    await advance(10_000);
+    expect(listed(/TOUCHDOWN/)).toBe(true);
+    expect(screen.getByText("Kickoff")).not.toBeNull();
+  });
+
+  test("a play that arrives while the sheet is open holds the header, and steps the score as it lands", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    const run = feed();
+    const upToRun = { ...run, drives: [{ ...run.drives[0], plays: run.drives[0].plays.slice(0, 1) }], descriptions: run.descriptions.slice(0, 1) };
+    let answer: unknown = upToRun;
+    serving(() => answer);
+    const before: GameResult = { ...LIVE, shown: { awayScore: 10, homeScore: 21 }, live: { ...LIVE.live!, homeScore: 21 } };
+    render(<LiveBoard initial={state({ complete: false, games: [game(before)] })} viewer={VIEWER} fieldCard />);
+
+    openGame();
+    await advance(10_000);
+    expect(home().textContent).toBe("21");
+
+    // The touchdown arrives on the next poll.
+    answer = feed();
+    await advance(20_000);
+    expect(screen.getByText("Play in progress")).not.toBeNull();
+    expect(listed(/TOUCHDOWN/)).toBe(false);
+    expect(home().textContent).toBe("21");
+
+    // The ball reaches the goal line: +6, a point at a time, each its own render.
+    await advance(300 + 2800);
+    for (let i = 0; i < 6; i++) await advance(145);
+    expect(home().textContent).toBe("27");
+
+    // The extra point: +1, and the play lands.
+    await advance(1400);
+    await advance(145);
+    expect(home().textContent).toBe("28");
+    expect(screen.queryByText("Play in progress")).toBeNull();
+    expect(listed(/TOUCHDOWN/)).toBe(true);
+    expect(screen.getByText("Kickoff")).not.toBeNull();
+  });
+
+  test("the same play on the next poll does not replay; a changed drawing replays once", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    let answer = feed();
+    serving(() => answer);
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} fieldCard />);
+
+    openGame();
+    await advance(0);
+    await advance(10_000);
+    expect(screen.queryByText("Play in progress")).toBeNull();
+
+    // The next poll, same play, same drawing (a fresh object, as the wire gives it).
+    answer = feed();
+    await advance(20_000);
+    expect(screen.queryByText("Play in progress")).toBeNull();
+    expect(listed(/TOUCHDOWN/)).toBe(true);
+
+    // Revised under the same id: now a catch and run.
+    answer = feed([
+      { kind: "arc", from: 60, to: 30 },
+      { kind: "ground", from: 30, to: 0 },
+    ]);
+    await advance(30_000);
+    expect(screen.getByText("Play in progress")).not.toBeNull();
+    expect(listed(/TOUCHDOWN/)).toBe(false);
+    await advance(10_000);
+    expect(screen.queryByText("Play in progress")).toBeNull();
+  });
+});
+
 describe("the viewer's own rank", () => {
   test("reads the week, not the season — the stake on a Saturday is this week", () => {
     render(<LiveBoard initial={state({ scores: [score(FAMILY[0], 30), ...FAMILY.slice(1).map((m) => score(m, 10))] })} viewer={VIEWER} />);
