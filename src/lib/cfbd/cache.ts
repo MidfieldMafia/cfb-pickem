@@ -39,6 +39,15 @@ export function cachingCfbd(inner: CfbdClient, ttlMs: number, now: () => number 
     scoreboard: () => inner.scoreboard(),
     /** Never cached, for the reason `scoreboard` is not: the stale gate's claim is the bound. */
     livePlays: (gameId) => inner.livePlays(gameId),
+    /**
+     * Never cached either. Until a game's stats are published the answer is
+     * `[]`, and a ten-minute entry of it would outlast the five-minute retry;
+     * the claim on `weeks.stats_fetched_at` is the bound.
+     */
+    gameTeamStats: (q) => inner.gameTeamStats(q),
+    gamePlayerStats: (q) => inner.gamePlayerStats(q),
+    /** Kept in Neon for the season (`season_rosters`), so a copy here would only hold 9 MB in memory. */
+    roster: (year) => inner.roster(year),
     rankings: (year) => remember(`rankings:${year}`, () => inner.rankings(year)),
     lines: (q) => remember(weekKey("lines", q), () => inner.lines(q)),
     seasonGames: (year) => remember(`seasonGames:${year}`, () => inner.seasonGames(year)),

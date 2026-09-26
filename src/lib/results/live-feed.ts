@@ -11,6 +11,7 @@
  * docs/research/cfbd-live-plays.md.
  */
 import type { CfbdLiveDrive, CfbdLiveGame, CfbdLivePlay } from "@/lib/cfbd/types";
+import type { FinalStats } from "./box-score";
 import type { DriveRecap } from "./drive-recap";
 import { ballSide, type FieldTeams, type PlayDescription, type Side } from "./field";
 
@@ -155,4 +156,9 @@ export interface GamePlaysJson {
   descriptions: PlayDescription[];
   /** The drive before the newest, for the line under Recent plays. Null before the second drive. Worked out on every request. */
   recap: DriveRecap | null;
+  /**
+   * The final sheet's team stats, game leaders and bar colours. Null for "not
+   * yet": the game is not final, or CFBD has not published its stats.
+   */
+  final: FinalStats | null;
 }

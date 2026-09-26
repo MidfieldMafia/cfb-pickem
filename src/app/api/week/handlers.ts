@@ -131,7 +131,8 @@ export function getGamePlays(request: Request, route: PickRoute, gameIdParam: st
     if (!plays) {
       return Response.json({ error: "That game is not on this week's slate." } satisfies ApiError, { status: 404 });
     }
-    const etag = `W/"plays-${gameId}-${plays.fetchedAt ?? "none"}"`;
+    // A box score is stored once and never changes, so whether it is here is all the tag needs.
+    const etag = `W/"plays-${gameId}-${plays.fetchedAt ?? "none"}-${plays.final ? "final" : "not-final"}"`;
     const headers = { etag, "cache-control": "no-store" };
     if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
     return Response.json(plays, { headers });

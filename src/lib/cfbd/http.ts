@@ -12,6 +12,14 @@ const CFBD_BASE_URL = "https://api.collegefootballdata.com";
 export const LIVE_PLAYS_TIMEOUT_MS = 8_000;
 
 /**
+ * How long a box-score or roster call may take. They are larger (2.5 MB for
+ * a week's player stats, 9 MB for a season's roster) and run inside a
+ * member's request like the plays, so they get longer, but still a bound: a
+ * call that times out is retried on the next claim.
+ */
+export const STATS_TIMEOUT_MS = 15_000;
+
+/**
  * A `Refusal`, not a fault: the feed being down is not the commissioner's
  * mistake, but "Check the feed now" is a button they pressed, so the honest
  * answer is a sentence under it rather than the error page. The message names
@@ -50,6 +58,11 @@ export function httpCfbd(apiKey: string, fetchImpl: typeof fetch = fetch): CfbdC
     // No year or week: the endpoint has neither, and answers the week being played.
     scoreboard: () => get("/scoreboard", { classification: "fbs" }),
     livePlays: (gameId) => get("/live/plays", { gameId }, AbortSignal.timeout(LIVE_PLAYS_TIMEOUT_MS)),
+    gameTeamStats: (q) =>
+      get("/games/teams", { ...regular(q), classification: "fbs" }, AbortSignal.timeout(STATS_TIMEOUT_MS)),
+    gamePlayerStats: (q) =>
+      get("/games/players", { ...regular(q), classification: "fbs" }, AbortSignal.timeout(STATS_TIMEOUT_MS)),
+    roster: (year) => get("/roster", { year }, AbortSignal.timeout(STATS_TIMEOUT_MS)),
     rankings: (year) => get("/rankings", { year, seasonType: "regular" }),
     lines: (q) => get("/lines", regular(q)),
     seasonGames: (year) => get("/games", { year, seasonType: "regular", classification: "fbs" }),

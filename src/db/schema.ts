@@ -24,6 +24,7 @@ import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import { chatReactionKinds } from "@/lib/chat/reactions";
 import type { CfbdLiveDrive } from "@/lib/cfbd/types";
 import type { GameDetail } from "@/lib/detail";
+import type { BoxScore, Positions } from "@/lib/results/box-score";
 import type { LiveFeed } from "@/lib/results/live-feed";
 import type { Rules } from "@/lib/scoring/types";
 
@@ -62,6 +63,13 @@ export const weeks = pgTable(
      * member traffic schedules the feed calls without exceeding the quota.
      */
     scoreboardFetchedAt: utc("scoreboard_fetched_at"),
+    /**
+     * When this Week's box scores were last asked for: the stats gate's claim,
+     * as `scoreboard_fetched_at` is the results gate's, so a final game waiting
+     * on CollegeFootballData costs two calls every five minutes however many
+     * members are looking. See `refreshStatsIfStale`.
+     */
+    statsFetchedAt: utc("stats_fetched_at"),
     createdAt: utc("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("weeks_season_week_idx").on(t.seasonId, t.weekNumber)],
@@ -190,6 +198,33 @@ export const liveFeeds = pgTable("live_feeds", {
 });
 
 export type LiveFeedRow = typeof liveFeeds.$inferSelect;
+
+/**
+ * A final Game's box score for the Game sheet: team stats and game leaders,
+ * positions included, stored the first time CFBD has both halves and never
+ * fetched again. The bar colours are not here; they are worked out on read.
+ */
+export const gameStats = pgTable("game_stats", {
+  gameId: integer("game_id")
+    .primaryKey()
+    .references(() => games.id),
+  boxScore: jsonb("box_score").$type<BoxScore>().notNull(),
+  fetchedAt: utc("fetched_at").notNull(),
+});
+
+/**
+ * Every player's position for a Season, by CFBD athlete id, from one
+ * `/roster?year=` call: the whole roster is 9 MB and 31,000 players, and
+ * only the positions are kept, without the nulls and "?"s. Read when a box
+ * score is first stored, to put a position beside each leader.
+ */
+export const seasonRosters = pgTable("season_rosters", {
+  seasonId: integer("season_id")
+    .primaryKey()
+    .references(() => seasons.id),
+  positions: jsonb("positions").$type<Positions>().notNull(),
+  fetchedAt: utc("fetched_at").notNull(),
+});
 
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),

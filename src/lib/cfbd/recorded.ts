@@ -1,8 +1,11 @@
+import gamePlayerStats2026w2 from "./fixtures/2026-week-2/game-player-stats.json";
+import gameTeamStats2026w2 from "./fixtures/2026-week-2/game-team-stats.json";
 import games2026w2 from "./fixtures/2026-week-2/games.json";
 import lines2026w2 from "./fixtures/2026-week-2/lines.json";
 import media2026w2 from "./fixtures/2026-week-2/media.json";
 import rankings2026 from "./fixtures/2026-week-2/rankings.json";
 import records2026 from "./fixtures/2026-week-2/records.json";
+import roster2026 from "./fixtures/2026-week-2/roster.json";
 import seasonGames2026 from "./fixtures/2026-week-2/season-games.json";
 import stats2026 from "./fixtures/2026-week-2/stats.json";
 import venues from "./fixtures/2026-week-2/venues.json";
@@ -15,10 +18,13 @@ import type {
   CfbdClient,
   CfbdGame,
   CfbdGameMedia,
+  CfbdGamePlayerStats,
+  CfbdGameTeamStats,
   CfbdGameWeather,
   CfbdLiveGame,
   CfbdPollWeek,
   CfbdPregameWinProbability,
+  CfbdRosterPlayer,
   CfbdScoreboardGame,
   CfbdTeamRecord,
   CfbdTeamStat,
@@ -117,12 +123,21 @@ export function noPlays(gameId: number): CfbdLiveGame {
  * season-wide responses (records, stats, season games, venues) are trimmed
  * to the teams and venues that appear in the week's games. The scoreboard is
  * the one derived entry, for the reason on `scoreboardOf`.
+ *
+ * The box scores were recorded on 2026-09-25, after the week was played, for
+ * the three games the test Slate uses (Oklahoma at Michigan, Ohio State at
+ * Texas, Florida A&M at Miami), and the roster is trimmed to the players in
+ * them. So the week's games and scoreboard say nothing is final while its box
+ * scores are all in: a suite that finishes a game says so with `feedWith`.
  */
 export const recordings = {
   "2026-week-2": {
     games: games2026w2 as CfbdGame[],
     scoreboard: scoreboardOf(games2026w2 as CfbdGame[]),
     livePlays: noPlays(0),
+    gameTeamStats: gameTeamStats2026w2 as CfbdGameTeamStats[],
+    gamePlayerStats: gamePlayerStats2026w2 as CfbdGamePlayerStats[],
+    roster: roster2026 as CfbdRosterPlayer[],
     rankings: rankings2026 as CfbdPollWeek[],
     lines: lines2026w2 as CfbdBettingGame[],
     seasonGames: seasonGames2026 as CfbdGame[],
@@ -169,6 +184,9 @@ export function recordedCfbd(name: RecordingName, overrides: Partial<Recording> 
       const recorded = recording.livePlays;
       return recorded.drives.length === 0 ? noPlays(gameId) : recorded;
     },
+    gameTeamStats: replay("gameTeamStats"),
+    gamePlayerStats: replay("gamePlayerStats"),
+    roster: replay("roster"),
     rankings: replay("rankings"),
     lines: replay("lines"),
     seasonGames: replay("seasonGames"),

@@ -31,6 +31,7 @@ import {
 } from "@/test/week-2";
 import type { GamePlaysJson } from "@/lib/results/live-feed";
 import { getGamePlays, getSheet, getWeekState, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
+import { refreshStatsIfStale } from "@/lib/results/box-scores";
 import { ingestResults } from "@/lib/results/writes";
 
 /** A PUT the routes would receive, with the body as JSON on the wire. */
@@ -477,7 +478,34 @@ describe("a game's plays, for the Game sheet", () => {
 
     const plays = await json<GamePlaysJson>(await getGamePlays(get(), asGrandma(SUNDAY), String(miami.id)));
 
-    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [], recap: null });
+    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [], recap: null, final: null });
+  });
+
+  test("a final game's box score is served once stored, and a poll holding the old tag sees it arrive", async () => {
+    const { db, week, asGrandma, michigan } = await setup();
+    const finals = { [OKLAHOMA_AT_MICHIGAN]: [24, 13] as [number, number] };
+    await ingestResults(db, feedWith(finals), await slateFor(db, week.id), SUNDAY);
+
+    const before = await getGamePlays(get(), asGrandma(SUNDAY), String(michigan.id));
+    // Final, but CFBD has not published its stats: "not yet".
+    expect((await json<GamePlaysJson>(before)).final).toBeNull();
+
+    await refreshStatsIfStale(db, feedWith(finals), await slateFor(db, week.id), SUNDAY);
+    const after = await getGamePlays(get(before.headers.get("etag")!), asGrandma(SUNDAY), String(michigan.id));
+
+    expect(after.status).toBe(200);
+    const { final } = await json<GamePlaysJson>(after);
+    expect(final?.colors).toEqual({ away: "#841617", home: "#00274C" });
+    expect(final?.teamStats.map((r) => r.key)).toEqual([
+      "totalYards",
+      "turnovers",
+      "firstDowns",
+      "penalties",
+      "thirdDown",
+      "fourthDown",
+      "possession",
+    ]);
+    expect(final?.leaders.map((r) => r.key)).toEqual(["passing", "rushing", "receiving", "sacks", "tackles"]);
   });
 
   test("a game off the published slate, or no game id at all, is a 404, and signed out is a 401", async () => {
