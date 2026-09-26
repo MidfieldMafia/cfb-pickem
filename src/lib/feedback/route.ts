@@ -9,6 +9,8 @@ import type { Db } from "@/db/types";
 import { consoleAction, type ConsoleRoute } from "@/lib/console/route";
 import type { EditOutcome } from "@/lib/console/state";
 import { integerField } from "@/lib/parse";
+import { notifyFeedback } from "@/lib/push/console-notify";
+import type { Pusher } from "@/lib/push/sender";
 import { Refusal } from "@/lib/refusal";
 import { InvalidFeedback, readFeedback, sendFeedback, setFeedbackDone } from "./feedback";
 import type { FeedbackState } from "./limits";
@@ -20,6 +22,8 @@ export interface FeedbackRoute {
   userAgent: () => Promise<string>;
   /** The wall clock unless given. */
   now?: () => Date;
+  /** Where the commissioners' push goes out; null or absent when push is not configured. */
+  pusher?: Pusher | null;
 }
 
 /** The You screen's Send feedback form. A refusal is the sentence above Send. */
@@ -27,7 +31,9 @@ export async function sendFromForm(route: FeedbackRoute, form: FormData): Promis
   const member = await route.requireMember();
   try {
     const input = await readFeedback(form);
-    const id = await sendFeedback(route.db, member, { ...input, userAgent: await route.userAgent() }, route.now?.() ?? new Date());
+    const now = route.now?.() ?? new Date();
+    const id = await sendFeedback(route.db, member, { ...input, userAgent: await route.userAgent() }, now);
+    await notifyFeedback(route.db, route.pusher ?? null, member, input.kind, input.text, now);
     return { sent: id };
   } catch (error) {
     if (!(error instanceof Refusal)) throw error;

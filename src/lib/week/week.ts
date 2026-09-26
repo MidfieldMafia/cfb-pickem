@@ -19,6 +19,7 @@ import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
 import { playedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
 import { refreshStatsIfStale } from "@/lib/results/box-scores";
+import { pusher } from "@/lib/push/sender";
 import { refreshResultsIfStale } from "@/lib/results/writes";
 import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
 
@@ -113,7 +114,7 @@ export interface WeekOptions {
 async function refreshQuietly(db: Db, cfbd: () => CfbdClient, slate: Slate, now: Date): Promise<Slate> {
   let fresh = slate;
   try {
-    fresh = (await refreshResultsIfStale(db, cfbd(), slate, now)).slate;
+    fresh = (await refreshResultsIfStale(db, cfbd(), slate, now, pusher())).slate;
   } catch (error) {
     console.warn("Results refresh skipped:", error instanceof Error ? error.message : error);
   }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { MessageSquare } from "lucide-react";
+import { Bell, MessageSquare } from "lucide-react";
 import { AppHeader, CopyButton, SECTION_LABEL, Badge, Button, Card, LINK } from "@saturday-slate/design-system";
 import { MemberMenu } from "@/components/member-menu";
 
@@ -118,6 +118,19 @@ export default async function You() {
           )}
           <Button asChild variant="outline" className="self-start">
             <Link href="/start">Start a group</Link>
+          </Button>
+        </section>
+      </Card>
+
+      <Card asChild className="mx-4 gap-2">
+        <section>
+          <p className={SECTION_LABEL}>Notifications</p>
+          <p className="text-sm text-muted-foreground">A buzz for new Chat messages and games going Final.</p>
+          <Button asChild variant="outline" className="tap self-start">
+            <Link href="/you/notifications">
+              <Bell aria-hidden />
+              Notifications
+            </Link>
           </Button>
         </section>
       </Card>

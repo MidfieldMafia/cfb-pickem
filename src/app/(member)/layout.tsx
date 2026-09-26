@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { db } from "@/db";
 import { AnalyticsMember } from "@/components/analytics-member";
 import { BottomNav } from "@/components/bottom-nav";
+import { PushRegistrar } from "@/components/push/registrar";
 import { WhatsNew } from "@/components/whats-new";
 import { currentChatUnread } from "@/lib/chat/current";
 import { requireMember } from "@/lib/members/current";
@@ -28,6 +29,7 @@ export default async function MemberLayout({ children }: { children: ReactNode }
   return (
     <>
       <AnalyticsMember memberId={member.id} />
+      <PushRegistrar />
       {children}
       <WhatsNew />
       <BottomNav locked={locked} picksOpen={picksOpen} chatUnread={chatUnread} />

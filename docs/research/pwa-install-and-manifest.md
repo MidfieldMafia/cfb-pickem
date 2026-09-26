@@ -24,7 +24,10 @@ Next.js 16 App Router declares manifest/icons.
    topic 1). Detect this via user-agent/heuristics if possible, and show an explicit
    "Tap ••• → Open in Safari" instruction before the A2HS instructions, to be safe on
    older iOS/host apps that don't support A2HS from their in-app browser.
-3. **Skip the service worker for now.** Neither iOS Safari nor current Chrome requires
+3. **Skip the service worker for now.** *(Superseded in part: Web Push (#PUSH-ISSUE) added
+   `public/sw.js`, a worker with `push` and `notificationclick` handlers and deliberately
+   no `fetch` handler — so it changes nothing about how pages load, and the cache-staleness
+   concern below does not arise. Keep it fetch-less.)* Neither iOS Safari nor current Chrome requires
    a service worker for "Add to Home Screen" installability (topic 5). Since this app
    shows live/frequently-changing scores, a service worker with an over-eager cache
    (or a naive cache-first strategy) risks serving stale scores; skipping it entirely

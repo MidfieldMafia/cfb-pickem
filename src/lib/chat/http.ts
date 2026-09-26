@@ -21,6 +21,8 @@ import { createHash } from "node:crypto";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { Refusal } from "@/lib/refusal";
+import { notifyChat } from "@/lib/push/chat-notify";
+import type { Pusher } from "@/lib/push/sender";
 import { chatThread, markRead, NotInGroup, postMessage, setReaction, takeDown, unreadCount } from "./chat";
 import { toChatStateJson, type ChatStateJson, type ChatUnreadJson } from "./json";
 import { isChatReactionKind } from "./reactions";
@@ -32,6 +34,8 @@ export interface ChatRoute {
   currentGroup: () => Promise<number | null>;
   /** The wall clock unless given. */
   now?: () => Date;
+  /** Where a new message's push goes out; null or absent when push is not configured. */
+  pusher?: Pusher | null;
 }
 
 interface ApiError {
@@ -114,7 +118,9 @@ export async function postChat(request: Request, route: ChatRoute): Promise<Resp
   const group = groupParam(body.group);
   return withChatContext(route, () => group, async (context) => {
     if (typeof body.text !== "string") return refuse("Say something first.", 400);
-    await postMessage(context.db, context.member, context.group, body.text, context.now);
+    const message = await postMessage(context.db, context.member, context.group, body.text, context.now);
+    // The push rides after the write: the poster sees their message whether or not anyone's phone buzzes.
+    await notifyChat(context.db, route.pusher ?? null, context.member, context.group, message, context.now);
     return answerThread(null, context);
   });
 }

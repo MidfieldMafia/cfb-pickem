@@ -35,6 +35,10 @@ import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types"
 import type { Commissioner } from "@/lib/members/authority";
 import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
+import { newlyClose, notifyClose } from "@/lib/push/close-notify";
+import { newlyNeedingReview, notifyReview } from "@/lib/push/console-notify";
+import { newlyFinal, notifyFinals } from "@/lib/push/finals-notify";
+import type { Pusher } from "@/lib/push/sender";
 import { applyGamePatches, gameWithWeek, slateFor, type Slate } from "@/lib/slate/slate";
 import { toLiveFeed, type LiveFeed } from "./live-feed";
 import { describeResult, effectiveResult } from "./result";
@@ -261,6 +265,7 @@ export async function ingestResults(
   cfbd: CfbdClient,
   slate: Slate,
   now: Date = new Date(),
+  push: Pusher | null = null,
 ): Promise<{ changed: number }> {
   const board = new Map((await cfbd.scoreboard()).map((g) => [g.id, g]));
   const unlisted = new Set(
@@ -284,20 +289,41 @@ export async function ingestResults(
     (game) => nextOf.get(game.id)?.status === "in_progress" && effectiveResult(game).status === "pending",
   );
   const plays = await ingestPlays(db, cfbd, live, now);
-  return {
-    changed: await applyGamePatches(
-      db,
+  const changed = await applyGamePatches(
+    db,
+    slate.games,
+    (game) => {
+      const next = nextOf.get(game.id);
+      if (next === undefined) return null;
+      const read = plays.get(game.id);
+      const withPlays = read ? { ...next, liveFeed: read.ok ? read.feed : game.liveFeed } : next;
+      return sameColumns(withPlays, game) ? null : withPlays;
+    },
+    now,
+  );
+  // Finals go out once the rows say final, so a tap on the banner finds the score already there.
+  await notifyFinals(
+    db,
+    push,
+    newlyFinal(
       slate.games,
-      (game) => {
-        const next = nextOf.get(game.id);
-        if (next === undefined) return null;
-        const read = plays.get(game.id);
-        const withPlays = read ? { ...next, liveFeed: read.ok ? read.feed : game.liveFeed } : next;
-        return sameColumns(withPlays, game) ? null : withPlays;
-      },
-      now,
+      (game) => effectiveResult(game),
+      (game) => nextOf.get(game.id),
     ),
-  };
+    now,
+  );
+  // A game that just came within one score late: once per game, so a lead swinging across polls does not buzz twice.
+  await notifyClose(
+    db,
+    push,
+    newlyClose(slate.games, (game) => nextOf.get(game.id)),
+    now,
+  );
+  // A game the feed left pending past the review line is the commissioners' to settle; they hear as it crosses.
+  // The rows in hand predate this pass's patches, so a game the feed just settled is set aside by hand.
+  const stillPending = slate.games.filter((game) => nextOf.get(game.id)?.status !== "final");
+  await notifyReview(db, push, newlyNeedingReview(stillPending, slate.week.scoreboardFetchedAt, now), now);
+  return { changed };
 }
 
 /**
@@ -345,6 +371,7 @@ export async function refreshResultsIfStale(
   cfbd: CfbdClient,
   slate: Slate,
   now: Date = new Date(),
+  push: Pusher | null = null,
 ): Promise<RefreshedSlate> {
   const weekId = slate.week.id;
   if (!slate.week.published) return { outcome: "idle", slate };
@@ -357,7 +384,7 @@ export async function refreshResultsIfStale(
     .where(and(eq(weeks.id, weekId), or(isNull(weeks.scoreboardFetchedAt), lte(weeks.scoreboardFetchedAt, cutoff))))
     .returning({ id: weeks.id });
   if (claimed.length === 0) return { outcome: "fresh", slate };
-  await ingestResults(db, cfbd, slate, now);
+  await ingestResults(db, cfbd, slate, now, push);
   return { outcome: "refreshed", slate: await slateFor(db, weekId) };
 }
 
