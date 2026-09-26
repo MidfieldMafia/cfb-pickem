@@ -17,7 +17,7 @@ import { plural } from "@/lib/plural";
 import { isVoid, voidNote, type MemberJson } from "@/lib/slate/json";
 import { fetchWeekState } from "@/lib/week/client";
 import { agoLabel, dueInLabel } from "@/lib/week/freshness";
-import type { WeekStateJson } from "@/lib/week/json";
+import type { LiveGameJson, WeekStateJson } from "@/lib/week/json";
 import { nextPollMs } from "@/lib/week/poll";
 
 /**
@@ -638,7 +638,7 @@ export function LiveBoard({
     [...initial.games].sort((a, b) => orderKey(a.result) - orderKey(b.result)).map((g) => g.game.id),
   );
   const byId = new Map(state.games.map((g) => [g.game.id, g]));
-  const ordered = gameOrder.map((id) => byId.get(id)).filter((g): g is RevealGame => g !== undefined);
+  const ordered = gameOrder.map((id) => byId.get(id)).filter((g): g is LiveGameJson => g !== undefined);
   const openGame = state.games.find((g) => g.game.id === openGameId) ?? null;
 
   return (

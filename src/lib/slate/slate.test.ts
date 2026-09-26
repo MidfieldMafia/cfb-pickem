@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
+import { games } from "@/db/schema";
 import { recordedCfbd, recordings } from "@/lib/cfbd/recorded";
 import {
   FAMU_AT_MIAMI,
@@ -6,7 +8,9 @@ import {
   pickAs,
   OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
+  SATURDAY_EVENING,
   seedWeek2,
+  SUNDAY,
 } from "@/test/week-2";
 import {
   addGame,
@@ -15,6 +19,7 @@ import {
   publishedSlate,
   publishSlate,
   refreshFromFeed,
+  refreshUpcomingSlates,
   removeGame,
   setDeadline,
   setTiebreaker,
@@ -159,7 +164,14 @@ describe("slate builder", () => {
     const moved = recordings["2026-week-2"].games.map((g) =>
       g.id === OKLAHOMA_AT_MICHIGAN ? { ...g, startDate: "2026-09-13T00:00:00.000Z" } : g,
     );
-    const changed = await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { games: moved }), week.id, rain);
+    const changed = await refreshFromFeed(
+      db,
+      jonah,
+      recordedCfbd("2026-week-2", { games: moved }),
+      week.id,
+      rain,
+      TUESDAY_BEFORE,
+    );
 
     expect(changed).toBe(1);
     const slate = await slateFor(db, week.id);
@@ -194,10 +206,84 @@ describe("slate builder", () => {
     const rainy = recordings["2026-week-2"].weather.map((w) =>
       w.id === OKLAHOMA_AT_MICHIGAN ? { ...w, temperature: 61.2, weatherConditionCode: 8, weatherCondition: "Rain" } : w,
     );
-    expect(await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(1);
+    expect(await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain, TUESDAY_BEFORE)).toBe(1);
     const slate = await slateFor(db, week.id);
     expect(slate.games[0].detail?.weather).toMatchObject({ temperature: 61, icon: "cloud-rain" });
     // A second refresh with the same feed changes nothing.
-    expect(await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain)).toBe(0);
+    expect(await refreshFromFeed(db, jonah, recordedCfbd("2026-week-2", { weather: rainy }), week.id, rain, TUESDAY_BEFORE)).toBe(0);
+  });
+  test("after publish the refresh moves the spread and ranks too, and each game freezes at its own kickoff", async () => {
+    const { db, jonah, candidate, rain } = await setup();
+    const week = await openWeek(db, jonah, 2);
+    const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
+    const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
+    await setTiebreaker(db, jonah, week.id, texas.id);
+    await publishSlate(db, jonah, week.id, TUESDAY_BEFORE);
+
+    // The line moves on both games and a new poll unranks everyone.
+    const moved = recordedCfbd("2026-week-2", {
+      lines: recordings["2026-week-2"].lines.map((g) =>
+        g.id === OHIO_STATE_AT_TEXAS || g.id === OKLAHOMA_AT_MICHIGAN
+          ? { ...g, lines: [{ ...g.lines[0], spread: -7, formattedSpread: g.id === OHIO_STATE_AT_TEXAS ? "Texas -7" : "Michigan -7" }] }
+          : g,
+      ),
+      rankings: [],
+    });
+    const byTeam = async () =>
+      Object.fromEntries((await slateFor(db, week.id)).games.map((g) => [g.homeTeam, g]));
+
+    // Saturday evening: Michigan kicked off at 16:00, Texas is still to come.
+    expect(await refreshFromFeed(db, jonah, moved, week.id, rain, SATURDAY_EVENING)).toBe(1);
+    let rows = await byTeam();
+    expect(rows.Texas).toMatchObject({ spread: "Texas -7", homeRank: null, awayRank: null });
+    expect(rows.Texas.detail?.spread).toBe("Texas -7");
+    // Michigan is frozen whole: kickoff, spread, ranks and detail as they were.
+    expect(rows.Michigan).toMatchObject({
+      kickoff: michigan.kickoff,
+      spread: michigan.spread,
+      homeRank: michigan.homeRank,
+      awayRank: michigan.awayRank,
+      detail: michigan.detail,
+    });
+
+    // The same feed before kickoff reaches Michigan as well.
+    expect(await refreshFromFeed(db, jonah, moved, week.id, rain, TUESDAY_BEFORE)).toBe(1);
+    rows = await byTeam();
+    expect(rows.Michigan).toMatchObject({ spread: "Michigan -7", homeRank: null, awayRank: null });
+    expect((await slateFor(db, week.id)).deadline?.toISOString()).toBe("2026-09-12T16:00:00.000Z");
+  });
+});
+
+describe("the daily refresh", () => {
+  test("refreshes every Week with a game still to kick off, each Week failing alone", async () => {
+    const { db, jonah, candidate, rain } = await setup();
+    await openWeek(db, jonah, 1);
+    const week2 = await openWeek(db, jonah, 2);
+    const texas = await addGame(db, jonah, week2.id, candidate(OHIO_STATE_AT_TEXAS));
+    await setTiebreaker(db, jonah, week2.id, texas.id);
+    await publishSlate(db, jonah, week2.id, TUESDAY_BEFORE);
+    // Week 3 carries a game too, and its feed will not answer.
+    const week3 = await openWeek(db, jonah, 3);
+    await addGame(db, jonah, week3.id, candidate(OKLAHOMA_AT_MICHIGAN));
+    await db.update(games).set({ spread: "stale" }).where(eq(games.id, texas.id));
+
+    const recorded = recordedCfbd("2026-week-2");
+    const cfbd = {
+      ...recorded,
+      games: async (query: { year: number; week: number }) => {
+        if (query.week === 3) throw new Error("CFBD is down");
+        return recorded.games(query);
+      },
+    };
+
+    // Week 1 has no games, so it is not read at all.
+    expect(await refreshUpcomingSlates(db, cfbd, rain, TUESDAY_BEFORE)).toEqual([
+      { weekNumber: 2, changed: 1 },
+      { weekNumber: 3, error: "CFBD is down" },
+    ]);
+    expect((await slateFor(db, week2.id)).games[0].spread).toBe("Texas -1.5");
+
+    // Once every game has kicked off, there is nothing left to refresh.
+    expect(await refreshUpcomingSlates(db, cfbd, rain, SUNDAY)).toEqual([]);
   });
 });

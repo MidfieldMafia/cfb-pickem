@@ -11,9 +11,21 @@
  * may reach the database at runtime: the Live Board is a `"use client"` file
  * and imports this module.
  */
+import type { GameDetail } from "@/lib/detail";
 import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/results";
 import { toGameView, toWeekJson, type WeekJson } from "@/lib/slate/json";
 import type { WeekContext } from "./week";
+
+/**
+ * A Live Board Game: the Reveal's Game, plus the stored `detail` (kickoff ·
+ * TV · venue, the spread, the weather) the Game sheet shows before kickoff.
+ * The daily refresh rewrites `detail` until kickoff, and it is part of the
+ * ETag's digest like everything else here, so a morning's new forecast
+ * reaches a phone on its next poll.
+ */
+export interface LiveGameJson extends RevealGame {
+  detail: GameDetail | null;
+}
 
 export interface WeekStateJson {
   week: WeekJson;
@@ -28,8 +40,8 @@ export interface WeekStateJson {
   complete: boolean;
   /** The board — who this Week counts. Empty before the Deadline. */
   members: ScoredMember[];
-  /** The Slate in kickoff order, each Game with its result and, after the Deadline, who took each side. */
-  games: RevealGame[];
+  /** The Slate in kickoff order, each Game with its result, its detail and, after the Deadline, who took each side. */
+  games: LiveGameJson[];
   /**
    * Everyone's Weekly Score as the engine grades the rows right now, in
    * finish order: provisional while games are going, because a pending pick
@@ -48,6 +60,8 @@ export interface WeekStateJson {
 export function toWeekStateJson(week: WeekContext): WeekStateJson {
   const { slate, sheet } = week;
   const result = week.state === "live" || week.state === "settled" ? week.result : null;
+  const detailOf = new Map(slate.games.map((game) => [game.id, game.detail]));
+  const games = result ? result.reveal.games : slate.games.map((game) => ({ ...toGameView(game), picks: [] }));
   return {
     week: toWeekJson(slate.week),
     year: slate.season.year,
@@ -56,7 +70,7 @@ export function toWeekStateJson(week: WeekContext): WeekStateJson {
     locked: sheet.locked,
     complete: result?.complete ?? false,
     members: result?.reveal.members ?? [],
-    games: result ? result.reveal.games : slate.games.map((game) => ({ ...toGameView(game), picks: [] })),
+    games: games.map((game) => ({ ...game, detail: detailOf.get(game.game.id) ?? null })),
     scores: result?.scores ?? null,
     weeklyWin: result?.weeklyWin ?? null,
   };

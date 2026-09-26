@@ -1,17 +1,8 @@
-import { timingSafeEqual } from "node:crypto";
 import { db } from "@/db";
 import { appUrl } from "@/lib/app-url";
 import { senderFromEnv } from "@/lib/messaging/sender";
 import { runScheduledReminder } from "@/lib/messaging/texts";
-
-/** Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; anything else is refused before any work. */
-function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const given = Buffer.from(request.headers.get("authorization") ?? "");
-  const wanted = Buffer.from(`Bearer ${secret}`);
-  return given.length === wanted.length && timingSafeEqual(given, wanted);
-}
+import { authorized } from "../auth";
 
 /**
  * The scheduled reminder. Vercel Hobby runs it once a day (see `vercel.json`);

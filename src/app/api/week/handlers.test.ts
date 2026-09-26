@@ -5,8 +5,9 @@
  * meets — the status codes, and the JSON body `put` reads to decide whether to
  * flip the screen to its locked state.
  */
+import { eq } from "drizzle-orm";
 import { describe, expect, test, vi } from "vitest";
-import type { Member } from "@/db/schema";
+import { games, type Member } from "@/db/schema";
 import { put } from "@/lib/picks/client";
 import type { ApiError, PickRoute } from "@/lib/picks/http";
 import type { SheetJson } from "@/lib/picks/json";
@@ -360,6 +361,26 @@ describe("the week state", () => {
     expect(state.games[0].result).toMatchObject({ status: "final", awayScore: 7, homeScore: 45 });
   });
 
+  test("each game carries its stored detail, and a refreshed detail changes the ETag", async () => {
+    const { asGrandma, michigan, db } = await setup();
+    const friday = new Date("2026-09-11T01:00:00Z");
+
+    const first = await getWeekState(poll(), asGrandma(friday));
+    const before = await json<WeekStateJson>(first);
+    const row = before.games.find((g) => g.game.id === michigan.id)!;
+    expect(row.detail).toMatchObject({ venue: "Michigan Stadium", tv: "FOX", spread: "Oklahoma -1.5" });
+
+    // The morning's refresh moves the forecast; the next poll must not be a 304.
+    await db
+      .update(games)
+      .set({ detail: { ...michigan.detail!, tv: "ABC" } })
+      .where(eq(games.id, michigan.id));
+    const moved = await getWeekState(poll(first.headers.get("etag")!), asGrandma(friday));
+    expect(moved.status).toBe(200);
+    const after = await json<WeekStateJson>(moved);
+    expect(after.games.find((g) => g.game.id === michigan.id)!.detail?.tv).toBe("ABC");
+  });
+
   test("the ETag varies by group, so one group's board is never served from another's cache", async () => {
     const { db, slate, grandma, jonah, michigan, family, route } = await setup();
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
@@ -443,6 +464,8 @@ describe("a game's plays, for the Game sheet", () => {
       segments: [{ kind: "ground", from: 66, to: 69 }, { kind: "score" }],
       rest: { spot: 69, side: "away", down: 2, distance: 7 },
     });
+    // The game's first drive is still going, so there is no previous drive to recap.
+    expect(plays.recap).toBeNull();
     expect(response.headers.get("cache-control")).toBe("no-store");
 
     const again = await getGamePlays(get(response.headers.get("etag")!), route, String(texas.id));
@@ -455,7 +478,7 @@ describe("a game's plays, for the Game sheet", () => {
 
     const plays = await json<GamePlaysJson>(await getGamePlays(get(), asGrandma(SUNDAY), String(miami.id)));
 
-    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [], final: null });
+    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [], recap: null, final: null });
   });
 
   test("a final game's box score is served once stored, and a poll holding the old tag sees it arrive", async () => {
