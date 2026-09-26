@@ -21,7 +21,7 @@ const FINAL: GameResult = {
   label: "Final",
 };
 
-const row = (result: GameResult): LiveGameJson => ({ game: MICHIGAN.game, result, picks: [], detail: null });
+const row = (result: GameResult): LiveGameJson => ({ game: MICHIGAN.game, result, picks: [], detail: null, ownPick: null });
 
 describe("the Live Board's polling cadence", () => {
   test("polls every thirty seconds while a game is under way", () => {

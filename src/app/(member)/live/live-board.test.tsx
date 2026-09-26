@@ -75,6 +75,7 @@ const VOIDED: GameResult = { ...PENDING, status: "void", label: "Void", note: "P
 function game(result: GameResult, picks: RevealPick[] = []): LiveGameJson {
   return {
     detail: null,
+    ownPick: null,
     game: {
       id: 1,
       awayTeamId: CLEMSON,
