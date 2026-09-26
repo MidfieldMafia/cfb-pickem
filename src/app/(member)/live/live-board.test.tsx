@@ -13,10 +13,11 @@
  * `@testing-library/jest-dom` is not a dependency here, and its matchers fail
  * as invalid Chai properties rather than as missing ones.
  *
- * No `fetch` stub and no timers outside the freshness-line block: every
- * fixture below is `complete`, which is `nextPollMs`'s own "nothing left to
- * learn" and leaves the polling effect unarmed. The poll cadence is tested in
- * `week/poll.test.ts`.
+ * No `fetch` stub and no timers outside the freshness-line and live-sheet
+ * blocks, bar one spy proving a final sheet asks for nothing. Most fixtures are `complete`, which is `nextPollMs`'s own "nothing
+ * left to learn" and leaves the polling effect unarmed; the rest end before
+ * their first poll is due, and only a live game's sheet asks for its plays.
+ * The poll cadence is tested in `week/poll.test.ts`.
  */
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -24,6 +25,7 @@ import type { GameResult } from "@/lib/results/result";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import type { MemberJson } from "@/lib/slate/json";
 import type { LiveGameJson, WeekStateJson } from "@/lib/week/json";
+import { kickoffDay, kickoffLine, kickoffTime } from "@/lib/week/kickoff";
 import { LiveBoard } from "./live-board";
 
 afterEach(cleanup);
@@ -227,7 +229,26 @@ describe("a pick's mark only grades once the game is final (#98)", () => {
 });
 
 describe("the sheet a tap opens", () => {
-  test("before the Deadline, says picks aren't visible yet rather than 0 of 0", () => {
+  test("before the Deadline, one card holds your own pick and when everyone's show, in place of the picks", () => {
+    const mine = { ...game(PENDING), ownPick: { teamId: GEORGIA, lock: "counts" as const } };
+    render(
+      <LiveBoard
+        initial={state({ locked: false, complete: false, games: [mine], scores: null, members: [] })}
+        viewer={VIEWER}
+      />,
+    );
+
+    openGame();
+    expect(screen.getByText("Your pick")).not.toBeNull();
+    expect(screen.getByLabelText("Lock of the Week")).not.toBeNull();
+    expect(screen.getByText(/Everyone.s picks show at the deadline/)).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Change your pick" }).getAttribute("href")).toBe("/picks");
+    expect(screen.queryByText(/Picks aren.t visible yet|of 0|Nobody picked/)).toBeNull();
+    // The one padlock here is on your own pick, inside the card that replaced the note.
+    expect(screen.queryByText(/A padlock marks/)).toBeNull();
+  });
+
+  test("before the Deadline with no pick yet, the link asks for one", () => {
     render(
       <LiveBoard
         initial={state({ locked: false, complete: false, games: [game(PENDING)], scores: null, members: [] })}
@@ -236,10 +257,45 @@ describe("the sheet a tap opens", () => {
     );
 
     openGame();
-    expect(screen.getAllByText(/Picks aren.t visible yet/)).toHaveLength(2);
-    expect(screen.queryByText(/of 0/)).toBeNull();
+    expect(screen.queryByText("Your pick")).toBeNull();
+    expect(screen.getByRole("link", { name: "Make your pick" })).not.toBeNull();
   });
 
+  test("before kickoff, the header is the date and time, and Game information lists the detail", () => {
+    const detail = {
+      kickoff: "2026-09-12T23:30:00.000Z",
+      venue: "Sanford Stadium",
+      city: "Athens, GA",
+      tv: "ABC",
+      homeWp: 0.7,
+      spread: "Georgia -6.5",
+      weather: { temperature: 68, precipitation: 40, icon: "cloud-rain" as const, wind: 9 },
+      home: { rank: 2, record: "3–0", pointsFor: null, pointsAgainst: null, yardsFor: null, yardsAgainst: null },
+      away: { rank: 4, record: "4–0", pointsFor: null, pointsAgainst: null, yardsFor: null, yardsAgainst: null },
+    };
+    const scheduled = { ...game(PENDING, picks(GEORGIA, [2, 3], "pending")), detail };
+    scheduled.game = { ...scheduled.game, spread: "Georgia -6.5" };
+    render(<LiveBoard initial={state({ complete: false, games: [scheduled], serverNow: "2026-09-12T15:00:00.000Z" })} viewer={VIEWER} />);
+
+    openGame();
+    // In the test machine's own zone, as a phone would after hydration.
+    const kickoff = new Date(detail.kickoff);
+    expect(screen.getByText(kickoffDay(kickoff, new Date("2026-09-12T15:00:00.000Z")))).not.toBeNull();
+    expect(screen.getByText(kickoffTime(kickoff))).not.toBeNull();
+    expect(screen.getByText("4–0")).not.toBeNull();
+    expect(screen.getByText("3–0")).not.toBeNull();
+    expect(screen.getByText("Game information")).not.toBeNull();
+    expect(screen.getByText(kickoffLine(kickoff))).not.toBeNull();
+    expect(screen.getByText("Sanford Stadium")).not.toBeNull();
+    expect(screen.getByText("Athens, GA")).not.toBeNull();
+    expect(screen.getByText("68°")).not.toBeNull();
+    expect(screen.getAllByText("ABC")).toHaveLength(2);
+    expect(screen.getByText("Georgia −6.5")).not.toBeNull();
+    // After the Deadline the picks show, with no Leading or Trailing before a snap, and no padlock to explain.
+    expect(screen.getByText("2 of 12")).not.toBeNull();
+    expect(screen.queryByText(/Leading|Trailing/)).toBeNull();
+    expect(screen.queryByText(/A padlock marks/)).toBeNull();
+  });
 
   test("lists every member who took a side, with no cap — twelve fit by wrapping, not by counting", () => {
     const all = FAMILY.map((m) => m.id);
@@ -260,6 +316,201 @@ describe("the sheet a tap opens", () => {
 
     openGame();
     expect(screen.getByLabelText(/dropped/)).not.toBeNull();
+    expect(screen.getByText(/A padlock marks/)).not.toBeNull();
+  });
+
+  test("a final game's header reads Final, and there is no Recent plays to ask for", () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    render(<LiveBoard initial={state()} viewer={VIEWER} />);
+
+    openGame();
+    expect(screen.getAllByText("Final").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("34")).toHaveLength(2);
+    expect(screen.queryByText("Recent plays")).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("the live sheet", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  /** A drive's worth of the feed, as the plays endpoint answers it. */
+  function playsJson(fetchedAt: string | null = "2026-09-12T23:45:00.000Z") {
+    const play = (id: string, clock: string, text: string, home: number, away: number) => ({
+      id,
+      homeScore: home,
+      awayScore: away,
+      period: 3,
+      clock,
+      wallClock: "2026-09-12T23:44:00.000Z",
+      teamId: GEORGIA,
+      team: "Georgia",
+      down: 1,
+      distance: 10,
+      yardsToGoal: 20,
+      yardsGained: 0,
+      playTypeId: 1,
+      playType: "Rush",
+      epa: null,
+      garbageTime: false,
+      success: false,
+      rushPass: "rush",
+      downType: "standard",
+      playText: text,
+    });
+    return {
+      gameId: 1,
+      fetchedAt,
+      drives:
+        fetchedAt === null
+          ? []
+          : [
+              {
+                id: "d1",
+                offenseId: GEORGIA,
+                offense: "Georgia",
+                defenseId: CLEMSON,
+                defense: "Clemson",
+                playCount: 2,
+                yards: 20,
+                startPeriod: 3,
+                startClock: "9:00",
+                startYardsToGoal: 20,
+                endPeriod: 3,
+                endClock: "8:12",
+                endYardsToGoal: 0,
+                duration: "0:48",
+                scoringOpportunity: true,
+                result: "",
+                pointsGained: 7,
+                plays: [
+                  play("p1", "9:00", "Timeout Clemson, clock 09:00", 21, 10),
+                  play("p2", "08:12", "C.Back run for 20 yds for a TOUCHDOWN (kick attempt good)", 28, 10),
+                ],
+              },
+            ],
+      descriptions: [
+        { id: "p1", start: null, side: null, segments: [], rest: { spot: null, side: null, down: null, distance: null } },
+        {
+          id: "p2",
+          start: 80,
+          side: "home",
+          segments: [{ kind: "flash", label: "Touchdown" }],
+          rest: { spot: null, side: "home", down: null, distance: null },
+        },
+      ],
+      recap: null,
+      final: null,
+    };
+  }
+
+  /** Answers the plays endpoint with `plays` and the week state with `weekState`, or a 304 without one. */
+  function serving(plays: unknown, weekState?: () => WeekStateJson) {
+    const fetch = vi.fn(async (path: string) => {
+      if (path.endsWith("/plays")) return Response.json(plays);
+      return weekState ? Response.json(weekState()) : new Response(null, { status: 304 });
+    });
+    vi.stubGlobal("fetch", fetch);
+    return fetch;
+  }
+
+  test("shows the score with the Live badge, and this drive's plays newest first with the score tagged", async () => {
+    serving(playsJson());
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
+
+    openGame();
+    expect(await screen.findByText("Recent plays")).not.toBeNull();
+    const rows = screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Timeout") || li.textContent?.includes("TOUCHDOWN"));
+    expect(rows[0].textContent).toContain("TOUCHDOWN");
+    expect(screen.getByText("Touchdown")).not.toBeNull();
+    // No abbreviation in the feed's words yet, so the teams go by name.
+    expect(screen.getByText("Clemson 10–28 Georgia")).not.toBeNull();
+    expect(screen.getByText("8:12", { selector: "li span" })).not.toBeNull();
+  });
+
+  test("polls the plays every 30 s while open, and stops when the sheet closes", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    const fetch = serving(playsJson());
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
+    const playCalls = () => fetch.mock.calls.filter(([path]) => String(path).endsWith("/plays")).length;
+
+    openGame();
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+    expect(playCalls()).toBe(1);
+
+    await act(async () => void (await vi.advanceTimersByTimeAsync(30_000)));
+    expect(playCalls()).toBe(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await act(async () => void (await vi.advanceTimersByTimeAsync(90_000)));
+    expect(playCalls()).toBe(2);
+  });
+
+  test("a hidden tab stops asking, and asks again the moment it is back", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    const fetch = serving(playsJson());
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
+    const playCalls = () => fetch.mock.calls.filter(([path]) => String(path).endsWith("/plays")).length;
+    let visibility: DocumentVisibilityState = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+
+    openGame();
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+    expect(playCalls()).toBe(1);
+
+    // Its next turn finds the tab hidden and asks nothing, then or after.
+    visibility = "hidden";
+    await act(async () => void (await vi.advanceTimersByTimeAsync(90_000)));
+    expect(playCalls()).toBe(1);
+
+    visibility = "visible";
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(playCalls()).toBe(2);
+  });
+
+  test("a game the feed does not carry has no Recent plays at all", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    serving(playsJson(null));
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
+
+    openGame();
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+    expect(screen.queryByText("Recent plays")).toBeNull();
+    expect(screen.queryByText(/Plays show up here/)).toBeNull();
+  });
+
+  test("a score change counts up a point at a time", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
+    const scored: GameResult = { ...LIVE, shown: { awayScore: 10, homeScore: 31 }, live: { ...LIVE.live!, homeScore: 31 } };
+    serving(playsJson(), () => state({ complete: false, games: [game(scored)] }));
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
+
+    openGame();
+    const home = () => screen.getByText(/^(28|29|30|31)$/, { selector: "p span" });
+    expect(home().textContent).toBe("28");
+
+    // The week state's next poll brings a field goal.
+    await act(async () => void (await vi.advanceTimersByTimeAsync(30_000)));
+    expect(home().textContent).toBe("28");
+    expect(home().className).toContain("text-live");
+
+    await act(async () => void (await vi.advanceTimersByTimeAsync(145)));
+    expect(home().textContent).toBe("29");
+
+    // Each point is its own render, so each gets its own act.
+    await act(async () => void (await vi.advanceTimersByTimeAsync(145)));
+    await act(async () => void (await vi.advanceTimersByTimeAsync(145)));
+    expect(home().textContent).toBe("31");
+    expect(home().className).not.toContain("text-live");
   });
 });
 

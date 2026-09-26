@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { fetchWeekState, WEEK_STATE_PATH } from "./client";
+import { fetchGamePlays, fetchWeekState, gamePlaysPath, WEEK_STATE_PATH } from "./client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -42,5 +42,24 @@ describe("fetching the week state", () => {
 
     answering(() => Promise.reject(new TypeError("Failed to fetch")));
     expect(await fetchWeekState(null)).toEqual({ kind: "failed" });
+  });
+});
+
+describe("fetching a game's plays", () => {
+  test("asks the game's own endpoint with the ETag it holds", async () => {
+    const calls = answering(Response.json({ gameId: 7 }, { headers: { etag: 'W/"p"' } }));
+
+    expect(await fetchGamePlays(7, 'W/"o"')).toEqual({ kind: "fresh", plays: { gameId: 7 }, etag: 'W/"p"' });
+    expect(calls[0].path).toBe(gamePlaysPath(7));
+    expect(calls[0].path).toBe("/api/week/games/7/plays");
+    expect(calls[0].init.headers).toEqual({ "if-none-match": 'W/"o"' });
+  });
+
+  test("a 304 is unchanged and a refusal fails quietly", async () => {
+    answering(new Response(null, { status: 304 }));
+    expect(await fetchGamePlays(7, 'W/"o"')).toEqual({ kind: "unchanged" });
+
+    answering(new Response("not on the slate", { status: 404 }));
+    expect(await fetchGamePlays(7, null)).toEqual({ kind: "failed" });
   });
 });

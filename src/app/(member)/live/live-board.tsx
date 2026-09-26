@@ -1,17 +1,19 @@
 "use client";
 
-import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, Scale, X } from "lucide-react";
+import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, X } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { AppHeader, LocalTime, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, StandingCard } from "@saturday-slate/design-system";
+import { AppHeader, LocalTime, Badge, Card, StandingCard } from "@saturday-slate/design-system";
 
 import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
 
+import { GameSheet } from "./game-sheet";
+
 import { useDeadlineClock } from "@/lib/picks/clock";
 import { clockLabel, type GameResult } from "@/lib/results/result";
-import type { RevealGame, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
-import { sideStanding, type SideStanding } from "@/lib/results/side";
+import type { RevealGame, RevealPick } from "@/lib/results/results";
+import { sideStanding } from "@/lib/results/side";
 import { record, standing } from "@/lib/results/summary";
 import { plural } from "@/lib/plural";
 import { isVoid, voidNote, type MemberJson } from "@/lib/slate/json";
@@ -405,205 +407,6 @@ function GameRow({
   );
 }
 
-const STANDING_BORDER: Record<SideStanding, string> = {
-  won: "border-win",
-  lost: "border-loss/40",
-  leading: "border-border",
-  trailing: "border-border",
-  level: "border-border",
-  none: "border-border",
-};
-
-/** One side of the sheet: who took it, ringed by how it's doing, with a chip per member. */
-function SidePanel({
-  team,
-  rank,
-  teamId,
-  standingWord,
-  picks,
-  members,
-  viewerId,
-  total,
-}: {
-  team: string;
-  rank: number | null;
-  teamId: number;
-  standingWord: SideStanding;
-  picks: RevealPick[];
-  members: Map<number, ScoredMember>;
-  viewerId: number;
-  total: number;
-}) {
-  return (
-    <Card className={`grid gap-2 p-2.5 ${STANDING_BORDER[standingWord]}`}>
-      <div className="flex items-center gap-2">
-        <TeamLogo team={team} size={24} />
-        {rank ? <span className="text-xs font-bold tabular-nums text-muted-foreground">#{rank}</span> : null}
-        <span className="min-w-0 flex-1 truncate font-display text-[17px] font-black">{team}</span>
-        {standingWord === "won" ? <Badge variant="win">Won</Badge> : null}
-        {standingWord === "lost" ? <Badge variant="loss">Lost</Badge> : null}
-        {standingWord === "leading" ? <Badge variant="outline">Leading</Badge> : null}
-        {standingWord === "trailing" ? <Badge variant="outline">Trailing</Badge> : null}
-        {total > 0 ? (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {picks.length} of {total}
-          </span>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {total === 0 ? (
-          <span className="text-sm text-muted-foreground">Picks aren&rsquo;t visible yet.</span>
-        ) : picks.length === 0 ? (
-          <span className="text-sm text-muted-foreground">Nobody picked this side.</span>
-        ) : null}
-        {picks
-          .filter((p) => p.teamId === teamId)
-          .map((pick) => {
-            const member = members.get(pick.memberId);
-            if (!member) return null;
-            const you = pick.memberId === viewerId;
-            return (
-              <span
-                key={pick.memberId}
-                className={`inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 ${
-                  you ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                }`}
-              >
-                <Pennant avatarId={member.avatarId} name={member.displayName} size={20} />
-                <span className={`text-xs ${you ? "font-extrabold" : "font-semibold"}`}>{you ? "You" : member.displayName}</span>
-                {pick.lock === "counts" ? (
-                  <Lock size={12} strokeWidth={3} aria-label="Lock of the Week" />
-                ) : null}
-                {pick.lock === "dropped" ? (
-                  <LockOpen
-                    size={12}
-                    strokeWidth={3}
-                    className={you ? "" : "text-muted-foreground"}
-                    aria-label="Lock of the Week, dropped: the game is void"
-                  />
-                ) : null}
-              </span>
-            );
-          })}
-      </div>
-    </Card>
-  );
-}
-
-/** Everyone's Tiebreaker Guess, closest first once the game is final. */
-function TiebreakerSection({ game, scores, viewerId }: { game: RevealGame; scores: WeeklyScore[]; viewerId: number }) {
-  const final = game.result.status === "final";
-  const combined = final && game.result.shown ? game.result.shown.homeScore + game.result.shown.awayScore : null;
-  const guessed = scores.filter((s) => s.tiebreakerGuess !== null);
-  const sorted = [...guessed].sort((a, b) =>
-    final ? (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity) : a.tiebreakerGuess! - b.tiebreakerGuess!,
-  );
-  const missing = scores.length - guessed.length;
-  return (
-    <Card className="grid gap-2 border-secondary p-2.5">
-      <div className="flex items-baseline gap-2">
-        <span className="flex-1 text-xs font-bold uppercase tracking-[0.08em] text-secondary">Tiebreaker Guesses</span>
-        <span className="text-xs text-muted-foreground">{combined !== null ? `Finished ${combined}` : "Combined final score"}</span>
-      </div>
-      <div className="grid gap-0.5">
-        {sorted.map((s) => {
-          const you = s.member.id === viewerId;
-          return (
-            <div key={s.member.id} className={`flex min-h-8 items-center gap-2 rounded-md px-1.5 ${you ? "bg-accent" : ""}`}>
-              <Pennant avatarId={s.member.avatarId} name={s.member.displayName} size={20} />
-              <span className={`min-w-0 flex-1 truncate text-sm ${you ? "font-extrabold" : "font-semibold"}`}>
-                {you ? "You" : s.member.displayName}
-              </span>
-              {final ? <span className="text-xs tabular-nums text-muted-foreground">off by {s.tiebreakerError}</span> : null}
-              <span className="font-display text-[15px] tabular-nums">{s.tiebreakerGuess}</span>
-            </div>
-          );
-        })}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Closest guess breaks a tie on points.{" "}
-        {missing > 0 ? `${plural(missing, "member")} ${missing === 1 ? "has" : "have"} not guessed yet.` : "Everyone has guessed."}
-      </p>
-    </Card>
-  );
-}
-
-/** Tap a game for the full picture: everyone's pick, Locks, and the Tiebreaker Guesses. */
-function GameSheet({
-  game,
-  members,
-  scores,
-  viewerId,
-  tiebreakerGameId,
-  onClose,
-}: {
-  game: RevealGame | null;
-  members: Map<number, ScoredMember>;
-  scores: WeeklyScore[] | null;
-  viewerId: number;
-  tiebreakerGameId: number | null;
-  onClose: () => void;
-}) {
-  return (
-    <Drawer open={game !== null} onOpenChange={(open) => (open ? null : onClose())}>
-      <DrawerContent className="mx-auto max-w-md">
-        {game ? (
-          <>
-            <DrawerHeader>
-              <DrawerTitle>
-                <span className="inline-flex items-center gap-2">
-                  {game.game.awayTeam} at {game.game.homeTeam}
-                  {game.game.id === tiebreakerGameId ? <Scale size={16} className="text-secondary" aria-hidden /> : null}
-                </span>
-              </DrawerTitle>
-              <DrawerDescription>
-                {game.result.status === "final" && game.result.shown
-                  ? `Final · ${game.result.shown.awayScore}–${game.result.shown.homeScore}`
-                  : game.result.live
-                    ? `${clockLabel(game.result.live) ?? game.result.label} · ${game.result.live.awayScore}–${game.result.live.homeScore}`
-                    : game.result.status === "void"
-                      ? "Postponed, scores zero for everyone"
-                      : <LocalTime at={game.game.kickoff} style="slot" />}
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="grid gap-2.5 overflow-y-auto px-4 pb-2" style={{ maxHeight: "calc(100dvh - 240px)" }}>
-              <SidePanel
-                team={game.game.awayTeam}
-                rank={game.game.awayRank}
-                teamId={game.game.awayTeamId}
-                standingWord={sideStanding(game.result, "away")}
-                picks={game.picks}
-                members={members}
-                viewerId={viewerId}
-                total={members.size}
-              />
-              <SidePanel
-                team={game.game.homeTeam}
-                rank={game.game.homeRank}
-                teamId={game.game.homeTeamId}
-                standingWord={sideStanding(game.result, "home")}
-                picks={game.picks}
-                members={members}
-                viewerId={viewerId}
-                total={members.size}
-              />
-              {game.game.id === tiebreakerGameId && scores ? (
-                <TiebreakerSection game={game} scores={scores} viewerId={viewerId} />
-              ) : null}
-              <p className="text-xs text-muted-foreground">A padlock marks that member&rsquo;s Lock of the Week.</p>
-            </div>
-          </>
-        ) : null}
-        <DrawerFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Close
-          </Button>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-  );
-}
-
 export function LiveBoard({
   initial,
   viewer,
@@ -670,6 +473,9 @@ export function LiveBoard({
         scores={state.scores}
         viewerId={viewer.id}
         tiebreakerGameId={state.week.tiebreakerGameId}
+        locked={state.locked}
+        deadline={state.deadline}
+        serverNow={state.serverNow}
         onClose={() => setOpenGameId(null)}
       />
     </main>

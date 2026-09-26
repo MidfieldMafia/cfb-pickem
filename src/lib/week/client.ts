@@ -1,9 +1,10 @@
 /**
- * The browser side of the week-state endpoint: one GET the Live Board
- * repeats, carrying the ETag of the state it holds so an unchanged Week costs
- * a 304 and no body. Never throws — every caller is a timer on a phone that
+ * The browser side of the week-state endpoint, and of the Game sheet's plays
+ * endpoint beside it: one GET the phone repeats, carrying the ETag of what it
+ * holds so an unchanged answer costs a 304 and no body. Never throws — every caller is a timer on a phone that
  * has to keep going. Client-safe: no database imports.
  */
+import type { GamePlaysJson } from "@/lib/results/live-feed";
 import type { WeekStateJson } from "./json";
 
 export type WeekStateFetch =
@@ -20,16 +21,37 @@ export const WEEK_STATE_PATH = "/api/week/state";
  * in the default mode the browser would answer it from cache as a 200 and the
  * phone could not tell "unchanged" from "here it is again".
  */
-export async function fetchWeekState(etag: string | null): Promise<WeekStateFetch> {
+async function conditionalGet<T>(
+  path: string,
+  etag: string | null,
+): Promise<{ kind: "fresh"; body: T; etag: string | null } | { kind: "unchanged" } | { kind: "failed" }> {
   try {
-    const response = await fetch(WEEK_STATE_PATH, {
+    const response = await fetch(path, {
       cache: "no-store",
       headers: etag ? { "if-none-match": etag } : {},
     });
     if (response.status === 304) return { kind: "unchanged" };
     if (!response.ok) return { kind: "failed" };
-    return { kind: "fresh", state: (await response.json()) as WeekStateJson, etag: response.headers.get("etag") };
+    return { kind: "fresh", body: (await response.json()) as T, etag: response.headers.get("etag") };
   } catch {
     return { kind: "failed" };
   }
+}
+
+export async function fetchWeekState(etag: string | null): Promise<WeekStateFetch> {
+  const result = await conditionalGet<WeekStateJson>(WEEK_STATE_PATH, etag);
+  return result.kind === "fresh" ? { kind: "fresh", state: result.body, etag: result.etag } : result;
+}
+
+export type GamePlaysFetch =
+  | { kind: "fresh"; plays: GamePlaysJson; etag: string | null }
+  | { kind: "unchanged" }
+  | { kind: "failed" };
+
+export const gamePlaysPath = (gameId: number) => `/api/week/games/${gameId}/plays`;
+
+/** One Slate game's stored play-by-play, for the Game sheet's Recent plays. Same rules as the week state. */
+export async function fetchGamePlays(gameId: number, etag: string | null): Promise<GamePlaysFetch> {
+  const result = await conditionalGet<GamePlaysJson>(gamePlaysPath(gameId), etag);
+  return result.kind === "fresh" ? { kind: "fresh", plays: result.body, etag: result.etag } : result;
 }
