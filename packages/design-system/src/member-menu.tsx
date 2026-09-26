@@ -4,7 +4,8 @@ import { ShieldCheck } from "lucide-react";
 import { Pennant, type PennantMark } from "./pennant";
 import { SECTION_LABEL } from "./section-label";
 
-const ROW = "flex min-h-tap items-center gap-2 rounded-sm px-2 text-sm font-semibold no-underline hover:bg-accent";
+/** A row of the `MemberMenu` panel, for a caller's own rows passed as `children`. */
+export const MENU_ROW = "flex min-h-tap items-center gap-2 rounded-sm px-2 text-sm font-semibold no-underline hover:bg-accent";
 
 /**
  * The signed-in member in a header, as a menu: their pennant alone (it already
@@ -15,7 +16,8 @@ const ROW = "flex min-h-tap items-center gap-2 rounded-sm px-2 text-sm font-semi
  * `<details>` rather than a menu library, for the reason `GroupSwitcher` gives:
  * it opens without JavaScript and is safe to render inside a `"use client"`
  * tree. Presentational: the caller resolves the avatar, the group slot and
- * the Manage href.
+ * the Manage href. `children` are the caller's own rows, set before the You
+ * link.
  */
 export function MemberMenu({
   avatar,
@@ -23,6 +25,7 @@ export function MemberMenu({
   group,
   manage,
   href = "/you",
+  children,
 }: {
   avatar: PennantMark | undefined;
   displayName: string;
@@ -31,6 +34,8 @@ export function MemberMenu({
   /** Where Manage goes, from `currentManageHref`; no row when absent. */
   manage?: string | null;
   href?: string;
+  /** Extra rows, styled with `MENU_ROW`, between Manage and the You link. */
+  children?: ReactNode;
 }) {
   return (
     <details className="group relative shrink-0">
@@ -48,12 +53,13 @@ export function MemberMenu({
           </div>
         ) : null}
         {manage ? (
-          <Link href={manage} className={ROW}>
+          <Link href={manage} className={MENU_ROW}>
             <ShieldCheck size={16} className="shrink-0 text-primary" aria-hidden />
             Manage
           </Link>
         ) : null}
-        <Link href={href} className={ROW}>
+        {children}
+        <Link href={href} className={MENU_ROW}>
           {displayName}
           <span className="font-normal text-muted-foreground">Your profile</span>
         </Link>
