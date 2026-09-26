@@ -5,6 +5,7 @@ import { cfbd } from "@/lib/cfbd";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { toMemberJson } from "@/lib/slate/json";
+import { showsFieldCard } from "@/lib/week/game-sheet-live";
 import { toWeekStateJson } from "@/lib/week/json";
 import { currentWeek } from "@/lib/week/week";
 import { NoSlate } from "../picks/no-slate";
@@ -30,6 +31,7 @@ export default async function Live() {
     <LiveBoard
       initial={toWeekStateJson(week)}
       viewer={toMemberJson(member)}
+      fieldCard={showsFieldCard(member, process.env.GAME_SHEET_LIVE)}
       manage={await currentManageHref()}
       switcher={<GroupSwitcher choice={choice} />}
     />

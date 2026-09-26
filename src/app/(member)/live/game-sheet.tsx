@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Calendar, Eye, Lock, LockOpen, MapPin, Radio, Scale, Tv } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   Badge,
   Button,
@@ -31,6 +31,8 @@ import { plural } from "@/lib/plural";
 import { fetchGamePlays } from "@/lib/week/client";
 import type { LiveGameJson, OwnPickJson } from "@/lib/week/json";
 import { kickoffDay, kickoffLine, kickoffTime } from "@/lib/week/kickoff";
+
+import { FieldCard, useFieldPlayer } from "./field-card";
 
 /** How often an open sheet asks for a live game's plays: the ingest's own cadence on the stale gate (#269). */
 const PLAYS_POLL_MS = 30_000;
@@ -181,18 +183,31 @@ function TvChip({ tv }: { tv: string }) {
 }
 
 /**
+ * What the header shows while the "On the field" card is up: the score, the
+ * clock and the ball as of the last play that landed, so the header never
+ * gets ahead of the field (#310).
+ */
+interface Landed {
+  score: { home: number; away: number };
+  clock: string | null;
+  ball: Side | null;
+}
+
+/**
  * The scoreboard across the top of the sheet. Live and final, the score sits
  * in the middle with the ball-carrier's football on its outer side and the
  * Live badge or Final under it. Before kickoff, ESPN's layout (#318): the
  * relative date where the score goes, the kickoff time where the clock goes,
  * the TV chip under it, and each team's record under its name.
  */
-function SheetHeader({ game, serverNow }: { game: LiveGameJson; serverNow: string }) {
+function SheetHeader({ game, serverNow, landed }: { game: LiveGameJson; serverNow: string; landed: Landed | null }) {
   const { result, detail } = game;
   const g = game.game;
   const final = result.status === "final" && result.shown !== null;
   const beforeKickoff = result.status === "pending" && result.live === null;
-  const ball = result.live ? (result.live.feed?.ball ?? result.live.possession) : null;
+  const ball = landed ? landed.ball : result.live ? (result.live.feed?.ball ?? result.live.possession) : null;
+  const awayScore = landed?.score.away ?? result.shown?.awayScore ?? 0;
+  const homeScore = landed?.score.home ?? result.shown?.homeScore ?? 0;
   const awayLost = final && sideStanding(result, "away") === "lost";
   const homeLost = final && sideStanding(result, "home") === "lost";
   const kickoff = new Date(g.kickoff);
@@ -216,17 +231,17 @@ function SheetHeader({ game, serverNow }: { game: LiveGameJson; serverNow: strin
         <div className="flex flex-col items-center gap-1">
           <p className="flex items-baseline gap-2 font-display text-[32px] leading-10 font-black tabular-nums">
             {final ? null : <BallSlot has={ball === "away"} />}
-            <Score value={result.shown.awayScore} side="away" muted={awayLost} />
+            <Score value={awayScore} side="away" muted={awayLost} />
             <span aria-hidden className="text-xl text-border">
               –
             </span>
-            <Score value={result.shown.homeScore} side="home" muted={homeLost} />
+            <Score value={homeScore} side="home" muted={homeLost} />
             {final ? null : <BallSlot has={ball === "home"} />}
           </p>
           {result.live ? (
             <Badge variant="live" className="tabular-nums">
               <Radio size={12} aria-hidden />
-              {clockLabel(result.live) ?? result.label}
+              {(landed ? landed.clock : clockLabel(result.live)) ?? result.label}
             </Badge>
           ) : (
             <Badge variant="outline">{result.label}</Badge>
@@ -617,6 +632,8 @@ function TiebreakerSection({ game, scores, viewerId }: { game: LiveGameJson; sco
 }
 
 interface SheetProps {
+  /** The `GAME_SHEET_LIVE` switch, decided on the server for this member: whether the "On the field" card shows. */
+  fieldCard: boolean;
   members: Map<number, ScoredMember>;
   scores: WeeklyScore[] | null;
   viewerId: number;
@@ -627,21 +644,45 @@ interface SheetProps {
 }
 
 /** Everything under the drawer's handle for one game. Keyed on the game, so its polling and counting start fresh for each. */
-function SheetBody({ game, members, scores, viewerId, tiebreakerGameId, locked, deadline, serverNow }: SheetProps & { game: LiveGameJson }) {
+function SheetBody({
+  game,
+  fieldCard,
+  members,
+  scores,
+  viewerId,
+  tiebreakerGameId,
+  locked,
+  deadline,
+  serverNow,
+}: SheetProps & { game: LiveGameJson }) {
   const { result } = game;
   const g = game.game;
   const live = result.status === "pending" && result.live !== null;
   const beforeKickoff = result.status === "pending" && result.live === null;
   const final = result.status === "final";
   const feed = useGamePlays(g.id, live, final);
-  const card = feed ? recentPlays(feed, g) : null;
+  const teams = useMemo(
+    () => ({ homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId, homeTeam: g.homeTeam, awayTeam: g.awayTeam }),
+    [g.homeTeamId, g.awayTeamId, g.homeTeam, g.awayTeam],
+  );
+  // With the card up, the list and the header wait for each play to land.
+  const player = useFieldPlayer(feed, teams, fieldCard && live);
+  const card = player.shown ? recentPlays(player.shown, teams) : null;
+  const landed: Landed | null =
+    player.readout && player.holdsHeader
+      ? {
+          score: player.score ?? player.readout.score,
+          clock: player.readout.clock,
+          ball: player.readout.side,
+        }
+      : null;
   const padlock = locked && game.picks.some((pick) => pick.lock !== null);
 
   return (
     <>
-      <SheetHeader game={game} serverNow={serverNow} />
+      <SheetHeader game={game} serverNow={serverNow} landed={landed} />
       <div className="grid gap-2.5 overflow-y-auto px-4 pb-2" style={{ maxHeight: "calc(100dvh - 300px)" }}>
-        {/* The "On the field" card (#310) goes here, above the picks, while the game is live. */}
+        {player.readout ? <FieldCard player={player} awayTeam={g.awayTeam} homeTeam={g.homeTeam} /> : null}
         {locked ? (
           <>
             <SidePanel

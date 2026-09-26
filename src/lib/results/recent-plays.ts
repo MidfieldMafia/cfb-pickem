@@ -47,9 +47,7 @@ export interface RecentTeams extends FieldTeams {
 export function recentPlays(feed: GamePlaysJson, teams: RecentTeams): RecentPlays | null {
   if (feed.fetchedAt === null) return null;
   const all = feed.drives.flatMap((drive) => drive.plays);
-  const sideOf = (teamId: number): Side | null =>
-    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
-  const label = teamLabels(abbreviations(all, sideOf), teams);
+  const label = feedLabels(feed, teams);
   const descriptions = new Map(feed.descriptions.map((description) => [description.id, description]));
 
   // Scores are read against the play logged before, across drives, so the
@@ -80,6 +78,19 @@ export function recentPlays(feed: GamePlaysJson, teams: RecentTeams): RecentPlay
     })
     .reverse();
   return { plays, recap: recapLine(feed.recap, label) };
+}
+
+/** Each side's short name as the feed's play text writes it, the one the card and the field both use. */
+export function feedLabels(feed: GamePlaysJson, teams: RecentTeams): Record<Side, string> {
+  const sideOf = (teamId: number): Side | null =>
+    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
+  return teamLabels(
+    abbreviations(
+      feed.drives.flatMap((drive) => drive.plays),
+      sideOf,
+    ),
+    teams,
+  );
 }
 
 /**

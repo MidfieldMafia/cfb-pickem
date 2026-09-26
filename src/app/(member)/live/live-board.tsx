@@ -410,11 +410,14 @@ function GameRow({
 export function LiveBoard({
   initial,
   viewer,
+  fieldCard = false,
   manage,
   switcher,
 }: {
   initial: WeekStateJson;
   viewer: MemberJson;
+  /** The `GAME_SHEET_LIVE` switch for this member: whether the Game sheet shows the "On the field" card. */
+  fieldCard?: boolean;
   manage?: string | null;
   /**
    * The group name, rendered on the server and handed down. This file is
@@ -469,6 +472,7 @@ export function LiveBoard({
 
       <GameSheet
         game={openGame}
+        fieldCard={fieldCard}
         members={members}
         scores={state.scores}
         viewerId={viewer.id}

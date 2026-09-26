@@ -91,6 +91,8 @@ export interface FieldHeader {
 
 /** Plays that draw nothing: the field holds the last real play's resting state. */
 const MARKERS = /^(timeout|official timeout|end period|end of half|halftime|end of game|end of regulation)$/i;
+/** A timeout or a period marker: a play that draws nothing. */
+export const isMarker = (playType: string): boolean => MARKERS.test(playType);
 /** Markers after which nobody has the ball, so the Live Board hides its football. */
 const BREAKS = /^(end period|end of half|halftime|end of game|end of regulation)$/i;
 
