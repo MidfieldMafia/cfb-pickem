@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { recordings } from "@/lib/cfbd/recorded";
 import type { CfbdGamePlayerStatsSide, CfbdGameTeamStatsSide } from "@/lib/cfbd/types";
 import { FAMU_AT_MIAMI, OHIO_STATE_AT_TEXAS, OKLAHOMA_AT_MICHIGAN } from "@/test/week-2";
-import { shownPosition, toBoxScore, type BoxScore, type Positions } from "./box-score";
+import { awayShare, shownPosition, toBoxScore, type BoxScore, type Positions } from "./box-score";
 
 const recorded = recordings["2026-week-2"];
 
@@ -162,5 +162,28 @@ describe("game leaders", () => {
     // Two players in the recording have a null position, and neither is kept.
     expect(recorded.roster.filter((p) => p.position === null)).toHaveLength(2);
     expect(Object.values(positions)).not.toContain(null);
+  });
+});
+
+describe("the split bar", () => {
+  const side = (value: number) => ({ display: String(value), value });
+  const split = (away: number, home: number) => awayShare({ key: "totalYards", label: "Total yards", away: side(away), home: side(home) });
+
+  test("away's share of the two values, as the canvas sizes it", () => {
+    expect(split(356, 421)).toBeCloseTo(0.458, 3);
+    expect(split(2, 0)).toBe(1);
+    expect(split(0, 1)).toBe(0);
+  });
+
+  test("two zeroes split evenly rather than dividing by nothing", () => {
+    expect(split(0, 0)).toBe(0.5);
+  });
+
+  test("the recorded rows all land between 0 and 1", () => {
+    for (const r of boxOf(OHIO_STATE_AT_TEXAS).teamStats) {
+      const share = awayShare(r);
+      expect(share).toBeGreaterThanOrEqual(0);
+      expect(share).toBeLessThanOrEqual(1);
+    }
   });
 });
