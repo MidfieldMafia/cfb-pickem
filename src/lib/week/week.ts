@@ -18,6 +18,7 @@ import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
 import { playedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
+import { refreshStatsIfStale } from "@/lib/results/box-scores";
 import { refreshResultsIfStale } from "@/lib/results/writes";
 import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
 
@@ -103,14 +104,25 @@ export interface WeekOptions {
   cfbd?: () => CfbdClient;
 }
 
-/** A feed failure never breaks the page; the last scores stand and the Slate we hold is the one we read on from. */
+/**
+ * A feed failure never breaks the page; the last scores stand and the Slate we
+ * hold is the one we read on from. The box scores come after the scores, on a
+ * gate of their own and a catch of their own, so a stats call that fails or
+ * times out never costs the scores or the live plays.
+ */
 async function refreshQuietly(db: Db, cfbd: () => CfbdClient, slate: Slate, now: Date): Promise<Slate> {
+  let fresh = slate;
   try {
-    return (await refreshResultsIfStale(db, cfbd(), slate, now)).slate;
+    fresh = (await refreshResultsIfStale(db, cfbd(), slate, now)).slate;
   } catch (error) {
     console.warn("Results refresh skipped:", error instanceof Error ? error.message : error);
-    return slate;
   }
+  try {
+    await refreshStatsIfStale(db, cfbd(), fresh, now);
+  } catch (error) {
+    console.warn("Box scores skipped:", error instanceof Error ? error.message : error);
+  }
+  return fresh;
 }
 
 /**

@@ -66,6 +66,7 @@ function week(overrides: Partial<Week> = {}): Week {
     published: true,
     tiebreakerGameId: 7,
     scoreboardFetchedAt: null,
+    statsFetchedAt: null,
     createdAt: KICKOFF,
     ...overrides,
   };

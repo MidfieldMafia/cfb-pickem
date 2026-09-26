@@ -8,11 +8,13 @@ import { eq } from "drizzle-orm";
 import { liveFeeds } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { Slate } from "@/lib/slate/slate";
+import { finalStats } from "./box-scores";
 import { describePlays } from "./field";
 import { newestPlay, type GamePlaysJson } from "./live-feed";
 
 /**
- * One Slate game's stored plays, each with its drawable description. Null for
+ * One Slate game's stored plays, each with its drawable description, and its
+ * box score once it is final. Null for
  * a game the Slate does not have, so no other Week's feed is reachable.
  *
  * The newest play reads the game header's next snap from the Game's row, but
@@ -36,5 +38,6 @@ export async function gamePlays(db: Db, slate: Slate, gameId: number): Promise<G
       game,
       header,
     ),
+    final: await finalStats(db, game),
   };
 }

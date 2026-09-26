@@ -76,12 +76,14 @@ async function familyBeforeGroups() {
   // its slate through the app's own `addGame` and `ingestResults`, which name
   // every column in today's schema. So bring `games` alone forward. These
   // columns have nothing to do with the groups migration under test, and
-  // `0008_live-detail` and `0013_live-feeds` add them `if not exists`, so
-  // migrating the real folder forward later still passes over them cleanly.
+  // `0008_live-detail`, `0013_live-feeds` and `0014_game-stats` add them
+  // `if not exists`, so migrating the real folder forward later still passes
+  // over them cleanly. `weeks` comes forward for the same reason.
   await db.execute(sql`alter table games add column if not exists possession text`);
   await db.execute(sql`alter table games add column if not exists last_play text`);
   await db.execute(sql`alter table games add column if not exists situation text`);
   await db.execute(sql`alter table games add column if not exists live_feed jsonb`);
+  await db.execute(sql`alter table weeks add column if not exists stats_fetched_at timestamp with time zone`);
 
   await db.insert(seasons).values({
     year: 2026,

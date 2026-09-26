@@ -251,6 +251,64 @@ export interface CfbdLiveGame {
   drives: CfbdLiveDrive[];
 }
 
+/**
+ * One side of a final game's box score from `/games/teams`. Every `stat` is a
+ * preformatted string ("631", "7-12", "28:41"), and a category that came to
+ * zero can be missing altogether, so read them by `category`, never by index.
+ * See docs/research/cfbd-final-game-stats.md.
+ */
+export interface CfbdGameTeamStatsSide {
+  teamId: number;
+  team: string;
+  conference: string | null;
+  homeAway: "home" | "away";
+  points: number | null;
+  stats: { category: string; stat: string }[];
+}
+
+/** GET /games/teams: one entry per game with stats published so far, both sides in it. */
+export interface CfbdGameTeamStats {
+  id: number;
+  teams: CfbdGameTeamStatsSide[];
+}
+
+/** One player's figure in one type of one category. `id` is a string, and negative for the " Team" pseudo-player. */
+export interface CfbdAthleteStat {
+  id: string;
+  name: string;
+  stat: string;
+}
+
+/**
+ * One side of a game's player stats from `/games/players`. No `teamId`: the
+ * side is matched by `homeAway`. Every athlete in a category appears in every
+ * one of its types ("passing" has "C/ATT", "YDS", "TD", "INT", …).
+ */
+export interface CfbdGamePlayerStatsSide {
+  team: string;
+  conference: string | null;
+  homeAway: "home" | "away";
+  points: number | null;
+  categories: { name: string; types: { name: string; athletes: CfbdAthleteStat[] }[] }[];
+}
+
+/** GET /games/players: one entry per game with stats published so far. */
+export interface CfbdGamePlayerStats {
+  id: number;
+  teams: CfbdGamePlayerStatsSide[];
+}
+
+/** One player on a season's roster, from `/roster`. Only what the Game sheet reads is typed. */
+export interface CfbdRosterPlayer {
+  /** A string, the same id `/games/players` gives its athletes. */
+  id: string;
+  firstName: string;
+  lastName: string;
+  team: string;
+  /** Not normalised ("DL", "DE", "EDGE"…), and null or a literal "?" for about one player in twenty. */
+  position: string | null;
+}
+
 export interface WeekQuery {
   year: number;
   week: number;
@@ -274,6 +332,17 @@ export interface CfbdClient {
    * stale gate's claim is its one caller: see `ingestResults`.
    */
   livePlays(gameId: number): Promise<CfbdLiveGame>;
+  /**
+   * GET /games/teams for a regular-season week, FBS classification: every
+   * final game's team box score in one call, `[]` until any is published.
+   * Metered, and never cached: the stats gate's claim is its bound, and a
+   * cached `[]` would outlast the retry. See `refreshStatsIfStale`.
+   */
+  gameTeamStats(query: WeekQuery): Promise<CfbdGameTeamStats[]>;
+  /** GET /games/players for a regular-season week, FBS classification: ~2.5 MB for a whole week. Never cached, as above. */
+  gamePlayerStats(query: WeekQuery): Promise<CfbdGamePlayerStats[]>;
+  /** GET /roster for a season, every team: ~9 MB, fetched once a season and kept in Neon. */
+  roster(year: number): Promise<CfbdRosterPlayer[]>;
   /** GET /rankings for a season: every poll week published so far. */
   rankings(year: number): Promise<CfbdPollWeek[]>;
   /** GET /lines for a regular-season week. */

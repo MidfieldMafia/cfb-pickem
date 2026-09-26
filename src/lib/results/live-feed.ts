@@ -11,6 +11,7 @@
  * docs/research/cfbd-live-plays.md.
  */
 import type { CfbdLiveDrive, CfbdLiveGame, CfbdLivePlay } from "@/lib/cfbd/types";
+import type { FinalStats } from "./box-score";
 import { ballSide, type FieldTeams, type PlayDescription, type Side } from "./field";
 
 /** The newest play, as the Live Board row reads it. Text, type and team are the feed's own words. */
@@ -152,4 +153,9 @@ export interface GamePlaysJson {
   drives: CfbdLiveDrive[];
   /** One per play across `drives`, matched by `id`. Worked out on every request; nothing of it is stored. */
   descriptions: PlayDescription[];
+  /**
+   * The final sheet's team stats, game leaders and bar colours. Null for "not
+   * yet": the game is not final, or CFBD has not published its stats.
+   */
+  final: FinalStats | null;
 }

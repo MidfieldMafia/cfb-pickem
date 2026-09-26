@@ -99,6 +99,13 @@
       "when": 1790375910235,
       "tag": "0013_live-feeds",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790382413301,
+      "tag": "0014_game-stats",
+      "breakpoints": true
     }
   ]
 }
