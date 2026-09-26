@@ -104,12 +104,16 @@ export const games = pgTable(
     awayRank: integer("away_rank"),
     awayConference: text("away_conference"),
     kickoff: utc("kickoff").notNull(),
-    /** Spread snapshot at slate time, home team perspective. Information only. */
+    /**
+     * Spread snapshot, home team perspective. Refreshed with the feed until
+     * the game kicks off, then frozen. Information only.
+     */
     spread: text("spread"),
     /**
      * Presentation detail snapshot for the pick screen (venue, TV, win
-     * probability, forecast, each team's form). Refreshed with the feed;
-     * never read by scoring.
+     * probability, forecast, each team's form), also read by the Game sheet
+     * before kickoff. Refreshed daily and by the slate builder's Refresh
+     * until the game kicks off, then frozen; never read by scoring.
      */
     detail: jsonb("detail").$type<GameDetail>(),
     homeScore: integer("home_score"),

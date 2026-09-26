@@ -21,9 +21,9 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { GameResult } from "@/lib/results/result";
-import type { RevealGame, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import type { MemberJson } from "@/lib/slate/json";
-import type { WeekStateJson } from "@/lib/week/json";
+import type { LiveGameJson, WeekStateJson } from "@/lib/week/json";
 import { LiveBoard } from "./live-board";
 
 afterEach(cleanup);
@@ -72,8 +72,9 @@ const LIVE: GameResult = {
 
 const VOIDED: GameResult = { ...PENDING, status: "void", label: "Void", note: "Postponed to December" };
 
-function game(result: GameResult, picks: RevealPick[] = []): RevealGame {
+function game(result: GameResult, picks: RevealPick[] = []): LiveGameJson {
   return {
+    detail: null,
     game: {
       id: 1,
       awayTeamId: CLEMSON,

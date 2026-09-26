@@ -312,15 +312,19 @@ export async function removeGame(db: Db, actor: Commissioner, gameId: number): P
 
 /**
  * Re-reads the week from CollegeFootballData and updates each slate game's
- * kickoff and pick-screen detail (and, while unpublished, its rank and
- * spread snapshot). Games stay on the slate whatever the feed says; the
- * Deadline is never touched here. Returns how many games changed.
+ * kickoff, pick-screen detail, spread and ranks, published or not: the spread
+ * and ranks are display-only and nothing scores from them. A game freezes at
+ * its own kickoff and is left alone after it, so a run on Sunday cannot put
+ * the new poll's ranks or a closing line on Saturday's finals. Games stay on
+ * the slate whatever the feed says; the Deadline is never touched here.
+ * Returns how many games changed.
  *
  * Takes a `Commissioner` it never reads: the write itself carries no actor
  * to log (it patches columns from the feed, not a commissioner's decision),
  * but the console button that reaches it is the only thing guarding it, so
  * the brand is the guard now rather than a `requireConsole()` result
- * `refreshSlate` used to discard.
+ * `refreshSlate` used to discard. The daily cron reaches the same refresh
+ * through `refreshUpcomingSlates`, which has no commissioner to brand.
  */
 export async function refreshFromFeed(
   db: Db,
@@ -328,24 +332,66 @@ export async function refreshFromFeed(
   cfbd: CfbdClient,
   weekId: number,
   rain: RainChanceSource,
+  now: Date = new Date(),
 ): Promise<number> {
-  const slate = await slateFor(db, weekId);
-  if (slate.games.length === 0) return 0;
+  return refreshWeek(db, cfbd, await slateFor(db, weekId), rain, now);
+}
+
+async function refreshWeek(db: Db, cfbd: CfbdClient, slate: Slate, rain: RainChanceSource, now: Date): Promise<number> {
+  const upcoming = slate.games.filter((game) => game.kickoff > now);
+  if (upcoming.length === 0) return 0;
   const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const byId = new Map(feed.map((c) => [c.cfbdGameId, c]));
-  return applyGamePatches(db, slate.games, (game) => {
+  return applyGamePatches(db, upcoming, (game) => {
     const fresh = byId.get(game.cfbdGameId);
     if (!fresh) return null;
     const patch: Partial<typeof games.$inferInsert> = {};
     if (fresh.kickoff.getTime() !== game.kickoff.getTime()) patch.kickoff = fresh.kickoff;
     if (canonical(fresh.detail) !== canonical(game.detail)) patch.detail = fresh.detail;
-    if (!slate.week.published) {
-      if (fresh.spread !== game.spread) patch.spread = fresh.spread;
-      if (fresh.homeRank !== game.homeRank) patch.homeRank = fresh.homeRank;
-      if (fresh.awayRank !== game.awayRank) patch.awayRank = fresh.awayRank;
-    }
+    if (fresh.spread !== game.spread) patch.spread = fresh.spread;
+    if (fresh.homeRank !== game.homeRank) patch.homeRank = fresh.homeRank;
+    if (fresh.awayRank !== game.awayRank) patch.awayRank = fresh.awayRank;
     return patch;
-  }, new Date());
+  }, now);
+}
+
+/** One Week's part of a daily refresh: how many games moved, or why the feed would not answer. */
+export type WeekRefresh = { weekNumber: number; changed: number } | { weekNumber: number; error: string };
+
+/**
+ * The daily cron's refresh: `refreshFromFeed` over every Week of the active
+ * season that still has a game not yet kicked off, so a published slate's
+ * detail, spread and ranks keep up with the feed until each game's kickoff
+ * rather than showing the day the slate was built. One `weekCandidates`
+ * fan-out per Week. Each Week fails alone: a feed error on one leaves the
+ * others refreshed.
+ *
+ * Takes no actor, like `ingestResults`: the cron has no commissioner to brand.
+ */
+export async function refreshUpcomingSlates(
+  db: Db,
+  cfbd: CfbdClient,
+  rain: RainChanceSource,
+  now: Date = new Date(),
+): Promise<WeekRefresh[]> {
+  const season = await findActiveSeason(db);
+  if (!season) return [];
+  const all = await db.query.weeks.findMany({
+    where: eq(weeks.seasonId, season.id),
+    orderBy: [asc(weeks.weekNumber)],
+    with: { season: true, games: true },
+  });
+  const upcoming = all.map(toSlate).filter((slate) => slate.games.some((game) => game.kickoff > now));
+  return Promise.all(
+    upcoming.map(async (slate): Promise<WeekRefresh> => {
+      const weekNumber = slate.week.weekNumber;
+      try {
+        return { weekNumber, changed: await refreshWeek(db, cfbd, slate, rain, now) };
+      } catch (error) {
+        return { weekNumber, error: error instanceof Error ? error.message : String(error) };
+      }
+    }),
+  );
 }
 
 /**
