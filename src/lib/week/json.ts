@@ -12,6 +12,7 @@
  * and imports this module.
  */
 import type { GameDetail } from "@/lib/detail";
+import type { PickSheet } from "@/lib/picks/picks";
 import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/results";
 import { toGameView, toWeekJson, type WeekJson } from "@/lib/slate/json";
 import type { WeekContext } from "./week";
@@ -25,6 +26,21 @@ import type { WeekContext } from "./week";
  */
 export interface LiveGameJson extends RevealGame {
   detail: GameDetail | null;
+  /**
+   * The viewer's own Pick on this Game before the Deadline, for the Game
+   * sheet's "Your pick" row; null when they have not picked it. Null after the
+   * Deadline too, where their Pick is among `picks` with everyone else's.
+   *
+   * It comes from the signed-in member's own sheet and nowhere else, so the
+   * state never carries another member's Pick before the Reveal.
+   */
+  ownPick: OwnPickJson | null;
+}
+
+/** One side of one Game, and whether the viewer's Lock of the Week sits on it, in `RevealPick.lock`'s words. */
+export interface OwnPickJson {
+  teamId: number;
+  lock: "counts" | "dropped" | null;
 }
 
 export interface WeekStateJson {
@@ -53,9 +69,10 @@ export interface WeekStateJson {
 
 /**
  * The Week a member is standing in, as the phone reads it. Before the
- * Deadline the Games carry no picks and the standings are null — the Reveal
- * is what the Deadline gates, and `currentWeek` never grades before it — so
- * the two shapes of the screen are one shape with two empty halves.
+ * Deadline the Games carry no picks but the viewer's own and the standings
+ * are null — the Reveal is what the Deadline gates, and `currentWeek` never
+ * grades before it — so the two shapes of the screen are one shape with two
+ * empty halves.
  */
 export function toWeekStateJson(week: WeekContext): WeekStateJson {
   const { slate, sheet } = week;
@@ -70,8 +87,19 @@ export function toWeekStateJson(week: WeekContext): WeekStateJson {
     locked: sheet.locked,
     complete: result?.complete ?? false,
     members: result?.reveal.members ?? [],
-    games: games.map((game) => ({ ...game, detail: detailOf.get(game.game.id) ?? null })),
+    games: games.map((game) => ({
+      ...game,
+      detail: detailOf.get(game.game.id) ?? null,
+      ownPick: sheet.locked ? null : ownPickOn(sheet, game.game.id),
+    })),
     scores: result?.scores ?? null,
     weeklyWin: result?.weeklyWin ?? null,
   };
+}
+
+function ownPickOn(sheet: PickSheet, gameId: number): OwnPickJson | null {
+  const pick = sheet.picks.find((p) => p.gameId === gameId);
+  if (!pick) return null;
+  const { lock } = sheet;
+  return { teamId: pick.teamId, lock: lock.state !== "none" && lock.gameId === gameId ? lock.state : null };
 }

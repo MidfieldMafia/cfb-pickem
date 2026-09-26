@@ -20,6 +20,7 @@ import {
   familyGroup,
   feedWith,
   joinGroup,
+  lockAs,
   OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   pickAs,
@@ -288,6 +289,46 @@ describe("the week state", () => {
     expect(state.members).toEqual([]);
     expect(state.scores).toBeNull();
     expect(state.weeklyWin).toBeNull();
+  });
+
+  test("before the Deadline each game carries the viewer's own pick and Lock, and never anyone else's", async () => {
+    const { asGrandma, route, slate, grandma, jonah, michigan, miami, texas, db } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await pickAs(db, grandma, slate, texas, texas.awayTeamId, THURSDAY);
+    await lockAs(db, grandma, slate, texas.id, THURSDAY);
+    await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY);
+    await pickAs(db, jonah, slate, miami, miami.homeTeamId, THURSDAY);
+
+    const own = (state: WeekStateJson) => state.games.map((g) => [g.game.id, g.ownPick]);
+    const asGrandmaState = await json<WeekStateJson>(await getWeekState(poll(), asGrandma()));
+    const asJonahState = await json<WeekStateJson>(await getWeekState(poll(), route(jonah)));
+
+    // Grandma sees hers, with the Lock on Texas; Jonah's Miami pick is nowhere in her answer.
+    expect(own(asGrandmaState)).toEqual([
+      [miami.id, null],
+      [michigan.id, { teamId: michigan.homeTeamId, lock: null }],
+      [texas.id, { teamId: texas.awayTeamId, lock: "counts" }],
+    ]);
+    expect(JSON.stringify(asGrandmaState)).not.toContain(`"memberId":${jonah.id}`);
+    expect(asGrandmaState.games.every((g) => g.picks.length === 0)).toBe(true);
+    expect(asGrandmaState.members).toEqual([]);
+    expect(asGrandmaState.scores).toBeNull();
+    expect(own(asJonahState)).toEqual([
+      [miami.id, { teamId: miami.homeTeamId, lock: null }],
+      [michigan.id, { teamId: michigan.awayTeamId, lock: null }],
+      [texas.id, null],
+    ]);
+  });
+
+  test("after the Deadline the own pick is left to the Reveal", async () => {
+    const { asGrandma, slate, grandma, michigan, db } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+
+    const state = await json<WeekStateJson>(await getWeekState(poll(), asGrandma(SUNDAY)));
+
+    expect(state.games.every((g) => g.ownPick === null)).toBe(true);
+    const michiganRow = state.games.find((g) => g.game.id === michigan.id)!;
+    expect(michiganRow.picks.map((p) => [p.memberId, p.teamId])).toEqual([[grandma.id, michigan.homeTeamId]]);
   });
 
   test("after the Deadline it carries everyone's picks, graded, and the provisional standings", async () => {
