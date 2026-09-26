@@ -11,7 +11,7 @@
  *   a bar that is itself dark.
  *
  * Pure and client-safe: worked out whenever a box score is read, never stored,
- * so tuning `TOO_ALIKE` changes every sheet at once.
+ * so tuning `TOO_ALIKE` or `DARK` changes every sheet at once.
  */
 import type { TeamColors } from "@/lib/logos";
 
@@ -25,14 +25,26 @@ export const LIGHT_GRAY = "#B8B4AD";
 
 /**
  * Below this CIEDE2000 difference two colours are "too alike" to share a
- * split bar, and a colour is "dark" beside black. Chosen from real pairs:
- * Ohio State's red and Georgia's are 10 apart, Alabama and Oklahoma 8,
- * Michigan navy and black 19 (so navy is dark), Georgia red and black 39.
- * Texas orange and Ohio State red, at 16, count as alike, which costs Ohio
- * State its red at Texas for its gray. The one number to tune by eye on a
- * real sheet; it serves both tests, so moving it moves both.
+ * split bar. Tuned by eye on every school pair in `logos.ts` (#309): at 20,
+ * the pairs that still clashed were dark on dark, black by a navy (Southern
+ * Miss at BYU, 22), navy by green, black by Tennessee's gray (26), and 26
+ * clears them. What it costs is bright pairs in the low 20s, orange by red,
+ * which then take a gray or a secondary and still read apart. Ohio State's
+ * red and Georgia's are 10 apart, Texas orange and Ohio State red 16.
  */
-export const TOO_ALIKE = 20;
+export const TOO_ALIKE = 26;
+
+/**
+ * Below this CIEDE2000 difference from black a bar is "dark", so the side
+ * that gives way beside it takes light gray rather than black. Its own number
+ * because black reads as one bar with colours well past `TOO_ALIKE`: navies,
+ * dark greens, maroons, garnet and dark purples all sit 15 to 31 from black
+ * (Michigan navy 19, Florida State garnet 30, Pittsburgh navy 31), and the
+ * first that read clearly apart are mid greens and blues at 35. Light gray
+ * reads apart from any of them, so erring dark costs nothing. Georgia red
+ * is 39.
+ */
+export const DARK = 33;
 
 export interface BarColors {
   away: string;
@@ -66,7 +78,7 @@ function usable(colors: TeamColors | undefined): string[] {
 }
 
 function fallbackBeside(other: string): string {
-  return tooAlike(other, BLACK) ? LIGHT_GRAY : BLACK;
+  return deltaE2000(other, BLACK) < DARK ? LIGHT_GRAY : BLACK;
 }
 
 export function tooAlike(a: string, b: string): boolean {

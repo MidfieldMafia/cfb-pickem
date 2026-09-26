@@ -21,6 +21,7 @@ import { Pennant } from "@/components/pennant";
 import { WeatherPill } from "@/components/picks/weather-pill";
 import { TeamLogo } from "@/components/team-logo";
 
+import { awayShare, type FinalStats, type Leader, type LeaderKey, type LeaderRow, type TeamStatRow } from "@/lib/results/box-score";
 import type { GamePlaysJson } from "@/lib/results/live-feed";
 import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
 import { clockLabel } from "@/lib/results/result";
@@ -37,18 +38,20 @@ const PLAYS_POLL_MS = 30_000;
 const COUNT_STEP_MS = 145;
 
 /**
- * A live game's stored plays, asked for when the sheet opens and every 30 s
- * after, carrying the ETag so an unchanged feed is a 304. Mounted only while
- * the sheet shows this game, so closing it stops the polling; so does the
- * game going final, when `live` turns false. A hidden tab stops asking and
- * asks again the moment it is back, as the week state's poll does.
+ * A game's stored plays, asked for when the sheet opens and every 30 s
+ * after, carrying the ETag so an unchanged feed is a 304. Asked for while the
+ * game is live, and once it is final until its box score arrives (#309): the
+ * same endpoint carries it as `final`, and the ETag changes when it does.
+ * Mounted only while the sheet shows this game, so closing it stops the
+ * polling. A hidden tab stops asking and asks again the moment it is back, as
+ * the week state's poll does.
  */
-function useGamePlays(gameId: number, live: boolean): GamePlaysJson | null {
+function useGamePlays(gameId: number, live: boolean, final: boolean): GamePlaysJson | null {
   const [plays, setPlays] = useState<GamePlaysJson | null>(null);
   const etag = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!live) return;
+    if (!live && !final) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
@@ -59,6 +62,8 @@ function useGamePlays(gameId: number, live: boolean): GamePlaysJson | null {
       if (result.kind === "fresh") {
         etag.current = result.etag;
         setPlays(result.plays);
+        // A final game's box score is stored once and never changes, so there is nothing more to ask.
+        if (!live && result.plays.final !== null) return;
       }
       timer = setTimeout(() => void poll(), PLAYS_POLL_MS);
     };
@@ -75,9 +80,9 @@ function useGamePlays(gameId: number, live: boolean): GamePlaysJson | null {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [gameId, live]);
+  }, [gameId, live, final]);
 
-  return live ? plays : null;
+  return live || final ? plays : null;
 }
 
 /**
@@ -414,6 +419,118 @@ function RecentPlaysCard({ card }: { card: RecentPlays }) {
   );
 }
 
+/** Team stats and Game leaders both open on the two teams, away on the left, as the rows below them read. */
+function TeamsKey({ away, home, colors }: { away: string; home: string; colors?: FinalStats["colors"] }) {
+  const swatch = (color: string) => <span aria-hidden className="size-3 shrink-0 rounded-[2px]" style={{ background: color }} />;
+  const name = `min-w-0 text-[13px] leading-4 ${colors ? "font-semibold text-muted-foreground" : "font-bold"}`;
+  return (
+    <div className="flex items-center gap-2 border-b border-muted py-2.5">
+      <TeamLogo team={away} size={28} />
+      {colors ? swatch(colors.away) : null}
+      <span className={name}>{away}</span>
+      <span className="flex-1" />
+      <span className={`${name} text-right`}>{home}</span>
+      {colors ? swatch(colors.home) : null}
+      <TeamLogo team={home} size={28} />
+    </div>
+  );
+}
+
+/** Two values either side of a centred label: the head of every Team stats and Game leaders row. */
+function Faceoff({ away, label, home, size }: { away: string; label: string; home: string; size: "stat" | "leader" }) {
+  const value = `font-display font-black tabular-nums ${size === "stat" ? "text-xl leading-6" : "text-[22px] leading-[26px]"}`;
+  return (
+    <div className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 ${size === "stat" ? "items-baseline" : "items-center"}`}>
+      <span className={value}>{away}</span>
+      <span className="text-center text-[13px] leading-4 font-bold">{label}</span>
+      <span className={`${value} text-right`}>{home}</span>
+    </div>
+  );
+}
+
+/** One team stat: the two figures, the label, and a bar split in the pair of team colours. */
+function TeamStat({ row, away, home, colors }: { row: TeamStatRow; away: string; home: string; colors: FinalStats["colors"] }) {
+  return (
+    <div className="grid gap-1.5 border-t border-muted py-3 first:border-t-0">
+      <Faceoff away={row.away.display} label={row.label} home={row.home.display} size="stat" />
+      <span
+        role="img"
+        aria-label={`${row.label}: ${away} ${row.away.display}, ${home} ${row.home.display}`}
+        className="flex h-2 gap-0.5 overflow-hidden rounded-full"
+      >
+        <span style={{ width: `${(awayShare(row) * 100).toFixed(1)}%`, background: colors.away }} />
+        <span className="flex-1" style={{ background: colors.home }} />
+      </span>
+    </div>
+  );
+}
+
+/** What a side with nobody to show says under its dash: a team with no sacks, say. */
+const NO_LEADER: Record<LeaderKey, string> = {
+  passing: "No passes",
+  rushing: "No carries",
+  receiving: "No catches",
+  sacks: "No sacks",
+  tackles: "No tackles",
+};
+
+/** A leader's name, position and detail line, or the category's empty state. No headshots (#265). */
+function LeaderCell({ leader, empty, side }: { leader: Leader | null; empty: string; side: Side }) {
+  return (
+    <span className={`flex min-w-0 flex-col break-words ${side === "home" ? "text-right" : ""}`}>
+      {leader ? (
+        <>
+          <span className="text-sm font-bold">
+            {leader.name}
+            {leader.position ? <span className="font-medium text-muted-foreground"> {leader.position}</span> : null}
+          </span>
+          {leader.detail ? <span className="text-xs text-muted-foreground">{leader.detail}</span> : null}
+        </>
+      ) : (
+        <span className="text-sm text-muted-foreground">{empty}</span>
+      )}
+    </span>
+  );
+}
+
+function LeaderStat({ row }: { row: LeaderRow }) {
+  return (
+    <div className="grid gap-1.5 border-t border-muted py-3 first:border-t-0">
+      <Faceoff away={row.away?.value ?? "–"} label={row.label} home={row.home?.value ?? "–"} size="leader" />
+      <div className="grid grid-cols-2 gap-3">
+        <LeaderCell leader={row.away} empty={NO_LEADER[row.key]} side="away" />
+        <LeaderCell leader={row.home} empty={NO_LEADER[row.key]} side="home" />
+      </div>
+    </div>
+  );
+}
+
+/** A final game's box score, ESPN's way (#265): Team stats with split bars, then Game leaders. */
+function FinalStatsCards({ stats, away, home }: { stats: FinalStats; away: string; home: string }) {
+  return (
+    <>
+      <Card className="grid gap-0 p-3">
+        <CardHeading>Team stats</CardHeading>
+        <TeamsKey away={away} home={home} colors={stats.colors} />
+        <div className="grid">
+          {stats.teamStats.map((row) => (
+            <TeamStat key={row.key} row={row} away={away} home={home} colors={stats.colors} />
+          ))}
+        </div>
+      </Card>
+      <Card className="grid gap-0 p-3">
+        <CardHeading>Game leaders</CardHeading>
+        <TeamsKey away={away} home={home} />
+        <div className="grid">
+          {stats.leaders.map((row) => (
+            <LeaderStat key={row.key} row={row} />
+          ))}
+        </div>
+      </Card>
+    </>
+  );
+}
+
 /** A Game information row: an icon, then whatever the row holds. */
 function InfoRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
@@ -515,7 +632,8 @@ function SheetBody({ game, members, scores, viewerId, tiebreakerGameId, locked, 
   const g = game.game;
   const live = result.status === "pending" && result.live !== null;
   const beforeKickoff = result.status === "pending" && result.live === null;
-  const feed = useGamePlays(g.id, live);
+  const final = result.status === "final";
+  const feed = useGamePlays(g.id, live, final);
   const card = feed ? recentPlays(feed, g) : null;
   const padlock = locked && game.picks.some((pick) => pick.lock !== null);
 
@@ -553,7 +671,13 @@ function SheetBody({ game, members, scores, viewerId, tiebreakerGameId, locked, 
         )}
         {g.id === tiebreakerGameId && scores ? <TiebreakerSection game={game} scores={scores} viewerId={viewerId} /> : null}
         {live && card ? <RecentPlaysCard card={card} /> : null}
-        {/* Final team stats and game leaders (#309) go here, once the game is final. */}
+        {final && feed ? (
+          feed.final ? (
+            <FinalStatsCards stats={feed.final} away={g.awayTeam} home={g.homeTeam} />
+          ) : (
+            <p className="text-sm text-muted-foreground">Stats arrive shortly after the final.</p>
+          )
+        ) : null}
         {beforeKickoff ? <GameInformation game={game} /> : null}
       </div>
     </>

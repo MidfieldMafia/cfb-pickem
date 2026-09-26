@@ -76,6 +76,16 @@ export interface FinalStats extends BoxScore {
 /** The season's positions by athlete id, with null and "?" already left out. */
 export type Positions = Readonly<Record<string, string>>;
 
+/**
+ * How much of a row's split bar is away's: its value over both, the way the
+ * canvas sizes it whichever side a higher number favours. Two zeroes (no
+ * 4th-down tries, say) split evenly.
+ */
+export function awayShare({ away, home }: TeamStatRow): number {
+  const total = away.value + home.value;
+  return total > 0 ? away.value / total : 0.5;
+}
+
 /** A roster position worth showing: null and CFBD's literal "?" are not. */
 export function shownPosition(position: string | null | undefined): string | null {
   const trimmed = position?.trim();
