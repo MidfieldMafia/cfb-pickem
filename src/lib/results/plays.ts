@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { liveFeeds } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { Slate } from "@/lib/slate/slate";
+import { recapPreviousDrive } from "./drive-recap";
 import { describePlays } from "./field";
 import { newestPlay, type GamePlaysJson } from "./live-feed";
 
@@ -36,5 +37,6 @@ export async function gamePlays(db: Db, slate: Slate, gameId: number): Promise<G
       game,
       header,
     ),
+    recap: recapPreviousDrive(drives, game),
   };
 }

@@ -442,6 +442,8 @@ describe("a game's plays, for the Game sheet", () => {
       segments: [{ kind: "ground", from: 66, to: 69 }, { kind: "score" }],
       rest: { spot: 69, side: "away", down: 2, distance: 7 },
     });
+    // The game's first drive is still going, so there is no previous drive to recap.
+    expect(plays.recap).toBeNull();
     expect(response.headers.get("cache-control")).toBe("no-store");
 
     const again = await getGamePlays(get(response.headers.get("etag")!), route, String(texas.id));
@@ -454,7 +456,7 @@ describe("a game's plays, for the Game sheet", () => {
 
     const plays = await json<GamePlaysJson>(await getGamePlays(get(), asGrandma(SUNDAY), String(miami.id)));
 
-    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [] });
+    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [], recap: null });
   });
 
   test("a game off the published slate, or no game id at all, is a 404, and signed out is a 401", async () => {
