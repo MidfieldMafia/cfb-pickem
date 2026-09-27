@@ -7,6 +7,25 @@ blog, the official `cfbd` npm package + GitHub repo, the legacy `cfb.js` client'
 the `CFBD/cfb-api-v2` GitHub issue tracker. Unverifiable claims are stated as such below,
 never guessed.
 
+> **Since this was written (updated 2026-09-27).** The body below is the 2026-09-04 research,
+> written when the project planned on Tier 1, and it is left as it was. What has changed:
+>
+> - **The project is on Tier 3: $10/mo, 75,000 calls a month**, which includes live
+>   play-by-play and GraphQL (see the tier table in §1). The quota is no longer a constraint.
+>   The Tier 1 "Quota headroom" bullet in the Summary and the Tier 1 quota arithmetic in §5
+>   describe the original plan.
+> - **`/scoreboard` is not metered at all.** It was observed and confirmed in CFBD's quota
+>   middleware in the #172 research (`docs/research/cfbd-possession-and-delays.md` §5).
+>   The metered live cost is `/live/plays`, one call per live game per refresh. The comment on
+>   `LIVE_REFRESH_INTERVAL_MS` in `src/lib/results/writes.ts` estimates about 6,300 calls on a
+>   fifteen-game Saturday and about 32,000 a month, well within 75,000.
+> - **§5's "poll every 2–3 minutes" is superseded.** The results gate refreshes every 30
+>   seconds while a slate game is under way and every 5 minutes between games
+>   (`src/lib/results/writes.ts`).
+> - **§2's `"possession": "home"` sample was invented, not observed.** A live game on
+>   2026-09-24 did return `"home"`, `"away"` or `null` (`docs/research/cfbd-live-plays.md`).
+>   #211 tracks marking the doc's other invented sample values.
+
 ## Summary — actionable recommendations
 
 - **Auth**: send `Authorization: Bearer <CFBD_API_KEY>` on every request, server-side only —
