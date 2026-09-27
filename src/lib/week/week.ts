@@ -17,7 +17,7 @@ import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
-import { playedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
+import { groupPlayedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
 import { refreshStatsIfStale } from "@/lib/results/box-scores";
 import { refreshResultsIfStale } from "@/lib/results/writes";
 import { activeSeason, deadlinePassed, publishedSlate, slateFor, type Slate } from "@/lib/slate/slate";
@@ -256,7 +256,9 @@ export async function weekInReview(
   const group = options.group ?? null;
   if (group === null) return null;
   const season = await activeSeason(db);
-  const played = await playedWeeks(db, season, now);
+  // The group's played Weeks, not the Season's: a Week nobody here picked has
+  // nothing to reveal, so it is not offered and `?week=` for it lands on the latest (#332).
+  const played = await groupPlayedWeeks(db, group, season, now);
   const chosen = played.find((w) => w.weekNumber === weekNumber) ?? played[played.length - 1];
   if (!chosen) return null;
   const loaded = await slateFor(db, chosen.id);

@@ -11,7 +11,7 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
 import { membershipRemovals } from "@/db/schema";
-import { seasonResult } from "@/lib/results/results";
+import { groupPlayedWeeks, seasonResult } from "@/lib/results/results";
 import { slateFor } from "@/lib/slate/slate";
 import {
   addGroup,
@@ -19,6 +19,7 @@ import {
   familyGroup,
   feedWith,
   type Finals,
+  joinAt,
   joinGroup,
   lockAs,
   OHIO_STATE_AT_TEXAS,
@@ -104,10 +105,36 @@ describe("a board is one group's", () => {
       weeklyWins: 0,
       averagePoints: null,
     });
-    // Nobody was in Friends at the Deadline, so its Week 2 board is empty and
-    // the week has no winner at all.
-    expect(inFriends.weeks[0].scores).toEqual([]);
-    expect(inFriends.weeks[0].weeklyWin).toBeNull();
+    // Nobody was in Friends at the Deadline, so nobody there played Week 2 and
+    // it is not a Week of Friends' season at all (#332).
+    expect(inFriends.weeks).toEqual([]);
+  });
+
+  test("a Week with Picks in one group and none in the other is played only where someone picked (#332)", async () => {
+    const { db, jonah, week } = await playedWeek2();
+    const family = await familyGroup(db);
+    // Cousins joined before the Deadline and picked nothing: on the board, sat out.
+    const cousins = await addGroup(db, "Cousins");
+    const cousin = await joinAt(db, jonah, "Cousin", TUESDAY);
+    await joinGroup(db, cousins, cousin, TUESDAY);
+
+    const inFamily = await seasonResult(db, family.id, SUNDAY);
+    const inCousins = await seasonResult(db, cousins.id, SUNDAY);
+
+    expect(inFamily.weeks.map((w) => w.week.weekNumber)).toEqual([2]);
+    // No strip tile, and `selectedWeek` falls back as for any unplayed Week.
+    expect(inCousins.weeks).toEqual([]);
+    // The Week counted for nobody, so the season row is the same either way.
+    expect(inCousins.leaderboard.find((r) => r.member.id === cousin.id)).toMatchObject({
+      totalPoints: 0,
+      weeksPlayed: 0,
+      previousRank: null,
+    });
+
+    // The Reveal offers the same Weeks: Week 2 in Family, nothing in Cousins.
+    const season = inFamily.season;
+    expect((await groupPlayedWeeks(db, family.id, season, SUNDAY)).map((w) => w.id)).toEqual([week.id]);
+    expect(await groupPlayedWeeks(db, cousins.id, season, SUNDAY)).toEqual([]);
   });
 
   test("a removed member is absent from the group's past weeks, and the Weekly Win moves", async () => {

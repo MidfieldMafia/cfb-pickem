@@ -186,10 +186,20 @@ async function publishAlso(fixture: Week2Fixture, weekNumber: number) {
   return { week, michigan };
 }
 
+/** Grandma takes Michigan in the Week: someone in the family played it, so it has a Reveal (#332). */
+async function playIn(fixture: Week2Fixture, weekId: number) {
+  const { db, grandma } = fixture;
+  const slate = await slateFor(db, weekId);
+  const michigan = slate.games.find((g) => g.cfbdGameId === OKLAHOMA_AT_MICHIGAN)!;
+  await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+}
+
 describe("the week in review", () => {
   test("opens on the latest week the season has played, and offers every one of them", async () => {
     const fixture = await publishWeek2();
     const three = await publishAlso(fixture, 3);
+    await playIn(fixture, fixture.week.id);
+    await playIn(fixture, three.week.id);
 
     const review = (await familyReview(fixture.db,undefined, SUNDAY))!;
 
@@ -201,7 +211,9 @@ describe("the week in review", () => {
 
   test("looks back at an older week when asked, and falls back when asked for one the season has not played", async () => {
     const fixture = await publishWeek2();
-    await publishAlso(fixture, 3);
+    const three = await publishAlso(fixture, 3);
+    await playIn(fixture, fixture.week.id);
+    await playIn(fixture, three.week.id);
     const { db } = fixture;
 
     expect((await familyReview(db,2, SUNDAY))!.slate.week.weekNumber).toBe(2);
@@ -211,7 +223,9 @@ describe("the week in review", () => {
   });
 
   test("there is nothing to review until a deadline has passed", async () => {
-    const { db, jonah } = await publishWeek2();
+    const fixture = await publishWeek2();
+    const { db, jonah } = fixture;
+    await playIn(fixture, fixture.week.id);
 
     // Thursday is inside Week 2: the Reveal is what the Deadline gates, so the
     // week is not reviewable yet — asked for by number or not.
@@ -222,6 +236,25 @@ describe("the week in review", () => {
     // asking for Week 4 lands on Week 2, the one the season has played.
     await openWeek(db, jonah, 4);
     expect((await familyReview(db,4, SUNDAY))!.slate.week.weekNumber).toBe(2);
+  });
+
+  test("offers only the Weeks someone in the group picked in (#332)", async () => {
+    const fixture = await publishWeek2();
+    const { db } = fixture;
+    await publishAlso(fixture, 3);
+    await playIn(fixture, fixture.week.id);
+
+    // Week 3's Deadline has passed, but nobody in the family picked it: there is
+    // nothing to reveal, so it is not offered and asking for it lands on Week 2.
+    const review = (await familyReview(db, 3, SUNDAY))!;
+    expect(review.played).toEqual([2]);
+    expect(review.slate.week.weekNumber).toBe(2);
+  });
+
+  test("has nothing to review in a season nobody in the group has picked in", async () => {
+    const { db } = await publishWeek2();
+
+    expect(await familyReview(db, undefined, SUNDAY)).toBeNull();
   });
 
   test("grades the week it lands on, with everyone's picks on the board", async () => {
