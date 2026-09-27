@@ -46,6 +46,7 @@ Managed in Vercel (Production, Preview, Development). Pull them locally with `ve
 | `CRON_SECRET` | Generated | Bearer token required by scheduled route handlers |
 | `NEXT_PUBLIC_APP_URL` | Set by hand | Absolute URL used in magic links and texts. Production: `https://slate.midfield-mafia.com`. Development: `http://localhost:3000`. Unset in Preview; code should fall back to `https://${VERCEL_URL}` |
 | `PINGRAM_API_KEY` | Pingram dashboard | Sends text messages (free tier, 100 SMS a month) |
+| `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT` | `npx web-push generate-vapid-keys`, once; the subject is a `mailto:` address | Push notifications (Chat messages, games going Final). Leave all three unset to turn push off |
 
 ## Database and migrations
 

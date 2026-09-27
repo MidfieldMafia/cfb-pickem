@@ -612,6 +612,63 @@ export type Season = typeof seasons.$inferSelect;
 export type Week = typeof weeks.$inferSelect;
 export type Game = typeof games.$inferSelect;
 export type Member = typeof members.$inferSelect;
+/**
+ * Web Push subscriptions (#PUSH-ISSUE): one row per device a member turned
+ * notifications on for. `endpoint` is the push service's URL for that device
+ * and is unique across the app; a device that re-subscribes replaces its own
+ * row. `chat` and `finals` are the two kinds of notification the device takes.
+ * A member's rows go with them when the member is deleted.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: serial("id").primaryKey(),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull().unique(),
+    /** The device's public key, base64url, as the browser hands it over. */
+    p256dh: text("p256dh").notNull(),
+    /** The device's auth secret, base64url. */
+    auth: text("auth").notNull(),
+    /** A new message in one of the member's Groups. */
+    chat: boolean("chat").notNull().default(true),
+    /** A slate game going Final, with the member's pick's fate. */
+    finals: boolean("finals").notNull().default(true),
+    /**
+     * Commissioner notices, each its own switch. Stored for everyone, sent
+     * only to commissioners: a member sending feedback, a game needing
+     * review, and the Deadline roll call of who has not picked.
+     */
+    feedback: boolean("feedback").notNull().default(true),
+    review: boolean("review").notNull().default(true),
+    rollCall: boolean("roll_call").notNull().default(true),
+    /** A slate game in its last two minutes with the trailing team a score back and driving, once per game. */
+    close: boolean("close").notNull().default(true),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
+  },
+  (t) => [index("push_subscriptions_member_idx").on(t.memberId)],
+);
+
+/**
+ * Push notices that go out once per game — a close-game alert today — keyed
+ * by the game and the kind, so a game that drifts in and out of the
+ * condition across polls is announced the first time only.
+ */
+export const pushGameEvents = pgTable(
+  "push_game_events",
+  {
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.gameId, t.kind] })],
+);
+
 export type Group = typeof groups.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
@@ -619,3 +676,4 @@ export type TextMessage = typeof textMessages.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type ChatReaction = typeof chatReactions.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;

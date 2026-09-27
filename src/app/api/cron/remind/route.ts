@@ -2,6 +2,8 @@ import { db } from "@/db";
 import { appUrl } from "@/lib/app-url";
 import { senderFromEnv } from "@/lib/messaging/sender";
 import { runScheduledReminder } from "@/lib/messaging/texts";
+import { notifyRollCall } from "@/lib/push/console-notify";
+import { pusher } from "@/lib/push/sender";
 import { authorized } from "../auth";
 
 /**
@@ -13,6 +15,11 @@ export async function GET(request: Request) {
   if (!authorized(request)) return new Response("Unauthorized", { status: 401 });
   const run = await runScheduledReminder(db(), senderFromEnv(), appUrl());
   if (!run.ran) return Response.json({ ran: false, why: run.why });
+  // The same roll call the texts went out on, to the commissioners' phones: everyone still behind, reached or not.
+  await notifyRollCall(db(), pusher(), run.weekNumber, [
+    ...run.texted.map((t) => t.member),
+    ...run.skipped.map((s) => s.row.member),
+  ]);
   return Response.json({
     ran: true,
     week: run.weekNumber,
