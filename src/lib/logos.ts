@@ -14,9 +14,11 @@ export interface TeamColors {
 export interface TeamLogo {
   school: string;
   /**
-   * What a pick tile prints when `school` would wrap there. Set by hand, only
-   * where the usual short form is unambiguous: not "MSU", which Michigan State
-   * also answers to.
+   * What a pick tile prints when `school` would wrap there: ESPN's
+   * `shortDisplayName`, set only for schools whose full name wraps at 375 or
+   * 390px and only where ESPN's form is shorter. Mississippi State is the one
+   * hand-set exception: ESPN's "Mississippi St" still wraps, and "MSU" is
+   * Michigan State's.
    */
   short?: string;
   slug: string;

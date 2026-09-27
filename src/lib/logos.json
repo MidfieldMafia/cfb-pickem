@@ -275,6 +275,7 @@
  },
  {
   "school": "Michigan State",
+  "short": "Michigan St",
   "slug": "michigan-state",
   "espnId": 127,
   "conference": "Big Ten",
@@ -457,6 +458,7 @@
  },
  {
   "school": "Arizona State",
+  "short": "Arizona St",
   "slug": "arizona-state",
   "espnId": 9,
   "conference": "Big 12",
@@ -561,6 +563,7 @@
  },
  {
   "school": "Kansas State",
+  "short": "Kansas St",
   "slug": "kansas-state",
   "espnId": 2306,
   "conference": "Big 12",
@@ -574,6 +577,7 @@
  },
  {
   "school": "Oklahoma State",
+  "short": "Oklahoma St",
   "slug": "oklahoma-state",
   "espnId": 197,
   "conference": "Big 12",
@@ -704,6 +708,7 @@
  },
  {
   "school": "Florida State",
+  "short": "Florida St",
   "slug": "florida-state",
   "espnId": 52,
   "conference": "ACC",
@@ -938,6 +943,7 @@
  },
  {
   "school": "Florida Atlantic",
+  "short": "FAU",
   "slug": "florida-atlantic",
   "espnId": 2226,
   "conference": "American",
@@ -1107,6 +1113,7 @@
  },
  {
   "school": "Colorado State",
+  "short": "Colorado St",
   "slug": "colorado-state",
   "espnId": 36,
   "conference": "Mountain West",
@@ -1120,6 +1127,7 @@
  },
  {
   "school": "Fresno State",
+  "short": "Fresno St",
   "slug": "fresno-state",
   "espnId": 278,
   "conference": "Mountain West",
@@ -1172,6 +1180,7 @@
  },
  {
   "school": "San Diego State",
+  "short": "San Diego St",
   "slug": "san-diego-state",
   "espnId": 21,
   "conference": "Mountain West",
@@ -1185,6 +1194,7 @@
  },
  {
   "school": "San José State",
+  "short": "San José St",
   "slug": "san-jose-state",
   "espnId": 23,
   "conference": "Mountain West",
@@ -1237,6 +1247,7 @@
  },
  {
   "school": "Oregon State",
+  "short": "Oregon St",
   "slug": "oregon-state",
   "espnId": 204,
   "conference": "Pac-12",
@@ -1250,6 +1261,7 @@
  },
  {
   "school": "Washington State",
+  "short": "Washington St",
   "slug": "washington-state",
   "espnId": 265,
   "conference": "Pac-12",
@@ -1263,6 +1275,7 @@
  },
  {
   "school": "Appalachian State",
+  "short": "App State",
   "slug": "appalachian-state",
   "espnId": 2026,
   "conference": "Sun Belt",
@@ -1276,6 +1289,7 @@
  },
  {
   "school": "Arkansas State",
+  "short": "Arkansas St",
   "slug": "arkansas-state",
   "espnId": 2032,
   "conference": "Sun Belt",
@@ -1289,6 +1303,7 @@
  },
  {
   "school": "Coastal Carolina",
+  "short": "Coastal",
   "slug": "coastal-carolina",
   "espnId": 324,
   "conference": "Sun Belt",
@@ -1302,6 +1317,7 @@
  },
  {
   "school": "Georgia Southern",
+  "short": "GA Southern",
   "slug": "georgia-southern",
   "espnId": 290,
   "conference": "Sun Belt",
@@ -1315,6 +1331,7 @@
  },
  {
   "school": "Georgia State",
+  "short": "Georgia St",
   "slug": "georgia-state",
   "espnId": 2247,
   "conference": "Sun Belt",
@@ -1497,6 +1514,7 @@
  },
  {
   "school": "Central Michigan",
+  "short": "C Michigan",
   "slug": "central-michigan",
   "espnId": 2117,
   "conference": "MAC",
@@ -1510,6 +1528,7 @@
  },
  {
   "school": "Eastern Michigan",
+  "short": "E Michigan",
   "slug": "eastern-michigan",
   "espnId": 2199,
   "conference": "MAC",
@@ -1562,6 +1581,7 @@
  },
  {
   "school": "Northern Illinois",
+  "short": "N Illinois",
   "slug": "northern-illinois",
   "espnId": 2459,
   "conference": "MAC",
@@ -1601,6 +1621,7 @@
  },
  {
   "school": "Western Michigan",
+  "short": "W Michigan",
   "slug": "western-michigan",
   "espnId": 2711,
   "conference": "MAC",
@@ -1640,6 +1661,7 @@
  },
  {
   "school": "Jacksonville State",
+  "short": "Jax State",
   "slug": "jacksonville-state",
   "espnId": 55,
   "conference": "Conference USA",
@@ -1653,6 +1675,7 @@
  },
  {
   "school": "Kennesaw State",
+  "short": "Kennesaw St",
   "slug": "kennesaw-state",
   "espnId": 338,
   "conference": "Conference USA",
@@ -1692,6 +1715,7 @@
  },
  {
   "school": "Middle Tennessee",
+  "short": "MTSU",
   "slug": "middle-tennessee",
   "espnId": 2393,
   "conference": "Conference USA",
@@ -1705,6 +1729,7 @@
  },
  {
   "school": "Missouri State",
+  "short": "Missouri St",
   "slug": "missouri-state",
   "espnId": 2623,
   "conference": "Conference USA",
@@ -1718,6 +1743,7 @@
  },
  {
   "school": "New Mexico State",
+  "short": "New Mexico St",
   "slug": "new-mexico-state",
   "espnId": 166,
   "conference": "Conference USA",
@@ -1757,6 +1783,7 @@
  },
  {
   "school": "Western Kentucky",
+  "short": "Western KY",
   "slug": "western-kentucky",
   "espnId": 98,
   "conference": "Conference USA",

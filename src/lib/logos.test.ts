@@ -21,7 +21,8 @@ describe("logo index", () => {
 
   it("shortens a school only where a short form is set", () => {
     expect(shortSchool("Mississippi State")).toBe("Miss. State");
-    expect(shortSchool("Michigan State")).toBe("Michigan State");
+    expect(shortSchool("Michigan State")).toBe("Michigan St");
+    expect(shortSchool("Ohio State")).toBe("Ohio State");
     expect(shortSchool("Hogwarts")).toBe("Hogwarts");
   });
 
