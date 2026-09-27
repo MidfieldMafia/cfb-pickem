@@ -115,8 +115,10 @@ const fromGoal = (side: Side, yardsToGoal: number): Yard => goalAttacked(side) -
 /** The spot `yards` from `side`'s own goal line, as "CCU31" reads when CCU is `side`. */
 const ownSpot = (side: Side, yards: number): Yard => (side === "away" ? yards : 100 - yards);
 
-/** "CCU31": a team abbreviation, then the yard line in two digits. */
-const SPOT = String.raw`([A-Z][A-Z&-]{0,6}?)(\d{2})(?!\d)`;
+/** A team abbreviation as the feed spells it: "CCU", "OU", "State", "Mizzou". */
+const ABBR = String.raw`[A-Z][A-Za-z&-]{0,6}`;
+/** "CCU31", "OU 28", "State33": a team abbreviation, then the yard line in two digits. */
+const SPOT = String.raw`(${ABBR}?) ?(\d{2})(?!\d)`;
 const re = (source: string, flags = "") => new RegExp(source.replaceAll("SPOT", SPOT), flags);
 
 /**
@@ -153,7 +155,10 @@ export function abbreviations(plays: readonly CfbdLivePlay[], sideOf: (teamId: n
   for (const [abbr, tally] of votes)
     if (tally.home !== tally.away) sides.set(abbr, tally.home > tally.away ? "home" : "away");
   // Two teams, two abbreviations: one placed names the other.
-  const seen = new Set(plays.flatMap((play) => [...play.playText.matchAll(re(`\\bSPOT`, "g"))].map((m) => m[1])));
+  // Only after the words a spot follows: "Holding 10 yards" is not a spot.
+  const seen = new Set(
+    plays.flatMap((play) => [...play.playText.matchAll(re(`\\b(?:the|at|from|to) SPOT`, "g"))].map((m) => m[1])),
+  );
   if (seen.size === 2 && sides.size === 1) {
     const [[known, side]] = sides;
     for (const abbr of seen) if (abbr !== known) sides.set(abbr, other(side));
@@ -410,7 +415,7 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
     if (landing === null) return { segments, end: null, holder: receiver, placed: false, recognised: false };
     if (/touchback/i.test(snap)) landing = goalAttacked(side) + direction(side) * TOUCHBACK_DEPTH;
     segments.push({ kind: "arc", from: start, to: landing });
-    const recovered = snap.match(/recovered by ([A-Z][A-Z&-]{0,6})\b/);
+    const recovered = snap.match(new RegExp(String.raw`recovered by (${ABBR})\b`));
     const holder = recovered && ctx.sideOfAbbr(recovered[1]) === side ? side : receiver;
     if (holder !== side) segments.push({ kind: "possession", side: holder });
     const back = spotIn(snap.slice(kick.index! + kick[0].length), String.raw`return -?\d+ yards? to the SPOT`, ctx);
@@ -481,7 +486,7 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
   // A fumble: the line runs to where the ball came out, then any swap and return.
   const loose = spotIn(snap, String.raw`fumbled? by (?:(?!recovered).)*? at SPOT`, ctx) ?? end;
   if (segments.length === 0) segments.push({ kind: "ground", from: start, to: loose });
-  const recovered = snap.match(/recovered by ([A-Z][A-Z&-]{0,6})\b/);
+  const recovered = snap.match(new RegExp(String.raw`recovered by (${ABBR})\b`));
   const holder = recovered ? (ctx.sideOfAbbr(recovered[1]) ?? side) : side;
   if (holder === side) return done(end);
   segments.push({ kind: "possession", side: holder });
