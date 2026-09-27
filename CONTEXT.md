@@ -99,7 +99,7 @@ A member's points for one week, computed from picks, results, and rules on every
 Having the highest Weekly Score in a group for a week. Ties break by Tiebreaker Guess closeness, then are shared.
 
 **Leaderboard**:
-A group's season standings: total points, record, weekly wins, average points per Played Week, and average Tiebreaker Guess miss across Played Weeks actually guessed, ordered by the season tiebreak rules. The miss average is display-only, reads lower-is-better, and does not itself decide a tie — the season tiebreak's own closeness figure is a sum over completed Played Weeks, not this average, and the two can rank members differently.
+A group's season standings: total points, win percentage (correct over graded picks; a Void is neither), weekly wins, and average Tiebreaker Guess miss across Played Weeks actually guessed, ordered by the season tiebreak rules. The miss average is display-only, reads lower-is-better, and does not itself decide a tie — the season tiebreak's own closeness figure is a sum over completed Played Weeks, not this average, and the two can rank members differently.
 _Avoid_: Standings, rankings, table
 
 **Live Board**:

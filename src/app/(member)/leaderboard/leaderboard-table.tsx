@@ -7,7 +7,7 @@ import { Badge, Card, Table, TableBody, TableCell, TableHead, TableHeader, Table
 import { Pennant } from "@/components/pennant";
 
 import type { LeaderboardRow } from "@/lib/results/results";
-import { averageLabel, movement, record, tiebreakerMissLabel, type Movement } from "@/lib/results/summary";
+import { movement, tiebreakerMissLabel, winRateLabel, type Movement } from "@/lib/results/summary";
 import { sortLeaderboard, type SortColumn, type SortDirection } from "./leaderboard-sort";
 import { SolidTrophy } from "./solid-trophy";
 
@@ -41,9 +41,12 @@ interface Sort {
  */
 const SORTABLE_COLUMNS: { column: SortColumn; label: string; icon?: React.ReactNode; tip: string }[] = [
   { column: "points", label: "Pts", tip: "Total points across every week played." },
-  { column: "record", label: "W–L", tip: "Correct and incorrect picks across the season. A voided game counts as neither." },
+  {
+    column: "winRate",
+    label: "Win%",
+    tip: "The share of your picks that were correct, across the season. A voided game counts as neither.",
+  },
   { column: "wins", label: "Weekly wins", icon: <SolidTrophy size={14} />, tip: "Weekly Wins: weeks you scored the most points in your group." },
-  { column: "average", label: "Avg", tip: "Average points per week played." },
   {
     column: "miss",
     label: "Miss",
@@ -53,7 +56,7 @@ const SORTABLE_COLUMNS: { column: SortColumn; label: string; icon?: React.ReactN
 
 /**
  * The numeric columns' cell class. Padding is 6px a side, not the table's 8,
- * so the Member column gets the difference (18px across five columns) and a
+ * so the Member column gets the difference (16px across four columns) and a
  * name truncates later on a phone; the last column keeps 8px off the card edge.
  */
 const NUMERIC = "px-1.5 text-right tabular-nums last:pr-2";
@@ -284,9 +287,8 @@ export function LeaderboardTable({
                 <TableCell className={`${NUMERIC} font-display text-lg font-black`}>
                   {row.totalPoints}
                 </TableCell>
-                <TableCell className={NUMERIC}>{record(row.correct, row.incorrect)}</TableCell>
+                <TableCell className={NUMERIC}>{winRateLabel(row.correct, row.incorrect)}</TableCell>
                 <TableCell className={NUMERIC}>{row.weeklyWins}</TableCell>
-                <TableCell className={NUMERIC}>{averageLabel(row.averagePoints)}</TableCell>
                 <TableCell className={NUMERIC}>{tiebreakerMissLabel(row.averageTiebreakerMiss)}</TableCell>
               </TableRow>
             );

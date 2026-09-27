@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The sortable Leaderboard table (#134): clicking Pts, W–L, Wins, Avg, or
+ * The sortable Leaderboard table (#134): clicking Pts, Win%, Wins, or
  * Miss sorts best-first, a second click reverses, the # column keeps each
  * member's real place regardless of order, and a fresh mount (a reload)
  * always starts from the default order. The Trophy is here too: it marks only
@@ -143,12 +143,29 @@ describe("header tooltips", () => {
 
   test("hovering shows the tip, leaving hides it", () => {
     render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
-    const button = screen.getByRole("button", { name: "Avg" });
+    const button = screen.getByRole("button", { name: "Win%" });
     expect(document.querySelectorAll(".fixed[aria-hidden]").length).toBe(0);
     fireEvent.mouseEnter(button);
-    expect(document.querySelector("span.fixed[aria-hidden]")?.textContent).toMatch(/Average points per week/);
+    expect(document.querySelector("span.fixed[aria-hidden]")?.textContent).toMatch(/share of your picks that were correct/);
     fireEvent.mouseLeave(button);
     expect(document.querySelector("span.fixed[aria-hidden]")).toBeNull();
+  });
+});
+
+describe("Win%, in place of W–L (#336)", () => {
+  test("shows each row's correct share as a whole percent, a dash before any graded pick", () => {
+    const rows = [row(1, 1, { correct: 34, incorrect: 21 }), row(2, 2)];
+    render(<LeaderboardTable rows={rows} viewerId={1} championId={null} />);
+    const headers = screen.getAllByRole("columnheader").map((th) => th.querySelector("button")?.textContent ?? th.textContent);
+    const col = headers.indexOf("Win%");
+    const cells = screen.getAllByRole("row").slice(1).map((tr) => tr.querySelectorAll("td")[col].textContent);
+    expect(cells).toEqual(["62%", "—"]);
+  });
+
+  test("there is no W–L or Avg column any more", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
+    expect(screen.queryByRole("button", { name: "W–L" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Avg" })).toBeNull();
   });
 });
 

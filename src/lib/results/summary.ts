@@ -30,6 +30,21 @@ export function record(correct: number, incorrect: number): string {
   return `${correct}–${incorrect}`;
 }
 
+/**
+ * The share of graded picks that were correct, from 0 to 1, or null before any
+ * was graded. A Void is neither, as in `record`, so it moves the rate neither way.
+ */
+export function winRate(correct: number, incorrect: number): number | null {
+  const graded = correct + incorrect;
+  return graded === 0 ? null : correct / graded;
+}
+
+/** "62%", `winRate` to the whole percent; an em dash before the first graded pick. */
+export function winRateLabel(correct: number, incorrect: number): string {
+  const rate = winRate(correct, incorrect);
+  return rate === null ? "—" : `${Math.round(rate * 100)}%`;
+}
+
 /** "1st", "2nd", "3rd", "4th" — and "11th", "21st", where the naive rule gets it wrong. */
 export function ordinal(place: number): string {
   const teens = place % 100;
@@ -217,18 +232,7 @@ export function pickBreakdown(reveal: Reveal, memberId: number): BreakdownRow[] 
 }
 
 /**
- * Average points per week played, to one decimal and without a trailing
- * ".0" — the column is read down, and "26.7" beside "30" lines up where
- * "26.666666666666668" and "30.0" do not. An em dash before the first week
- * played, which is what a null average means.
- */
-export function averageLabel(averagePoints: number | null): string {
-  if (averagePoints === null) return "—";
-  return String(Math.round(averagePoints * 10) / 10);
-}
-
-/**
- * Average Tiebreaker Guess miss, to one decimal, same rounding as `averageLabel`.
+ * Average Tiebreaker Guess miss, to one decimal.
  * An em dash before a member has a completed week they actually guessed on —
  * distinct from having simply played, since a skipped Guess leaves no miss to average.
  */
