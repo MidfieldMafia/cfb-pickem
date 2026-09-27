@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who reacted list</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;color:#241F1A}
+</style>
+</helmet>
+<div style="{{rootStyle}}">
+<sc-if value="{{isRows}}" hint-placeholder-val="{{ true }}">
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column;">
+<sc-for list="{{flat}}" as="p" hint-placeholder-count="4">
+<li style="display: flex; align-items: center; gap: 12px; min-height: 44px;">
+<span aria-hidden="true" style="{{p.disc}}">{{p.initial}}</span>
+<span style="{{p.nameStyle}}">{{p.name}}</span>
+<sc-if value="{{showKind}}" hint-placeholder-val="{{ true }}">
+<span style="display: inline-flex;"><dc-import name="Glyph" kind="{{p.kind}}" size="{{18}}" hint-size="18px,18px"></dc-import></span>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">{{p.label}}</span>
+</sc-if>
+</li>
+</sc-for>
+</ul>
+</sc-if>
+<sc-if value="{{isGrouped}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<section style="display: flex; flex-direction: column;">
+<h3 style="margin: 0; display: flex; align-items: center; gap: 6px; font-family: Manrope, sans-serif; font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #6F6152; padding-bottom: 4px;">
+<dc-import name="Glyph" kind="{{g.kind}}" size="{{14}}" hint-size="14px,14px"></dc-import>
+<span>{{g.label}}</span>
+<span style="font-variant-numeric: tabular-nums;">{{g.count}}</span>
+</h3>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column;">
+<sc-for list="{{g.people}}" as="p" hint-placeholder-count="2">
+<li style="display: flex; align-items: center; gap: 12px; min-height: 40px;">
+<span aria-hidden="true" style="{{p.disc}}">{{p.initial}}</span>
+<span style="{{p.nameStyle}}">{{p.name}}</span>
+</li>
+</sc-for>
+</ul>
+</section>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{isNames}}" hint-placeholder-val="{{ false }}">
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px;">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<li style="display: flex; align-items: flex-start; gap: 10px;">
+<span style="display: inline-flex; padding-top: 1px;"><dc-import name="Glyph" kind="{{g.kind}}" size="{{18}}" hint-size="18px,18px"></dc-import></span>
+<span style="font-size: 15px; line-height: 20px;"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">{{g.label}}: </span>{{g.sentence}}</span>
+</li>
+</sc-for>
+</ul>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"people":{"editor":null},"rowstyle":{"editor":"enum","options":["rows","grouped","names"],"default":"rows"},"only":{"editor":"enum","options":["","flag","hot","respect","ha"],"default":""},"width":{"editor":"int","default":320,"min":160,"max":600},"$preview":{"width":320,"height":260}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var KINDS = ['flag', 'hot', 'respect', 'ha'];
+    var LABEL = { flag: 'Flag', hot: 'Hot take', respect: 'Respect', ha: 'Ha' };
+    var sample = [
+      { name: 'Marcus Hill', initial: 'M', color: '#A94B17', kind: 'hot' },
+      { name: 'Priya Shah', initial: 'P', color: '#856717', kind: 'hot' },
+      { name: 'Beth Lang', initial: 'B', color: '#7A6C5A', kind: 'ha' },
+      { name: 'You', initial: 'S', color: '#1F4034', kind: 'respect', you: true }
+    ];
+    var people = this.props.people || sample;
+    var only = this.props.only || '';
+    var style = this.props.rowstyle || 'rows';
+    var shown = people.filter(function (p) { return !only || p.kind === only; });
+
+    function decorate(p, size) {
+      var tint = 'color-mix(in srgb, ' + p.color + ' 18%, transparent)';
+      return Object.assign({}, p, {
+        label: LABEL[p.kind],
+        disc: 'display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: ' + size + 'px; height: ' + size + 'px; border-radius: 9999px; background: ' + tint + '; color: ' + p.color + '; font-family: Chivo, Manrope, sans-serif; font-weight: 900; font-size: ' + Math.round(size * 0.42) + 'px; line-height: 1;',
+        nameStyle: 'flex-grow: 1; min-width: 0; font-size: 15px; line-height: 20px; font-weight: ' + (p.you ? 800 : 600) + '; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'
+      });
+    }
+
+    function sentence(names) {
+      if (names.length <= 1) return names.join('');
+      return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+    }
+
+    var groups = KINDS.filter(function (k) {
+      return shown.some(function (p) { return p.kind === k; });
+    }).map(function (k) {
+      var ps = shown.filter(function (p) { return p.kind === k; });
+      return {
+        kind: k,
+        label: LABEL[k],
+        count: ps.length,
+        people: ps.map(function (p) { return decorate(p, 28); }),
+        sentence: sentence(ps.map(function (p) { return p.name; }))
+      };
+    });
+
+    return {
+      rootStyle: 'width: ' + Number(this.props.width || 320) + 'px; box-sizing: border-box; position: relative;',
+      isRows: style === 'rows',
+      isGrouped: style === 'grouped',
+      isNames: style === 'names',
+      showKind: !only,
+      flat: shown.map(function (p) { return decorate(p, 32); }),
+      groups: groups
+    };
+  }
+}
+</script>
+</body>
+</html>

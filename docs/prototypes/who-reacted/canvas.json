@@ -1,0 +1,88 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Glyph.dc.html": {
+      "h": 40,
+      "title": "Glyph (component)",
+      "w": 40,
+      "x": 870,
+      "y": 1964
+    },
+    "LongPress.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "B \u00b7 Hold a chip: popover",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Thread (component)",
+      "w": 390,
+      "x": 0,
+      "y": 1964
+    },
+    "RowStyles.dc.html": {
+      "h": 880,
+      "title": "How a name reads",
+      "w": 1224,
+      "x": 0,
+      "y": 964
+    },
+    "TapChip.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "A \u00b7 Hold a chip: sheet",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "TrayRow.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "C \u00b7 Reacted in the tray",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Who.dc.html": {
+      "h": 260,
+      "title": "Who (component)",
+      "w": 320,
+      "x": 470,
+      "y": 1964
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-27T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "gestures": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Who reacted: tap a chip to add yours, three ways to see who",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    }
+  },
+  "order": [
+    "TapChip.dc.html",
+    "LongPress.dc.html",
+    "TrayRow.dc.html",
+    "RowStyles.dc.html",
+    "Main.dc.html",
+    "Who.dc.html",
+    "Glyph.dc.html"
+  ],
+  "pages": [],
+  "title": "Chat: who reacted"
+}

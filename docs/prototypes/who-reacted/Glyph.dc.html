@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reaction glyph</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<svg width="{{size}}" height="{{size}}" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="{{svgStyle}}">
+<sc-if value="{{isFlag}}" hint-placeholder-val="{{ false }}">
+<g transform="rotate(-30 12 12)">
+<circle cx="12" cy="4.6" r="3.1" fill="currentColor"></circle>
+<rect x="10.6" y="7.2" width="2.8" height="2.2" rx=".6" fill="currentColor"></rect>
+<path d="M10.6 9.2C9 12 6.6 15 3.6 18.2c1.8.8 3.5.6 5 1.6 1.2.8 2.4 1.4 3.8 1.2 1.6-.4 3-1.8 4.6-1.4 1.6.4 2.8-.2 4-1.4-3-2.6-5.4-6-6.6-9Z" fill="currentColor"></path>
+<path d="M12 10.4v10" stroke="{{cut}}" stroke-width="1.1" stroke-linecap="round"></path>
+</g>
+</sc-if>
+<sc-if value="{{isHot}}" hint-placeholder-val="{{ false }}">
+<path fill="currentColor" d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+</sc-if>
+<sc-if value="{{isRespect}}" hint-placeholder-val="{{ false }}">
+<path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" fill="currentColor"></path>
+<path d="M7 10.5v11" stroke="{{cut}}" stroke-width="1.6" stroke-linecap="round"></path>
+</sc-if>
+<sc-if value="{{isHa}}" hint-placeholder-val="{{ true }}">
+<circle cx="12" cy="12" r="10" fill="currentColor"></circle>
+<path d="M17 13.2a5 5 0 0 1-10 0h10Z" fill="{{cut}}"></path>
+<circle cx="9" cy="9.3" r="1.3" fill="{{cut}}"></circle>
+<circle cx="15" cy="9.3" r="1.3" fill="{{cut}}"></circle>
+</sc-if>
+</svg>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["flag","hot","respect","ha"],"default":"ha"},"size":{"editor":"int","default":24,"min":8,"max":64},"on":{"editor":"boolean","default":false},"$preview":{"width":24,"height":24}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var kind = this.props.kind || 'ha';
+    var on = !!this.props.on;
+    // Off the viewer's own reaction each glyph is its own chart colour; on it, cream on pine.
+    var ACCENT = { flag: '#856717', hot: '#A94B17', respect: '#2F6A4F', ha: '#6A9449' };
+    return {
+      size: Number(this.props.size || 24),
+      svgStyle: 'display: block; flex-shrink: 0; color: ' + (on ? '#FBF6EC' : ACCENT[kind]) + ';',
+      cut: on ? '#1F4034' : '#FBF6EC',
+      isFlag: kind === 'flag',
+      isHot: kind === 'hot',
+      isRespect: kind === 'respect',
+      isHa: kind === 'ha'
+    };
+  }
+}
+</script>
+</body>
+</html>

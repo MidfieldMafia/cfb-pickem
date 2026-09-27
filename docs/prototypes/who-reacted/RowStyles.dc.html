@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who reacted: name rows</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;color:#241F1A;background:#F7F1E3}
+</style>
+</helmet>
+<div style="width: 1224px; height: 880px; box-sizing: border-box; padding: 40px; background: #F7F1E3; display: flex; flex-direction: column; gap: 24px; font-family: Manrope, sans-serif; color: #241F1A;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #A94B17;">Prototype · throwaway</div>
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 28px; line-height: 32px;">How a name reads</h1>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #6F6152;">“Bama -3 is free money.” Top: everyone who reacted. Bottom: Hot take alone, as a chip tap or a press shows it.</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; align-items: start;">
+<sc-for list="{{cols}}" as="c" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<h2 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 18px; line-height: 22px;">{{c.title}}</h2>
+<div style="box-sizing: border-box; padding: 12px 20px; border: 1px solid #9C845F; border-radius: 14px; background: #FBF6EC;">
+<dc-import name="Who" people="{{people}}" rowstyle="{{c.style}}" only="" width="{{320}}" hint-size="320px,220px"></dc-import>
+</div>
+<div style="box-sizing: border-box; padding: 12px 20px; border: 1px solid #9C845F; border-radius: 14px; background: #FBF6EC;">
+<dc-import name="Who" people="{{people}}" rowstyle="{{c.style}}" only="hot" width="{{320}}" hint-size="320px,140px"></dc-import>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1224,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      people: [
+        { name: 'Marcus Hill', initial: 'M', color: '#A94B17', kind: 'hot' },
+        { name: 'Priya Shah', initial: 'P', color: '#856717', kind: 'hot' },
+        { name: 'Beth Lang', initial: 'B', color: '#7A6C5A', kind: 'ha' },
+        { name: 'Cole Rivera', initial: 'C', color: '#6A9449', kind: 'hot' },
+        { name: 'You', initial: 'S', color: '#1F4034', kind: 'respect', you: true }
+      ],
+      cols: [
+        { title: 'Rows', style: 'rows' },
+        { title: 'Grouped', style: 'grouped' },
+        { title: 'Names', style: 'names' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

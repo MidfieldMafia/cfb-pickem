@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat thread</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;color:#241F1A;background:#F7F1E3}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #F7F1E3; display: flex; flex-direction: column; font-family: Manrope, sans-serif; color: #241F1A;">
+<header style="flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; padding: 16px 16px 12px; border-bottom: 1px solid #C6B49A; background: #F7F1E3;">
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 24px; line-height: 28px; letter-spacing: -0.01em;">Chat</h1>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #6F6152;">Film Room · 7 members</p>
+</header>
+<ol style="flex-grow: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 8px 16px 16px; list-style: none; display: flex; flex-direction: column; gap: 4px;">
+<sc-for list="{{rows}}" as="m" hint-placeholder-count="5">
+<li style="{{m.liStyle}}">
+<sc-if value="{{m.showHead}}" hint-placeholder-val="{{ true }}">
+<div style="{{m.headStyle}}">
+<sc-if value="{{m.theirs}}" hint-placeholder-val="{{ true }}"><span style="font-weight: 700;">{{m.name}}</span></sc-if>
+<span style="color: #6F6152;">{{m.time}}</span>
+</div>
+</sc-if>
+<div style="{{m.bubbleRow}}">
+<sc-if value="{{m.theirs}}" hint-placeholder-val="{{ true }}">
+<span aria-hidden="true" style="{{m.pennant}}">{{m.initial}}</span>
+</sc-if>
+<button type="button" onClick="{{m.tapBubble}}" aria-expanded="{{m.trayOpen}}" style="{{m.bubble}}">{{m.text}}</button>
+</div>
+<div style="{{m.below}}">
+<sc-if value="{{m.hasChips}}" hint-placeholder-val="{{ true }}">
+<div style="{{m.chipRow}}">
+<sc-for list="{{m.chips}}" as="c" hint-placeholder-count="2">
+<button type="button" onClick="{{c.tap}}" onPointerDown="{{c.down}}" onPointerUp="{{c.cancel}}" onPointerLeave="{{c.cancel}}" onPointerCancel="{{c.cancel}}" onContextMenu="{{c.noMenu}}" aria-pressed="{{c.on}}" aria-label="{{c.aria}}" style="padding: 10px 0; margin: -10px 0; border: 0; background: transparent; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
+<span style="{{c.style}}"><dc-import name="Glyph" kind="{{c.kind}}" size="{{12}}" on="{{c.on}}" hint-size="12px,12px"></dc-import>{{c.count}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{m.popOpen}}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-label="{{m.popLabel}}" style="{{m.popStyle}}">
+<div style="display: flex; align-items: center; gap: 6px; padding-bottom: 6px; font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #6F6152;">
+<dc-import name="Glyph" kind="{{m.popKind}}" size="{{14}}" hint-size="14px,14px"></dc-import>
+<span>{{m.popTitle}}</span>
+</div>
+<dc-import name="Who" people="{{m.people}}" rowstyle="{{m.rowstyle}}" only="{{m.popKind}}" width="{{240}}" hint-size="240px,120px"></dc-import>
+</div>
+</sc-if>
+<sc-if value="{{m.trayOpen}}" hint-placeholder-val="{{ false }}">
+<div role="group" aria-label="{{m.trayLabel}}" style="{{m.trayStyle}}">
+<sc-for list="{{m.tray}}" as="t" hint-placeholder-count="4">
+<button type="button" onClick="{{t.pick}}" aria-pressed="{{t.on}}" style="{{t.style}}">
+<dc-import name="Glyph" kind="{{t.kind}}" size="{{18}}" on="{{t.on}}" hint-size="18px,18px"></dc-import>
+<span>{{t.label}}</span>
+</button>
+</sc-for>
+<sc-if value="{{m.showReacted}}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{m.toggleReacted}}" aria-expanded="{{m.reactedOpen}}" style="{{m.reactedStyle}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+<span>Reacted</span>
+</button>
+</sc-if>
+<button type="button" aria-label="More" style="display: flex; width: 52px; height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: 6px; background: transparent; color: #6F6152; font-size: 11px; font-weight: 700; cursor: pointer;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+<span>More</span>
+</button>
+</div>
+</sc-if>
+<sc-if value="{{m.reactedOpen}}" hint-placeholder-val="{{ false }}">
+<div style="{{m.reactedList}}">
+<dc-import name="Who" people="{{m.people}}" rowstyle="{{m.rowstyle}}" only="" width="{{252}}" hint-size="252px,160px"></dc-import>
+</div>
+</sc-if>
+</div>
+</li>
+</sc-for>
+</ol>
+<form style="flex-shrink: 0; display: flex; gap: 8px; align-items: center; padding: 10px 16px 14px; border-top: 1px solid #C6B49A; background: #F7F1E3;">
+<label style="flex-grow: 1; display: flex;">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Message</span>
+<input type="text" placeholder="Message Film Room" style="flex-grow: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 14px; border: 1px solid #9C845F; border-radius: 22px; background: #FBF6EC; font-family: Manrope, sans-serif; font-size: 16px; color: #241F1A;">
+</label>
+<button type="button" aria-label="Send" style="display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; border: 0; border-radius: 22px; background: #1F4034; color: #FBF6EC;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg>
+</button>
+</form>
+<sc-if value="{{popAny}}" hint-placeholder-val="{{ false }}">
+<button type="button" aria-label="Close" onClick="{{closePop}}" style="position: absolute; inset: 0; z-index: 5; border: 0; background: transparent; cursor: default;"></button>
+</sc-if>
+<sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; z-index: 10;">
+<button type="button" aria-label="Close" onClick="{{closeSheet}}" style="position: absolute; inset: 0; border: 0; background: rgba(36,31,26,0.42); cursor: default;"></button>
+<div role="dialog" aria-label="Reactions" style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%; display: flex; flex-direction: column; background: #FBF6EC; border-radius: 20px 20px 0 0; box-shadow: 0 -8px 24px rgba(36,31,26,0.18);">
+<div aria-hidden="true" style="align-self: center; width: 40px; height: 4px; margin-top: 8px; border-radius: 2px; background: #C6B49A;"></div>
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 0 20px;">
+<h2 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 20px; line-height: 24px;">Reactions</h2>
+<button type="button" aria-label="Close" onClick="{{closeSheet}}" style="display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; border: 0; background: transparent; color: #6F6152; cursor: pointer;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+</button>
+</div>
+<div role="tablist" style="display: flex; gap: 6px; padding: 8px 16px 12px; overflow-x: auto; border-bottom: 1px solid #C6B49A;">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">
+<sc-if value="{{t.all}}" hint-placeholder-val="{{ true }}"><span>All</span></sc-if>
+<sc-if value="{{t.glyph}}" hint-placeholder-val="{{ false }}"><dc-import name="Glyph" kind="{{t.kind}}" size="{{14}}" on="{{t.selected}}" hint-size="14px,14px"></dc-import></sc-if>
+<span style="font-variant-numeric: tabular-nums;">{{t.count}}</span>
+</button>
+</sc-for>
+</div>
+<div style="overflow-y: auto; padding: 8px 20px 28px;">
+<dc-import name="Who" people="{{sheetPeople}}" rowstyle="{{rowstyle}}" only="{{sheetKind}}" width="{{350}}" hint-size="350px,200px"></dc-import>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"gesture":{"editor":"enum","options":["chip","press","tray"],"default":"chip"},"rowstyle":{"editor":"enum","options":["rows","grouped","names"],"default":"rows"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      trayFor: null,
+      sheet: null,
+      pop: null,
+      reactedFor: null,
+      messages: [
+        { id: 1, from: 2, time: 'Sat 11:02 AM', text: 'Bama -3 is free money. Book it.', reactions: [
+          { m: 1, k: 'hot', t: 1 }, { m: 3, k: 'hot', t: 2 }, { m: 5, k: 'ha', t: 3 }, { m: 4, k: 'hot', t: 4 }, { m: 0, k: 'respect', t: 5 }
+        ] },
+        { id: 2, from: 2, time: 'Sat 11:02 AM', text: 'Screenshot this.', reactions: [] },
+        { id: 3, from: 0, time: 'Sat 11:05 AM', text: 'Taking Georgia again. Don’t @ me.', reactions: [
+          { m: 2, k: 'ha', t: 1 }, { m: 6, k: 'ha', t: 2 }, { m: 1, k: 'flag', t: 3 }
+        ] },
+        { id: 4, from: 3, time: 'Sat 11:09 AM', text: 'Who had Vandy on the sheet??', reactions: [
+          { m: 1, k: 'respect', t: 1 }, { m: 2, k: 'ha', t: 2 }, { m: 4, k: 'respect', t: 3 }, { m: 5, k: 'respect', t: 4 }, { m: 6, k: 'respect', t: 5 }, { m: 0, k: 'respect', t: 6 }
+        ] },
+        { id: 5, from: 6, time: 'Sat 11:10 AM', text: 'Me. Obviously.', reactions: [ { m: 3, k: 'flag', t: 1 } ] }
+      ]
+    };
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.pressTimer);
+  }
+
+  react(id, kind) {
+    var msgs = this.state.messages.map(function (msg) {
+      if (msg.id !== id) return msg;
+      var cur = null;
+      msg.reactions.forEach(function (r) { if (r.m === 0) cur = r.k; });
+      var rest = msg.reactions.filter(function (r) { return r.m !== 0; });
+      var next = cur === kind ? null : kind;
+      return Object.assign({}, msg, { reactions: next ? rest.concat([{ m: 0, k: next, t: 99 }]) : rest });
+    });
+    this.setState({ messages: msgs, trayFor: null, reactedFor: null });
+  }
+
+  renderVals() {
+    var self = this;
+    var S = this.state;
+    var gesture = this.props.gesture || 'chip';
+    var rowstyle = this.props.rowstyle || 'rows';
+    var KINDS = ['flag', 'hot', 'respect', 'ha'];
+    var LABEL = { flag: 'Flag', hot: 'Hot take', respect: 'Respect', ha: 'Ha' };
+    var MEMBERS = {
+      0: { name: 'You', initial: 'S', color: '#1F4034' },
+      1: { name: 'Marcus Hill', initial: 'M', color: '#A94B17' },
+      2: { name: 'Tate Owens', initial: 'T', color: '#2F6A4F' },
+      3: { name: 'Priya Shah', initial: 'P', color: '#856717' },
+      4: { name: 'Cole Rivera', initial: 'C', color: '#6A9449' },
+      5: { name: 'Beth Lang', initial: 'B', color: '#7A6C5A' },
+      6: { name: 'Dre Watts', initial: 'D', color: '#8E2B20' }
+    };
+
+    function peopleOf(msg) {
+      return msg.reactions.slice().sort(function (a, b) { return b.t - a.t; }).map(function (r) {
+        var who = MEMBERS[r.m];
+        return { name: who.name, initial: who.initial, color: who.color, kind: r.k, you: r.m === 0 };
+      });
+    }
+
+    function countsOf(msg) {
+      var c = {};
+      msg.reactions.forEach(function (r) { c[r.k] = (c[r.k] || 0) + 1; });
+      return c;
+    }
+
+    function mineOf(msg) {
+      var k = null;
+      msg.reactions.forEach(function (r) { if (r.m === 0) k = r.k; });
+      return k;
+    }
+
+    var list = S.messages;
+    var rows = list.map(function (msg, i) {
+      var mine = msg.from === 0;
+      var prev = list[i - 1];
+      var next = list[i + 1];
+      var head = !prev || prev.from !== msg.from;
+      var tail = !next || next.from !== msg.from;
+      var who = MEMBERS[msg.from];
+      var counts = countsOf(msg);
+      var myKind = mineOf(msg);
+      var total = msg.reactions.length;
+      var trayOpen = S.trayFor === msg.id;
+      var reactedOpen = gesture === 'tray' && S.reactedFor === msg.id;
+      var popOpen = gesture === 'press' && S.pop && S.pop.id === msg.id;
+
+      function showWho(kind) {
+        if (gesture === 'chip') self.setState({ sheet: { id: msg.id, kind: kind }, trayFor: null });
+        else if (gesture === 'press') self.setState({ pop: { id: msg.id, kind: kind }, trayFor: null });
+        else self.setState({ trayFor: msg.id, reactedFor: msg.id });
+      }
+
+      var chips = KINDS.filter(function (k) { return counts[k]; }).map(function (k) {
+        var on = myKind === k;
+        return {
+          kind: k,
+          count: counts[k],
+          on: on,
+          // A tap on someone else's message adds yours to this reaction (or takes it off); on your own
+          // message, where you cannot react, it shows who did. Holding shows who in A (sheet) and B (popover).
+          aria: LABEL[k] + ' ' + counts[k] + (on ? ', including yours' : '') + (mine ? '. See who reacted' : (on ? '. Tap to take yours off' : '. Tap to add yours')),
+          style: 'display: inline-flex; height: 24px; box-sizing: border-box; align-items: center; gap: 3px; padding: 0 8px; border-radius: 9999px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; ' +
+            (on ? 'border: 1px solid #1F4034; background: #1F4034; color: #FBF6EC;' : 'border: 1px solid #9C845F; background: transparent; color: #241F1A;'),
+          cancel: function () { clearTimeout(self.pressTimer); },
+          noMenu: function (e) { e.preventDefault(); },
+          tap: function () {
+            if (self.held) { self.held = false; return; }
+            clearTimeout(self.pressTimer);
+            if (!mine) { self.react(msg.id, k); return; }
+            showWho(k);
+          },
+          down: function () {
+            clearTimeout(self.pressTimer);
+            self.held = false;
+            if (gesture === 'tray') return;
+            self.pressTimer = setTimeout(function () { self.held = true; showWho(k); }, 450);
+          }
+        };
+      });
+
+      var tray = mine ? [] : KINDS.map(function (k) {
+        var on = myKind === k;
+        return {
+          kind: k,
+          label: LABEL[k],
+          on: on,
+          pick: function () { self.react(msg.id, k); },
+          style: 'display: flex; width: 60px; height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; ' +
+            (on ? 'background: #1F4034; color: #FBF6EC;' : 'background: transparent; color: #241F1A;')
+        };
+      });
+
+      var popKind = popOpen ? S.pop.kind : '';
+      return {
+        theirs: !mine,
+        rowstyle: rowstyle,
+        name: who.name,
+        initial: who.initial,
+        time: msg.time,
+        text: msg.text,
+        showHead: head,
+        liStyle: 'display: flex; flex-direction: column; gap: 2px; ' + (mine ? 'align-items: flex-end; ' : '') + (head ? 'padding-top: 8px;' : ''),
+        headStyle: 'display: flex; align-items: baseline; gap: 6px; font-size: 12px; line-height: 16px; ' + (mine ? 'padding-right: 12px;' : 'padding-left: 48px;'),
+        bubbleRow: 'display: flex; align-items: flex-end; gap: 8px; ' + (mine ? 'justify-content: flex-end;' : ''),
+        pennant: 'display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 9999px; font-family: Chivo, Manrope, sans-serif; font-weight: 900; font-size: 12px; line-height: 1; ' +
+          'background: color-mix(in srgb, ' + who.color + ' 18%, transparent); color: ' + who.color + '; visibility: ' + (tail ? 'visible' : 'hidden') + ';',
+        bubble: 'max-width: 270px; box-sizing: border-box; padding: 8px 12px; border-radius: 14px; text-align: left; font-family: Manrope, sans-serif; font-size: 16px; line-height: 22px; cursor: pointer; overflow-wrap: anywhere; ' +
+          (mine
+            ? 'border: 0; background: #1F4034; color: #FBF6EC;' + (trayOpen ? ' box-shadow: 0 0 0 2px #F7F1E3, 0 0 0 4px #1F4034;' : '')
+            : 'background: #FBF6EC; color: #241F1A; border: 1px solid ' + (trayOpen ? '#1F4034' : '#C6B49A') + ';'),
+        tapBubble: function () {
+          self.setState({ trayFor: S.trayFor === msg.id ? null : msg.id, reactedFor: null });
+        },
+        below: 'display: flex; flex-direction: column; gap: 4px; min-width: 0; ' + (mine ? 'align-items: flex-end;' : 'align-items: flex-start; padding-left: 36px;'),
+        hasChips: chips.length > 0,
+        chipRow: 'display: flex; flex-wrap: wrap; gap: 4px; ' + (mine ? 'justify-content: flex-end; padding-right: 4px;' : 'padding-left: 4px;'),
+        chips: chips,
+        people: peopleOf(msg),
+        trayOpen: trayOpen,
+        trayLabel: mine ? 'Your message' : 'React to this message',
+        trayStyle: 'display: flex; gap: 2px; margin-top: 2px; padding: 4px; border: 1px solid #9C845F; border-radius: 14px; background: #FBF6EC;',
+        tray: tray,
+        showReacted: gesture === 'tray' && total > 0,
+        reactedOpen: reactedOpen,
+        reactedStyle: 'display: flex; width: 64px; height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; ' +
+          (reactedOpen ? 'background: #EAE0CC; color: #241F1A;' : 'background: transparent; color: #241F1A;'),
+        toggleReacted: function () { self.setState({ reactedFor: S.reactedFor === msg.id ? null : msg.id }); },
+        reactedList: 'box-sizing: border-box; width: 284px; padding: 8px 16px; border: 1px solid #9C845F; border-radius: 14px; background: #FBF6EC;',
+        popOpen: popOpen,
+        popKind: popKind,
+        popTitle: popOpen ? LABEL[popKind] + ' · ' + counts[popKind] : '',
+        popLabel: popOpen ? 'Who reacted ' + LABEL[popKind] : '',
+        popStyle: 'position: relative; z-index: 6; box-sizing: border-box; width: 272px; padding: 10px 16px 6px; border: 1px solid #9C845F; border-radius: 14px; background: #FBF6EC; box-shadow: 0 6px 18px rgba(36,31,26,0.16);'
+      };
+    });
+
+    var sheetMsg = S.sheet && gesture === 'chip' ? list.filter(function (x) { return x.id === S.sheet.id; })[0] : null;
+    var tabs = [];
+    if (sheetMsg) {
+      var c = countsOf(sheetMsg);
+      var mk = mineOf(sheetMsg);
+      var sel = S.sheet.kind;
+      var base = 'display: inline-flex; flex-shrink: 0; height: 36px; box-sizing: border-box; align-items: center; gap: 5px; padding: 0 14px; border-radius: 9999px; font-size: 14px; font-weight: 700; cursor: pointer; ';
+      function tabStyle(on) {
+        return base + (on ? 'border: 1px solid #1F4034; background: #1F4034; color: #FBF6EC;' : 'border: 1px solid #9C845F; background: transparent; color: #241F1A;');
+      }
+      tabs.push({ all: true, glyph: false, kind: 'ha', count: sheetMsg.reactions.length, selected: sel === '', style: tabStyle(sel === ''),
+        pick: function () { self.setState({ sheet: { id: sheetMsg.id, kind: '' } }); } });
+      KINDS.filter(function (k) { return c[k]; }).forEach(function (k) {
+        tabs.push({ all: false, glyph: true, kind: k, count: c[k], selected: sel === k, style: tabStyle(sel === k),
+          pick: function () { self.setState({ sheet: { id: sheetMsg.id, kind: k } }); } });
+      });
+    }
+
+    return {
+      rows: rows,
+      rowstyle: rowstyle,
+      popAny: gesture === 'press' && !!S.pop,
+      closePop: function () { self.setState({ pop: null }); },
+      sheetOpen: !!sheetMsg,
+      closeSheet: function () { self.setState({ sheet: null }); },
+      tabs: tabs,
+      sheetKind: sheetMsg ? S.sheet.kind : '',
+      sheetPeople: sheetMsg ? peopleOf(sheetMsg) : []
+    };
+  }
+}
+</script>
+</body>
+</html>
