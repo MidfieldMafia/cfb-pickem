@@ -9,6 +9,24 @@ Neon docs, the PostgreSQL manual, the Next.js 16.3.4 docs bundled in this repo's
 `node_modules/next/dist/docs/`, the installed `drizzle-orm@0.45.2` and
 `@neondatabase/serverless@1.1.0` packages, and the live Vercel API for this project.
 
+> **Since this was written (updated 2026-09-27).** The body below records the options as they
+> stood on 2026-09-21, and it is left as it was. What was decided and built:
+>
+> - **#222 chose option B, bytes in Neon**, and #230 built it (PR #232). The table is
+>   `member_photos`, as §3's first mitigation suggests. It stores **base64 `text`, not a
+>   `customType` bytea**, so §3's Drizzle and driver questions never had to be answered.
+> - **The photo is a 216×216 JPEG, not a 256×256 WebP.** The sizes in "The scale this is
+>   measured against" and the WebP details in §3 and §6.2 are the assumption from that date.
+>   The scale conclusions still hold at this size.
+> - **It is served by `src/app/pennants/[memberId]/[file]/route.ts`**, which `findAvatar` gets
+>   to through an avatar id of the form `photo-<memberId>-<hash8>`. §3's example URL
+>   `/api/members/<id>/pennant.webp` was only an illustration.
+> - **`sharp` is still a devDependency only**, as §6 requires.
+> - **Vercel Functions can now be up to 5 GB**, not the 250 MB §6 quotes
+>   ([changelog](https://vercel.com/changelog/vercel-functions-can-now-be-up-to-5-gb-in-package-size)).
+>   §6's objection to `sharp` in the runtime was never about size, so it stands.
+> - The Vercel plan, Blob and Neon figures in §0–§4 were not rechecked.
+
 ## The scale this is measured against
 
 The map has settled that the crop is client-side, so what arrives at the server is one finished
