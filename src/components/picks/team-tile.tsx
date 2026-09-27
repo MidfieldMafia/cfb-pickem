@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Check } from "lucide-react";
-import { logoSrc } from "@/lib/logos";
+import { logoSrc, shortSchool } from "@/lib/logos";
 
 /**
  * One side of the matchup, flexing to fill the height left below the panel so
@@ -95,7 +95,7 @@ export function TeamTile({
       </span>
 
       <span className="grid w-full justify-items-center gap-1.5">
-        <span className="font-display text-[22px] leading-[26px] text-balance">{name}</span>
+        <span className="font-display text-[22px] leading-[26px] text-balance">{shortSchool(name)}</span>
         <span
           aria-hidden
           className={`block h-1.5 w-[70%] rounded-full ${dimmed ? "opacity-50" : ""}`}

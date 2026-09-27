@@ -13,6 +13,12 @@ export interface TeamColors {
 
 export interface TeamLogo {
   school: string;
+  /**
+   * What a pick tile prints when `school` would wrap there. Set by hand, only
+   * where the usual short form is unambiguous: not "MSU", which Michigan State
+   * also answers to.
+   */
+  short?: string;
   slug: string;
   /** CFBD `team.id` — the numeric identity, when one is on hand. */
   espnId: number;
@@ -90,6 +96,10 @@ export function findLogoByEspnId(espnId: number): TeamLogo | undefined {
 export function findLogo(school: string): TeamLogo | undefined {
   const slug = slugify(school);
   return bySlug.get(SLUG_ALIASES[slug] ?? slug);
+}
+
+export function shortSchool(school: string): string {
+  return findLogo(school)?.short ?? school;
 }
 
 export function logoSrc(school: string): string | undefined {
