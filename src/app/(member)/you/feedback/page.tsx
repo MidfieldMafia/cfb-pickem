@@ -3,7 +3,8 @@ import { requireMember } from "@/lib/members/current";
 import { FeedbackForm } from "./feedback-form";
 
 /**
- * Send feedback (#237), opened from the You screen. An ordinary page in the
+ * Send feedback (#237), opened from the You screen or the Profile menu (#337).
+ * Back goes to You either way: the page lives under it. An ordinary page in the
  * member group rather than an overlay like the photo crop, so `body`'s
  * safe-area padding already keeps the back link clear of the status bar and
  * the bottom nav clears the home indicator. Adding either inset here would
