@@ -74,7 +74,13 @@ export function TeamTile({
         </span>
       ) : null}
 
-      <span className="relative mx-1 my-2 min-h-0 flex-1 self-stretch">
+      {/* The badge row ends 38px inside the border (the 28px check at top-2.5),
+          so the logo's box starts at 42px: pt-3 plus mt-[30px]. A tight-cropped
+          logo fills its whole box, and a box reaching into that row runs it
+          into the badges. min-h-8 keeps the logo from vanishing behind a
+          two-line name on a short screen; the page scrolls a little there
+          instead. */}
+      <span className="relative mx-1 mt-[30px] mb-2 min-h-8 flex-1 self-stretch">
         {logo ? (
           <Image
             src={logo}
