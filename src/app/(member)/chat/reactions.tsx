@@ -11,7 +11,8 @@ import type { MemberJson } from "@/lib/slate/json";
 /**
  * Reactions on the Chat thread (#249), as board 5 of the #177 canvas draws
  * them: the tray under a tapped message, the chips under any message that has
- * one, and the sheet of who reacted that a chip opens (#338). Each glyph is solid, in its own chart colour; on the viewer's own
+ * one, and the sheet of who reacted that a chip opens (#338). Each glyph is
+ * solid, in its own chart colour; on the viewer's own
  * reaction it sits cream on pine.
  */
 
@@ -78,19 +79,19 @@ function ReactionIcon({ kind, size, on }: { kind: ChatReactionKind; size: number
 const HOLD_MS = 450;
 
 /** What a chip says to a screen reader: its count, and what a tap on it does. */
-function chipLabel(message: ChatMessageJson, kind: ChatReactionKind, count: number, own: boolean): string {
+function chipLabel(message: ChatMessageJson, kind: ChatReactionKind, count: number, canReact: boolean): string {
   const on = message.mine === kind;
   const counted = `${CHAT_REACTION_LABELS[kind]} ${count}${on ? ", including yours" : ""}`;
-  if (own) return `${counted}. Tap to see who reacted`;
+  if (!canReact) return `${counted}. Tap to see who reacted`;
   if (on) return `${counted}. Tap to take yours off`;
   return `${counted}. ${message.mine ? "Tap to switch yours to it" : "Tap to add yours"}`;
 }
 
 /**
  * The counts under a message; nothing when nobody has reacted. Each chip is a
- * button (#338): a tap on someone else's message does what that reaction does
- * in the tray, and on the viewer's own opens who reacted, since they cannot
- * react to it. Holding any chip opens who reacted, and the hold does not also
+ * button (#338): where the viewer can react, a tap does what that reaction
+ * does in the tray; on their own message, or once they are out of the Group,
+ * it opens who reacted instead. Holding any chip opens who reacted, and the hold does not also
  * count as a tap. The chip stays 24px to look at, with a 44px hit area.
  *
  * A hold cannot be reached from a keyboard or a screen reader, so a "See who
@@ -99,12 +100,15 @@ function chipLabel(message: ChatMessageJson, kind: ChatReactionKind, count: numb
 export function ReactionChips({
   message,
   mine,
-  onTap,
+  canReact,
+  onReact,
   onShow,
 }: {
   message: ChatMessageJson;
   mine: boolean;
-  onTap: (kind: ChatReactionKind) => void;
+  /** Someone else's message, and the viewer still in the Group. */
+  canReact: boolean;
+  onReact: (kind: ChatReactionKind) => void;
   /** Opens who reacted at `kind`, or at All for null. */
   onShow: (kind: ChatReactionKind | null) => void;
 }) {
@@ -124,9 +128,10 @@ export function ReactionChips({
           <button
             key={kind}
             type="button"
-            aria-label={chipLabel(message, kind, count, mine)}
-            onPointerDown={() => {
+            aria-label={chipLabel(message, kind, count, canReact)}
+            onPointerDown={(e) => {
               release();
+              if (e.button !== 0) return;
               held.current = null;
               timer.current = setTimeout(() => {
                 held.current = kind;
@@ -137,13 +142,13 @@ export function ReactionChips({
             onPointerLeave={release}
             onPointerCancel={release}
             onContextMenu={(e) => e.preventDefault()}
-            onClick={() => {
-              if (held.current === kind) {
-                held.current = null;
-                return;
-              }
-              if (mine) onShow(kind);
-              else onTap(kind);
+            onClick={(e) => {
+              // A keyboard's click (detail 0) is never the end of a hold.
+              const endsHold = held.current === kind && e.detail > 0;
+              held.current = null;
+              if (endsHold) return;
+              if (canReact) onReact(kind);
+              else onShow(kind);
             }}
             className="-my-2.5 touch-manipulation py-2.5 select-none [-webkit-touch-callout:none]"
           >
@@ -177,20 +182,22 @@ export function ReactionChips({
  */
 export function ReactionSheet({
   sheet,
+  open,
   people,
   viewerId,
   onSelect,
   onClose,
 }: {
-  /** Null when the sheet is closed. */
+  /** Kept after a close, so the sheet still has its rows while it slides away. */
   sheet: ReactionSheetView | null;
+  open: boolean;
   people: Map<number, MemberJson>;
   viewerId: number;
   onSelect: (kind: ChatReactionKind | null) => void;
   onClose: () => void;
 }) {
   return (
-    <Drawer open={sheet !== null} onOpenChange={(open) => (open ? null : onClose())}>
+    <Drawer open={open && sheet !== null} onOpenChange={(opening) => (opening ? null : onClose())}>
       <DrawerContent className="mx-auto max-w-md">
         <DrawerHeader className="flex-row items-center justify-between py-1 pr-2 pl-5 text-left">
           <DrawerTitle className="font-display text-xl leading-6 font-black">Reactions</DrawerTitle>

@@ -26,7 +26,7 @@ import { memberGroups } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import { toMemberJson, type MemberJson } from "@/lib/slate/json";
 import { MAX_CHAT_TEXT } from "./limits";
-import { chatReactionKinds, type ChatReactionKind, type Reactor } from "./reactions";
+import { countReactions, type ChatReactionKind, type Reactor } from "./reactions";
 
 export class InvalidChat extends Refusal {}
 
@@ -226,11 +226,7 @@ async function reactionsTo(
     if (row.memberId === readerId) entry.mine = row.kind;
     byMessage.set(row.messageId, entry);
   }
-  for (const entry of byMessage.values()) {
-    entry.reactions = chatReactionKinds
-      .map((kind) => ({ kind, count: entry.reactors.filter((r) => r.kind === kind).length }))
-      .filter(({ count }) => count > 0);
-  }
+  for (const entry of byMessage.values()) entry.reactions = countReactions(entry.reactors);
   return byMessage;
 }
 
