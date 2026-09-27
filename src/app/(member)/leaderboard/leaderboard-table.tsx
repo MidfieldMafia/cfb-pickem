@@ -9,6 +9,7 @@ import { Pennant } from "@/components/pennant";
 import type { LeaderboardRow } from "@/lib/results/results";
 import { averageLabel, movement, record, tiebreakerMissLabel, type Movement } from "@/lib/results/summary";
 import { sortLeaderboard, type SortColumn, type SortDirection } from "./leaderboard-sort";
+import { SolidTrophy } from "./solid-trophy";
 
 /**
  * How far a member's rank moved since the board before the latest played week,
@@ -31,10 +32,17 @@ interface Sort {
   direction: SortDirection;
 }
 
-const SORTABLE_COLUMNS: { column: SortColumn; label: string; tip: string }[] = [
+/**
+ * `label` is each header's accessible name. A column with an `icon` shows that
+ * in place of the word: Wins wears the Weekly Win's trophy, the Week strip's
+ * mark for a week won, which is narrower than "Wins" on a table with no width
+ * to spare (#336). It takes the header's own colour rather than the gold of the
+ * champion's Badge, so it reads as a column label, not a result.
+ */
+const SORTABLE_COLUMNS: { column: SortColumn; label: string; icon?: React.ReactNode; tip: string }[] = [
   { column: "points", label: "Pts", tip: "Total points across every week played." },
   { column: "record", label: "W–L", tip: "Correct and incorrect picks across the season. A voided game counts as neither." },
-  { column: "wins", label: "Wins", tip: "Weekly Wins: weeks you scored the most points in your group." },
+  { column: "wins", label: "Weekly wins", icon: <SolidTrophy size={14} />, tip: "Weekly Wins: weeks you scored the most points in your group." },
   { column: "average", label: "Avg", tip: "Average points per week played." },
   {
     column: "miss",
@@ -42,6 +50,13 @@ const SORTABLE_COLUMNS: { column: SortColumn; label: string; tip: string }[] = [
     tip: "Average Tiebreaker Guess miss over the weeks you guessed. Lower is better; it plays no part in ties.",
   },
 ];
+
+/**
+ * The numeric columns' cell class. Padding is 6px a side, not the table's 8,
+ * so the Member column gets the difference (18px across five columns) and a
+ * name truncates later on a phone; the last column keeps 8px off the card edge.
+ */
+const NUMERIC = "px-1.5 text-right tabular-nums last:pr-2";
 
 /** How long a finger must rest on a header before it explains itself, as a long-press does on a phone. */
 const LONG_PRESS_MS = 450;
@@ -62,12 +77,14 @@ interface TipPlace {
 function SortableHead({
   column,
   label,
+  icon,
   tip,
   sort,
   onSort,
 }: {
   column: SortColumn;
   label: string;
+  icon?: React.ReactNode;
   tip: string;
   sort: Sort | null;
   onSort: (column: SortColumn) => void;
@@ -98,7 +115,7 @@ function SortableHead({
   }
 
   return (
-    <TableHead className="text-right" aria-sort={ariaSort}>
+    <TableHead className={NUMERIC} aria-sort={ariaSort}>
       {/* p-0/border-0/bg-transparent strip the UA button chrome that would
           otherwise widen every numeric column past its plain-text size — the
           table already sits 1px from its 390px container (page.tsx's own
@@ -142,12 +159,29 @@ function SortableHead({
         onContextMenu={(e) => e.preventDefault()}
         className={`relative -my-2 inline-flex items-center gap-0.5 border-0 bg-transparent px-0 py-2 ${active ? "font-bold text-foreground" : ""}`}
       >
-        {label}
-        {/* Hung in the gap to the label's left rather than set beside it: an
-            inline arrow widens the column, and this table has no width to
-            spare (the note above). */}
+        {/* An icon header names itself in hidden text rather than aria-label,
+            so the <th> takes the name from its content as well as the button. */}
+        {icon ? (
+          <>
+            {icon}
+            <span className="sr-only">{label}</span>
+          </>
+        ) : (
+          label
+        )}
+        {/* Hung under the label rather than set beside it: an inline arrow
+            widens the column, and this table has no width to spare (the note
+            above). Under it, not in the gap to its left, because that 12px gap
+            belongs to two columns: an arrow there sat 1px from the neighbour's
+            label, and beside the trophy, which cannot turn bold, read as the
+            neighbour's (#336). */}
         {active ? (
-          <Direction size={10} strokeWidth={3} aria-hidden className="absolute right-full top-1/2 mr-px -translate-y-1/2" />
+          <Direction
+            size={8}
+            strokeWidth={3}
+            aria-hidden
+            className="absolute bottom-[5px] left-1/2 -translate-x-1/2"
+          />
         ) : null}
       </button>
       {/* Always in the DOM so a screen reader can read it off the button; the
@@ -202,8 +236,16 @@ export function LeaderboardTable({
           <TableRow>
             <TableHead className="w-12 pr-0">#</TableHead>
             <TableHead>Member</TableHead>
-            {SORTABLE_COLUMNS.map(({ column, label, tip }) => (
-              <SortableHead key={column} column={column} label={label} tip={tip} sort={sort} onSort={toggleSort} />
+            {SORTABLE_COLUMNS.map(({ column, label, icon, tip }) => (
+              <SortableHead
+                key={column}
+                column={column}
+                label={label}
+                icon={icon}
+                tip={tip}
+                sort={sort}
+                onSort={toggleSort}
+              />
             ))}
           </TableRow>
         </TableHeader>
@@ -219,7 +261,10 @@ export function LeaderboardTable({
                     {move ? <Move move={move} /> : null}
                   </span>
                 </TableCell>
-                <TableCell>
+                {/* w-full max-w-0 gives the name column whatever the numbers leave
+                    and no more: without it a table cell grows to fit its text,
+                    so a long name pushed Miss off a phone instead of truncating. */}
+                <TableCell className="w-full max-w-0">
                   <span className="flex items-center gap-2">
                     <Pennant avatarId={row.member.avatarId} name={row.member.displayName} size={28} />
                     {/* min-w-0 is what lets the name truncate rather than widen the column. */}
@@ -234,13 +279,13 @@ export function LeaderboardTable({
                     </span>
                   </span>
                 </TableCell>
-                <TableCell className="text-right font-display text-lg font-black tabular-nums">
+                <TableCell className={`${NUMERIC} font-display text-lg font-black`}>
                   {row.totalPoints}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{record(row.correct, row.incorrect)}</TableCell>
-                <TableCell className="text-right tabular-nums">{row.weeklyWins}</TableCell>
-                <TableCell className="text-right tabular-nums">{averageLabel(row.averagePoints)}</TableCell>
-                <TableCell className="text-right tabular-nums">{tiebreakerMissLabel(row.averageTiebreakerMiss)}</TableCell>
+                <TableCell className={NUMERIC}>{record(row.correct, row.incorrect)}</TableCell>
+                <TableCell className={NUMERIC}>{row.weeklyWins}</TableCell>
+                <TableCell className={NUMERIC}>{averageLabel(row.averagePoints)}</TableCell>
+                <TableCell className={NUMERIC}>{tiebreakerMissLabel(row.averageTiebreakerMiss)}</TableCell>
               </TableRow>
             );
           })}

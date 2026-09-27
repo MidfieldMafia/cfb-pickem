@@ -95,14 +95,15 @@ describe("sorting by Pts", () => {
 
 describe("sort arrows", () => {
   test("only the sorted column shows an arrow, pointing the way its values run", () => {
+    const arrows = () => document.querySelectorAll("th svg.lucide-arrow-up, th svg.lucide-arrow-down").length;
     render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
-    expect(document.querySelectorAll("th svg").length).toBe(0);
+    expect(arrows()).toBe(0);
     const button = screen.getByRole("button", { name: "Pts" });
     fireEvent.click(button);
     expect(button.querySelector("svg.lucide-arrow-down")).not.toBeNull();
     fireEvent.click(button);
     expect(button.querySelector("svg.lucide-arrow-up")).not.toBeNull();
-    expect(document.querySelectorAll("th svg").length).toBe(1);
+    expect(arrows()).toBe(1);
   });
 
   test("Miss is lower-is-better, so its best-first click points up", () => {
@@ -120,6 +121,24 @@ describe("header tooltips", () => {
     const button = screen.getByRole("button", { name: "Miss" });
     const tip = document.getElementById(button.getAttribute("aria-describedby")!);
     expect(tip?.textContent).toMatch(/Lower is better/);
+  });
+
+  test("Wins shows the trophy in place of its word, still named and explained (#336)", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
+    const button = screen.getByRole("button", { name: "Weekly wins" });
+    // The word itself is screen-reader-only text; what shows is the trophy.
+    expect(button.querySelector(".sr-only")?.textContent).toBe("Weekly wins");
+    expect(button.querySelector("svg")).not.toBeNull();
+    const tip = document.getElementById(button.getAttribute("aria-describedby")!);
+    expect(tip?.textContent).toMatch(/^Weekly Wins:/);
+  });
+
+  test("the trophy header still sorts, most Weekly Wins first", () => {
+    const rows = [row(1, 1, { weeklyWins: 1 }), row(2, 2, { weeklyWins: 3 }), row(3, 3, { weeklyWins: 2 })];
+    render(<LeaderboardTable rows={rows} viewerId={1} championId={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Weekly wins" }));
+    expect(renderedMemberOrder()).toEqual([2, 3, 1]);
+    expect(screen.getByRole("columnheader", { name: /Weekly wins/ }).getAttribute("aria-sort")).toBe("descending");
   });
 
   test("hovering shows the tip, leaving hides it", () => {
