@@ -22,8 +22,9 @@ import { WeeklyScoreList } from "./weekly-score";
  * Result Override on the results console changes this table the next time it
  * is opened.
  *
- * Only Weeks whose Deadline has passed count (`playedWeeks`), so a Week in
- * progress never appears as a week everyone scored zero in.
+ * Only Weeks whose Deadline has passed and that this group played count
+ * (`groupWeeks`), so neither a Week in progress nor one the group sat out
+ * appears as a week everyone scored zero in (#332).
  *
  * `?week=` swaps the season table for that one Week's standings. They come
  * out of the same `seasonResult` pass, so a week's board and the season it

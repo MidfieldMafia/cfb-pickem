@@ -305,7 +305,7 @@ export interface LeaderboardRow {
 /** The season graded: the Leaderboard, and every played Week behind it. */
 export interface SeasonResult {
   season: Season;
-  /** Published Weeks whose Deadline has passed, in week order. */
+  /** Published Weeks whose Deadline has passed and in which someone on the group's board made a Pick, in week order. */
   weeks: GradedWeek[];
   leaderboard: LeaderboardRow[];
 }
@@ -434,11 +434,11 @@ function gradedWeekResult(slate: Slate, rows: readonly BoardMember[], graded: en
  * a week played (see `@/lib/scoring`) — and `weekEntries` would refuse the read
  * anyway, because the Reveal is what the Deadline gates.
  *
- * Stated once here because three screens now turn on it: the Leaderboard adds
- * these up, the week results screen offers exactly these in its chooser, and
- * `seasonResult` grades them.
+ * Stated once here, and read only through `groupWeeks`, which narrows it to
+ * the Weeks one group played: the Leaderboard adds those up and the Reveal
+ * offers exactly those.
  */
-export async function playedWeeks(db: Db, season: Season, now: Date = new Date()): Promise<Week[]> {
+async function playedWeeks(db: Db, season: Season, now: Date = new Date()): Promise<Week[]> {
   const published = await db.query.weeks.findMany({
     where: and(eq(weeks.seasonId, season.id), eq(weeks.published, true)),
     orderBy: [asc(weeks.weekNumber)],
@@ -455,9 +455,22 @@ interface SeasonPass {
   graded: engine.SeasonResult;
 }
 
-async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPass> {
-  // Neither read depends on the other, so the board waits for one round trip.
-  const [season, group] = await Promise.all([activeSeason(db), groupBoard(db, groupId)]);
+/**
+ * `playedWeeks` as one group played them: each Week with its games and its
+ * board, less any Week in which nobody on that board made a Pick (#332).
+ *
+ * `playedWeeks` is the Season's answer, and #132's rule is a member's, so a
+ * Week the site played can still be one this group sat out entirely. Such a
+ * Week counts for nobody here, so dropping it moves no season number; keeping
+ * it gave the Leaderboard a Week tile with no one on it, a Reveal with nothing
+ * to reveal, and movement arrows measured across a Week that changed nothing.
+ * It is dropped before grading so the engine's "latest week" is the group's.
+ *
+ * The board is `seasonEntries`', roster already applied, so a person who
+ * picked in another group — or here before they joined — does not make the
+ * Week this group's.
+ */
+async function groupWeeks(db: Db, season: Season, group: readonly BoardMember[], now: Date) {
   const played = await playedWeeks(db, season, now);
   const weekIds = played.map((w) => w.id);
   const gameRows = weekIds.length ? await db.query.games.findMany({ where: inArray(games.weekId, weekIds) }) : [];
@@ -465,8 +478,24 @@ async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPa
     week,
     games: slateOrder(gameRows.filter((g) => g.weekId === week.id)),
   }));
-
   const boards = await seasonEntries(db, group, weekGames, now);
+  return {
+    weekGames: weekGames.filter(({ week }) => boards.get(week.id)!.some((entry) => entry.picks.length > 0)),
+    boards,
+  };
+}
+
+/** The Weeks `groupId` played, in week order: what its Reveal offers. See `groupWeeks`. */
+export async function groupPlayedWeeks(db: Db, groupId: number, season: Season, now: Date = new Date()): Promise<Week[]> {
+  const { weekGames } = await groupWeeks(db, season, await groupBoard(db, groupId), now);
+  return weekGames.map(({ week }) => week);
+}
+
+async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPass> {
+  // Neither read depends on the other, so the board waits for one round trip.
+  const [season, group] = await Promise.all([activeSeason(db), groupBoard(db, groupId)]);
+  const { weekGames, boards } = await groupWeeks(db, season, group, now);
+  const played = weekGames.map(({ week }) => week);
   // `seasonEntries` has already applied `roster` a Week at a time, so this is not a
   // fourth answer to who is on the board � it is the season-wide superset of those
   // boards, within this group: its active members plus anyone since deactivated
@@ -501,9 +530,10 @@ function seasonView({ season, played, rows, graded }: SeasonPass): SeasonResult 
 /**
  * The season graded: the Leaderboard and every Week behind it, from one
  * `scoreSeason` pass over rows read in a fixed number of round trips. Only
- * published Weeks whose Deadline has passed count — a published Week still
- * open scores zero for everyone and would drag every average down as a week
- * played (see `@/lib/scoring`).
+ * published Weeks whose Deadline has passed, and that the group played
+ * (`groupWeeks`), count — a published Week still open scores zero for
+ * everyone and would drag every average down as a week played (see
+ * `@/lib/scoring`).
  *
  * Every active member gets a Leaderboard row, including before the first
  * Deadline of the season: an empty season is a table of zeroes, not an empty
