@@ -56,6 +56,16 @@ export const REFRESH_INTERVAL_MS = 5 * 60_000;
  * to move it (see #269, #304).
  */
 export const LIVE_REFRESH_INTERVAL_MS = 30_000;
+
+/**
+ * How long a pass keeps starting `/live/plays` calls. They run one after
+ * another inside a member's request, about 0.3 s each on the first live
+ * Saturday, so fifteen games fit easily; a slow feed does not, and one call can hold for the whole of
+ * `LIVE_PLAYS_TIMEOUT_MS`. Past this the remaining games keep what they have
+ * until the next pass, so a request waits at most this plus one call.
+ */
+export const LIVE_PLAYS_PASS_BUDGET_MS = 10_000;
+
 /** The highest score the override form accepts. The record is 222; nobody needs more. */
 export const MAX_SCORE = 250;
 
@@ -183,27 +193,34 @@ type PlaysRead = { ok: true; feed: LiveFeed | null } | { ok: false };
 
 /**
  * Fetches `/live/plays` for each game and stores what comes back, one game at
- * a time as far as failure goes: a game whose call errors or times out is
- * logged and left with the plays it last stored, and the rest are written
- * regardless. Each response overwrites the game's `live_feeds` row whole, so a
+ * a time: CFBD allows one open call per endpoint per key and answers the rest
+ * 429, so fetching them together refreshed about one game a pass (#330). A
+ * game whose call errors or times out is logged and left with the plays it
+ * last stored, and the rest are written regardless. So is a game the pass
+ * never reached, once `LIVE_PLAYS_PASS_BUDGET_MS` has gone. Each response overwrites the game's `live_feeds` row whole, so a
  * play revised in place is just the newer copy. Returns each game's read, by
  * `games.id`.
  */
 async function ingestPlays(db: Db, cfbd: CfbdClient, live: Game[], now: Date): Promise<Map<number, PlaysRead>> {
-  const settled = await Promise.allSettled(live.map((game) => cfbd.livePlays(game.cfbdGameId)));
   const reads = new Map<number, PlaysRead>();
   const rows: (typeof liveFeeds.$inferInsert)[] = [];
-  settled.forEach((outcome, i) => {
-    const game = live[i];
-    if (outcome.status === "rejected") {
-      const reason = outcome.reason instanceof Error ? outcome.reason.message : outcome.reason;
-      console.warn(`Live plays skipped for game ${game.cfbdGameId}:`, reason);
+  // Wall time, not `now`: `now` is the pass's timestamp, fixed for the whole pass.
+  const started = Date.now();
+  for (const game of live) {
+    if (Date.now() - started >= LIVE_PLAYS_PASS_BUDGET_MS) {
+      console.warn(`Live plays skipped for game ${game.cfbdGameId}: the pass ran out of time`);
       reads.set(game.id, { ok: false });
-      return;
+      continue;
     }
-    reads.set(game.id, { ok: true, feed: toLiveFeed(outcome.value, game) });
-    rows.push({ gameId: game.id, drives: outcome.value.drives, fetchedAt: now });
-  });
+    try {
+      const plays = await cfbd.livePlays(game.cfbdGameId);
+      reads.set(game.id, { ok: true, feed: toLiveFeed(plays, game) });
+      rows.push({ gameId: game.id, drives: plays.drives, fetchedAt: now });
+    } catch (error) {
+      console.warn(`Live plays skipped for game ${game.cfbdGameId}:`, error instanceof Error ? error.message : error);
+      reads.set(game.id, { ok: false });
+    }
+  }
   if (rows.length > 0) {
     await db
       .insert(liveFeeds)

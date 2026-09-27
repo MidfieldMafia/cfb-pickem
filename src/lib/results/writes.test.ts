@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { games, liveFeeds, weeks } from "@/db/schema";
 import { sharedFeed } from "@/lib/cfbd/cache";
@@ -24,6 +24,7 @@ import {
   clearOverride,
   ingestResults,
   InvalidResult,
+  LIVE_PLAYS_PASS_BUDGET_MS,
   overrideResult,
   refreshResultsIfStale,
   restoreGame,
@@ -527,6 +528,48 @@ describe("live play-by-play", () => {
     // Michigan is untouched by Texas's failure.
     expect((await storedFeed(db, michigan.id))?.fetchedAt).toEqual(later);
     expect(effectiveResult(await reload(michigan.id)).live?.feed?.play).toMatchObject({ clock: "11:00", homeScore: 7 });
+  });
+
+  test("the games are fetched one at a time: CFBD refuses a second call to the endpoint while one is open", async () => {
+    const { db, texas, michigan, ingest } = await setup();
+    const feed = feedWith({}, { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"], [OKLAHOMA_AT_MICHIGAN]: [0, 0, 1, "15:00"] });
+    const answer = feed.livePlays;
+    let open = 0;
+    let most = 0;
+    feed.livePlays = async (gameId) => {
+      most = Math.max(most, ++open);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      open -= 1;
+      return answer(gameId);
+    };
+
+    await ingest(feed, SATURDAY_EVENING);
+
+    expect(most).toBe(1);
+    // And every one of them still lands on the pass.
+    expect((await storedFeed(db, texas.id))?.fetchedAt).toEqual(SATURDAY_EVENING);
+    expect((await storedFeed(db, michigan.id))?.fetchedAt).toEqual(SATURDAY_EVENING);
+  });
+
+  test("a pass that has run past its budget starts no more fetches, and the games it skipped keep their plays", async () => {
+    const { db, texas, michigan, ingest } = await setup();
+    const feed = feedWith({}, { [OHIO_STATE_AT_TEXAS]: [3, 0, 1, "08:42"], [OKLAHOMA_AT_MICHIGAN]: [0, 0, 1, "15:00"] });
+    const answer = feed.livePlays;
+    // The first game answers only once the whole budget has gone.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      feed.livePlays = async (gameId) => {
+        vi.setSystemTime(Date.now() + LIVE_PLAYS_PASS_BUDGET_MS);
+        return answer(gameId);
+      };
+      await ingest(feed, SATURDAY_EVENING);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(feed.reads.livePlays).toBe(1);
+    const stored = [await storedFeed(db, texas.id), await storedFeed(db, michigan.id)];
+    expect(stored.filter(Boolean)).toHaveLength(1);
   });
 
   test("a Void or overridden game is never fetched, whatever the scoreboard says", async () => {
