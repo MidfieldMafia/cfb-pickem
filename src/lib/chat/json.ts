@@ -4,7 +4,7 @@
  */
 import type { MemberJson } from "@/lib/slate/json";
 import type { GoneReason, ReactionCount, Thread } from "./chat";
-import type { ChatReactionKind } from "./reactions";
+import type { ChatReactionKind, Reactor } from "./reactions";
 
 export interface ChatMessageJson {
   id: number;
@@ -17,6 +17,8 @@ export interface ChatMessageJson {
   reactions: ReactionCount[];
   /** The viewer's own reaction. */
   mine: ChatReactionKind | null;
+  /** Who reacted with what, newest first; every one of them is in `senders`. */
+  reactors: Reactor[];
   /** Why it no longer shows, for the placeholder in its place; null while it does. */
   gone: GoneReason | null;
 }
@@ -24,6 +26,7 @@ export interface ChatMessageJson {
 export interface ChatStateJson {
   /** Oldest first. */
   messages: ChatMessageJson[];
+  /** Everyone who wrote or reacted to one of `messages`. */
   senders: MemberJson[];
   /** The viewer may remove other people's messages: an Organizer of the Group, or a Commissioner. */
   canRemove: boolean;
@@ -40,6 +43,7 @@ export function toChatStateJson(thread: Thread, now: Date): ChatStateJson {
       createdAt: m.createdAt.toISOString(),
       reactions: m.reactions,
       mine: m.mine,
+      reactors: m.reactors,
       gone: m.gone,
     })),
     senders: thread.senders,

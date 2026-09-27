@@ -11,7 +11,7 @@ import { manageGroup, removeFromGroup } from "@/lib/groups/manage";
 import { removeMember, setMemberActive } from "@/lib/members/members";
 import { addGroup, familyGroup, joinAt, joinGroup, seedWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { chatThread, InvalidChat, NotInGroup, postMessage, setReaction } from "./chat";
-import { tapReaction, withReaction } from "./reactions";
+import { reactionSheet, tapReaction, withReaction } from "./reactions";
 
 const MINUTE = 60 * 1000;
 const at = (minutes: number) => new Date(THURSDAY.getTime() + minutes * MINUTE);
@@ -25,24 +25,94 @@ describe("a tap", () => {
 });
 
 describe("the counts a tap shows before the server answers", () => {
-  const message = { reactions: [{ kind: "hot" as const, count: 2 }, { kind: "ha" as const, count: 1 }], mine: "ha" as const };
+  const VIEWER = 1;
+  const message = {
+    reactions: [{ kind: "hot" as const, count: 2 }, { kind: "ha" as const, count: 1 }],
+    mine: "ha" as const,
+    reactors: [
+      { memberId: 2, kind: "hot" as const },
+      { memberId: VIEWER, kind: "ha" as const },
+      { memberId: 3, kind: "hot" as const },
+    ],
+  };
 
-  test("switching moves one from the old kind to the new, dropping a kind that reaches zero", () => {
-    expect(withReaction(message, "flag")).toEqual({
+  test("switching moves one from the old kind to the new, dropping a kind that reaches zero, and puts the viewer first", () => {
+    expect(withReaction(message, VIEWER, "flag")).toEqual({
       reactions: [
         { kind: "flag", count: 1 },
         { kind: "hot", count: 2 },
       ],
       mine: "flag",
+      reactors: [
+        { memberId: VIEWER, kind: "flag" },
+        { memberId: 2, kind: "hot" },
+        { memberId: 3, kind: "hot" },
+      ],
     });
   });
 
-  test("taking it off, and putting one on a kind others already have", () => {
-    expect(withReaction(message, null)).toEqual({ reactions: [{ kind: "hot", count: 2 }], mine: null });
-    expect(withReaction({ ...message, mine: null, reactions: [{ kind: "hot", count: 2 }] }, "hot")).toEqual({
+  test("taking it off drops the viewer from who reacted", () => {
+    expect(withReaction(message, VIEWER, null)).toEqual({
+      reactions: [{ kind: "hot", count: 2 }],
+      mine: null,
+      reactors: [
+        { memberId: 2, kind: "hot" },
+        { memberId: 3, kind: "hot" },
+      ],
+    });
+  });
+
+  test("putting one on a kind others already have", () => {
+    const without = { reactions: [{ kind: "hot" as const, count: 2 }], mine: null, reactors: message.reactors.filter((r) => r.memberId !== VIEWER) };
+    expect(withReaction(without, VIEWER, "hot")).toEqual({
       reactions: [{ kind: "hot", count: 3 }],
       mine: "hot",
+      reactors: [
+        { memberId: VIEWER, kind: "hot" },
+        { memberId: 2, kind: "hot" },
+        { memberId: 3, kind: "hot" },
+      ],
     });
+  });
+});
+
+describe("the sheet of who reacted", () => {
+  const message = {
+    reactions: [{ kind: "hot" as const, count: 2 }, { kind: "ha" as const, count: 1 }],
+    reactors: [
+      { memberId: 2, kind: "hot" as const },
+      { memberId: 1, kind: "ha" as const },
+      { memberId: 3, kind: "hot" as const },
+    ],
+    gone: null,
+  };
+
+  test("has All, then a tab per reaction in the tray's order, and lists everyone on All", () => {
+    expect(reactionSheet(message, null)).toEqual({
+      tabs: [
+        { kind: null, count: 3 },
+        { kind: "hot", count: 2 },
+        { kind: "ha", count: 1 },
+      ],
+      selected: null,
+      reactors: message.reactors,
+    });
+  });
+
+  test("on a reaction's tab, lists only the people who chose it, newest first as they came", () => {
+    expect(reactionSheet(message, "hot")?.reactors).toEqual([
+      { memberId: 2, kind: "hot" },
+      { memberId: 3, kind: "hot" },
+    ]);
+  });
+
+  test("falls back to All when the selected reaction has dropped to zero", () => {
+    expect(reactionSheet(message, "flag")).toMatchObject({ selected: null, reactors: message.reactors });
+  });
+
+  test("has nothing to show once the message has no reactions, or is gone", () => {
+    expect(reactionSheet({ reactions: [], reactors: [], gone: null }, null)).toBeNull();
+    expect(reactionSheet({ ...message, gone: "deleted" as const }, null)).toBeNull();
   });
 });
 

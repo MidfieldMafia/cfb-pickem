@@ -10,7 +10,7 @@ import { manageGroup, removeFromGroup, restoreToGroup } from "@/lib/groups/manag
 import { deleteGroup } from "@/lib/groups/console";
 import { removeMember, setMemberActive } from "@/lib/members/members";
 import { addGroup, familyGroup, joinAt, joinGroup, seedWeek2, SUNDAY, THURSDAY, TUESDAY } from "@/test/week-2";
-import { chatThread, InvalidChat, markRead, NotInGroup, postMessage, unreadCount } from "./chat";
+import { chatThread, InvalidChat, markRead, NotInGroup, postMessage, setReaction, takeDown, unreadCount } from "./chat";
 import { MAX_CHAT_TEXT } from "./limits";
 
 const MINUTE = 60 * 1000;
@@ -156,6 +156,70 @@ describe("the thread", () => {
     const thread = await chatThread(db, jonah, family.id);
     expect(thread.messages).toHaveLength(1);
     expect(thread.senders).toEqual([{ id: grandma.id, displayName: "Grandma", avatarId: grandma.avatarId }]);
+  });
+
+  test("carries who reacted to each message, newest reaction first", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const priya = await joinAt(db, jonah, "Priya", TUESDAY);
+    const message = await postMessage(db, jonah, family.id, "Bold Lock", at(0));
+    const quiet = await postMessage(db, jonah, family.id, "Anyone?", at(1));
+
+    await setReaction(db, grandma, family.id, message.id, "ha", at(2));
+    await setReaction(db, jonah, family.id, message.id, "flag", at(3));
+    await setReaction(db, priya, family.id, message.id, "ha", at(4));
+
+    const thread = await chatThread(db, grandma, family.id);
+    expect(thread.messages.map((m) => [m.id, m.reactors])).toEqual([
+      [
+        message.id,
+        [
+          { memberId: priya.id, kind: "ha" },
+          { memberId: jonah.id, kind: "flag" },
+          { memberId: grandma.id, kind: "ha" },
+        ],
+      ],
+      [quiet.id, []],
+    ]);
+  });
+
+  test("moves a reactor to the top when they switch, since a switch is a new reaction", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const priya = await joinAt(db, jonah, "Priya", TUESDAY);
+    const message = await postMessage(db, jonah, family.id, "Bold Lock", at(0));
+
+    await setReaction(db, grandma, family.id, message.id, "ha", at(1));
+    await setReaction(db, priya, family.id, message.id, "ha", at(2));
+    await setReaction(db, grandma, family.id, message.id, "respect", at(3));
+
+    const [entry] = (await chatThread(db, jonah, family.id)).messages;
+    expect(entry.reactors).toEqual([
+      { memberId: grandma.id, kind: "respect" },
+      { memberId: priya.id, kind: "ha" },
+    ]);
+  });
+
+  test("names a reactor who never posted, with the senders", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, jonah, family.id, "Bold Lock", at(0));
+    await setReaction(db, grandma, family.id, message.id, "hot", at(1));
+
+    const thread = await chatThread(db, jonah, family.id);
+    expect(thread.senders.map((s) => s.displayName).sort()).toEqual(["Grandma", "Jonah"]);
+  });
+
+  test("carries no reactors on a message that is gone", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    const message = await postMessage(db, jonah, family.id, "Oops", at(0));
+    await setReaction(db, grandma, family.id, message.id, "hot", at(1));
+    await takeDown(db, jonah, family.id, message.id, at(2));
+
+    const thread = await chatThread(db, jonah, family.id);
+    expect(thread.messages[0]).toMatchObject({ gone: "deleted", reactions: [], reactors: [] });
+    expect(thread.senders.map((s) => s.displayName)).toEqual(["Jonah"]);
   });
 
   test("is empty, not refused, when there is no active Season", async () => {
