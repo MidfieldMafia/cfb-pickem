@@ -13,6 +13,32 @@ read-only GET calls** made against CFBD with the Saturday Slate key on 2026-09-2
 CFBD's own published code or DDL. `[OBSERVED]` = seen in a real response on 2026-09-21.
 `[EXTERNAL]` = secondary (sports media). `[UNVERIFIED]` = could not be established here.
 
+> **Since this was written (updated 2026-09-27).** The body below records what was true and
+> observed on 2026-09-21, and it is left as it was. These points have changed since then:
+>
+> - **The plan is now Tier 3, with 75,000 calls a month.** On 2026-09-21 the key was Tier 1
+>   (5,000 a month, `livePlayByPlay: false`), as the `/info` response in §5 shows. After the
+>   upgrade, `/live/plays` answers. It has been ingested for every live game since #305
+>   (PR #315). The Tier 1 statements in the Summary, in §3.2's `/live/plays` and GraphQL rows,
+>   in §3.7's "Tier 2 ($5/mo)" precondition and in §5's budget describe that day's key, not the
+>   current one.
+> - **`possession` has been observed.** During a live game on 2026-09-24 it was `"home"`,
+>   `"away"` or `null`, and `null` after kickoffs, timeouts, scores, quarter ends and at
+>   halftime. See `docs/research/cfbd-live-plays.md`. That closes §1.3–§1.5 and items 1–2 of §4.
+>   `/live/plays` has its own `possession`, which is a team name.
+> - **§2 was built** under #207: the `games.possession`, `last_play` and `situation` columns,
+>   and `possessionSide()` in `src/lib/results/writes.ts` rather than `results.ts`.
+>   The Live Board row no longer relies on it first. Following #311, the row places the
+>   football from the newest live play (#306), shows that play's age from its `wallClock`, and
+>   falls back to `/scoreboard`'s `possession`/`situation` only when there is no live-feed data.
+> - **`LIVE_REFRESH_INTERVAL_MS` is now 30 seconds** (in `src/lib/results/writes.ts`, not 90s in
+>   `results.ts`). Its comment already says `/scoreboard` is free and budgets the metered
+>   `/live/plays` calls against the 75,000-call tier. That is §5's recommendation (#210).
+> - **No "Delayed" badge was built**, as §3.7 recommends. The live-play `wallClock` that §3.7
+>   named as the precondition is available now. It drives the row's play age and its stale
+>   state after 10 minutes, with announced breaks exempt. It is still not a delay signal.
+> - Still open: #208, #209, #210, #211 and #212.
+
 > **The one thing I could not do**: observe a live game. Today is Sunday 2026-09-21 and
 > `GET /scoreboard?classification=fbs` returned **75 games, all `completed`** (kickoffs
 > 2026-09-17 → 2026-09-20) `[OBSERVED]`. **No FBS game was in progress**, so `possession` and
