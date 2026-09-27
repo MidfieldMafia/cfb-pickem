@@ -270,7 +270,9 @@ export function LeaderboardTable({
                     {/* min-w-0 is what lets the name truncate rather than widen the column. */}
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="truncate font-semibold">{row.member.displayName}</span>
-                      {you ? <span className="text-xs text-muted-foreground">you</span> : null}
+                      {/* The row's highlight marks you on screen; a visible "you"
+                          cost the name its room on a phone (#336). */}
+                      {you ? <span className="sr-only">(you)</span> : null}
                       {row.member.id === championId ? (
                         <Badge variant="leader">
                           <Trophy size={12} aria-hidden /> <span className="sr-only">Season champion</span>

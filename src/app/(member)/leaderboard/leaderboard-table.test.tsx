@@ -152,6 +152,16 @@ describe("header tooltips", () => {
   });
 });
 
+describe("the viewer's row", () => {
+  test("is highlighted, with 'you' left to screen readers rather than shown (#336)", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
+    const mine = document.querySelector('tr[data-member-id="1"]')!;
+    expect(mine.className).toMatch(/bg-muted/);
+    expect(mine.querySelector(".sr-only")?.textContent).toBe("(you)");
+    expect([...mine.querySelectorAll("span:not(.sr-only)")].some((s) => s.textContent === "you")).toBe(false);
+  });
+});
+
 describe("the Trophy", () => {
   /** Every row the board would mark as champion, by member id. */
   function trophies(): number[] {
