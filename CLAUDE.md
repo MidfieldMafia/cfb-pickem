@@ -40,6 +40,10 @@ next run.
 
 Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; each roadmap is a `wayfinder:map` issue (v1, v2 and v3 so far) and every ticket is a sub-issue of one with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.
 
+### Triage labels
+
+The five default triage roles, each label named after its role: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
 ### Design system Artifact
 
 `packages/design-system` has one design system outside the repo: the Artifact "Saturday Slate Design System" (https://claude.ai/artifact/LaNEaker2yyAez16eThdfU). It holds the brand book, token usage notes, contrast and layout guidelines, brand marks, pennants, all 136 logos, the live component bundle and a preview per component, and it is what every mockup or deck built with the Artifact tool reads. Build designs on it.
