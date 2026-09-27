@@ -18,6 +18,7 @@
     "migrate": "drizzle-kit migrate",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
     "start-season": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/start-season.ts",
+    "check-field": "tsx --env-file-if-exists=.env.local scripts/check-field.ts",
     "changelog": "tsx scripts/changelog.ts",
     "icons": "tsx scripts/icons.ts",
     "splash": "tsx scripts/splash.ts",
