@@ -1,6 +1,6 @@
 /**
- * The five sortable Leaderboard columns (#134): each sorts best-first on the
- * first tap, reversed on the second, with dash rows (no average yet, no
+ * The four sortable Leaderboard columns (#134, #336): each sorts best-first on the
+ * first tap, reversed on the second, with dash rows (no graded pick yet, no
  * Tiebreaker Guess miss to average) sinking last regardless of direction —
  * the same partition-then-sort-then-reverse shape as
  * `src/app/console/slate/candidate-sort.ts`.
@@ -44,17 +44,30 @@ describe("sorting by points", () => {
   });
 });
 
-describe("sorting by record (W–L)", () => {
-  test("asc is best-first: most correct picks first", () => {
-    const rows = [row(1, { correct: 5 }), row(2, { correct: 9 }), row(3, { correct: 7 })];
-    const sorted = sortLeaderboard(rows, "record", "asc");
+describe("sorting by Win% (correct over graded picks)", () => {
+  // Member 1 has the most correct picks but the lowest rate: the rate is what sorts.
+  const rows = [
+    row(1, { correct: 12, incorrect: 12 }),
+    row(2, { correct: 9, incorrect: 1 }),
+    row(3, { correct: 7, incorrect: 3 }),
+  ];
+
+  test("asc is best-first: highest rate first, not most correct", () => {
+    const sorted = sortLeaderboard(rows, "winRate", "asc");
     expect(sorted.map((r) => r.member.id)).toEqual([2, 3, 1]);
   });
 
   test("desc reverses it", () => {
-    const rows = [row(1, { correct: 5 }), row(2, { correct: 9 }), row(3, { correct: 7 })];
-    const sorted = sortLeaderboard(rows, "record", "desc");
+    const sorted = sortLeaderboard(rows, "winRate", "desc");
     expect(sorted.map((r) => r.member.id)).toEqual([1, 3, 2]);
+  });
+
+  test("a dash (no graded pick yet) sorts last regardless of direction", () => {
+    const withADash = [row(1, { correct: 3, incorrect: 1 }), row(2), row(3, { correct: 1, incorrect: 1 })];
+    for (const dir of ["asc", "desc"] as const) {
+      const sorted = sortLeaderboard(withADash, "winRate", dir);
+      expect(sorted.at(-1)!.member.id).toBe(2);
+    }
   });
 });
 
@@ -69,28 +82,6 @@ describe("sorting by Wins (Weekly Wins)", () => {
     const rows = [row(1, { weeklyWins: 1 }), row(2, { weeklyWins: 4 }), row(3, { weeklyWins: 2 })];
     const sorted = sortLeaderboard(rows, "wins", "desc");
     expect(sorted.map((r) => r.member.id)).toEqual([1, 3, 2]);
-  });
-});
-
-describe("sorting by Avg (average points)", () => {
-  test("asc is best-first: highest average first", () => {
-    const rows = [row(1, { averagePoints: 12 }), row(2, { averagePoints: 30 }), row(3, { averagePoints: 20 })];
-    const sorted = sortLeaderboard(rows, "average", "asc");
-    expect(sorted.map((r) => r.member.id)).toEqual([2, 3, 1]);
-  });
-
-  test("desc reverses the placed rows", () => {
-    const rows = [row(1, { averagePoints: 12 }), row(2, { averagePoints: 30 }), row(3, { averagePoints: 20 })];
-    const sorted = sortLeaderboard(rows, "average", "desc");
-    expect(sorted.map((r) => r.member.id)).toEqual([1, 3, 2]);
-  });
-
-  test("a dash (no weeks played) sorts last regardless of direction", () => {
-    const rows = [row(1, { averagePoints: 12 }), row(2, { averagePoints: null }), row(3, { averagePoints: 20 })];
-    for (const dir of ["asc", "desc"] as const) {
-      const sorted = sortLeaderboard(rows, "average", dir);
-      expect(sorted.at(-1)!.member.id).toBe(2);
-    }
   });
 });
 

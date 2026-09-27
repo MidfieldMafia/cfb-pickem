@@ -1,28 +1,28 @@
 import type { LeaderboardRow } from "@/lib/results/results";
+import { winRate } from "@/lib/results/summary";
 
-/** The five Leaderboard columns a member can tap to sort by. */
-export type SortColumn = "points" | "record" | "wins" | "average" | "miss";
+/** The four Leaderboard columns a member can tap to sort by. */
+export type SortColumn = "points" | "winRate" | "wins" | "miss";
 
 /**
- * `asc` is each column's own best-first order (highest Pts, most correct
- * picks, most Wins, highest Avg, lowest Miss) — the same convention as
+ * `asc` is each column's own best-first order (highest Pts, highest Win%,
+ * most Wins, lowest Miss) — the same convention as
  * `src/app/console/slate/candidate-sort.ts`'s `asc`, not literal numeric
  * ascending. `desc` reverses it.
  */
 export type SortDirection = "asc" | "desc";
 
-/** Whether a row has no real value to sort by on the given column: no weeks played, or no Tiebreaker Guess to average. */
+/** Whether a row has no real value to sort by on the given column: no graded pick yet, or no Tiebreaker Guess to average. */
 function isDashed(row: LeaderboardRow, column: SortColumn): boolean {
-  if (column === "average") return row.averagePoints === null;
+  if (column === "winRate") return winRate(row.correct, row.incorrect) === null;
   if (column === "miss") return row.averageTiebreakerMiss === null;
   return false;
 }
 
 function compare(a: LeaderboardRow, b: LeaderboardRow, column: SortColumn): number {
   if (column === "points") return b.totalPoints - a.totalPoints;
-  if (column === "record") return b.correct - a.correct;
+  if (column === "winRate") return winRate(b.correct, b.incorrect)! - winRate(a.correct, a.incorrect)!;
   if (column === "wins") return b.weeklyWins - a.weeklyWins;
-  if (column === "average") return b.averagePoints! - a.averagePoints!;
   // Miss reads lower-is-better, so its own best-first order is ascending, unlike every other column.
   return a.averageTiebreakerMiss! - b.averageTiebreakerMiss!;
 }

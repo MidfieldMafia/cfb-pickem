@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The sortable Leaderboard table (#134): clicking Pts, W–L, Wins, Avg, or
+ * The sortable Leaderboard table (#134): clicking Pts, Win%, Wins, or
  * Miss sorts best-first, a second click reverses, the # column keeps each
  * member's real place regardless of order, and a fresh mount (a reload)
  * always starts from the default order. The Trophy is here too: it marks only
@@ -95,14 +95,15 @@ describe("sorting by Pts", () => {
 
 describe("sort arrows", () => {
   test("only the sorted column shows an arrow, pointing the way its values run", () => {
+    const arrows = () => document.querySelectorAll("th svg.lucide-arrow-up, th svg.lucide-arrow-down").length;
     render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
-    expect(document.querySelectorAll("th svg").length).toBe(0);
+    expect(arrows()).toBe(0);
     const button = screen.getByRole("button", { name: "Pts" });
     fireEvent.click(button);
     expect(button.querySelector("svg.lucide-arrow-down")).not.toBeNull();
     fireEvent.click(button);
     expect(button.querySelector("svg.lucide-arrow-up")).not.toBeNull();
-    expect(document.querySelectorAll("th svg").length).toBe(1);
+    expect(arrows()).toBe(1);
   });
 
   test("Miss is lower-is-better, so its best-first click points up", () => {
@@ -122,14 +123,59 @@ describe("header tooltips", () => {
     expect(tip?.textContent).toMatch(/Lower is better/);
   });
 
+  test("Wins shows the trophy in place of its word, still named and explained (#336)", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
+    const button = screen.getByRole("button", { name: "Weekly wins" });
+    // The word itself is screen-reader-only text; what shows is the trophy.
+    expect(button.querySelector(".sr-only")?.textContent).toBe("Weekly wins");
+    expect(button.querySelector("svg")).not.toBeNull();
+    const tip = document.getElementById(button.getAttribute("aria-describedby")!);
+    expect(tip?.textContent).toMatch(/^Weekly Wins:/);
+  });
+
+  test("the trophy header still sorts, most Weekly Wins first", () => {
+    const rows = [row(1, 1, { weeklyWins: 1 }), row(2, 2, { weeklyWins: 3 }), row(3, 3, { weeklyWins: 2 })];
+    render(<LeaderboardTable rows={rows} viewerId={1} championId={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Weekly wins" }));
+    expect(renderedMemberOrder()).toEqual([2, 3, 1]);
+    expect(screen.getByRole("columnheader", { name: /Weekly wins/ }).getAttribute("aria-sort")).toBe("descending");
+  });
+
   test("hovering shows the tip, leaving hides it", () => {
     render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
-    const button = screen.getByRole("button", { name: "Avg" });
+    const button = screen.getByRole("button", { name: "Win%" });
     expect(document.querySelectorAll(".fixed[aria-hidden]").length).toBe(0);
     fireEvent.mouseEnter(button);
-    expect(document.querySelector("span.fixed[aria-hidden]")?.textContent).toMatch(/Average points per week/);
+    expect(document.querySelector("span.fixed[aria-hidden]")?.textContent).toMatch(/share of your picks that were correct/);
     fireEvent.mouseLeave(button);
     expect(document.querySelector("span.fixed[aria-hidden]")).toBeNull();
+  });
+});
+
+describe("Win%, in place of W–L (#336)", () => {
+  test("shows each row's correct share as a whole percent, a dash before any graded pick", () => {
+    const rows = [row(1, 1, { correct: 34, incorrect: 21 }), row(2, 2)];
+    render(<LeaderboardTable rows={rows} viewerId={1} championId={null} />);
+    const headers = screen.getAllByRole("columnheader").map((th) => th.querySelector("button")?.textContent ?? th.textContent);
+    const col = headers.indexOf("Win%");
+    const cells = screen.getAllByRole("row").slice(1).map((tr) => tr.querySelectorAll("td")[col].textContent);
+    expect(cells).toEqual(["62%", "—"]);
+  });
+
+  test("there is no W–L or Avg column any more", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
+    expect(screen.queryByRole("button", { name: "W–L" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Avg" })).toBeNull();
+  });
+});
+
+describe("the viewer's row", () => {
+  test("is highlighted, with 'you' left to screen readers rather than shown (#336)", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
+    const mine = document.querySelector('tr[data-member-id="1"]')!;
+    expect(mine.className).toMatch(/bg-muted/);
+    expect(mine.querySelector(".sr-only")?.textContent).toBe("(you)");
+    expect([...mine.querySelectorAll("span:not(.sr-only)")].some((s) => s.textContent === "you")).toBe(false);
   });
 });
 

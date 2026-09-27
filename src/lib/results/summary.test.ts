@@ -11,7 +11,6 @@ import type {
 } from "./results";
 import type { GameJson, GameView } from "@/lib/slate/json";
 import {
-  averageLabel,
   movement,
   ordinal,
   pickBreakdown,
@@ -22,6 +21,8 @@ import {
   tiebreakerOutcome,
   weeklyWinners,
   weeklyWinSentence,
+  winRate,
+  winRateLabel,
 } from "./summary";
 
 /*
@@ -369,11 +370,13 @@ describe("one member's own week", () => {
 });
 
 describe("the leaderboard's own columns", () => {
-  test("an average is one decimal, and an em dash before the first week played", () => {
-    expect(averageLabel(null)).toBe("—");
-    expect(averageLabel(30)).toBe("30");
-    expect(averageLabel(80 / 3)).toBe("26.7");
-    expect(averageLabel(0)).toBe("0");
+  test("a win rate is correct over graded picks, a whole percent, and an em dash before any", () => {
+    expect(winRate(0, 0)).toBeNull();
+    expect(winRate(3, 1)).toBe(0.75);
+    expect(winRateLabel(0, 0)).toBe("—");
+    expect(winRateLabel(34, 21)).toBe("62%");
+    expect(winRateLabel(0, 5)).toBe("0%");
+    expect(winRateLabel(9, 0)).toBe("100%");
   });
 
   test("a climb up the board is a fall in the rank number", () => {
