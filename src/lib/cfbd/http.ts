@@ -20,6 +20,13 @@ export const LIVE_PLAYS_TIMEOUT_MS = 8_000;
 export const STATS_TIMEOUT_MS = 15_000;
 
 /**
+ * The longest a 429's `retry-after` is waited out. CFBD allows one open call
+ * per endpoint per key and asks for a second's wait; a longer ask is capped
+ * rather than honoured, because the wait is inside a member's request.
+ */
+const MAX_RETRY_WAIT_MS = 2_000;
+
+/**
  * A `Refusal`, not a fault: the feed being down is not the commissioner's
  * mistake, but "Check the feed now" is a button they pressed, so the honest
  * answer is a sentence under it rather than the error page. The message names
@@ -46,7 +53,17 @@ export function httpCfbd(apiKey: string, fetchImpl: typeof fetch = fetch): CfbdC
   ): Promise<T> {
     const url = new URL(path, CFBD_BASE_URL);
     for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value));
-    const response = await fetchImpl(url, { headers: { Authorization: `Bearer ${apiKey}` }, signal });
+    const send = () => fetchImpl(url, { headers: { Authorization: `Bearer ${apiKey}` }, signal });
+    let response = await send();
+    // Another call to the same endpoint is open: a commissioner's "Check the
+    // feed now" landing on a gated pass. One retry after the wait CFBD asks
+    // for; a 429 costs no quota, so the retry is free.
+    if (response.status === 429) {
+      const seconds = Number(response.headers.get("retry-after") ?? 1);
+      const wait = Math.min(Number.isFinite(seconds) ? seconds * 1000 : 1000, MAX_RETRY_WAIT_MS);
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      response = await send();
+    }
     if (!response.ok) throw new CfbdError(response.status, path);
     return (await response.json()) as T;
   }

@@ -19,13 +19,14 @@ const WEEK = { year: 2026, week: 2 } as const;
  * for. Each call is kept as its parsed URL, so a test asserts on the path and
  * the params rather than on string order.
  */
-function spyFetch(body: unknown = [], init: { ok?: boolean; status?: number } = {}) {
+function spyFetch(body: unknown = [], init: { ok?: boolean; status?: number; headers?: HeadersInit } = {}) {
   const calls: { url: URL; headers: Headers; signal: AbortSignal | null | undefined }[] = [];
   const impl = (async (input: URL | RequestInfo, options?: RequestInit) => {
     calls.push({ url: new URL(String(input)), headers: new Headers(options?.headers), signal: options?.signal });
     return {
       ok: init.ok ?? true,
       status: init.status ?? 200,
+      headers: new Headers(init.headers),
       json: async () => body,
     } as Response;
   }) as typeof fetch;
@@ -56,6 +57,27 @@ describe("the request the live client builds", () => {
     // A timeout signal: the one call here a slow answer from a single game could otherwise stall.
     expect(signal).toBeInstanceOf(AbortSignal);
     expect(signal?.aborted).toBe(false);
+  });
+
+  test("livePlays waits out a 429 once and asks again: CFBD allows one open call per endpoint per key", async () => {
+    let calls = 0;
+    const impl = (async () => {
+      calls += 1;
+      return calls === 1
+        ? ({ ok: false, status: 429, headers: new Headers({ "retry-after": "0" }), json: async () => ({}) } as Response)
+        : ({ ok: true, status: 200, headers: new Headers(), json: async () => ({ drives: [] }) } as Response);
+    }) as typeof fetch;
+
+    expect(await httpCfbd("secret", impl).livePlays(401869941)).toEqual({ drives: [] });
+    expect(calls).toBe(2);
+  });
+
+  test("livePlays gives up after a second 429 rather than keep a member waiting", async () => {
+    const fetch = spyFetch({}, { ok: false, status: 429, headers: { "retry-after": "0" } });
+    const error = await refusalOf(() => httpCfbd("secret", fetch.impl).livePlays(401869941));
+
+    expect(error.status).toBe(429);
+    expect(fetch.calls).toHaveLength(2);
   });
 
   test("games asks for the FBS regular season for one week", async () => {
@@ -147,6 +169,7 @@ describe("when the API refuses", () => {
       ({
         ok: false,
         status: 429,
+        headers: new Headers({ "retry-after": "0" }),
         json: async () => {
           read = true;
           return {};
