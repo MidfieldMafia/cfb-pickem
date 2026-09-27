@@ -45,6 +45,66 @@ describe("the whole final game", () => {
   });
 });
 
+describe("other spellings of a spot", () => {
+  // The same game as 2026-09-26's feeds spelled their spots: "OU 28" (padded), "State33" and "Mizzou45" (mixed case).
+  const respelled = (home: string, away: string) =>
+    PLAYS.map((p) => ({
+      ...p,
+      playText: p.playText
+        .replace(/\bCCU(\d{2})/g, `${home}$1`)
+        .replace(/\bLIB(\d{2})/g, `${away}$1`)
+        .replace(/\bCCU\b/g, home.trim())
+        .replace(/\bLIB\b/g, away.trim()),
+    }));
+
+  test.each([
+    ["State", "OU "],
+    ["Mizzou", "OU "],
+  ])(
+    "spelled %s31 and %s31, the abbreviations vote for their sides and the whole game draws as it does",
+    (home, away) => {
+      const plays = respelled(home, away);
+      const sides = abbreviations(plays, (id) => (id === 324 ? "home" : id === 2335 ? "away" : null));
+      expect(Object.fromEntries(sides)).toEqual({ [home]: "home", [away.trim()]: "away" });
+      expect(describePlays(plays, TEAMS)).toEqual(DESCRIBED);
+    },
+  );
+
+  test("a penalty's yards are not a spot, so one placed abbreviation still names the other", () => {
+    const [snap] = upTo("21").slice(-1);
+    const plays = [
+      { ...snap, yardsToGoal: 29, playText: "(12:21) Shotgun #9 L.Avant rush middle for 1 yard gain to the OU 28" },
+      { ...snap, playText: "(11:40) Shotgun #9 L.Avant fumbled by #9 L.Avant at State40" },
+      { ...snap, playText: "(11:02) PENALTY OU Holding 10 yards enforced" },
+    ];
+    const sides = abbreviations(plays, (id) => (id === 324 ? "home" : id === 2335 ? "away" : null));
+    expect(Object.fromEntries(sides)).toEqual({ OU: "away", State: "home" });
+  });
+
+  test("a run to the OU 28 is a ground line", () => {
+    // Coastal (home) snapping from the OU 29.
+    const [snap] = upTo("21").slice(-1);
+    const run = {
+      ...snap,
+      yardsToGoal: 29,
+      playText: "(12:21) No Huddle-Shotgun #9 L.Avant rush middle for 1 yard gain to the OU 28",
+    };
+    expect(describePlays([run], TEAMS)[0].segments).toEqual([{ kind: "ground", from: 29, to: 28 }]);
+  });
+
+  test("an interception at Mizzou45 is an arc and a swap", () => {
+    const plays = respelled("Mizzou", "OU ");
+    const i = plays.findIndex((p) => p.id === "40186994121");
+    const pick = {
+      ...plays[i],
+      playType: "Pass Interception Return",
+      playText: "(8:02) Shotgun #1 B.Pyburn pass intercepted by #4 T.Greco at Mizzou45",
+    };
+    const described = describePlays([...plays.slice(0, i), pick], TEAMS)[i];
+    expect(described.segments.map((s) => s.kind)).toEqual(["arc", "possession"]);
+  });
+});
+
 describe("each shape", () => {
   test("a run is a ground line", () => {
     // "rush middle for 20 yards gain to the LIB39": Coastal from its own 41.
