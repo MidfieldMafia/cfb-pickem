@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { gameDetail, week1 } from "./scoring/fixtures/week-1-2026";
-import { conferences, FALLBACK_TEAM_COLOR, findLogo, findLogoByEspnId, logoSrc, teamColor, teamLogos } from "./logos";
+import { conferences, FALLBACK_TEAM_COLOR, findLogo, findLogoByEspnId, logoSrc, shortSchool, teamColor, teamLogos } from "./logos";
 
 describe("logo index", () => {
   it("resolves a school by display name and by ESPN id", () => {
@@ -17,6 +17,13 @@ describe("logo index", () => {
     expect(findLogo("Florida International")?.slug).toBe("fiu");
     expect(findLogo("App State")?.slug).toBe("appalachian-state");
     expect(findLogo("Massachusetts")?.slug).toBe("umass");
+  });
+
+  it("shortens a school only where a short form is set", () => {
+    expect(shortSchool("Mississippi State")).toBe("Miss. State");
+    expect(shortSchool("Michigan State")).toBe("Michigan St");
+    expect(shortSchool("Ohio State")).toBe("Ohio State");
+    expect(shortSchool("Hogwarts")).toBe("Hogwarts");
   });
 
   it("carries a color pair for every school", () => {

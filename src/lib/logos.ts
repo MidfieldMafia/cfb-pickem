@@ -13,6 +13,14 @@ export interface TeamColors {
 
 export interface TeamLogo {
   school: string;
+  /**
+   * What a pick tile prints when `school` would wrap there: ESPN's
+   * `shortDisplayName`, set only for schools whose full name wraps at 375 or
+   * 390px and only where ESPN's form is shorter. Mississippi State is the one
+   * hand-set exception: ESPN's "Mississippi St" still wraps, and "MSU" is
+   * Michigan State's.
+   */
+  short?: string;
   slug: string;
   /** CFBD `team.id` — the numeric identity, when one is on hand. */
   espnId: number;
@@ -90,6 +98,10 @@ export function findLogoByEspnId(espnId: number): TeamLogo | undefined {
 export function findLogo(school: string): TeamLogo | undefined {
   const slug = slugify(school);
   return bySlug.get(SLUG_ALIASES[slug] ?? slug);
+}
+
+export function shortSchool(school: string): string {
+  return findLogo(school)?.short ?? school;
 }
 
 export function logoSrc(school: string): string | undefined {

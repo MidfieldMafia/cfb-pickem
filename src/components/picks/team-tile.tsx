@@ -1,8 +1,60 @@
 "use client";
 
 import Image from "next/image";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { Check } from "lucide-react";
-import { logoSrc } from "@/lib/logos";
+import { logoSrc, shortSchool } from "@/lib/logos";
+
+const NAME_PX = 22;
+const MIN_NAME_PX = 16;
+
+/**
+ * The name's font size, shrunk from 22px just far enough to keep it on one
+ * line. ESPN's short names still leave 18 schools too wide for a 390px tile
+ * (James Madison, South Carolina, ...). Below 16px it stops and lets the name
+ * wrap instead.
+ *
+ * It measures, rather than guessing from character count, because the room
+ * changes with the phone's width. It refits when that width changes, and once
+ * the display font loads, since the fallback font's width is no guide.
+ */
+function useFittedNameSize(ref: RefObject<HTMLSpanElement | null>, text: string): number {
+  const [size, setSize] = useState(NAME_PX);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const room = el?.parentElement;
+    if (!el || !room) return;
+
+    const fit = () => {
+      // Measure the name on one line at full size, then put back what React set.
+      const { fontSize, whiteSpace } = el.style;
+      el.style.fontSize = `${NAME_PX}px`;
+      el.style.whiteSpace = "nowrap";
+      const natural = el.scrollWidth;
+      el.style.fontSize = fontSize;
+      el.style.whiteSpace = whiteSpace;
+
+      const avail = room.clientWidth - 1; // scrollWidth rounds; keep a pixel spare
+      setSize(
+        natural <= avail ? NAME_PX : Math.max(MIN_NAME_PX, Math.floor(((NAME_PX * avail) / natural) * 2) / 2),
+      );
+    };
+
+    fit();
+    // Absent in jsdom and before iOS 13.4; the first fit still holds there.
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(fit);
+    observer?.observe(room);
+    let live = true;
+    void document.fonts?.ready.then(() => live && fit());
+    return () => {
+      live = false;
+      observer?.disconnect();
+    };
+  }, [ref, text]);
+
+  return size;
+}
 
 /**
  * One side of the matchup, flexing to fill the height left below the panel so
@@ -39,6 +91,9 @@ export function TeamTile({
   onPick: () => void;
 }) {
   const logo = logoSrc(name);
+  const label = shortSchool(name);
+  const nameRef = useRef<HTMLSpanElement>(null);
+  const nameSize = useFittedNameSize(nameRef, label);
   // Rank sits on the inward edge and the check on the outward one, so neither
   // collides with the "at" between the tiles.
   const inward = side === "away" ? "right-2.5" : "left-2.5";
@@ -74,7 +129,13 @@ export function TeamTile({
         </span>
       ) : null}
 
-      <span className="relative mx-1 my-2 min-h-0 flex-1 self-stretch">
+      {/* The badge row ends 38px inside the border (the 28px check at top-2.5),
+          so the logo's box starts at 42px: pt-3 plus mt-[30px]. A tight-cropped
+          logo fills its whole box, and a box reaching into that row runs it
+          into the badges. min-h-8 keeps the logo from vanishing behind a
+          two-line name on a short screen; the page scrolls a little there
+          instead. */}
+      <span className="relative mx-1 mt-[30px] mb-2 min-h-8 flex-1 self-stretch">
         {logo ? (
           <Image
             src={logo}
@@ -89,7 +150,9 @@ export function TeamTile({
       </span>
 
       <span className="grid w-full justify-items-center gap-1.5">
-        <span className="font-display text-[22px] leading-[26px] text-balance">{name}</span>
+        <span ref={nameRef} className="font-display leading-[26px] text-balance" style={{ fontSize: nameSize }}>
+          {label}
+        </span>
         <span
           aria-hidden
           className={`block h-1.5 w-[70%] rounded-full ${dimmed ? "opacity-50" : ""}`}
