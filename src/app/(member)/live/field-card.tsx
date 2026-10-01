@@ -73,9 +73,9 @@ const reducedMotion = () =>
  * lands, the list, the strip and the header's score and clock stay as they
  * were, and the score steps as the ball reaches each score.
  *
- * With `enabled` off (the switch), it passes the feed straight through.
+ * Unless the game is `live`, it passes the feed straight through.
  */
-export function useFieldPlayer(feed: GamePlaysJson | null, teams: RecentTeams, enabled: boolean): FieldPlayer {
+export function useFieldPlayer(feed: GamePlaysJson | null, teams: RecentTeams, live: boolean): FieldPlayer {
   const [playing, setPlaying] = useState<Playing | null>(null);
   const [score, setScore] = useState<{ home: number; away: number } | null>(null);
   const [rested, setRested] = useState<FieldPlayer["rested"]>(null);
@@ -83,7 +83,7 @@ export function useFieldPlayer(feed: GamePlaysJson | null, teams: RecentTeams, e
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    if (!enabled || feed === null || feed.fetchedAt === null) return;
+    if (!live || feed === null || feed.fetchedAt === null) return;
     const target = newestDrawn(feed);
     if (target === null) return;
     const key = drawingKey(target);
@@ -116,7 +116,7 @@ export function useFieldPlayer(feed: GamePlaysJson | null, teams: RecentTeams, e
       setScore(null);
       setRested({ description: target, line });
     });
-  }, [feed, teams, enabled]);
+  }, [feed, teams, live]);
 
   useEffect(
     () => () => {
@@ -125,7 +125,7 @@ export function useFieldPlayer(feed: GamePlaysJson | null, teams: RecentTeams, e
     [],
   );
 
-  if (!enabled || feed === null || feed.fetchedAt === null)
+  if (!live || feed === null || feed.fetchedAt === null)
     return { shown: feed, readout: null, score: null, playing: null, rested: null, holdsHeader: false };
   const shown = playing ? feedBefore(feed, playing.description.id) : feed;
   const newest = shown.drives.flatMap((drive) => drive.plays).at(-1);
