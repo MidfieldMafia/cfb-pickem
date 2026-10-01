@@ -12,7 +12,8 @@ import { TeamLogo } from "@/components/team-logo";
 import { GameSheet } from "./game-sheet";
 
 import { useDeadlineClock } from "@/lib/picks/clock";
-import { clockLabel, sideWithBall, type GameResult } from "@/lib/results/result";
+import { downAndDistance, lastPlayLine } from "@/lib/results/live-row";
+import { clockLabel, sideWithBall, type GameResult, type LiveScore } from "@/lib/results/result";
 import type { RevealGame, RevealPick } from "@/lib/results/results";
 import { sideStanding } from "@/lib/results/side";
 import { record, standing } from "@/lib/results/summary";
@@ -327,6 +328,29 @@ function SplitBar({
 }
 
 /**
+ * The newest play on one line under the team lines, with its age at the end
+ * (#209). The age ticks against the server's clock between polls, as the
+ * freshness line does, and never shrinks or wraps: the play's words give way
+ * first. Once stale it turns bold and orange. No line at all when there is no
+ * play to show, so a game the feed has gone quiet on looks like today's row.
+ */
+function LastPlay({ live, serverNow }: { live: LiveScore; serverNow: string }) {
+  const { remainingMs } = useDeadlineClock(serverNow, serverNow);
+  const line = lastPlayLine(live, new Date(serverNow).getTime() - remainingMs);
+  if (line === null) return null;
+  return (
+    <p className="flex min-h-4 min-w-0 items-baseline gap-2 text-xs text-muted-foreground">
+      <span className="min-w-0 flex-1 truncate">{line.text}</span>
+      {line.age === null ? null : (
+        <span className={`shrink-0 whitespace-nowrap tabular-nums ${line.stale ? "font-bold text-secondary" : ""}`}>
+          {line.age}
+        </span>
+      )}
+    </p>
+  );
+}
+
+/**
  * One game on the board: tap it for the full picture in `GameSheet`.
  *
  * A final game recedes in place — muted card fill, faint border, quieter
@@ -338,10 +362,12 @@ function SplitBar({
 function GameRow({
   row,
   viewerId,
+  serverNow,
   onOpen,
 }: {
   row: RevealGame;
   viewerId: number;
+  serverNow: string;
   onOpen: () => void;
 }) {
   const { game, result } = row;
@@ -353,6 +379,7 @@ function GameRow({
   const earned = mine?.outcome === "correct" ? mine.points : null;
   const final = result.status === "final";
   const ball = result.live ? sideWithBall(result.live) : null;
+  const situation = result.live ? downAndDistance(result.live, game) : null;
 
   return (
     <li className={isVoid(row) ? "opacity-70" : ""}>
@@ -360,17 +387,23 @@ function GameRow({
         type="button"
         onClick={onOpen}
         aria-label={`${game.awayTeam} at ${game.homeTeam}, details`}
-        className={`grid w-full gap-1.5 rounded-md border p-3 text-left ${
+        className={`grid w-full grid-cols-[minmax(0,1fr)] gap-1.5 rounded-md border p-3 text-left ${
           final ? "border-border/50 bg-muted/30" : "border-border bg-card"
         }`}
       >
-        <div className="flex min-h-5 items-center gap-2">
-          <span className="flex-1 truncate text-xs text-muted-foreground">
-            {result.status === "pending" && !result.live ? (
-              <LocalTime at={game.kickoff} style="slot" />
-            ) : result.status === "final" ? (
-              result.label
-            ) : null}
+        <div className="flex min-h-5 min-w-0 items-center gap-2">
+          {/* Live, the down-and-distance (#209); otherwise the kickoff or the final word. Empty with neither, and the badge keeps its place. */}
+          <span
+            className={`min-w-0 flex-1 truncate text-xs ${
+              situation === null ? "text-muted-foreground" : "font-bold tabular-nums text-foreground"
+            }`}
+          >
+            {situation ??
+              (result.status === "pending" && !result.live ? (
+                <LocalTime at={game.kickoff} style="slot" />
+              ) : result.status === "final" ? (
+                result.label
+              ) : null)}
           </span>
           {result.live ? (
             <Badge variant="live">
@@ -408,6 +441,7 @@ function GameRow({
           pick={mine}
           hasBall={ball === "home"}
         />
+        {result.live ? <LastPlay live={result.live} serverNow={serverNow} /> : null}
         <SplitBar
           away={awayPicks}
           home={homePicks}
@@ -476,7 +510,13 @@ export function LiveBoard({
 
       <ul className="space-y-3 px-4">
         {ordered.map((row) => (
-          <GameRow key={row.game.id} row={row} viewerId={viewer.id} onOpen={() => setOpenGameId(row.game.id)} />
+          <GameRow
+            key={row.game.id}
+            row={row}
+            viewerId={viewer.id}
+            serverNow={state.serverNow}
+            onOpen={() => setOpenGameId(row.game.id)}
+          />
         ))}
       </ul>
 

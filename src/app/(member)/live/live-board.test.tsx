@@ -22,6 +22,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { FinalStats } from "@/lib/results/box-score";
+import type { LiveFeed } from "@/lib/results/live-feed";
 import type { GameResult } from "@/lib/results/result";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import type { MemberJson } from "@/lib/slate/json";
@@ -259,6 +260,109 @@ describe("the football marks the team with the ball (#208)", () => {
     for (const result of [withFeedBall(null, "home"), LIVE, PENDING, FINAL]) {
       render(<LiveBoard initial={state({ complete: false, games: [game(result)] })} viewer={VIEWER} />);
       expect(screen.queryByRole("img", { name: "Has the ball" })).toBeNull();
+      cleanup();
+    }
+  });
+});
+
+describe("the down-and-distance and the last play (#209)", () => {
+  afterEach(() => void vi.useRealTimers());
+
+  const SERVER_NOW = new Date(state().serverNow).getTime();
+  const withFeed = (over: Partial<LiveFeed> = {}, play: Partial<LiveFeed["play"]> = {}): GameResult => ({
+    ...LIVE,
+    live: {
+      ...LIVE.live!,
+      // The scoreboard's own words, which the feed must win over.
+      situation: "Scoreboard situation",
+      lastPlay: "Scoreboard last play",
+      feed: {
+        play: {
+          id: "1",
+          text: "(4:10) C.Klubnik pass complete to A.Williams for 12 yds to the UGA35",
+          type: "Pass Reception",
+          teamId: CLEMSON,
+          team: "Clemson",
+          period: 3,
+          clock: "4:10",
+          wallClock: new Date(SERVER_NOW - 40_000).toISOString(),
+          homeScore: 28,
+          awayScore: 10,
+          ...play,
+        },
+        down: 3,
+        distance: 7,
+        yardsToGoal: 35,
+        ball: "away",
+        homeAbbr: "UGA",
+        awayAbbr: "CLEM",
+        ...over,
+      },
+    },
+  });
+  const show = (result: GameResult) =>
+    render(<LiveBoard initial={state({ complete: false, games: [game(result)] })} viewer={VIEWER} />);
+  const age = (text: RegExp) => screen.getByText(text);
+
+  test("puts the down-and-distance top-left, keeps the badge to the clock, and the last play with its age below", () => {
+    vi.useFakeTimers({ now: SERVER_NOW });
+    show(withFeed());
+
+    expect(screen.getByText("3rd & 7 at UGA 35")).not.toBeNull();
+    expect(screen.getByText("Q3 · 8:12")).not.toBeNull();
+    expect(screen.getByText(/C.Klubnik pass complete/)).not.toBeNull();
+    expect(age(/^40s ago$/).className).not.toMatch(/text-secondary/);
+    expect(screen.queryByText(/Scoreboard/)).toBeNull();
+
+    // The last-play line sits between the second team line and the split bar.
+    const line = screen.getByText(/C.Klubnik pass complete/);
+    const georgia = screen.getByText("Georgia");
+    const split = screen.getByRole("img", { name: /picks? on Clemson/ });
+    expect(georgia.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(line.compareDocumentPosition(split) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test("the age ticks on between polls", () => {
+    vi.useFakeTimers({ now: SERVER_NOW });
+    show(withFeed());
+
+    act(() => void vi.advanceTimersByTime(20_000));
+
+    expect(age(/^1m ago$/)).not.toBeNull();
+  });
+
+  test("a play ten minutes old turns its age bold and orange, but not at a break", () => {
+    vi.useFakeTimers({ now: SERVER_NOW });
+    const old = new Date(SERVER_NOW - 34 * 60_000).toISOString();
+    show(withFeed({}, { wallClock: old }));
+    expect(age(/^34m ago$/).className).toMatch(/font-bold text-secondary/);
+    cleanup();
+
+    show(withFeed({ down: null, distance: null, ball: null }, { wallClock: old, type: "Halftime", text: "End of 2nd quarter." }));
+    expect(screen.getByText("End of 2nd quarter.")).not.toBeNull();
+    expect(age(/^34m ago$/).className).not.toMatch(/text-secondary/);
+  });
+
+  test("with no down to play the top-left is empty, even when the scoreboard has one", () => {
+    show(withFeed({ down: null, distance: null }));
+    expect(screen.queryByText(/& 7/)).toBeNull();
+    expect(screen.queryByText(/Scoreboard situation/)).toBeNull();
+  });
+
+  test("falls back to the scoreboard's words, with no age, when the feed carries no play", () => {
+    show({ ...LIVE, live: { ...LIVE.live!, situation: "2nd & 4 at CLEM 29", lastPlay: "Timeout Clemson" } });
+    expect(screen.getByText("2nd & 4 at CLEM 29")).not.toBeNull();
+    expect(screen.getByText("Timeout Clemson").parentElement?.textContent).toBe("Timeout Clemson");
+  });
+
+  test("a game with no last play has no line at all, and a game not under way shows neither", () => {
+    show(LIVE);
+    expect(screen.getByRole("button", { name: /details/ }).querySelectorAll("p")).toHaveLength(0);
+    cleanup();
+
+    for (const result of [PENDING, FINAL]) {
+      render(<LiveBoard initial={state({ complete: false, games: [game(result)] })} viewer={VIEWER} />);
+      expect(screen.getByRole("button", { name: /details/ }).querySelectorAll("p")).toHaveLength(0);
       cleanup();
     }
   });
