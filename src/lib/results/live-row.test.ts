@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import type { LiveFeed } from "./live-feed";
+import { LIBERTY_AT_COASTAL_FINAL } from "@/lib/cfbd/recorded";
+import { toLiveFeed, type LiveFeed } from "./live-feed";
 import { downAndDistance, lastPlayLine } from "./live-row";
 import type { LiveScore } from "./result";
 
@@ -59,6 +60,23 @@ describe("the down-and-distance", () => {
   test("reads the receiving side after a kick, not the kicking team the header names", () => {
     // r01: Liberty had just kicked off; it was Coastal's ball at the LIB49.
     const r01 = feed({ down: 1, distance: 10, yardsToGoal: 49, ball: "home" }, { type: "Kickoff" });
+    expect(downAndDistance({ ...live, feed: r01 }, TEAMS)).toBe("1st & 10 at LIB 49");
+  });
+
+  test("r01 from the recorded feed: the header names the kicker, the row names Coastal's spot at the LIB49", () => {
+    const drives = LIBERTY_AT_COASTAL_FINAL.drives;
+    const kickoff = drives.findIndex((drive) => drive.plays[0]?.id === "401869941161");
+    const r01 = toLiveFeed(
+      {
+        ...LIBERTY_AT_COASTAL_FINAL,
+        possession: "Liberty",
+        down: 1,
+        distance: 10,
+        yardsToGoal: 49,
+        drives: [...drives.slice(0, kickoff), { ...drives[kickoff], plays: [drives[kickoff].plays[0]] }],
+      },
+      { homeTeamId: 324, awayTeamId: 2335 },
+    );
     expect(downAndDistance({ ...live, feed: r01 }, TEAMS)).toBe("1st & 10 at LIB 49");
   });
 
