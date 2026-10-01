@@ -4,6 +4,7 @@ import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, X } from "lucide
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AppHeader, LocalTime, Badge, Card, StandingCard } from "@saturday-slate/design-system";
 
+import { Football } from "@/components/football";
 import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
@@ -11,7 +12,7 @@ import { TeamLogo } from "@/components/team-logo";
 import { GameSheet } from "./game-sheet";
 
 import { useDeadlineClock } from "@/lib/picks/clock";
-import { clockLabel, type GameResult } from "@/lib/results/result";
+import { clockLabel, sideWithBall, type GameResult } from "@/lib/results/result";
 import type { RevealGame, RevealPick } from "@/lib/results/results";
 import { sideStanding } from "@/lib/results/side";
 import { record, standing } from "@/lib/results/summary";
@@ -226,7 +227,9 @@ function PickMark({ pick }: { pick: RevealPick }) {
 
 /**
  * One compact line per side: logo, rank, name with your own pick marked, and
- * the score or the spread.
+ * the score or the spread. `hasBall` puts the football at the end of the name
+ * group (#208), after the pick and Lock, so nothing else on the line moves
+ * when possession flips and a long name truncates before the football does.
  *
  * `final` recedes the whole line once the game is decided — the score drops
  * its bold weight and always reads muted, on top of (not instead of) `dim`,
@@ -241,6 +244,7 @@ function SideLine({
   dim,
   final,
   pick,
+  hasBall,
 }: {
   team: string;
   rank: number | null;
@@ -250,6 +254,7 @@ function SideLine({
   dim: boolean;
   final: boolean;
   pick: RevealPick | undefined;
+  hasBall: boolean;
 }) {
   const mine = pick && pick.teamId === teamId && pick.outcome !== "void" && pick.outcome !== "unpicked" ? pick : undefined;
   const favored = spread !== null && spread !== "Pick" && spread.startsWith(team);
@@ -262,6 +267,11 @@ function SideLine({
           {team}
         </span>
         {mine ? <PickMark pick={mine} /> : null}
+        {hasBall ? (
+          <span className="shrink-0">
+            <Football size={16} />
+          </span>
+        ) : null}
       </span>
       {score === null ? (
         <span
@@ -342,6 +352,7 @@ function GameRow({
   const homeSide = sideStanding(result, "home");
   const earned = mine?.outcome === "correct" ? mine.points : null;
   const final = result.status === "final";
+  const ball = result.live ? sideWithBall(result.live) : null;
 
   return (
     <li className={isVoid(row) ? "opacity-70" : ""}>
@@ -384,6 +395,7 @@ function GameRow({
           dim={awaySide === "lost"}
           final={final}
           pick={mine}
+          hasBall={ball === "away"}
         />
         <SideLine
           team={game.homeTeam}
@@ -394,6 +406,7 @@ function GameRow({
           dim={homeSide === "lost"}
           final={final}
           pick={mine}
+          hasBall={ball === "home"}
         />
         <SplitBar
           away={awayPicks}

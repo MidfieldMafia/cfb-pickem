@@ -24,7 +24,7 @@ import { TeamLogo } from "@/components/team-logo";
 import { awayShare, type FinalStats, type Leader, type LeaderKey, type LeaderRow, type TeamStatRow } from "@/lib/results/box-score";
 import type { GamePlaysJson } from "@/lib/results/live-feed";
 import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
-import { clockLabel } from "@/lib/results/result";
+import { clockLabel, sideWithBall } from "@/lib/results/result";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
 import { plural } from "@/lib/plural";
@@ -205,7 +205,7 @@ function SheetHeader({ game, serverNow, landed }: { game: LiveGameJson; serverNo
   const g = game.game;
   const final = result.status === "final" && result.shown !== null;
   const beforeKickoff = result.status === "pending" && result.live === null;
-  const ball = landed ? landed.ball : result.live ? (result.live.feed?.ball ?? result.live.possession) : null;
+  const ball = landed ? landed.ball : result.live ? sideWithBall(result.live) : null;
   const awayScore = landed?.score.away ?? result.shown?.awayScore ?? 0;
   const homeScore = landed?.score.home ?? result.shown?.homeScore ?? 0;
   const awayLost = final && sideStanding(result, "away") === "lost";
