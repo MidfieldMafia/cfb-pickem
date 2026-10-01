@@ -1,6 +1,24 @@
 {
-  "generatedAt": "2026-09-21T22:52:32.745Z",
+  "generatedAt": "2026-10-01T13:24:05.107Z",
   "entries": [
+    {
+      "from": "2026-09-22",
+      "to": "2026-09-27",
+      "items": [
+        "Chat is a new tab for your Group. React to a message with Flag, Hot take, Respect or Ha, and delete your own messages if you think better of them.",
+        "History now lives on the Leaderboard. A strip across the top takes you to the Season or any Played Week, and while a week's games are still going it opens on that week.",
+        "Every finished week has its own Reveal: your picks and everyone else's, game by game, a tap from that week's standings.",
+        "Tap a game on the Live Board for its game sheet: kickoff time, TV, venue, weather, the spread and your own pick before it starts; the latest plays and the last drive while it's on; team stats and game leaders once it's final.",
+        "Your Pennant can now be your team's logo, or a photo of you. Change it from the You screen.",
+        "Send the commissioners a bug or an idea, screenshot and all, from Send feedback in the Profile menu or on the You screen.",
+        "The Season table fits on a phone. Long names shorten instead of pushing the numbers off the screen, and Win% takes the place of the old record and average.",
+        "You can jump to Review from any game on your picks, so setting your Lock of the Week and Tiebreaker Guess no longer means picking every game first.",
+        "Team names fit on one line on your picks, and logos no longer crowd the rank and the check mark.",
+        "Spreads and rankings keep updating every day until each game kicks off, even after the slate is out.",
+        "The Weekly Win badge waits until the week is decided, and a week nobody in your Group picked no longer shows up as an empty one.",
+        "What's new now opens by itself once when there's something new, and stays in the Profile menu after that."
+      ]
+    },
     {
       "from": "2026-09-15",
       "to": "2026-09-21",
