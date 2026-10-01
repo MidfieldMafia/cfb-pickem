@@ -26,6 +26,9 @@ describe("the row's slice of the live feed", () => {
       yardsToGoal: 31,
       // Liberty ran it and kept it.
       ball: "away",
+      // The play text's own spelling of each side, for the row's "at CCU 31".
+      homeAbbr: "CCU",
+      awayAbbr: "LIB",
     });
   });
 

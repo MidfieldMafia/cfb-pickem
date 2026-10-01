@@ -584,6 +584,9 @@ describe("a game's plays, for the Game sheet", () => {
       yardsToGoal: 31,
       // Ohio State, recast from Liberty's run, kept the ball.
       ball: "away",
+      // The recast keeps the play text's own spellings, and so does the row's spot.
+      homeAbbr: "CCU",
+      awayAbbr: "LIB",
     });
     // The feed is ahead of the scoreboard's 3–0, so the row shows the feed's score.
     expect(texasRow.result.shown).toEqual({ awayScore: 3, homeScore: 7 });
