@@ -524,11 +524,14 @@ describe("the live sheet", () => {
   }
 
   test("shows the score with the Live badge, and this drive's plays newest first with the score tagged", async () => {
+    vi.useFakeTimers({ now: new Date(state().serverNow) });
     serving(playsJson());
     render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
 
     openGame();
-    expect(await screen.findByText("Recent plays")).not.toBeNull();
+    // The On the field card replays the last play on open, and the list waits for it to land.
+    await act(async () => void (await vi.advanceTimersByTimeAsync(10_000)));
+    expect(screen.getByText("Recent plays")).not.toBeNull();
     const rows = screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Timeout") || li.textContent?.includes("TOUCHDOWN"));
     expect(rows[0].textContent).toContain("TOUCHDOWN");
     expect(screen.getByText("Touchdown")).not.toBeNull();
