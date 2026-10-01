@@ -203,6 +203,67 @@ describe("the states a Saturday passes through", () => {
   });
 });
 
+describe("the football marks the team with the ball (#208)", () => {
+  const withFeedBall = (ball: "home" | "away" | null, possession: "home" | "away" | null = null): GameResult => ({
+    ...LIVE,
+    live: {
+      ...LIVE.live!,
+      possession,
+      feed: {
+        play: {
+          id: "1",
+          text: "(4:10) K.Davis rush middle for 3 yards gain to the UGA31",
+          type: "Rush",
+          teamId: GEORGIA,
+          team: "Georgia",
+          period: 3,
+          clock: "4:10",
+          wallClock: "2026-09-12T23:45:00.000Z",
+          homeScore: 28,
+          awayScore: 10,
+        },
+        down: 2,
+        distance: 7,
+        yardsToGoal: 69,
+        ball,
+      },
+    },
+  });
+
+  /** The team line the football sits on, by the name beside it. */
+  function lineWithBall(): string | null {
+    const ball = screen.getByRole("img", { name: "Has the ball" });
+    return ball.closest(".grid")?.textContent ?? null;
+  }
+
+  test("sits on the side the feed says has the ball, after the name and your pick", () => {
+    const lock: RevealPick = { memberId: VIEWER.id, teamId: GEORGIA, outcome: "pending", lock: "counts", points: 0 };
+    const g = game(withFeedBall("home", "away"), [lock]);
+    render(<LiveBoard initial={state({ complete: false, games: [g] })} viewer={VIEWER} />);
+
+    expect(screen.getAllByRole("img", { name: "Has the ball" })).toHaveLength(1);
+    expect(lineWithBall()).toMatch(/Georgia/);
+    const ball = screen.getByRole("img", { name: "Has the ball" });
+    const mark = screen.getByLabelText("Your Lock of the Week");
+    expect(mark.compareDocumentPosition(ball) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test("falls back to the scoreboard's possession when the feed carries no play", () => {
+    const g = game({ ...LIVE, live: { ...LIVE.live!, possession: "away" } });
+    render(<LiveBoard initial={state({ complete: false, games: [g] })} viewer={VIEWER} />);
+
+    expect(lineWithBall()).toMatch(/Clemson/);
+  });
+
+  test("is gone at a break, when no one has the ball, and before kickoff and after the final", () => {
+    for (const result of [withFeedBall(null, "home"), LIVE, PENDING, FINAL]) {
+      render(<LiveBoard initial={state({ complete: false, games: [game(result)] })} viewer={VIEWER} />);
+      expect(screen.queryByRole("img", { name: "Has the ball" })).toBeNull();
+      cleanup();
+    }
+  });
+});
+
 describe("a pick's mark only grades once the game is final (#98)", () => {
   test("a pick on a game still going shows a hollow mark, not a graded one", () => {
     render(

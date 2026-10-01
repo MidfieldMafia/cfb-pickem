@@ -67,6 +67,18 @@ export function clockLabel(live: Pick<LiveScore, "period" | "clock">): string | 
   return time === null ? quarter : `${quarter} · ${time}`;
 }
 
+/**
+ * Which team has the ball, for the football on the Live Board row and the
+ * Game sheet header (#208, as amended by #311): the live feed's resting side
+ * whenever the feed carries the game — null at a break included, so a stale
+ * scoreboard `possession` never shows a football at halftime — and the
+ * scoreboard's `possession` only when it does not. The scoreboard names the
+ * kicking team after a kick; the feed does not.
+ */
+export function sideWithBall(live: Pick<LiveScore, "possession" | "feed">): PossessionSide | null {
+  return live.feed ? live.feed.ball : live.possession;
+}
+
 /** Every word a screen puts on a Game's state. One vocabulary, so the Reveal and the console agree. */
 export type ResultLabel = "Scheduled" | "In progress" | "Final" | "Final · override" | "Void";
 
