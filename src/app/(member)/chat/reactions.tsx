@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, X } from "lucide-react";
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@saturday-slate/design-system";
+import { Pennant } from "@/components/pennant";
 import type { ChatMessageJson } from "@/lib/chat/json";
-import { CHAT_REACTION_LABELS, chatReactionKinds, type ChatReactionKind } from "@/lib/chat/reactions";
+import { CHAT_REACTION_LABELS, chatReactionKinds, type ChatReactionKind, type ReactionSheetView } from "@/lib/chat/reactions";
+import type { MemberJson } from "@/lib/slate/json";
 
 /**
  * Reactions on the Chat thread (#249), as board 5 of the #177 canvas draws
- * them: the tray under a tapped message, and the chips under any message that
- * has one. Each glyph is solid, in its own chart colour; on the viewer's own
+ * them: the tray under a tapped message, the chips under any message that has
+ * one, and the sheet of who reacted that a chip opens (#338). Each glyph is
+ * solid, in its own chart colour; on the viewer's own
  * reaction it sits cream on pine.
  */
 
@@ -71,35 +75,185 @@ function ReactionIcon({ kind, size, on }: { kind: ChatReactionKind; size: number
   );
 }
 
-/** "Ha 2, including yours; Flag 1": what the chips say to a screen reader. */
-function tally(message: ChatMessageJson): string {
-  return message.reactions
-    .map(({ kind, count }) => `${CHAT_REACTION_LABELS[kind]} ${count}${message.mine === kind ? ", including yours" : ""}`)
-    .join("; ");
+/** How long a chip is held before it opens the sheet rather than acting as a tap. */
+const HOLD_MS = 450;
+
+/** What a chip says to a screen reader: its count, and what a tap on it does. */
+function chipLabel(message: ChatMessageJson, kind: ChatReactionKind, count: number, canReact: boolean): string {
+  const on = message.mine === kind;
+  const counted = `${CHAT_REACTION_LABELS[kind]} ${count}${on ? ", including yours" : ""}`;
+  if (!canReact) return `${counted}. Tap to see who reacted`;
+  if (on) return `${counted}. Tap to take yours off`;
+  return `${counted}. ${message.mine ? "Tap to switch yours to it" : "Tap to add yours"}`;
 }
 
-/** The counts under a message; nothing when nobody has reacted. */
-export function ReactionChips({ message, mine }: { message: ChatMessageJson; mine: boolean }) {
+/**
+ * The counts under a message; nothing when nobody has reacted. Each chip is a
+ * button (#338): where the viewer can react, a tap does what that reaction
+ * does in the tray; on their own message, or once they are out of the Group,
+ * it opens who reacted instead. Holding any chip opens who reacted, and the hold does not also
+ * count as a tap. The chip stays 24px to look at, with a 44px hit area.
+ *
+ * A hold cannot be reached from a keyboard or a screen reader, so a "See who
+ * reacted" button follows the chips, hidden until it has focus.
+ */
+export function ReactionChips({
+  message,
+  mine,
+  canReact,
+  onReact,
+  onShow,
+}: {
+  message: ChatMessageJson;
+  mine: boolean;
+  /** Someone else's message, and the viewer still in the Group. */
+  canReact: boolean;
+  onReact: (kind: ChatReactionKind) => void;
+  /** Opens who reacted at `kind`, or at All for null. */
+  onShow: (kind: ChatReactionKind | null) => void;
+}) {
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** The chip whose hold opened the sheet: the click that ends the hold is swallowed. */
+  const held = useRef<ChatReactionKind | null>(null);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
   if (message.reactions.length === 0) return null;
+  const release = () => clearTimeout(timer.current);
   return (
-    <div className={`flex flex-wrap gap-1 ${mine ? "justify-end pr-1" : "pl-1"}`}>
-      <span className="sr-only">Reactions: {tally(message)}</span>
+    <div role="group" aria-label="Reactions" className={`flex flex-wrap gap-1 ${mine ? "justify-end pr-1" : "pl-1"}`}>
       {message.reactions.map(({ kind, count }) => {
         const on = message.mine === kind;
         return (
-          <span
+          <button
             key={kind}
-            aria-hidden
-            className={`inline-flex h-6 items-center gap-[3px] rounded-full border px-2 text-xs font-bold tabular-nums ${
-              on ? "border-primary bg-primary text-primary-foreground" : "border-border text-foreground"
-            }`}
+            type="button"
+            aria-label={chipLabel(message, kind, count, canReact)}
+            onPointerDown={(e) => {
+              release();
+              if (e.button !== 0) return;
+              held.current = null;
+              timer.current = setTimeout(() => {
+                held.current = kind;
+                onShow(kind);
+              }, HOLD_MS);
+            }}
+            onPointerUp={release}
+            onPointerLeave={release}
+            onPointerCancel={release}
+            onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => {
+              // A keyboard's click (detail 0) is never the end of a hold.
+              const endsHold = held.current === kind && e.detail > 0;
+              held.current = null;
+              if (endsHold) return;
+              if (canReact) onReact(kind);
+              else onShow(kind);
+            }}
+            className="-my-2.5 touch-manipulation py-2.5 select-none [-webkit-touch-callout:none]"
           >
-            <ReactionIcon kind={kind} size={12} on={on} />
-            {count}
-          </span>
+            <span
+              className={`inline-flex h-6 items-center gap-[3px] rounded-full border px-2 text-xs font-bold tabular-nums ${
+                on ? "border-primary bg-primary text-primary-foreground" : "border-border text-foreground"
+              }`}
+            >
+              <ReactionIcon kind={kind} size={12} on={on} />
+              {count}
+            </span>
+          </button>
         );
       })}
+      <button
+        type="button"
+        onClick={() => onShow(null)}
+        className="sr-only rounded-full border border-border px-2 text-xs font-bold focus:not-sr-only focus:inline-flex focus:h-6 focus:items-center"
+      >
+        See who reacted
+      </button>
     </div>
+  );
+}
+
+/**
+ * Who reacted to a message (#338): a sheet with a tab for All and one per
+ * reaction, each listing its people newest first. The thread builds it from
+ * the message as the poll last brought it (`reactionSheet`), so it follows
+ * the poll while open.
+ */
+export function ReactionSheet({
+  sheet,
+  open,
+  people,
+  viewerId,
+  onSelect,
+  onClose,
+}: {
+  /** Kept after a close, so the sheet still has its rows while it slides away. */
+  sheet: ReactionSheetView | null;
+  open: boolean;
+  people: Map<number, MemberJson>;
+  viewerId: number;
+  onSelect: (kind: ChatReactionKind | null) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Drawer open={open && sheet !== null} onOpenChange={(opening) => (opening ? null : onClose())}>
+      <DrawerContent className="mx-auto max-w-md">
+        <DrawerHeader className="flex-row items-center justify-between py-1 pr-2 pl-5 text-left">
+          <DrawerTitle className="font-display text-xl leading-6 font-black">Reactions</DrawerTitle>
+          <DrawerDescription className="sr-only">Who reacted to this message, newest first.</DrawerDescription>
+          <DrawerClose aria-label="Close" className="grid size-11 place-items-center text-muted-foreground">
+            <X size={20} aria-hidden />
+          </DrawerClose>
+        </DrawerHeader>
+        {sheet ? (
+          <>
+            <div role="tablist" aria-label="Reactions" className="flex gap-1.5 overflow-x-auto border-b border-border px-4 pt-2 pb-3">
+              {sheet.tabs.map((tab) => {
+                const on = sheet.selected === tab.kind;
+                return (
+                  <button
+                    key={tab.kind ?? "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={on}
+                    aria-label={`${tab.kind ? CHAT_REACTION_LABELS[tab.kind] : "All"} ${tab.count}`}
+                    onClick={() => onSelect(tab.kind)}
+                    className={`inline-flex h-9 shrink-0 items-center gap-[5px] rounded-full border px-3.5 text-sm font-bold ${
+                      on ? "border-primary bg-primary text-primary-foreground" : "border-border text-foreground"
+                    }`}
+                  >
+                    {tab.kind ? <ReactionIcon kind={tab.kind} size={14} on={on} /> : <span>All</span>}
+                    <span className="tabular-nums">{tab.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <ul role="tabpanel" className="m-0 flex list-none flex-col overflow-y-auto px-5 pt-2 pb-7">
+              {sheet.reactors.map(({ memberId, kind }) => {
+                const you = memberId === viewerId;
+                const person = people.get(memberId);
+                const name = person?.displayName ?? "Someone";
+                return (
+                  <li key={memberId} className="flex min-h-11 items-center gap-3">
+                    <Pennant avatarId={person?.avatarId ?? null} name={name} size={32} />
+                    <span className={`min-w-0 flex-1 truncate text-[15px] leading-5 ${you ? "font-extrabold" : "font-semibold"}`}>
+                      {you ? "You" : name}
+                    </span>
+                    {sheet.selected === null ? (
+                      <>
+                        <ReactionIcon kind={kind} size={18} on={false} />
+                        <span className="sr-only">{CHAT_REACTION_LABELS[kind]}</span>
+                      </>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        ) : null}
+      </DrawerContent>
+    </Drawer>
   );
 }
 

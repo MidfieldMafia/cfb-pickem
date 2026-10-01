@@ -15,10 +15,10 @@ import { Pennant } from "@/components/pennant";
 import { GONE_LABELS, type ChatMessageJson, type ChatStateJson } from "@/lib/chat/json";
 import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import { nextChatPollMs } from "@/lib/chat/poll";
-import { tapReaction, withReaction, type ChatReactionKind } from "@/lib/chat/reactions";
+import { reactionSheet, tapReaction, withReaction, type ChatReactionKind } from "@/lib/chat/reactions";
 import { chatTimeLabel, threadRows, type ThreadRow } from "@/lib/chat/thread";
 import type { MemberJson } from "@/lib/slate/json";
-import { ReactionChips, ReactionTray } from "./reactions";
+import { ReactionChips, ReactionSheet, ReactionTray } from "./reactions";
 
 const CHAT_PATH = "/api/chat";
 const REACTIONS_PATH = "/api/chat/reactions";
@@ -129,6 +129,8 @@ export function ChatThread({
   const [trayFor, setTrayFor] = useState<number | null>(null);
   /** The message More is asking about deleting or removing (board 3). */
   const [confirming, setConfirming] = useState<ChatMessageJson | null>(null);
+  /** Whose reactions the sheet shows (#338), and on which tab: null for All. Kept after a close until the next opens. */
+  const [sheet, setSheet] = useState<{ messageId: number; kind: ChatReactionKind | null; open: boolean } | null>(null);
   const [takingDown, setTakingDown] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -139,6 +141,13 @@ export function ChatThread({
   const senders = new Map(state.senders.map((s) => [s.id, s]));
   const now = new Date(state.serverNow);
   const rows = threadRows(state.messages, viewer.id);
+  const sheetMessage = sheet ? state.messages.find((m) => m.id === sheet.messageId) : undefined;
+  const sheetView = sheetMessage && sheet ? reactionSheet(sheetMessage, sheet.kind) : null;
+  // The sheet follows the poll: a tab that drops to zero falls back to All for
+  // good, and a message left with no reactions, or gone, closes it for good.
+  // React's "adjust state while rendering": it settles in one extra render,
+  // where an effect would first paint the stale tab.
+  if (sheet && sheetView?.selected !== sheet.kind) setSheet(sheetView ? { ...sheet, kind: sheetView.selected } : null);
   const used = length(draft);
   const over = used > MAX_CHAT_TEXT;
   const left = MAX_CHAT_TEXT - used;
@@ -182,13 +191,13 @@ export function ChatThread({
     }
   };
 
-  /** A tap in the tray: the counts move at once, and the server's answer is the thread with them in. */
+  /** A tap in the tray, or on a chip: the counts move at once, and the server's answer is the thread with them in. */
   const react = async (message: ChatMessageJson, tapped: ChatReactionKind) => {
     if (gone) return;
     const kind = tapReaction(message.mine, tapped);
     setTrayFor(null);
     setError(null);
-    revise((m) => (m.id === message.id ? withReaction(m, kind) : m));
+    revise((m) => (m.id === message.id ? withReaction(m, viewer.id, kind) : m));
     try {
       const response = await fetch(REACTIONS_PATH, {
         method: "POST",
@@ -253,7 +262,12 @@ export function ChatThread({
                     ? undefined
                     : () => setTrayFor((open) => (open === row.message.id ? null : row.message.id))
                 }
+                canReact={!gone && !row.mine}
                 onReact={(kind) => void react(row.message, kind)}
+                onShow={(kind) => {
+                  setTrayFor(null);
+                  setSheet({ messageId: row.message.id, kind, open: true });
+                }}
                 onMore={
                   canTakeDown(row, state.canRemove)
                     ? () => {
@@ -307,6 +321,15 @@ export function ChatThread({
         ) : null}
       </form>
 
+      <ReactionSheet
+        sheet={sheetView}
+        open={sheet?.open ?? false}
+        people={senders}
+        viewerId={viewer.id}
+        onSelect={(kind) => setSheet((open) => (open ? { ...open, kind } : open))}
+        onClose={() => setSheet((open) => (open ? { ...open, open: false } : open))}
+      />
+
       <TakeDownSheet
         message={confirming}
         sender={confirming ? senders.get(confirming.memberId) : undefined}
@@ -336,7 +359,9 @@ function Message({
   now,
   trayOpen,
   onTray,
+  canReact,
   onReact,
+  onShow,
   onMore,
 }: {
   row: ThreadRow;
@@ -345,7 +370,11 @@ function Message({
   trayOpen: boolean;
   /** Undefined when there is nothing to open: once the member is out of the Group, or on a message that is gone. */
   onTray: (() => void) | undefined;
+  /** Someone else's message, and the viewer still in the Group: a chip tap reacts. */
+  canReact: boolean;
   onReact: (kind: ChatReactionKind) => void;
+  /** Opens who reacted, at a reaction's tab or at All for null. */
+  onShow: (kind: ChatReactionKind | null) => void;
   /** Undefined when More has nothing in it. */
   onMore: (() => void) | undefined;
 }) {
@@ -376,7 +405,7 @@ function Message({
             {message.text}
           </button>
         )}
-        <ReactionChips message={message} mine />
+        <ReactionChips message={message} mine canReact={canReact} onReact={onReact} onShow={onShow} />
         {tray}
       </li>
     );
@@ -415,7 +444,7 @@ function Message({
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-0.5 pl-9">
-        <ReactionChips message={message} mine={false} />
+        <ReactionChips message={message} mine={false} canReact={canReact} onReact={onReact} onShow={onShow} />
         {tray}
       </div>
     </li>

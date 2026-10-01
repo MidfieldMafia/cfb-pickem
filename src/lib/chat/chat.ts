@@ -7,8 +7,9 @@
  * The unread count behind the tab's badge is counted from a marker on the
  * membership: the id of the newest message the member has seen there.
  *
- * Reactions (#249) ride on the thread: each message carries its counts and the
- * reader's own, so the poll that brings new messages brings new reactions too.
+ * Reactions (#249) ride on the thread: each message carries its counts, the
+ * reader's own, and who reacted with what (#338), so the poll that brings new
+ * messages brings new reactions too.
  *
  * Nobody edits a message (#250). Its sender deletes it; an Organizer of the
  * Group or a Commissioner removes anyone's. Either way the row stays, with
@@ -25,7 +26,7 @@ import { memberGroups } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import { toMemberJson, type MemberJson } from "@/lib/slate/json";
 import { MAX_CHAT_TEXT } from "./limits";
-import { chatReactionKinds, type ChatReactionKind } from "./reactions";
+import { countReactions, type ChatReactionKind, type Reactor } from "./reactions";
 
 export class InvalidChat extends Refusal {}
 
@@ -69,12 +70,14 @@ export interface ThreadEntry extends ThreadMessage {
   reactions: ReactionCount[];
   /** The reader's own reaction. */
   mine: ChatReactionKind | null;
+  /** Who reacted with what, newest reaction first: a switch counts as new. */
+  reactors: Reactor[];
 }
 
 export interface Thread {
   /** Oldest first. */
   messages: ThreadEntry[];
-  /** Everyone who wrote one of `messages`, for the names and pennants. Removed members included. */
+  /** Everyone who wrote or reacted to one of `messages`, for the names and pennants. Removed members included. */
   senders: MemberJson[];
   /** The reader may remove other people's messages here (`canRemoveIn`). */
   canRemove: boolean;
@@ -149,11 +152,11 @@ export async function chatThread(db: Db, member: Member, groupId: number): Promi
     const base = { id: m.id, memberId: m.memberId, createdAt: m.createdAt };
     if (m.deletedAt !== null) {
       const gone: GoneReason = m.removedBy === null ? "deleted" : m.removerIsCommissioner ? "commissioner" : "organizer";
-      return { ...base, text: "", gone, reactions: [], mine: null };
+      return { ...base, text: "", gone, reactions: [], mine: null, reactors: [] };
     }
-    return { ...base, text: m.text, gone: null, ...(reactions.get(m.id) ?? { reactions: [], mine: null }) };
+    return { ...base, text: m.text, gone: null, ...(reactions.get(m.id) ?? { reactions: [], mine: null, reactors: [] }) };
   });
-  const ids = [...new Set(messages.map((m) => m.memberId))];
+  const ids = [...new Set(messages.flatMap((m) => [m.memberId, ...m.reactors.map((r) => r.memberId)]))];
   const senders =
     ids.length === 0
       ? []
@@ -204,29 +207,26 @@ export async function takeDown(db: Db, member: Member, groupId: number, messageI
   if (!taken) throw new InvalidChat("That message is gone.");
 }
 
-/** The counts and the reader's own reaction for each of `messageIds` that has any. */
+/** The counts, the reader's own reaction, and who reacted, for each of `messageIds` that has any. */
 async function reactionsTo(
   db: Db,
   readerId: number,
   messageIds: number[],
-): Promise<Map<number, Pick<ThreadEntry, "reactions" | "mine">>> {
-  const byMessage = new Map<number, Pick<ThreadEntry, "reactions" | "mine">>();
+): Promise<Map<number, Pick<ThreadEntry, "reactions" | "mine" | "reactors">>> {
+  const byMessage = new Map<number, Pick<ThreadEntry, "reactions" | "mine" | "reactors">>();
   if (messageIds.length === 0) return byMessage;
-  const rows = await db
+  const newestFirst = await db
     .select({ messageId: chatReactions.messageId, memberId: chatReactions.memberId, kind: chatReactions.kind })
     .from(chatReactions)
-    .where(inArray(chatReactions.messageId, messageIds));
-  const counts = new Map<number, Map<ChatReactionKind, number>>();
-  for (const row of rows) {
-    const kinds = counts.get(row.messageId) ?? new Map<ChatReactionKind, number>();
-    kinds.set(row.kind, (kinds.get(row.kind) ?? 0) + 1);
-    counts.set(row.messageId, kinds);
-    if (row.memberId === readerId) byMessage.set(row.messageId, { reactions: [], mine: row.kind });
+    .where(inArray(chatReactions.messageId, messageIds))
+    .orderBy(desc(chatReactions.createdAt), asc(chatReactions.memberId));
+  for (const row of newestFirst) {
+    const entry = byMessage.get(row.messageId) ?? { reactions: [], mine: null, reactors: [] };
+    entry.reactors.push({ memberId: row.memberId, kind: row.kind });
+    if (row.memberId === readerId) entry.mine = row.kind;
+    byMessage.set(row.messageId, entry);
   }
-  for (const [messageId, kinds] of counts) {
-    const reactions = chatReactionKinds.filter((kind) => kinds.has(kind)).map((kind) => ({ kind, count: kinds.get(kind)! }));
-    byMessage.set(messageId, { reactions, mine: byMessage.get(messageId)?.mine ?? null });
-  }
+  for (const entry of byMessage.values()) entry.reactions = countReactions(entry.reactors);
   return byMessage;
 }
 
