@@ -22,9 +22,12 @@ never guessed.
 > - **§5's "poll every 2–3 minutes" is superseded.** The results gate refreshes every 30
 >   seconds while a slate game is under way and every 5 minutes between games
 >   (`src/lib/results/writes.ts`).
-> - **§2's `"possession": "home"` sample was invented, not observed.** A live game on
->   2026-09-24 did return `"home"`, `"away"` or `null` (`docs/research/cfbd-live-plays.md`).
->   #211 tracks marking the doc's other invented sample values.
+> - **§2's JSON samples are illustrative, not captured responses** (#211). They were
+>   hand-written from the spec's schemas on 2026-09-04; the values are invented and §2 now says
+>   so. Where a field's real content has since been seen, §2 says that too: `/scoreboard`
+>   team names carry the mascot (seen 2026-09-21, `docs/research/cfbd-possession-and-delays.md`),
+>   and its `possession` is `"home"`, `"away"` or `null` (seen in a live game on 2026-09-24,
+>   `docs/research/cfbd-live-plays.md`).
 
 ## Summary — actionable recommendations
 
@@ -107,9 +110,16 @@ All field names below are taken directly from the live OpenAPI spec
 (`https://api.collegefootballdata.com/api-docs.json`, spec version 5.26.0), not from blog
 examples, unless noted.
 
+**The JSON samples in this section are illustrative.** Each one was written by hand to show
+the shape of the spec's response schema. None of them is a captured response: the ids,
+scores, lines, probabilities and dates are made up, and the same made-up Georgia–Tennessee
+game is reused across endpoints. Use them for field names and nesting only. Each field's
+type and meaning comes from the spec unless the text marks it **observed**, meaning it was
+seen in a real response.
+
 ### (a) `GET /games` — season/week game list
 
-Response is an array of `Game`. Key fields (trimmed to the relevant subset):
+Response is an array of `Game`. Key fields (trimmed to the relevant subset; illustrative values):
 
 ```json
 {
@@ -139,23 +149,32 @@ Response is an array of `Game`. Key fields (trimmed to the relevant subset):
 Distinct endpoint, described in the spec as "Returns current scoreboard data" — it takes only
 `classification` (defaults to `fbs`) and `conference` filters, **no** `year`/`week`/`team`
 params, meaning it always returns whatever games are scheduled/live/final *right now* across
-the whole slate in one call. Response is an array of `ScoreboardGame`:
+the whole slate in one call. Response is an array of `ScoreboardGame` (illustrative values):
 
 ```json
 {
   "id": 401520145, "startDate": "2023-08-26T16:00:00.000Z", "startTimeTBD": false,
   "status": "in_progress", "period": 3, "clock": "08:42",
   "situation": "1st & 10", "possession": "home", "lastPlay": "...",
-  "homeTeam": { "id": 61, "name": "Georgia", "points": 24, "lineScores": [7,10,7,0], "winProbability": 0.82 },
-  "awayTeam": { "id": 2439, "name": "Tennessee", "points": 17, "lineScores": [3,7,7,0], "winProbability": 0.18 },
+  "homeTeam": { "id": 61, "name": "Georgia Bulldogs", "points": 24, "lineScores": [7,10,7,0], "winProbability": 0.82 },
+  "awayTeam": { "id": 2439, "name": "Tennessee Volunteers", "points": 17, "lineScores": [3,7,7,0], "winProbability": 0.18 },
   "betting": { "spread": -13.5, "overUnder": 52.5, "homeMoneyline": -650, "awayMoneyline": 480 }
 }
 ```
 
 - `status` is the `GameStatus` enum, **and it only has three values**:
   `"scheduled" | "in_progress" | "completed"` — no separate postponed/delayed/canceled value.
+- Team `name` is the display name **with the mascot** (`"Georgia Bulldogs"`), **observed**
+  2026-09-21 (`docs/research/cfbd-possession-and-delays.md`). `/games` gives the bare school
+  in `homeTeam`/`awayTeam`, so the two never match as strings. Join on `id`.
 - Current period/quarter: `period` (nullable int). Clock: `clock` (nullable string, e.g.
-  `"08:42"`). Also present: `situation` (down & distance), `possession`, `lastPlay`.
+  `"08:42"`). Also present: `situation` (down & distance) and `lastPlay`.
+- `possession` is a nullable string in the spec, with no enum. **Observed** in a live game on
+  2026-09-24 as the literal `"home"` or `"away"`, and `null` whenever `situation` was null
+  (`docs/research/cfbd-live-plays.md`). The `"home"` in the sample above was invented before
+  that observation; it happens to match.
+- `winProbability` and the `betting` fields are typed in the spec; the numbers in the sample
+  are invented, and nothing in this repo has checked what they hold during a real game.
 - Nested `venue{name,city,state}`, `weather{temperature,windSpeed,windDirection,description}`,
   `betting{spread,overUnder,homeMoneyline,awayMoneyline}` all ship on the same object — a
   single `/scoreboard` call already carries the spread/total for display alongside the score.
@@ -163,7 +182,7 @@ the whole slate in one call. Response is an array of `ScoreboardGame`:
 ### (c) `GET /lines` — betting lines
 
 Response is an array of `BettingGame`, each carrying a `lines: GameLine[]` array (one entry
-per sportsbook):
+per sportsbook; illustrative values):
 
 ```json
 {
@@ -188,7 +207,7 @@ per sportsbook):
 
 ### (d) `GET /rankings` — AP/CFP poll rankings
 
-Response is an array of `PollWeek`:
+Response is an array of `PollWeek` (illustrative values):
 
 ```json
 {
@@ -207,7 +226,7 @@ Response is an array of `PollWeek`:
 
 ### (e) `GET /teams` / `GET /teams/fbs` — team metadata
 
-Response is an array of `Team`:
+Response is an array of `Team` (illustrative values):
 
 ```json
 {
