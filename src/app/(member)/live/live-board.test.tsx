@@ -594,7 +594,8 @@ describe("the live sheet", () => {
   test("a score change counts up a point at a time", async () => {
     vi.useFakeTimers({ now: new Date(state().serverNow) });
     const scored: GameResult = { ...LIVE, shown: { awayScore: 10, homeScore: 31 }, live: { ...LIVE.live!, homeScore: 31 } };
-    serving(playsJson(), () => state({ complete: false, games: [game(scored)] }));
+    // A game the feed does not carry: with plays, the On the field card holds the header to the feed's score.
+    serving(playsJson(null), () => state({ complete: false, games: [game(scored)] }));
     render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
 
     openGame();
@@ -722,21 +723,10 @@ describe("the On the field card", () => {
   const listed = (text: RegExp) => screen.queryAllByRole("listitem").some((li) => text.test(li.textContent ?? ""));
   const advance = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
 
-  test("with the switch off, the sheet has no card and no gap", async () => {
-    vi.useFakeTimers({ now: new Date(state().serverNow) });
-    serving(() => feed());
-    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
-
-    openGame();
-    await advance(0);
-    expect(screen.queryByText("On the field")).toBeNull();
-    expect(listed(/TOUCHDOWN/)).toBe(true);
-  });
-
   test("on open, the last play animates, and nothing is spoiled until the ball lands", async () => {
     vi.useFakeTimers({ now: new Date(state().serverNow) });
     serving(() => feed());
-    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} fieldCard />);
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
 
     openGame();
     await advance(0);
@@ -761,7 +751,7 @@ describe("the On the field card", () => {
     let answer: unknown = upToRun;
     serving(() => answer);
     const before: GameResult = { ...LIVE, shown: { awayScore: 10, homeScore: 21 }, live: { ...LIVE.live!, homeScore: 21 } };
-    render(<LiveBoard initial={state({ complete: false, games: [game(before)] })} viewer={VIEWER} fieldCard />);
+    render(<LiveBoard initial={state({ complete: false, games: [game(before)] })} viewer={VIEWER} />);
 
     openGame();
     await advance(10_000);
@@ -792,7 +782,7 @@ describe("the On the field card", () => {
     vi.useFakeTimers({ now: new Date(state().serverNow) });
     let answer = feed();
     serving(() => answer);
-    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} fieldCard />);
+    render(<LiveBoard initial={state({ complete: false, games: [game(LIVE)] })} viewer={VIEWER} />);
 
     openGame();
     await advance(0);
