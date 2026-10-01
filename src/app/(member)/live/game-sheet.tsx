@@ -632,8 +632,6 @@ function TiebreakerSection({ game, scores, viewerId }: { game: LiveGameJson; sco
 }
 
 interface SheetProps {
-  /** The `GAME_SHEET_LIVE` switch, decided on the server for this member: whether the "On the field" card shows. */
-  fieldCard: boolean;
   members: Map<number, ScoredMember>;
   scores: WeeklyScore[] | null;
   viewerId: number;
@@ -646,7 +644,6 @@ interface SheetProps {
 /** Everything under the drawer's handle for one game. Keyed on the game, so its polling and counting start fresh for each. */
 function SheetBody({
   game,
-  fieldCard,
   members,
   scores,
   viewerId,
@@ -666,7 +663,7 @@ function SheetBody({
     [g.homeTeamId, g.awayTeamId, g.homeTeam, g.awayTeam],
   );
   // With the card up, the list and the header wait for each play to land.
-  const player = useFieldPlayer(feed, teams, fieldCard && live);
+  const player = useFieldPlayer(feed, teams, live);
   const card = player.shown ? recentPlays(player.shown, teams) : null;
   const landed: Landed | null =
     player.readout && player.holdsHeader
