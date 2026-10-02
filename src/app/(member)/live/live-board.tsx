@@ -11,9 +11,8 @@ import { TeamLogo } from "@/components/team-logo";
 
 import { GameSheet } from "./game-sheet";
 
-import { findLogoByEspnId } from "@/lib/logos";
 import { useDeadlineClock } from "@/lib/picks/clock";
-import { barColors } from "@/lib/results/bar-colors";
+import { teamBarColors } from "@/lib/results/bar-colors";
 import { downAndDistance, lastPlayLine } from "@/lib/results/live-row";
 import { clockLabel, sideWithBall, type GameResult, type LiveScore } from "@/lib/results/result";
 import type { RevealGame, RevealPick } from "@/lib/results/results";
@@ -297,7 +296,7 @@ function SideLine({
 
 /**
  * The pick split across the two sides, in the two schools' colours (#362):
- * the pair `barColors` picks for the final sheet's team-stat bars, so the
+ * the pair `teamBarColors` picks for the final sheet's team-stat bars, so the
  * board and the sheet agree for the same game. A game nobody picked is the
  * bare track, in neither colour.
  *
@@ -323,7 +322,7 @@ function SplitBar({
   muted: boolean;
 }) {
   const total = away + home;
-  const colors = barColors(findLogoByEspnId(awayTeamId)?.colors, findLogoByEspnId(homeTeamId)?.colors);
+  const colors = teamBarColors(awayTeamId, homeTeamId);
   return (
     <span
       role="img"

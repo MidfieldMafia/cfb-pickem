@@ -1,7 +1,7 @@
 /**
- * The two colours of the final sheet's team-stat bars, chosen as a pair from
- * each school's colours in `logos.ts`, by the rule drawn on the Game sheet's
- * design ticket (#265):
+ * The two colours of a game's bars, the final sheet's team stats and the Live
+ * Board's pick split alike, chosen as a pair from each school's colours in
+ * `logos.ts`, by the rule drawn on the Game sheet's design ticket (#265):
  *
  * - A colour counts only if it reaches 3:1 against the card, `#FBF6EC`.
  * - Primaries first, and the away team may take its secondary so the home
@@ -13,7 +13,7 @@
  * Pure and client-safe: worked out whenever a box score is read, never stored,
  * so tuning `TOO_ALIKE` or `DARK` changes every sheet at once.
  */
-import type { TeamColors } from "@/lib/logos";
+import { findLogoByEspnId, type TeamColors } from "@/lib/logos";
 
 /** The card the bars sit on. */
 export const CARD = "#FBF6EC";
@@ -69,6 +69,15 @@ export function barColors(away: TeamColors | undefined, home: TeamColors | undef
   if (homeUsable.length > 0) return { away: fallbackBeside(homeUsable[0]), home: homeUsable[0] };
   if (awayUsable.length > 0) return { away: awayUsable[0], home: fallbackBeside(awayUsable[0]) };
   return { away: LIGHT_GRAY, home: BLACK };
+}
+
+/**
+ * The pair for one game, by CFBD team id: what the final sheet's team-stat bars
+ * and the Live Board's pick split both draw, so the two agree for the same game.
+ * A school missing from `logos.ts` takes the fallback.
+ */
+export function teamBarColors(awayTeamId: number, homeTeamId: number): BarColors {
+  return barColors(findLogoByEspnId(awayTeamId)?.colors, findLogoByEspnId(homeTeamId)?.colors);
 }
 
 /** A school's colours that reach 3:1 on the card, primary first. */
