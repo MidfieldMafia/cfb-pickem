@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { LIBERTY_AT_COASTAL_FINAL } from "@/lib/cfbd/recorded";
 import type { CfbdLivePlay } from "@/lib/cfbd/types";
-import { abbreviations, ballSide, describePlays, type PlayDescription } from "./field";
+import { abbreviations, ballSide, describePlays, sideOf, type PlayDescription } from "./field";
 
 // Liberty at Coastal Carolina: Liberty (LIB) is away and attacks towards 100, Coastal (CCU) home and towards 0.
 const TEAMS = { homeTeamId: 324, awayTeamId: 2335 };
@@ -408,5 +408,13 @@ describe("the Live Board's football", () => {
     ["the final", "794"],
   ])("is nobody's at %s", (_, suffix) => {
     expect(ballSide(upTo(suffix), TEAMS, null)).toBeNull();
+  });
+});
+
+describe("sideOf", () => {
+  test("names the side a team id plays on", () => {
+    expect(sideOf(TEAMS)(324)).toBe("home");
+    expect(sideOf(TEAMS)(2335)).toBe("away");
+    expect(sideOf(TEAMS)(1)).toBeNull();
   });
 });

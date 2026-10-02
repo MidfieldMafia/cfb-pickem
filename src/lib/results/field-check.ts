@@ -5,7 +5,7 @@
  * so `npm run check-field` runs this over a Saturday's stored feeds.
  */
 import type { CfbdLivePlay } from "@/lib/cfbd/types";
-import { abbreviations, describePlays, type FieldTeams, type Side } from "./field";
+import { abbreviations, describePlays, sideOf, type FieldTeams, type Side } from "./field";
 
 /** How many jump-only play texts a check keeps, to show the spelling that failed. */
 const SAMPLES = 3;
@@ -21,9 +21,7 @@ export interface FieldCheck {
 }
 
 export function checkField(plays: readonly CfbdLivePlay[], teams: FieldTeams): FieldCheck {
-  const sideOf = (teamId: number): Side | null =>
-    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
-  const placed = new Set(abbreviations(plays, sideOf).values());
+  const placed = new Set(abbreviations(plays, sideOf(teams)).values());
   const described = describePlays(plays, teams);
   let runsAndCatches = 0;
   const jumps: string[] = [];

@@ -12,7 +12,7 @@
  * Pure and free of database imports: it runs in the browser.
  */
 import type { CfbdLivePlay } from "@/lib/cfbd/types";
-import { isMarker, type FieldTeams, type PlayDescription, type Segment, type Side, type Yard } from "./field";
+import { isMarker, sideOf, type FieldTeams, type PlayDescription, type Segment, type Side, type Yard } from "./field";
 import type { GamePlaysJson } from "./live-feed";
 import { clockLabel } from "./result";
 
@@ -275,6 +275,12 @@ export interface Readout {
 
 const ORDINAL = ["", "1st", "2nd", "3rd", "4th"];
 
+/** "3rd & 7", or "1st & Goal" once the distance reaches the goal line. "–" for a distance the feed hasn't given. */
+export function downLabel(down: number, distance: number | null, yardsToGoal: number | null): string {
+  const goal = distance !== null && yardsToGoal !== null && distance >= yardsToGoal;
+  return `${ORDINAL[down]} & ${goal ? "Goal" : (distance ?? "–")}`;
+}
+
 /** "UGA 28", "50", or "End zone", from the team labels the Recent plays card uses. */
 export function spotLabel(spot: Yard, labels: Record<Side, string>): string {
   if (spot < 0 || spot > 100) return "End zone";
@@ -310,8 +316,7 @@ export function readout(feed: GamePlaysJson, id: string, teams: FieldTeams, labe
   let down = "–";
   if (rest.down !== null && rest.side !== null) {
     const toGoal = rest.spot === null ? null : rest.side === "away" ? 100 - rest.spot : rest.spot;
-    const goal = toGoal !== null && rest.distance !== null && rest.distance >= toGoal;
-    down = `${ORDINAL[rest.down]} & ${goal ? "Goal" : (rest.distance ?? "–")}`;
+    down = downLabel(rest.down, rest.distance, toGoal);
   } else if (flash?.kind === "flash") {
     down = flash.label === "Safety" ? "Free kick" : "Kickoff";
   }
@@ -324,9 +329,7 @@ export function readout(feed: GamePlaysJson, id: string, teams: FieldTeams, labe
   // The drive: the plays its offense has run so far. A play that handed the
   // ball over without a score, a kick or a turnover, starts a new drive at
   // the spot, whichever drive the feed filed it under.
-  const sideOf = (teamId: number): Side | null =>
-    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
-  const offense = drive ? sideOf(drive.offenseId) : null;
+  const offense = drive ? sideOf(teams)(drive.offenseId) : null;
   let driveText = "–";
   let driveStart: Yard | null = null;
   if (flash === undefined && rest.side !== null && rest.side !== offense) {

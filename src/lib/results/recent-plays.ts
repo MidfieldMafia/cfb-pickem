@@ -12,7 +12,7 @@
  * Pure and free of database imports: the Live Board runs it in the browser.
  */
 import type { DriveRecap } from "./drive-recap";
-import { abbreviations, type FieldTeams, type PlayDescription, type Side } from "./field";
+import { abbreviations, sideOf, type FieldTeams, type PlayDescription, type Side } from "./field";
 import type { GamePlaysJson } from "./live-feed";
 
 export type ScoreTag = "Touchdown" | "Extra point" | "Field goal" | "Safety";
@@ -82,12 +82,10 @@ export function recentPlays(feed: GamePlaysJson, teams: RecentTeams): RecentPlay
 
 /** Each side's short name as the feed's play text writes it, the one the card and the field both use. */
 export function feedLabels(feed: GamePlaysJson, teams: RecentTeams): Record<Side, string> {
-  const sideOf = (teamId: number): Side | null =>
-    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
   return teamLabels(
     abbreviations(
       feed.drives.flatMap((drive) => drive.plays),
-      sideOf,
+      sideOf(teams),
     ),
     teams,
   );
