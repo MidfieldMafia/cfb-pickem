@@ -17,9 +17,8 @@ import { and, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { gameStats, seasonRosters, weeks, type Game, type Season } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
-import { findLogoByEspnId } from "@/lib/logos";
 import type { Slate } from "@/lib/slate/slate";
-import { barColors } from "./bar-colors";
+import { teamBarColors } from "./bar-colors";
 import { shownPosition, toBoxScore, type FinalStats, type Positions } from "./box-score";
 import { effectiveResult } from "./result";
 
@@ -157,6 +156,6 @@ export async function finalStats(db: Db, game: Game): Promise<FinalStats | null>
   if (effectiveResult(game).status !== "final") return null;
   const row = await db.query.gameStats.findFirst({ where: eq(gameStats.gameId, game.id) });
   if (!row) return null;
-  const colors = barColors(findLogoByEspnId(game.awayTeamId)?.colors, findLogoByEspnId(game.homeTeamId)?.colors);
+  const colors = teamBarColors(game.awayTeamId, game.homeTeamId);
   return { ...row.boxScore, colors };
 }

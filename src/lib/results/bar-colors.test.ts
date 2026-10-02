@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { findLogo, type TeamColors } from "@/lib/logos";
-import { barColors, BLACK, CARD, ciede2000, contrast, DARK, deltaE2000, LIGHT_GRAY, MIN_CONTRAST, tooAlike } from "./bar-colors";
+import { barColors, BLACK, CARD, ciede2000, contrast, DARK, deltaE2000, LIGHT_GRAY, MIN_CONTRAST, teamBarColors, tooAlike } from "./bar-colors";
 
 const colors = (school: string): TeamColors => {
   const logo = findLogo(school);
@@ -90,5 +90,17 @@ describe("bar colours", () => {
         expect(a === LIGHT_GRAY || h === LIGHT_GRAY || !tooAlike(a, h)).toBe(true);
       }
     }
+  });
+});
+
+describe("bar colours by team id", () => {
+  test("looks both schools up by CFBD id: Oklahoma (201) at Michigan (130)", () => {
+    expect(teamBarColors(201, 130)).toEqual({ away: "#841617", home: "#00274C" });
+    expect(teamBarColors(201, 130)).toEqual(pair("Oklahoma", "Michigan"));
+  });
+
+  test("an id missing from logos.ts takes the fallback", () => {
+    expect(teamBarColors(-1, 130)).toEqual(pair(undefined, "Michigan"));
+    expect(teamBarColors(-1, 130).away).toBe(LIGHT_GRAY);
   });
 });
