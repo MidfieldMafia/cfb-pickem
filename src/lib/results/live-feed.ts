@@ -13,7 +13,7 @@
 import type { CfbdLiveDrive, CfbdLiveGame, CfbdLivePlay } from "@/lib/cfbd/types";
 import type { FinalStats } from "./box-score";
 import type { DriveRecap } from "./drive-recap";
-import { abbreviations, ballSide, type FieldTeams, type PlayDescription, type Side } from "./field";
+import { abbreviations, ballSide, sideOf, type FieldTeams, type PlayDescription, type Side } from "./field";
 
 /** The newest play, as the Live Board row reads it. Text, type and team are the feed's own words. */
 export interface LivePlay {
@@ -88,10 +88,8 @@ export function toLiveFeed(feed: CfbdLiveGame, teams: FieldTeams): LiveFeed | nu
     yardsToGoal: feed.yardsToGoal,
   };
   const plays = feed.drives.flatMap((drive) => drive.plays);
-  const sideOf = (teamId: number): Side | null =>
-    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
   // The last one placed, as the Game sheet's labels take it (`feedLabels`).
-  const abbrs = [...abbreviations(plays, sideOf)];
+  const abbrs = [...abbreviations(plays, sideOf(teams))];
   const abbrOf = (side: Side) => abbrs.findLast(([, placed]) => placed === side)?.[0] ?? null;
   return {
     play: {

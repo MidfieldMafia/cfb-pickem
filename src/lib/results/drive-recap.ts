@@ -14,7 +14,7 @@
  * `field.ts`. Pure and free of database imports.
  */
 import type { CfbdLiveDrive } from "@/lib/cfbd/types";
-import type { FieldTeams, Side } from "./field";
+import { sideOf, type FieldTeams, type Side } from "./field";
 
 export interface DriveRecap {
   /** The recapped drive's id in the feed. */
@@ -38,7 +38,7 @@ type RecappedDrive = Pick<CfbdLiveDrive, "id" | "offenseId" | "result"> & {
 export function recapPreviousDrive(drives: readonly RecappedDrive[], teams: FieldTeams): DriveRecap | null {
   const drive = drives.at(-2);
   if (!drive) return null;
-  const side = drive.offenseId === teams.homeTeamId ? "home" : drive.offenseId === teams.awayTeamId ? "away" : null;
+  const side = sideOf(teams)(drive.offenseId);
   const parts = [
     drive.playCount == null ? null : count(drive.playCount, "play", "plays"),
     drive.yards == null ? null : count(drive.yards, "yd", "yds"),

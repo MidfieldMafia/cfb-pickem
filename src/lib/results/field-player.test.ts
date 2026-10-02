@@ -5,6 +5,7 @@ import { recapPreviousDrive } from "./drive-recap";
 import { describePlays, type PlayDescription } from "./field";
 import {
   BALL_Y,
+  downLabel,
   drawingKey,
   feedBefore,
   fieldX,
@@ -230,6 +231,15 @@ describe("readout", () => {
     // Liberty on the CCU8, 1st & 8.
     const game = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
     expect(readout(game, id("755"), TEAMS, LABELS)).toMatchObject({ down: "1st & Goal", spot: "CCU 8", gain: 100 });
+  });
+});
+
+describe("downLabel", () => {
+  test("reads the down and the distance, or Goal once the distance reaches the goal line", () => {
+    expect(downLabel(3, 7, 35)).toBe("3rd & 7");
+    expect(downLabel(1, 8, 8)).toBe("1st & Goal");
+    expect(downLabel(2, 10, null)).toBe("2nd & 10");
+    expect(downLabel(4, null, 20)).toBe("4th & –");
   });
 });
 

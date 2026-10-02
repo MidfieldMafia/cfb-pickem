@@ -78,6 +78,12 @@ export interface FieldTeams {
   awayTeamId: number;
 }
 
+/** The side a team id plays on, or null for an id that is neither team's. */
+export const sideOf =
+  (teams: FieldTeams) =>
+  (teamId: number): Side | null =>
+    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
+
 /**
  * The game header's next snap, for the newest play, which has no next play to
  * read its end from. `yardsToGoal` is measured from the team that snaps next.
@@ -111,7 +117,7 @@ const direction = (side: Side): 1 | -1 => (side === "away" ? 1 : -1);
 /** The goal line `side` attacks. */
 const goalAttacked = (side: Side): Yard => (side === "away" ? 100 : 0);
 /** The spot `yardsToGoal` yards short of the goal `side` attacks. */
-const fromGoal = (side: Side, yardsToGoal: number): Yard => goalAttacked(side) - direction(side) * yardsToGoal;
+export const fromGoal = (side: Side, yardsToGoal: number): Yard => goalAttacked(side) - direction(side) * yardsToGoal;
 /** The spot `yards` from `side`'s own goal line, as "CCU31" reads when CCU is `side`. */
 const ownSpot = (side: Side, yards: number): Yard => (side === "away" ? yards : 100 - yards);
 
@@ -205,9 +211,8 @@ export function describePlays(
   teams: FieldTeams,
   header: FieldHeader | null = null,
 ): PlayDescription[] {
-  const sideOf = (teamId: number): Side | null =>
-    teamId === teams.homeTeamId ? "home" : teamId === teams.awayTeamId ? "away" : null;
-  const abbrs = abbreviations(plays, sideOf);
+  const teamSide = sideOf(teams);
+  const abbrs = abbreviations(plays, teamSide);
   const sideOfAbbr = (abbr: string) => abbrs.get(abbr) ?? null;
   const spot = (text: string): Yard | null => {
     const match = text.match(re(`^SPOT$`));
@@ -220,7 +225,7 @@ export function describePlays(
   const out: PlayDescription[] = [];
   let held: Rest = { spot: null, side: null, down: null, distance: null };
   plays.forEach((play, i) => {
-    const side = sideOf(play.teamId);
+    const side = teamSide(play.teamId);
     const before = i === 0 ? { home: 0, away: 0 } : { home: plays[i - 1].homeScore, away: plays[i - 1].awayScore };
     if (MARKERS.test(play.playType) || side === null) {
       out.push({ id: play.id, start: held.spot, side: held.side, segments: [], rest: held });
@@ -228,7 +233,7 @@ export function describePlays(
     }
     const start = play.yardsToGoal === null ? held.spot : fromGoal(side, play.yardsToGoal);
     const following = plays.slice(i + 1).find((p) => !MARKERS.test(p.playType));
-    const nextSide = following ? sideOf(following.teamId) : null;
+    const nextSide = following ? teamSide(following.teamId) : null;
     const next =
       following && nextSide
         ? {
