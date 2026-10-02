@@ -1,7 +1,7 @@
 /**
- * The two colours of the final sheet's team-stat bars, chosen as a pair from
- * each school's colours in `logos.ts`, by the rule drawn on the Game sheet's
- * design ticket (#265):
+ * The two colours of a game's bars, the final sheet's team stats and the Live
+ * Board's pick split alike, chosen as a pair from each school's colours in
+ * `logos.ts`, by the rule drawn on the Game sheet's design ticket (#265):
  *
  * - A colour counts only if it reaches 3:1 against the card, `#FBF6EC`.
  * - Primaries first, and the away team may take its secondary so the home
