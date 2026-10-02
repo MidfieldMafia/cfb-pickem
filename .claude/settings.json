@@ -32,5 +32,10 @@
   },
   "enabledPlugins": {
     "fallow@fallow-skills": true
+  },
+  "sandbox": {
+    "network": {
+      "allowedDomains": ["fonts.googleapis.com", "fonts.gstatic.com"]
+    }
   }
 }
