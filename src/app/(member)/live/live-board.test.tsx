@@ -394,6 +394,56 @@ describe("a pick's mark only grades once the game is final (#98)", () => {
   });
 });
 
+describe("the pick split bar in the two teams' colours (#362)", () => {
+  const OKLAHOMA = 201;
+  const MICHIGAN = 130;
+  /** Oklahoma at Michigan: crimson beside navy, the pair `bar-colors.test.ts` pins. */
+  function oklahomaAtMichigan(result: GameResult, taken: RevealPick[]): LiveGameJson {
+    const base = game(result, taken);
+    return {
+      ...base,
+      game: { ...base.game, awayTeamId: OKLAHOMA, awayTeam: "Oklahoma", homeTeamId: MICHIGAN, homeTeam: "Michigan" },
+    };
+  }
+  const bar = (away: string) => screen.getByRole("img", { name: new RegExp(`picks? on ${away}`) });
+  const fills = (el: HTMLElement) => [...el.children].map((c) => (c as HTMLElement).style.backgroundColor);
+
+  test("draws each share in its school's colour, by the final sheet's rule", () => {
+    const taken = [...picks(OKLAHOMA, [1, 2, 3], "pending"), ...picks(MICHIGAN, [4], "pending")];
+    render(<LiveBoard initial={state({ complete: false, games: [oklahomaAtMichigan(LIVE, taken)] })} viewer={VIEWER} />);
+
+    const split = bar("Oklahoma");
+    expect(split.getAttribute("aria-label")).toBe("3 picks on Oklahoma, 1 pick on Michigan");
+    expect(fills(split)).toEqual(["rgb(132, 22, 23)", "rgb(0, 39, 76)"]);
+    expect((split.children[0] as HTMLElement).style.width).toBe("75%");
+  });
+
+  test("keeps the final card's fade", () => {
+    const taken = [...picks(OKLAHOMA, [1]), ...picks(MICHIGAN, [2], "incorrect")];
+    render(<LiveBoard initial={state({ games: [oklahomaAtMichigan(FINAL, taken)] })} viewer={VIEWER} />);
+    expect(bar("Oklahoma").className).toMatch(/opacity-50/);
+  });
+
+  test("is not on any card before the Deadline, when there are no picks to split", () => {
+    render(
+      <LiveBoard
+        initial={state({ locked: false, complete: false, games: [oklahomaAtMichigan(PENDING, [])], scores: null })}
+        viewer={VIEWER}
+      />,
+    );
+    expect(screen.getByText("Oklahoma")).not.toBeNull();
+    expect(screen.queryByRole("img", { name: /picks? on/ })).toBeNull();
+  });
+
+  test("a game nobody picked is the plain track, in neither colour", () => {
+    render(<LiveBoard initial={state({ complete: false, games: [oklahomaAtMichigan(LIVE, [])] })} viewer={VIEWER} />);
+    const split = bar("Oklahoma");
+    expect(split.getAttribute("aria-label")).toBe("0 picks on Oklahoma, 0 picks on Michigan");
+    expect(split.className).toMatch(/bg-border/);
+    expect(split.children).toHaveLength(0);
+  });
+});
+
 describe("the sheet a tap opens", () => {
   test("before the Deadline, one card holds your own pick and when everyone's show, in place of the picks", () => {
     const mine = { ...game(PENDING), ownPick: { teamId: GEORGIA, lock: "counts" as const } };

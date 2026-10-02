@@ -11,7 +11,9 @@ import { TeamLogo } from "@/components/team-logo";
 
 import { GameSheet } from "./game-sheet";
 
+import { findLogoByEspnId } from "@/lib/logos";
 import { useDeadlineClock } from "@/lib/picks/clock";
+import { barColors } from "@/lib/results/bar-colors";
 import { downAndDistance, lastPlayLine } from "@/lib/results/live-row";
 import { clockLabel, sideWithBall, type GameResult, type LiveScore } from "@/lib/results/result";
 import type { RevealGame, RevealPick } from "@/lib/results/results";
@@ -294,11 +296,13 @@ function SideLine({
 }
 
 /**
- * The pick split across the two sides. Two design-system tones rather than
- * school colors: the app has no per-team color data.
+ * The pick split across the two sides, in the two schools' colours (#362):
+ * the pair `barColors` picks for the final sheet's team-stat bars, so the
+ * board and the sheet agree for the same game. A game nobody picked is the
+ * bare track, in neither colour.
  *
  * `muted` fades it for a final game — the split mattered while the outcome
- * was open; once decided it is trivia, not a cue, and full-strength color
+ * was open; once decided it is trivia, not a cue, and full-strength colour
  * here would fight the rest of the receded card.
  */
 function SplitBar({
@@ -306,23 +310,32 @@ function SplitBar({
   home,
   awayTeam,
   homeTeam,
+  awayTeamId,
+  homeTeamId,
   muted,
 }: {
   away: number;
   home: number;
   awayTeam: string;
   homeTeam: string;
+  awayTeamId: number;
+  homeTeamId: number;
   muted: boolean;
 }) {
-  const total = away + home || 1;
+  const total = away + home;
+  const colors = barColors(findLogoByEspnId(awayTeamId)?.colors, findLogoByEspnId(homeTeamId)?.colors);
   return (
     <span
       role="img"
       aria-label={`${plural(away, "pick")} on ${awayTeam}, ${plural(home, "pick")} on ${homeTeam}`}
       className={`flex h-1 overflow-hidden rounded-full bg-border ${muted ? "opacity-50" : ""}`}
     >
-      <span className="bg-primary" style={{ width: `${(away / total) * 100}%` }} />
-      <span className="flex-1 bg-secondary" />
+      {total === 0 ? null : (
+        <>
+          <span style={{ width: `${(away / total) * 100}%`, backgroundColor: colors.away }} />
+          <span className="flex-1" style={{ backgroundColor: colors.home }} />
+        </>
+      )}
     </span>
   );
 }
@@ -363,11 +376,14 @@ function GameRow({
   row,
   viewerId,
   serverNow,
+  locked,
   onOpen,
 }: {
   row: RevealGame;
   viewerId: number;
   serverNow: string;
+  /** Past the Deadline, so the picks are revealed. */
+  locked: boolean;
   onOpen: () => void;
 }) {
   const { game, result } = row;
@@ -442,13 +458,18 @@ function GameRow({
           hasBall={ball === "home"}
         />
         {result.live ? <LastPlay live={result.live} serverNow={serverNow} /> : null}
-        <SplitBar
-          away={awayPicks}
-          home={homePicks}
-          awayTeam={game.awayTeam}
-          homeTeam={game.homeTeam}
-          muted={final}
-        />
+        {/* Before the Deadline there are no picks to split (#362): the card gains the bar at the Reveal. */}
+        {locked ? (
+          <SplitBar
+            away={awayPicks}
+            home={homePicks}
+            awayTeam={game.awayTeam}
+            homeTeam={game.homeTeam}
+            awayTeamId={game.awayTeamId}
+            homeTeamId={game.homeTeamId}
+            muted={final}
+          />
+        ) : null}
       </button>
     </li>
   );
@@ -515,6 +536,7 @@ export function LiveBoard({
             row={row}
             viewerId={viewer.id}
             serverNow={state.serverNow}
+            locked={state.locked}
             onOpen={() => setOpenGameId(row.game.id)}
           />
         ))}
