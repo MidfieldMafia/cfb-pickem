@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stop C, the callout</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.tour{--accent:#A94B17;--bg:#F7F1E3;--fg:#241F1A;--card:#FBF6EC;--primary:#1F4034;--primary-fg:#FBF6EC;--muted:#EAE0CC;--muted-fg:#6F6152;--border:#9C845F;--ring:#1F4034}
+.tour.dark{--accent:#D2712E;--bg:#1C1714;--fg:#F2E9D8;--card:#241E19;--primary:#5C9A74;--primary-fg:#16120F;--muted:#2E2720;--muted-fg:#B3A38B;--border:#7A6952;--ring:#5C9A74}
+.tour button:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+@keyframes nudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.nudge{animation:nudge 300ms ease-in-out}
+@media (prefers-reduced-motion: reduce){.tour *{transition:none !important;animation:none !important}}
+</style>
+</helmet>
+<div class="tour {{themeClass}}" tabIndex="0" onKeyDown="{{onKey}}" style="position: relative; width: 360px; height: 740px; overflow: hidden; outline: none; font-family: Manrope, sans-serif; color: var(--fg)">
+<div style="position: absolute; left: 0; top: 0; width: 360px; height: 740px">
+<dc-import name="AppScreen" tab="{{tab}}" dark="{{dark}}" on-tab="{{setTab}}" hint-size="360px,740px"></dc-import>
+</div>
+
+<sc-if value="{{running}}" hint-placeholder-val="{{ true }}">
+<div role="dialog" aria-modal="true" aria-labelledby="stop-c-title" aria-describedby="stop-c-body" onClick="{{tapOverlay}}" style="position: absolute; left: 0; top: 0; width: 360px; height: 740px; overflow: hidden">
+<div style="{{cutoutStyle}}"></div>
+<div class="{{nudgeClass}}" onClick="{{swallow}}" style="{{boxStyle}}">
+<div style="{{arrowStyle}}"></div>
+<p style="position: relative; margin: 0; padding: 14px 16px 0 16px; font-size: 15px; line-height: 21px"><strong id="stop-c-title" style="font-weight: 800">{{stop.title}}.</strong> <span id="stop-c-body">{{stop.body}}</span></p>
+<div style="position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 4px">
+<button type="button" onClick="{{skip}}" style="height: 44px; padding: 0 12px; border: 0; background: none; color: var(--muted-fg); font-family: Manrope, sans-serif; font-size: 14px; font-weight: 700; text-decoration: underline; cursor: pointer">Skip Tour</button>
+<button type="button" onClick="{{next}}" style="height: 44px; padding: 0 16px; border: 0; border-radius: 22px; background: var(--primary); color: var(--primary-fg); font-family: Manrope, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer">{{nextLabel}}</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ended}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; bottom: 88px; width: 360px; display: flex; justify-content: center">
+<button type="button" onClick="{{restart}}" style="height: 44px; padding: 0 18px; border: 1px dashed var(--border); border-radius: 22px; background: var(--card); color: var(--fg); font-family: Manrope, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer">{{endedLabel}} · Replay</button>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"Look"},"moveWithinTab":{"editor":"enum","options":["Glide","Close and open"],"default":"Glide","section":"Motion"},"tapOutside":{"editor":"enum","options":["Nudge the text box","Next","End the Tour"],"default":"Nudge the text box","section":"Taps"},"tapTarget":{"editor":"enum","options":["Same as outside","Next"],"default":"Next","section":"Taps"},"$preview":{"width":360,"height":740}}'>
+// The Welcome Tour used on all three Stop designs. Rects are the unpadded
+// target boxes on AppScreen; tab is the bottom-nav tab the target lives on.
+const STOPS = [
+  { tab: 'picks', x: 16, y: 92, w: 328, h: 64, round: false, title: 'Make your picks', body: 'Tap the team you think wins each game. You can change a pick until the Deadline.' },
+  { tab: 'live', x: 16, y: 168, w: 328, h: 88, round: false, title: 'Follow your games live', body: 'Scores, the down and the last play for every game on the Slate. Tap a game for more.' },
+  { tab: 'board', x: 16, y: 82, w: 328, h: 44, round: false, title: 'Step through the Weeks', body: 'Each chip is a Week. Tap one to see how everyone scored that Week and who won it.' },
+  { tab: 'board', x: 300, y: 14, w: 44, h: 44, round: true, title: 'Your Profile', body: 'Change your Pennant, switch Groups or send the commissioners Feedback.' },
+  { tab: 'chat', x: 0, y: 608, w: 360, h: 60, round: false, title: 'Talk it over', body: 'Chat with your Group. Press and hold a message to react.' },
+];
+const PAD = 4;
+const RADIUS = 10;
+const OUT_MS = 180;
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { running: true, i: 0, tab: STOPS[0].tab, phase: 'show', nudge: 0, how: '' };
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.t1);
+    clearTimeout(this.t2);
+    clearTimeout(this.t3);
+  }
+
+  padded(s) {
+    return { x: s.x - PAD, y: s.y - PAD, w: s.w + PAD * 2, h: s.h + PAD * 2 };
+  }
+
+  goTo(n) {
+    if (n < 0) return;
+    if (n >= STOPS.length) return this.end('Done');
+    const s = STOPS[n];
+    const glide = s.tab === this.state.tab && (this.props.moveWithinTab ?? 'Glide') === 'Glide';
+    if (glide) return this.setState({ i: n });
+    clearTimeout(this.t1);
+    clearTimeout(this.t2);
+    this.setState({ phase: 'out' });
+    this.t1 = setTimeout(() => {
+      this.setState({ i: n, tab: s.tab, phase: 'in' });
+      this.t2 = setTimeout(() => this.setState({ phase: 'show' }), 40);
+    }, OUT_MS);
+  }
+
+  end(how) {
+    this.setState({ running: false, how });
+  }
+
+  tap(kind) {
+    const outside = this.props.tapOutside ?? 'Nudge the text box';
+    const action = kind === 'target' && (this.props.tapTarget ?? 'Next') === 'Next' ? 'Next' : outside;
+    if (action === 'Next') return this.goTo(this.state.i + 1);
+    if (action === 'End the Tour') return this.end('Ended by a tap outside');
+    clearTimeout(this.t3);
+    this.setState({ nudge: 0 }, () => {
+      this.t3 = setTimeout(() => this.setState({ nudge: 1 }), 10);
+    });
+  }
+
+  renderVals() {
+    const { running, i, phase, nudge, how, tab } = this.state;
+    const dark = !!this.props.dark;
+    const s = STOPS[i];
+    const r = this.padded(s);
+    const radius = s.round ? 999 : RADIUS;
+    const dim = dark ? 'rgba(0,0,0,0.55)' : 'rgba(36,31,26,0.42)';
+    // A closed hole is a zero-size box at the target's centre: the dim stays,
+    // the hole irises shut, the screen changes under it, then it opens again.
+    const closed = phase !== 'show';
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    const geo = closed
+      ? `left: ${cx}px; top: ${cy}px; width: 0px; height: 0px;`
+      : `left: ${r.x}px; top: ${r.y}px; width: ${r.w}px; height: ${r.h}px;`;
+    const move = phase === 'in' ? 'none' : 'left 260ms ease, top 260ms ease, width 260ms ease, height 260ms ease, border-radius 260ms ease';
+    const cutoutStyle = `position: absolute; ${geo} border-radius: ${radius}px; box-shadow: 0 0 0 3px var(--accent), 0 0 0 1600px ${dim}; transition: ${move}; pointer-events: none;`;
+
+    // A bubble pointed at the hole: below it when there is room, else above,
+    // centred on the target and clamped to the 12px gutters.
+    const W = 264;
+    const below = r.y + r.h + 14 + 130 <= 740;
+    const left = Math.max(12, Math.min(360 - 12 - W, cx - W / 2));
+    const place = below ? `top: ${r.y + r.h + 14}px;` : `bottom: ${740 - r.y + 14}px;`;
+    const boxTransition = phase === 'in' ? 'none' : 'opacity 160ms ease, top 260ms ease, bottom 260ms ease, left 260ms ease';
+    const boxStyle = `position: absolute; left: ${left}px; width: ${W}px; ${place} box-sizing: border-box; background: var(--card); color: var(--fg); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.3); opacity: ${closed ? 0 : 1}; transition: ${boxTransition};`;
+    const ax = Math.max(18, Math.min(W - 32, cx - left - 7));
+    const arrowStyle = `position: absolute; left: ${ax}px; ${below ? 'top: -7px;' : 'bottom: -7px;'} width: 14px; height: 14px; background: var(--card); transform: rotate(45deg); transition: left 260ms ease;`;
+
+    const last = i === STOPS.length - 1;
+    return {
+      dark,
+      themeClass: dark ? 'dark' : '',
+      tab,
+      running,
+      ended: !running,
+      endedLabel: how,
+      stop: s,
+      count: `${i + 1} of ${STOPS.length}`,
+      hasBack: i > 0,
+      nextLabel: last ? `Done · ${i + 1}/${STOPS.length}` : `Next · ${i + 1}/${STOPS.length}`,
+      arrowStyle,
+      cutoutStyle,
+      boxStyle,
+      nudgeClass: nudge ? 'nudge' : '',
+      setTab: (t) => { if (!this.state.running) this.setState({ tab: t }); },
+      next: () => this.goTo(i + 1),
+      back: () => this.goTo(i - 1),
+      skip: () => this.end('Skipped'),
+      restart: () => this.setState({ running: true, i: 0, tab: STOPS[0].tab, phase: 'show', how: '' }),
+      swallow: (e) => e.stopPropagation(),
+      onKey: (e) => { if (e.key === 'Escape' && this.state.running) this.end('Ended with Escape'); },
+      tapOverlay: (e) => {
+        const box = e.currentTarget.getBoundingClientRect();
+        const k = 360 / box.width;
+        const x = (e.clientX - box.left) * k;
+        const y = (e.clientY - box.top) * k;
+        const inHole = x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+        this.tap(inHole ? 'target' : 'outside');
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

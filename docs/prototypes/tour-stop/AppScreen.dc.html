@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>App screens under a Tour</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ss{--bg:#F7F1E3;--fg:#241F1A;--card:#FBF6EC;--primary:#1F4034;--primary-fg:#FBF6EC;--secondary:#A94B17;--muted:#EAE0CC;--muted-fg:#6F6152;--border:#9C845F;--live:#D26A12;--win:#6A9449}
+.ss.dark{--bg:#1C1714;--fg:#F2E9D8;--card:#241E19;--primary:#5C9A74;--primary-fg:#16120F;--secondary:#D2712E;--muted:#2E2720;--muted-fg:#B3A38B;--border:#7A6952;--live:#E8862A;--win:#93C06B}
+</style>
+</helmet>
+<div class="ss {{themeClass}}" style="position: relative; width: 360px; height: 740px; overflow: hidden; background: var(--bg); color: var(--fg); font-family: Manrope, sans-serif; font-size: 15px">
+
+<div style="position: absolute; left: 0; top: 0; width: 360px; height: 72px; display: flex; align-items: center; gap: 12px; padding: 0 16px; box-sizing: border-box">
+<div style="width: 44px; height: 44px; border-radius: 22px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-fg)" stroke-width="2" stroke-linejoin="round"><path d="M5 3v18"></path><path d="M5 4l14 5-14 5"></path></svg>
+</div>
+<div style="flex-grow: 1; min-width: 0">
+<div style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 22px; line-height: 28px">{{title}}</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--muted-fg)">{{sub}}</div>
+</div>
+<div style="width: 44px; height: 44px; border-radius: 22px; background: var(--secondary); color: var(--primary-fg); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0">JM</div>
+</div>
+
+<sc-if value="{{onPicks}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 16px; top: 92px; width: 328px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{games}}" as="g" hint-placeholder-count="6">
+<div style="height: 64px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; background: var(--card); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 6px">
+<div style="border-radius: 6px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: {{g.awayBg}}; color: {{g.awayFg}}; font-weight: 700; font-size: 14px"><span style="width: 24px; height: 24px; border-radius: 12px; background: var(--muted); flex-shrink: 0"></span>{{g.away}}</div>
+<div style="border-radius: 6px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: var(--bg); font-weight: 700; font-size: 14px"><span style="width: 24px; height: 24px; border-radius: 12px; background: var(--muted); flex-shrink: 0"></span>{{g.home}}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{onLive}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 16px; top: 92px; width: 328px; display: flex; flex-direction: column; gap: 12px">
+<div style="height: 64px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; background: var(--card); padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; gap: 2px">
+<div style="display: flex; justify-content: space-between; font-weight: 700"><span>Georgia 31</span><span style="color: var(--muted-fg); font-weight: 500; font-size: 13px">Final</span></div>
+<div style="display: flex; justify-content: space-between; color: var(--muted-fg)"><span>Auburn 17</span></div>
+</div>
+<div style="height: 88px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; background: var(--card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; font-weight: 700"><span>Penn State 21</span><span style="color: var(--live); font-size: 13px">Q3 8:42</span></div>
+<div style="display: flex; justify-content: space-between; font-weight: 700"><span>Ohio State 24</span><span style="color: var(--muted-fg); font-weight: 500; font-size: 13px">2nd &amp; 7 at PSU 34</span></div>
+<div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 4px"><div style="width: 40%; background: #00265D"></div><div style="width: 60%; background: #BB0000"></div></div>
+</div>
+<sc-for list="{{liveRest}}" as="r" hint-placeholder-count="4">
+<div style="height: 64px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; background: var(--card); padding: 10px 12px; display: flex; justify-content: space-between; align-items: center"><span style="font-weight: 700">{{r.teams}}</span><span style="color: var(--muted-fg); font-size: 13px">{{r.when}}</span></div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{onBoard}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 16px; top: 82px; width: 328px; height: 44px; display: flex; gap: 4px">
+<sc-for list="{{weeks}}" as="w" hint-placeholder-count="6">
+<div style="flex-grow: 1; height: 44px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: {{w.bg}}; color: {{w.fg}}">{{w.label}}</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 16px; top: 146px; width: 328px; display: flex; flex-direction: column">
+<sc-for list="{{standings}}" as="s" hint-placeholder-count="7">
+<div style="height: 52px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--muted)"><span style="width: 20px; color: var(--muted-fg); font-weight: 700">{{s.rank}}</span><span style="width: 32px; height: 32px; border-radius: 16px; background: var(--muted)"></span><span style="flex-grow: 1; font-weight: 700">{{s.name}}</span><span style="font-weight: 700">{{s.score}}</span></div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{onChat}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 16px; top: 88px; width: 328px; height: 508px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px">
+<sc-for list="{{messages}}" as="m" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; align-items: {{m.align}}; gap: 2px">
+<span style="font-size: 12px; color: var(--muted-fg); font-weight: 700">{{m.who}}</span>
+<span style="max-width: 250px; padding: 8px 12px; border-radius: 14px; background: {{m.bg}}; color: {{m.fg}}">{{m.text}}</span>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; left: 0; top: 608px; width: 360px; height: 60px; border-top: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; gap: 8px; padding: 0 16px; box-sizing: border-box">
+<div style="flex-grow: 1; height: 44px; border: 1px solid var(--border); border-radius: 22px; display: flex; align-items: center; padding: 0 16px; color: var(--muted-fg)">Message your Group</div>
+<div style="width: 44px; height: 44px; border-radius: 22px; background: var(--primary); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-fg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9z"></path></svg></div>
+</div>
+</sc-if>
+
+<nav aria-label="Tabs" style="position: absolute; left: 0; top: 668px; width: 360px; height: 72px; border-top: 1px solid var(--muted); background: var(--bg); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr))">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<button type="button" onClick="{{t.go}}" style="border: 0; background: none; color: var(--fg); font-family: Manrope, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; padding-top: 10px; cursor: pointer">
+<span style="width: 56px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: {{t.pillBg}}"><span style="width: 14px; height: 14px; border-radius: 4px; border: 2px solid {{t.pillFg}}"></span></span>
+<span style="font-size: 11px; font-weight: {{t.weight}}">{{t.label}}</span>
+</button>
+</sc-for>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["picks","live","board","chat"],"default":"picks"},"dark":{"editor":"boolean","default":false},"onTab":{"editor":null},"$preview":{"width":360,"height":740}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tab = this.props.tab ?? 'picks';
+    const onTab = this.props.onTab;
+    const titles = {
+      picks: ['Picks', 'Week 6 · 3 of 8 picked'],
+      live: ['Live Board', 'Week 6 · 2 games live'],
+      board: ['Leaderboard', '2026 · Week 5 · Final'],
+      chat: ['Chat', 'Midfield Mafia'],
+    };
+    const tabs = [
+      ['picks', 'Picks'],
+      ['live', 'Live Board'],
+      ['board', 'Leaderboard'],
+      ['chat', 'Chat'],
+    ].map(([id, label]) => ({
+      label,
+      pillBg: id === tab ? 'var(--primary)' : 'transparent',
+      pillFg: id === tab ? 'var(--primary-fg)' : 'var(--fg)',
+      weight: id === tab ? 700 : 500,
+      go: () => { if (onTab) onTab(id); },
+    }));
+    const pair = (away, home, picked) => ({
+      away, home,
+      awayBg: picked ? 'var(--primary)' : 'var(--bg)',
+      awayFg: picked ? 'var(--primary-fg)' : 'var(--fg)',
+    });
+    return {
+      themeClass: this.props.dark ? 'dark' : '',
+      title: titles[tab][0],
+      sub: titles[tab][1],
+      onPicks: tab === 'picks',
+      onLive: tab === 'live',
+      onBoard: tab === 'board',
+      onChat: tab === 'chat',
+      tabs,
+      games: [
+        pair('Penn State', 'Ohio State', false),
+        pair('Georgia', 'Auburn', true),
+        pair('Oregon', 'USC', true),
+        pair('Texas', 'Oklahoma', false),
+        pair('LSU', 'Alabama', true),
+        pair('Utah', 'BYU', false),
+      ],
+      liveRest: [
+        { teams: 'Oregon at USC', when: '7:30 PM' },
+        { teams: 'Texas vs Oklahoma', when: '3:30 PM' },
+        { teams: 'LSU at Alabama', when: '7:00 PM' },
+        { teams: 'Utah at BYU', when: '10:15 PM' },
+      ],
+      weeks: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'].map((label, i) => ({
+        label,
+        bg: i === 4 ? 'var(--primary)' : 'var(--muted)',
+        fg: i === 4 ? 'var(--primary-fg)' : 'var(--fg)',
+      })),
+      standings: [
+        ['1', 'Grandma', '38'], ['2', 'Alex', '36'], ['3', 'Jonah', '35'], ['4', 'Sam', '33'],
+        ['5', 'Riley', '31'], ['6', 'Casey', '30'], ['7', 'Drew', '27'], ['8', 'Pat', '25'],
+      ].map(([rank, name, score]) => ({ rank, name, score })),
+      messages: [
+        { who: 'Alex', text: 'Nobody is picking Utah this week?', mine: false },
+        { who: 'Grandma', text: 'I am. Write it down.', mine: false },
+        { who: 'You', text: 'Bold. Respect.', mine: true },
+        { who: 'Sam', text: 'Penn State covers, calling it now', mine: false },
+      ].map((m) => ({
+        ...m,
+        align: m.mine ? 'flex-end' : 'flex-start',
+        bg: m.mine ? 'var(--primary)' : 'var(--muted)',
+        fg: m.mine ? 'var(--primary-fg)' : 'var(--fg)',
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

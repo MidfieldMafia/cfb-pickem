@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The three Stops in dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1240px; height: 740px; display: flex; gap: 80px; background: #120E0B">
+<div style="width: 360px; height: 740px; flex-shrink: 0">
+<dc-import name="Main" dark="{{yes}}" hint-size="360px,740px"></dc-import>
+</div>
+<div style="width: 360px; height: 740px; flex-shrink: 0">
+<dc-import name="Dock" dark="{{yes}}" hint-size="360px,740px"></dc-import>
+</div>
+<div style="width: 360px; height: 740px; flex-shrink: 0">
+<dc-import name="Callout" dark="{{yes}}" hint-size="360px,740px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1240,"height":740}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { yes: true };
+  }
+}
+</script>
+</body>
+</html>
