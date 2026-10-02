@@ -302,7 +302,7 @@ function SideLine({
  * bare track, in neither colour.
  *
  * `muted` fades it for a final game — the split mattered while the outcome
- * was open; once decided it is trivia, not a cue, and full-strength color
+ * was open; once decided it is trivia, not a cue, and full-strength colour
  * here would fight the rest of the receded card.
  */
 function SplitBar({
