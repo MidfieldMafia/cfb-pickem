@@ -67,28 +67,30 @@ export default async function HowToPlay({
           <Card asChild className="flex-row items-center">
             <section>
               <Target size={28} className="shrink-0 text-secondary" aria-hidden />
-              <Heading
+              <TitleAndNote
                 title="Tiebreaker Guess"
                 note="Guess the total points in one designated game. Closest guess wins a tied week."
               />
             </section>
           </Card>
 
-          <section className="flex items-center gap-3 rounded-xl bg-primary p-3 text-primary-foreground">
-            <Clock size={28} className="shrink-0" aria-hidden />
-            <div className="flex flex-col">
-              <h2 className="text-lg">Picks lock at the first kickoff</h2>
-              <p className="text-sm opacity-85">
-                That&rsquo;s the Deadline, for your Lock and guess too. Then everyone&rsquo;s picks show.
-              </p>
-            </div>
-          </section>
+          <Card asChild className="flex-row items-center border-transparent bg-primary text-primary-foreground">
+            <section>
+              <Clock size={28} className="shrink-0" aria-hidden />
+              <div className="flex flex-col">
+                <p className="font-display text-lg leading-6">Picks lock at the first kickoff</p>
+                <p className="text-sm opacity-85">
+                  That&rsquo;s the Deadline, for your Lock and guess too. Then everyone&rsquo;s picks show.
+                </p>
+              </div>
+            </section>
+          </Card>
 
           <Card asChild>
             <section>
               <div className="flex items-center gap-3">
                 <Trophy size={28} className="shrink-0 text-secondary" aria-hidden />
-                <Heading title="Leaderboard" note="The season is decided by these, in order." />
+                <TitleAndNote title="Leaderboard" note="The season is decided by these, in order." />
               </div>
               <ol className="flex flex-col gap-1.5">
                 {LEADERBOARD_ORDER.map((step, i) => (
@@ -103,6 +105,8 @@ export default async function HowToPlay({
             </section>
           </Card>
 
+          {/* The rows carry their own 48px height, so the card drops its
+              vertical padding and only the label gets space above it. */}
           <Card asChild className="gap-0 py-0">
             <section>
               <p className={`pt-3 pb-1 ${SECTION_LABEL}`}>Good to know</p>
@@ -175,7 +179,7 @@ function NumberTile({ value, label, note }: { value: string; label: string; note
   );
 }
 
-function Heading({ title, note }: { title: string; note: string }) {
+function TitleAndNote({ title, note }: { title: string; note: string }) {
   return (
     <div className="flex flex-col">
       <span className="font-bold">{title}</span>
