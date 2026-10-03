@@ -1,0 +1,63 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Main.dc.html": {
+      "h": 1240,
+      "is_interactive": true,
+      "title": "A · The cards, cut down",
+      "w": 360,
+      "x": 0,
+      "y": 0
+    },
+    "Numbers.dc.html": {
+      "h": 1240,
+      "is_interactive": true,
+      "title": "C · Numbers first, fine print folded",
+      "w": 360,
+      "x": 880,
+      "y": 0
+    },
+    "Today.dc.html": {
+      "h": 1240,
+      "title": "Today's page, for comparison",
+      "w": 360,
+      "x": 1320,
+      "y": 0
+    },
+    "Week.dc.html": {
+      "h": 1240,
+      "is_interactive": true,
+      "title": "B · A week, in order",
+      "w": 360,
+      "x": 440,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-02T18:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t": {
+      "kind": "title1",
+      "maxW": 1680,
+      "text": "How to play, rethought",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Week.dc.html",
+    "Numbers.dc.html",
+    "Today.dc.html"
+  ],
+  "pages": [],
+  "title": "How to play prototype"
+}

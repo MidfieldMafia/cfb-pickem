@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How to play · today</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ss{--bg:#F7F1E3;--fg:#241F1A;--card:#FBF6EC;--primary:#1F4034;--primary-fg:#FBF6EC;--secondary:#A94B17;--muted:#EAE0CC;--muted-fg:#6F6152;--border:#9C845F}
+.ss.dark{--bg:#1C1714;--fg:#F2E9D8;--card:#241E19;--primary:#5C9A74;--primary-fg:#16120F;--secondary:#D2712E;--muted:#2E2720;--muted-fg:#B3A38B;--border:#7A6952}
+a{color:var(--primary)}a:hover{color:var(--fg)}
+</style>
+</helmet>
+<div class="ss {{themeClass}}" style="width: 360px; height: 1240px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font-family: Manrope, sans-serif; font-size: 15px; line-height: 22px">
+
+<div style="height: 72px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 16px; box-sizing: border-box">
+<div style="width: 44px; height: 44px; border-radius: 22px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-fg)" stroke-width="2" stroke-linejoin="round"><path d="M5 3v18"></path><path d="M5 4l14 5-14 5"></path></svg></div>
+<div style="flex-grow: 1; min-width: 0">
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 22px; line-height: 28px">How to play</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--muted-fg)">2026 season</div>
+</div>
+<div style="width: 44px; height: 44px; border-radius: 22px; background: var(--secondary); color: var(--primary-fg); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0">JM</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 16px; padding: 4px 16px 0">
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Making picks</div><p style="margin: 0; color: var(--muted-fg)">One game at a time. Tap a team — straight up, not against the spread — and the pick is saved the moment you tap it; there's no submit step.</p></section>
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Lock of the Week</div><p style="margin: 0"><span style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 24px">2×</span> <span style="color: var(--muted-fg)">points on the one pick a member marks each week. Nothing extra if it loses.</span></p></section>
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Tiebreaker Guess</div><p style="margin: 0; color: var(--muted-fg)">Predict the combined final score of the week's flagged Tiebreaker Game. If a Weekly Win ties, whoever's guess lands closest breaks it; a tie that survives that is shared.</p></section>
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Deadline</div><p style="margin: 0; color: var(--muted-fg)">Picks lock at the Deadline, usually the earliest kickoff on the week's Slate. Make your Lock and Tiebreaker Guess before then too — nothing entered after counts.</p></section>
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Reveal</div><p style="margin: 0; color: var(--muted-fg)">Once the Deadline passes, every pick becomes visible — yours and everyone else's. Before that, no one can see what you've chosen.</p></section>
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 8px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Scoring</div><p style="margin: 0"><span style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 24px">10</span> <span style="color: var(--muted-fg)">points for every correct pick.</span></p><p style="margin: 0; color: var(--muted-fg)">Total points, then weekly wins, then closest cumulative Tiebreaker Guess error.</p></section>
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Live Board</div><p style="margin: 0; color: var(--muted-fg)">The Saturday view of the Slate: live scores and everyone's picks, colored by whether they're currently winning.</p></section>
+<section style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary)">Who you see</div><p style="margin: 0; color: var(--muted-fg)">Every screen shows one group: its leaderboard, its weekly winner, its board on Saturday. You only ever see the people in the group you're looking at, and they only ever see you. Your picks are your own — make them once and they count in every group you're in.</p></section>
+</div>
+
+<a href="#" style="margin: 16px 16px 0; min-height: 44px; display: flex; align-items: center; font-weight: 700; text-decoration: underline; text-underline-offset: 3px">Back to this week</a>
+<nav aria-label="Tabs" style="margin-top: auto; height: 72px; flex-shrink: 0; border-top: 1px solid var(--muted); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr))">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<a href="#" style="color: var(--fg); text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 10px"><span style="width: 56px; height: 28px; display: flex; align-items: center; justify-content: center"><span style="width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--fg)"></span></span><span style="font-size: 11px; line-height: 14px; font-weight: 500">{{t}}</span></a>
+</sc-for>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":360,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themeClass: this.props.dark ? 'dark' : '', tabs: ['Picks', 'Live Board', 'Leaderboard', 'Chat'] };
+  }
+}
+</script>
+</body>
+</html>
