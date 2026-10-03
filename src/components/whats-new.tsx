@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Eye, Flag, Megaphone, MessageCircle, MessageSquareWarning, Trophy, X, type LucideIcon } from "lucide-react";
+import { CircleHelp, Megaphone, Palette, Radio, SmilePlus, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -11,34 +11,28 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * shortlist of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-09-21",
-  label: "What's new · Sep 21–26",
+  id: "2026-09-27",
+  label: "What's new · Sep 27–Oct 3",
   items: [
     {
-      icon: MessageCircle,
-      title: "Chat with your Group",
-      body: "A new Chat tab for the trash talk. React with Flag, Hot take, Respect or Ha.",
+      icon: Radio,
+      title: "More on every live game",
+      body: "Live rows show the down and distance, the last play, and a football on the side with the ball.",
     },
     {
-      icon: Activity,
-      title: "Tap a game on the Live Board",
-      body: "Recent plays while it's on, team stats and game leaders once it's Final.",
+      icon: Palette,
+      title: "Picks in team colours",
+      body: "Once picks are revealed, each game's split bar is drawn in the two schools' colours.",
     },
     {
-      icon: Eye,
-      title: "Your picks on the Live Board",
-      body: "See your own picks there before the Deadline. Everyone else's still wait for it.",
+      icon: SmilePlus,
+      title: "See who reacted",
+      body: "In Chat, press and hold a reaction to see who left it. Tap one to add yours.",
     },
     {
-      icon: Trophy,
-      title: "History moved to the Leaderboard",
-      body: "Step through past Weeks on the week strip, each with its own Reveal.",
-    },
-    { icon: Flag, title: "More Pennants", body: "Fly your team's logo, or upload a photo of your own." },
-    {
-      icon: MessageSquareWarning,
-      title: "Send Feedback",
-      body: "Found a bug or have an idea? Send it from your Profile.",
+      icon: CircleHelp,
+      title: "A shorter How to play",
+      body: "The rules on one page: points, your Lock, the Tiebreaker Guess and the Deadline.",
     },
   ],
 };
