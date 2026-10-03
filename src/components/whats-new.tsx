@@ -1,6 +1,6 @@
 "use client";
 
-import { LandPlot, Megaphone, Palette, Radio, SmilePlus, X, type LucideIcon } from "lucide-react";
+import { Megaphone, Palette, Radio, SmilePlus, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -11,18 +11,13 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * shortlist of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-09-28",
-  label: "What's new · Sep 28–Oct 2",
+  id: "2026-09-27",
+  label: "What's new · Sep 27–Oct 3",
   items: [
     {
       icon: Radio,
       title: "More on every live game",
       body: "Live rows show the down and distance, the last play, and a football on the side with the ball.",
-    },
-    {
-      icon: LandPlot,
-      title: "On the field",
-      body: "Tap a live game to watch each play drawn on the field as it happens.",
     },
     {
       icon: Palette,
