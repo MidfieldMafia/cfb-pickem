@@ -1,6 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/remind", "schedule": "0 15 * * *" },
+    { "path": "/api/cron/remind", "schedule": "0 16 * * *" },
     { "path": "/api/cron/refresh-slates", "schedule": "0 12 * * *" }
   ]
 }
