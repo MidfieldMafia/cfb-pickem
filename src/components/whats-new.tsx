@@ -1,6 +1,6 @@
 "use client";
 
-import { Megaphone, Palette, Radio, SmilePlus, X, type LucideIcon } from "lucide-react";
+import { CircleHelp, Megaphone, Palette, Radio, SmilePlus, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -28,6 +28,11 @@ const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: stri
       icon: SmilePlus,
       title: "See who reacted",
       body: "In Chat, press and hold a reaction to see who left it. Tap one to add yours.",
+    },
+    {
+      icon: CircleHelp,
+      title: "A shorter How to play",
+      body: "The rules on one page: points, your Lock, the Tiebreaker Guess and the Deadline.",
     },
   ],
 };
