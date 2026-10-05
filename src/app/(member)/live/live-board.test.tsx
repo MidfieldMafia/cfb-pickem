@@ -485,6 +485,7 @@ describe("the sheet a tap opens", () => {
       tv: "ABC",
       homeWp: 0.7,
       spread: "Georgia -6.5",
+      overUnder: 51.5,
       weather: { temperature: 68, precipitation: 40, icon: "cloud-rain" as const, wind: 9 },
       home: { rank: 2, record: "3–0", pointsFor: null, pointsAgainst: null, yardsFor: null, yardsAgainst: null },
       away: { rank: 4, record: "4–0", pointsFor: null, pointsAgainst: null, yardsFor: null, yardsAgainst: null },

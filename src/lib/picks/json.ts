@@ -45,6 +45,16 @@ export interface SheetJson {
   progress: SheetProgress;
 }
 
+/** The Tiebreaker Game's row on the sheet, or undefined before one is set. */
+export function tiebreakerView(sheet: Pick<SheetJson, "games" | "tiebreakerGameId">): SheetGameJson | undefined {
+  return sheet.games.find((g) => g.game.id === sheet.tiebreakerGameId);
+}
+
+/** The Tiebreaker Game's over/under, the Guess field's placeholder: null when no book has posted one. */
+export function tiebreakerOverUnder(sheet: Pick<SheetJson, "games" | "tiebreakerGameId">): number | null {
+  return tiebreakerView(sheet)?.detail?.overUnder ?? null;
+}
+
 export function toSheetJson(sheet: PickSheet): SheetJson {
   return {
     weekId: sheet.week.id,

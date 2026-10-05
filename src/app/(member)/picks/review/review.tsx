@@ -3,21 +3,23 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Clock, Lock } from "lucide-react";
-import { useState, type FormEvent } from "react";
-import { HEADER_TOP, HeaderLinks, Badge, Button, Card, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, Input, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
+import { Check, ChevronRight, Clock, Lock, Scale } from "lucide-react";
+import type { ReactNode } from "react";
+import { HEADER_TOP, HeaderLinks, Badge, Card, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
 
-import { track } from "@/lib/analytics/analytics";
 import { formatCountdown } from "@/lib/picks/clock";
-import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
-import { tiebreakerGuessError } from "@/lib/picks/limits";
-import { firstOpenGame, liveGames, lockGameOf, remainingLabel } from "@/lib/picks/progress";
+import { tiebreakerView, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
+import { firstOpenGame, lockGameOf, remainingLabel } from "@/lib/picks/progress";
 import { usePickSheet } from "@/lib/picks/use-pick-sheet";
 import { plural } from "@/lib/plural";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
+
+/** The pick flow's Lock and Guess pages, opened on their own; both come back here. */
+const LOCK_PAGE = "/picks?step=lock";
+const GUESS_PAGE = "/picks?step=guess";
 
 function StepRow({
   done,
@@ -60,29 +62,59 @@ function StepRow({
 }
 
 /**
- * Every pick on one screen. Tap a row to change it in the pick flow; choose
- * the Lock of the Week from a drawer of your own picks; type the Tiebreaker
- * Guess. The countdown runs on the server clock, and at zero the screen
- * flips to its locked state without a reload.
+ * One of the two summary cards at the foot of Review: what is set, and a tap
+ * that opens the pick flow's page for it. A control, but the same surface:
+ * `asChild` keeps the button element and its semantics while the radius and
+ * border come from Card, so this stops being a hand-copy of the card recipe.
+ */
+function SummaryCard({
+  set,
+  locked,
+  icon,
+  title,
+  detail,
+  onClick,
+}: {
+  set: boolean;
+  locked: boolean;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  onClick: () => void;
+}) {
+  return (
+    <Card asChild className="min-h-14 w-full flex-row items-center px-3 py-2 text-left">
+      <button type="button" disabled={locked} onClick={onClick} className="disabled:opacity-70">
+        <span
+          className={`grid size-9 shrink-0 place-items-center rounded-full ${
+            set ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {icon}
+        </span>
+        <span className="grid min-w-0 flex-1 gap-0.5">
+          <span className={set ? "font-display text-lg leading-[22px]" : "font-semibold"}>{title}</span>
+          <span className="text-xs text-muted-foreground">{detail}</span>
+        </span>
+        {locked ? null : <span className="text-sm font-semibold text-secondary">{set ? "Change" : "Choose"}</span>}
+      </button>
+    </Card>
+  );
+}
+
+/**
+ * Every pick on one screen. Tap a row to change it in the pick flow. The Lock
+ * of the Week and the Tiebreaker Guess are set on the pick flow's own pages,
+ * which come back here: both their StepRows and their summary cards at the
+ * foot open them, so each has one way to change it. There is no way to take a
+ * Lock back off — it adds points when it wins and costs nothing when it loses
+ * — though a Dropped Lock can still be moved. The countdown runs on the server
+ * clock, and at zero the screen flips to its locked state without a reload.
  */
 export function Review({ initial }: { initial: SheetJson }) {
   const router = useRouter();
   // Re-read on arrival so the countdown starts from a fresh server clock.
-  const { sheet, progress, locked, remainingMs, status, setLock, setGuess } = usePickSheet(initial, { refetch: true });
-
-  const [lockOpen, setLockOpen] = useState(false);
-  const lockPending = status.lock.state === "saving";
-  const lockError = status.lock.state === "failed" ? status.lock.error : null;
-
-  // What the member has typed, or null to show the Guess the sheet holds.
-  const [typed, setTyped] = useState<string | null>(null);
-  const guess = typed ?? (sheet.tiebreakerGuess === null ? "" : String(sheet.tiebreakerGuess));
-  const [guessInvalid, setGuessInvalid] = useState<string | null>(null);
-  const [edited, setEdited] = useState(false);
-  const guessPending = status.guess.state === "saving";
-  const guessError = guessInvalid ?? (status.guess.state === "failed" ? status.guess.error : null);
-  // "Saved." stands until the member types again.
-  const guessSaved = status.guess.state === "saved" && !edited;
+  const { sheet, progress, locked, remainingMs } = usePickSheet(initial, { refetch: true });
 
   const pickFor = (gameId: number) => sheet.picks.find((p) => p.gameId === gameId);
   const picked = (gameId: number) => pickFor(gameId) !== undefined;
@@ -91,7 +123,7 @@ export function Review({ initial }: { initial: SheetJson }) {
   const lockDropped = sheet.lock.state === "dropped";
   const lockGame = sheet.games.find((g) => g.game.id === lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
-  const tiebreakerGame = sheet.games.find((g) => g.game.id === sheet.tiebreakerGameId)?.game;
+  const tiebreakerGame = tiebreakerView(sheet)?.game;
   const steps = progress.liveGames + 2;
   const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
@@ -99,24 +131,6 @@ export function Review({ initial }: { initial: SheetJson }) {
   const tiebreakerLine = tiebreakerGame
     ? `Combined final score, ${tiebreakerGame.awayTeam} at ${tiebreakerGame.homeTeam}`
     : "Combined final score of the Tiebreaker Game";
-
-  const chooseLock = async (gameId: number | null) => {
-    const outcome = await setLock(gameId);
-    if (outcome.state !== "saved") return;
-    track("lock_set", { cleared: gameId === null });
-    setLockOpen(false);
-  };
-
-  const saveGuess = async (event: FormEvent) => {
-    event.preventDefault();
-    const value = Number(guess);
-    const invalid = guess.trim() === "" ? "Enter a guess first." : tiebreakerGuessError(value);
-    setGuessInvalid(invalid);
-    if (invalid) return;
-    setTyped(guess);
-    setEdited(false);
-    if ((await setGuess(value)).state === "saved") track("tiebreaker_saved");
-  };
 
   const pickRow = (view: SheetGameJson) => {
     const { game } = view;
@@ -242,7 +256,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           }
           action={progress.lockSet ? "Change" : "Set"}
           disabled={locked}
-          onClick={() => setLockOpen(true)}
+          onClick={() => router.push(LOCK_PAGE)}
         />
         <StepRow
           done={progress.guessSet}
@@ -250,7 +264,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           detail={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : tiebreakerLine}
           action={progress.guessSet ? "Change" : "Set"}
           disabled={locked}
-          onClick={() => document.getElementById("tiebreaker-guess")?.focus()}
+          onClick={() => router.push(GUESS_PAGE)}
         />
       </section>
 
@@ -270,54 +284,24 @@ export function Review({ initial }: { initial: SheetJson }) {
 
       <section>
         <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
-        {/* A control, but the same surface: `asChild` keeps the button element
-            and its semantics while the radius and border come from Card, so
-            this stops being a hand-copy of the card recipe that can drift. */}
-        <Card asChild className="min-h-14 w-full flex-row items-center px-3 py-2 text-left">
-          <button
-            type="button"
-            disabled={locked}
-            onClick={() => setLockOpen(true)}
-            className="disabled:opacity-70"
-          >
-            <span
-              className={`grid size-9 place-items-center rounded-full ${
-                progress.lockSet ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
-              }`}
-            >
-              <Lock size={18} />
-            </span>
-            <span className="grid flex-1 gap-0.5">
-              {lockGame && lockPick ? (
-                <>
-                  <span className="font-display text-lg leading-[22px]">{teamName(lockGame, lockPick.teamId)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {lockDropped
-                      ? locked
-                        ? "That game is void, so no Lock counts this week"
-                        : "That game is void and scores zero; choose another Lock"
-                      : `${sheet.lockMultiplier}× points if they win`}{" "}
-                    ·{" "}
-                    {lockGame.awayTeam} at {lockGame.homeTeam}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="font-semibold">{locked ? "No Lock this week" : "Choose your Lock"}</span>
-                  <span className="text-xs text-muted-foreground">One pick counts {sheet.lockMultiplier}× this week.</span>
-                </>
-              )}
-            </span>
-            {locked ? null : (
-              <span className="text-sm font-semibold text-secondary">{progress.lockSet ? "Change" : "Choose"}</span>
-            )}
-          </button>
-        </Card>
-        {lockError ? (
-          <p role="alert" className="pt-1 text-sm font-semibold text-destructive">
-            {lockError}
-          </p>
-        ) : null}
+        <SummaryCard
+          set={!!(lockGame && lockPick)}
+          locked={locked}
+          icon={<Lock size={18} />}
+          title={lockGame && lockPick ? teamName(lockGame, lockPick.teamId) : locked ? "No Lock this week" : "Choose your Lock"}
+          detail={
+            lockGame && lockPick
+              ? `${
+                  lockDropped
+                    ? locked
+                      ? "That game is void, so no Lock counts this week"
+                      : "That game is void and scores zero; choose another Lock"
+                    : `${sheet.lockMultiplier}× points if they win`
+                } · ${lockGame.awayTeam} at ${lockGame.homeTeam}`
+              : `One pick counts ${sheet.lockMultiplier}× this week.`
+          }
+          onClick={() => router.push(LOCK_PAGE)}
+        />
         <Link href="/rules" className={LINK}>
           See how to play
         </Link>
@@ -325,89 +309,20 @@ export function Review({ initial }: { initial: SheetJson }) {
 
       <section>
         <h2 className={`pb-1 pt-2 ${LABEL}`}>Tiebreaker Guess</h2>
-        <form onSubmit={saveGuess} className="grid gap-2">
-          <p className="text-sm text-muted-foreground">{tiebreakerLine}. Closest guess wins ties.</p>
-          <div className="flex gap-2">
-            <Input
-              id="tiebreaker-guess"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="e.g. 52"
-              value={guess}
-              disabled={locked}
-              aria-label="Tiebreaker Guess"
-              onChange={(e) => {
-                setTyped(e.target.value.replace(/\D/g, ""));
-                setGuessInvalid(null);
-                setEdited(true);
-              }}
-              className={progress.guessSet ? "" : "border-secondary"}
-            />
-            <Button type="submit" variant="outline" disabled={locked || guessPending}>
-              {guessPending ? "Saving…" : "Save"}
-            </Button>
-          </div>
-          {guessError ? (
-            <p role="alert" className="text-sm font-semibold text-destructive">
-              {guessError}
-            </p>
-          ) : null}
-          {guessSaved ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              Saved.
-            </p>
-          ) : null}
-        </form>
+        <SummaryCard
+          set={progress.guessSet}
+          locked={locked}
+          icon={<Scale size={18} />}
+          title={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : locked ? "No guess this week" : "Enter your guess"}
+          detail={`${tiebreakerLine}. Closest guess wins ties.`}
+          onClick={() => router.push(GUESS_PAGE)}
+        />
       </section>
 
       <Link href="/" className={LINK}>
         Back to this week
       </Link>
 
-      <Drawer open={lockOpen} onOpenChange={setLockOpen}>
-        <DrawerContent className="mx-auto max-w-md">
-          <DrawerHeader>
-            <DrawerTitle>Lock of the Week</DrawerTitle>
-            <DrawerDescription>
-              One of your picks. It scores {sheet.lockMultiplier}× if it wins; nothing extra if it loses.
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="grid max-h-80 gap-1.5 overflow-y-auto px-4">
-            {progress.picksMade === 0 ? (
-              <p className="py-3 text-center text-sm text-muted-foreground">Make a pick first, then lock it.</p>
-            ) : null}
-            {liveGames(sheet.games).map(({ game }) => {
-              const pick = pickFor(game.id);
-              if (!pick) return null;
-              const on = lockGameId === game.id;
-              return (
-                <button
-                  key={game.id}
-                  type="button"
-                  aria-pressed={on}
-                  disabled={lockPending}
-                  onClick={() => chooseLock(game.id)}
-                  className={`flex min-h-[52px] items-center gap-3 rounded-md border px-3 text-left ${
-                    on ? "border-secondary bg-secondary text-secondary-foreground" : "border-border bg-card"
-                  }`}
-                >
-                  <TeamLogo team={teamName(game, pick.teamId)} size={28} />
-                  <span className="flex-1 font-display text-lg">{teamName(game, pick.teamId)}</span>
-                  <span className="text-xs opacity-80">
-                    {game.awayTeam} at {game.homeTeam}
-                  </span>
-                  {on ? <Lock size={16} /> : null}
-                </button>
-              );
-            })}
-          </div>
-          <DrawerFooter>
-            <Button type="button" variant="ghost" disabled={lockPending} onClick={() => chooseLock(null)}>
-              No Lock this week
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
     </main>
   );
 }
