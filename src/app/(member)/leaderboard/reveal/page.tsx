@@ -9,7 +9,7 @@ import { RevealList } from "@/components/reveal";
 import { cfbd } from "@/lib/cfbd";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
-import { pickBreakdown, tiebreakerOutcome, weeklyWinSentence } from "@/lib/results/summary";
+import { pickBreakdown, tiebreakerGuesses, weeklyWinSentence } from "@/lib/results/summary";
 import { weekParam } from "@/lib/slate/slate";
 import { weekInReview } from "@/lib/week/week";
 import { YourPicks } from "../your-week";
@@ -59,11 +59,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
   const weekNumber = slate.week.weekNumber;
   const won = weeklyWinSentence(weeklyWin, complete);
   const mine = scores.find((s) => s.member.id === member.id) ?? null;
-  // Only the members tied for first by points: theirs are the Guesses that
-  // decided something. Empty when one member led outright.
-  const guessers = new Set(
-    tiebreakerOutcome(reveal, scores, weeklyWin)?.contenders.map((c) => c.member.id) ?? [],
-  );
+  const guesses = tiebreakerGuesses(reveal, scores, weeklyWin);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
@@ -98,7 +94,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
       )}
 
       <div className="px-4">
-        <RevealList reveal={reveal} scores={scores} viewerId={member.id} guessers={guessers} />
+        <RevealList reveal={reveal} viewerId={member.id} guesses={guesses} />
       </div>
     </main>
   );
