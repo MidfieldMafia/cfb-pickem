@@ -1,13 +1,30 @@
 import type { CandidateGame } from "@/lib/cfbd/candidates";
 
-/** The three ways a commissioner narrows the week's candidates. */
-export type Filter = "all" | "ranked" | "sec";
+/**
+ * Each conference pill, keyed as it appears in `?filter=` and mapped to the
+ * conference as CFBD spells it on a candidate, which is also the pill's label.
+ */
+const CONFERENCES = {
+  sec: "SEC",
+  "big-ten": "Big Ten",
+  acc: "ACC",
+  "big-12": "Big 12",
+} as const;
+
+type ConferenceFilter = keyof typeof CONFERENCES;
+
+/** The pills a commissioner narrows the week's candidates with. */
+export type Filter = "all" | "ranked" | ConferenceFilter;
 
 export const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "ranked", label: "Ranked" },
-  { key: "sec", label: "SEC" },
+  ...Object.entries(CONFERENCES).map(([key, conference]) => ({ key: key as ConferenceFilter, label: conference })),
 ];
+
+function isConference(filter: Filter): filter is ConferenceFilter {
+  return filter in CONFERENCES;
+}
 
 /** The `?filter=` a commissioner asked for, or "all" when it is missing or nonsense. */
 export function filterParam(param: string | undefined): Filter {
@@ -27,16 +44,20 @@ export function fbsOnlyParam(param: string | undefined): boolean {
 
 /**
  * Whether a feed candidate survives the pills, the FBS-only toggle, and the
- * search box. Ranked means either side is ranked and SEC means either side is
- * in it — a rule about the matchup rather than about one team, which is the
- * part that reads wrong when it sits inline in the page. FBS-only is the
+ * search box. Ranked means either side is ranked and a conference pill means
+ * either side is in that conference — a rule about the matchup rather than
+ * about one team, which is the part that reads wrong when it sits inline in
+ * the page. FBS-only is the
  * opposite shape: it hides a game unless *both* sides are classified `fbs`,
  * since a game with one FCS side is still a cupcake.
  */
 export function matches(candidate: CandidateGame, filter: Filter, fbsOnly: boolean, query: string): boolean {
   if (fbsOnly && (candidate.homeClassification !== "fbs" || candidate.awayClassification !== "fbs")) return false;
   if (filter === "ranked" && candidate.homeRank === null && candidate.awayRank === null) return false;
-  if (filter === "sec" && candidate.homeConference !== "SEC" && candidate.awayConference !== "SEC") return false;
+  if (isConference(filter)) {
+    const conference = CONFERENCES[filter];
+    if (candidate.homeConference !== conference && candidate.awayConference !== conference) return false;
+  }
   if (query && !`${candidate.awayTeam} ${candidate.homeTeam}`.toLowerCase().includes(query.toLowerCase())) return false;
   return true;
 }
