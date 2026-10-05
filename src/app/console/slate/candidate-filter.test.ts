@@ -1,8 +1,8 @@
 /**
- * The three pills, the FBS-only toggle, and the search box over the week's
+ * The pills, the FBS-only toggle, and the search box over the week's
  * candidates. Run against the real recorded Week 2 feed rather than
  * hand-written candidates, because the rules under test are about the
- * matchup — either side ranked, either side in the SEC, both sides FBS — and
+ * matchup — either side ranked, either side in a conference, both sides FBS — and
  * a fixture built to suit would not catch one of them reading wrong.
  */
 import { describe, expect, test } from "vitest";
@@ -13,23 +13,25 @@ import { fbsOnlyParam, filterParam, FILTERS, matches } from "./candidate-filter"
 
 const WEEK_2 = { year: 2026, week: 2 };
 
-/** Week 2 of 2026 as the feed recorded it: 86 games, 23 with a ranked side, 15 touching the SEC, 49 both-FBS. */
+/**
+ * Week 2 of 2026 as the feed recorded it: 86 games, 23 with a ranked side, 49
+ * both-FBS, and 15 touching the SEC, 17 the Big Ten, 14 the ACC and 15 the Big 12.
+ */
 const week2 = () => weekCandidates(recordedCfbd("2026-week-2"), WEEK_2, recordedOpenMeteo("2026-week-2"));
 
 describe("the ?filter= a commissioner asked for", () => {
-  test("takes the three pills and nothing else", () => {
-    expect(FILTERS.map((f) => f.key)).toEqual(["all", "ranked", "sec"]);
-    expect(filterParam("all")).toBe("all");
-    expect(filterParam("ranked")).toBe("ranked");
-    expect(filterParam("sec")).toBe("sec");
+  test("takes the six pills and nothing else", () => {
+    expect(FILTERS.map((f) => f.label)).toEqual(["All", "Ranked", "SEC", "Big Ten", "ACC", "Big 12"]);
+    for (const { key } of FILTERS) expect(filterParam(key)).toBe(key);
   });
 
   test("falls back to all FBS when the query string is missing or nonsense", () => {
     expect(filterParam(undefined)).toBe("all");
     expect(filterParam("")).toBe("all");
-    expect(filterParam("acc")).toBe("all");
+    expect(filterParam("pac-12")).toBe("all");
     // Not a case-insensitive match: the pills build the links, so only their own spelling counts.
     expect(filterParam("SEC")).toBe("all");
+    expect(filterParam("Big Ten")).toBe("all");
   });
 });
 
@@ -101,6 +103,43 @@ describe("which candidates survive the pills", () => {
     expect(secAway).toMatchObject({ awayConference: "SEC", homeConference: "Big Ten" });
     expect(matches(secHome, "sec", false, "")).toBe(true);
     expect(matches(secAway, "sec", false, "")).toBe(true);
+  });
+});
+
+describe("the conference pills", () => {
+  // CFBD's own spelling of each conference, which is what a candidate carries.
+  test.each([
+    ["sec", "SEC", 15],
+    ["big-ten", "Big Ten", 17],
+    ["acc", "ACC", 14],
+    ["big-12", "Big 12", 15],
+  ] as const)('"%s" keeps every game with a side in the %s and nothing else', async (filter, conference, count) => {
+    const candidates = await week2();
+
+    expect(candidates.filter((c) => matches(c, filter, false, ""))).toHaveLength(count);
+    for (const c of candidates) {
+      const inIt = c.homeConference === conference || c.awayConference === conference;
+      expect(matches(c, filter, false, "")).toBe(inIt);
+    }
+  });
+
+  test("a game between two of them shows under both pills", async () => {
+    const candidates = await week2();
+    // Rutgers (Big Ten) at Boston College (ACC).
+    const rutgers = candidates.find((c) => c.cfbdGameId === 401858214)!;
+    // Iowa State (Big 12) at Iowa (Big Ten).
+    const iowa = candidates.find((c) => c.cfbdGameId === 401856788)!;
+
+    expect(rutgers).toMatchObject({ awayConference: "Big Ten", homeConference: "ACC" });
+    expect(matches(rutgers, "big-ten", false, "")).toBe(true);
+    expect(matches(rutgers, "acc", false, "")).toBe(true);
+    expect(matches(rutgers, "big-12", false, "")).toBe(false);
+    expect(matches(rutgers, "sec", false, "")).toBe(false);
+
+    expect(iowa).toMatchObject({ awayConference: "Big 12", homeConference: "Big Ten" });
+    expect(matches(iowa, "big-12", false, "")).toBe(true);
+    expect(matches(iowa, "big-ten", false, "")).toBe(true);
+    expect(matches(iowa, "acc", false, "")).toBe(false);
   });
 });
 
