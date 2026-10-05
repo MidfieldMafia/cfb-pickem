@@ -48,11 +48,14 @@ interface BookSpread {
   spread: number;
 }
 
-/** The first total a sportsbook posted for each game, from the same `/lines` read as the spread. */
+/**
+ * Each game's total from the same `/lines` read as the spread: the book whose
+ * spread `bookLines` shows, else the first book that posted a total.
+ */
 function bookTotals(betting: CfbdBettingGame[]): Map<number, number> {
   const totals = new Map<number, number>();
   for (const b of betting) {
-    const total = b.lines.find((l) => l.overUnder !== null)?.overUnder;
+    const total = b.lines.find((l) => l.spread !== null)?.overUnder ?? b.lines.find((l) => l.overUnder !== null)?.overUnder;
     if (total != null) totals.set(b.id, total);
   }
   return totals;

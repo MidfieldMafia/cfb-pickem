@@ -67,7 +67,7 @@ export function LockStep({
               <li key={game.id} className="grid">
                 <button
                   type="button"
-                  disabled={locked}
+                  disabled={locked || saving}
                   onClick={() => onOpenGame(game.id)}
                   className="flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-secondary p-1 text-secondary disabled:opacity-70"
                 >

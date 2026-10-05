@@ -7,17 +7,12 @@ import { Badge, Button, LocalTime } from "@saturday-slate/design-system";
 import { TeamLogo } from "@/components/team-logo";
 
 import { shortSchool } from "@/lib/logos";
-import type { SheetJson } from "@/lib/picks/json";
+import { tiebreakerOverUnder, tiebreakerView, type SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
 import type { ShownPick } from "@/lib/picks/use-pick-sheet";
 import { teamName } from "@/lib/slate/json";
 
 import { SKIP } from "./lock-step";
-
-/** The Tiebreaker Game's over/under, the Guess field's placeholder: null when no book has posted one. */
-export function tiebreakerOverUnder(sheet: SheetJson): number | null {
-  return sheet.games.find((g) => g.game.id === sheet.tiebreakerGameId)?.detail?.overUnder ?? null;
-}
 
 function CardTeam({ team }: { team: string }) {
   return (
@@ -54,7 +49,7 @@ export function GuessStep({
 }) {
   const [typed, setTyped] = useState(sheet.tiebreakerGuess === null ? "" : String(sheet.tiebreakerGuess));
   const [invalid, setInvalid] = useState<string | null>(null);
-  const game = sheet.games.find((g) => g.game.id === sheet.tiebreakerGameId)?.game;
+  const game = tiebreakerView(sheet)?.game;
   const ownPick = game ? pick(game.id) : undefined;
   const overUnder = tiebreakerOverUnder(sheet);
 

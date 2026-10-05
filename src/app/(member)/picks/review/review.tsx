@@ -12,12 +12,10 @@ import { TeamLogo } from "@/components/team-logo";
 
 import { track } from "@/lib/analytics/analytics";
 import { formatCountdown } from "@/lib/picks/clock";
-import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
+import { tiebreakerOverUnder, tiebreakerView, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
 import { firstOpenGame, liveGames, lockGameOf, remainingLabel } from "@/lib/picks/progress";
 import { usePickSheet } from "@/lib/picks/use-pick-sheet";
-
-import { tiebreakerOverUnder } from "../guess-step";
 import { plural } from "@/lib/plural";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
 
@@ -95,7 +93,7 @@ export function Review({ initial }: { initial: SheetJson }) {
   const lockDropped = sheet.lock.state === "dropped";
   const lockGame = sheet.games.find((g) => g.game.id === lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
-  const tiebreakerGame = sheet.games.find((g) => g.game.id === sheet.tiebreakerGameId)?.game;
+  const tiebreakerGame = tiebreakerView(sheet)?.game;
   const steps = progress.liveGames + 2;
   const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);

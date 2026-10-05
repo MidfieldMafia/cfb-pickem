@@ -309,7 +309,7 @@ export function PickFlow({
           <h1 className="m-0 font-display text-[22px] leading-7">Week {held.weekNumber}</h1>
           <div className="truncate text-sm leading-5 text-muted-foreground">
             {page
-              ? `${PAGE_TITLE[page]}${walk.length === 2 ? ` · ${walk.indexOf(page) + 1} of 2` : ""}`
+              ? `${PAGE_TITLE[page]}${walk.length > 1 ? ` · ${walk.indexOf(page) + 1} of ${walk.length}` : ""}`
               : `Game ${index + 1} of ${games.length}`}
           </div>
         </div>
@@ -323,7 +323,9 @@ export function PickFlow({
         current={page ?? index}
         set={{ lock: progress.lockSet, guess: progress.guessSet }}
         onJump={goTo}
-        onOpen={(p) => openPage(p, [p])}
+        // Within a walk a marker moves between its pages and keeps the rest owed;
+        // anywhere else it opens that page on its own, which goes back to Review.
+        onOpen={(p) => openPage(p, page && walk.includes(p) ? walk : [p])}
       />
 
       {page && locked ? (
@@ -452,10 +454,10 @@ export function PickFlow({
                       "Tap a team — it saves as you go, no submit step."}
             </span>
             {/*
-              Review is reachable from every game, not only the last one: the Lock
-              of the Week and the Tiebreaker Guess are settable nowhere else, and
-              the flow walks the slate in order, so a member part-way down it had
-              no way to that screen but to pick out the rest of the games first.
+              Review is reachable from every game, not only the last one: it is
+              where the Lock of the Week and the Tiebreaker Guess sit beside every
+              pick, and the flow walks the slate in order, so a member part-way
+              down it had no way to that screen but to pick out the rest first.
 
               Mid-slate it is the underlined text link the Leaderboard and You
               screens use for a secondary destination, not a second button —
