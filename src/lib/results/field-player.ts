@@ -301,8 +301,29 @@ function driveLabel(plays: number, yards: number | null): string {
  * What the card reads once the play `id` has landed. Everything comes from
  * the plays and their descriptions: the ball, the side and the next down from
  * the play's resting state, the drive from the feed's drive holding it.
+ *
+ * A timeout or a period's end lands along with the play before it, so it
+ * reads as that play does, words, score and clock apart. Read on its own, a
+ * marker after a score would lose the drive's yards, as nothing yet says
+ * where the next snap is (#391).
  */
 export function readout(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Record<Side, string>): Readout {
+  const all = feed.drives.flatMap((drive) => drive.plays);
+  const at = all.findIndex((play) => play.id === id);
+  const landed = all[at];
+  const lastSnap =
+    landed && isMarker(landed.playType) ? all.slice(0, at).findLast((play) => !isMarker(play.playType)) : undefined;
+  if (!lastSnap) return readPlay(feed, id, teams, labels);
+  return {
+    ...readPlay(feed, lastSnap.id, teams, labels),
+    text: landed.playText,
+    score: { home: landed.homeScore, away: landed.awayScore },
+    clock: clockLabel({ period: landed.period, clock: landed.clock }),
+  };
+}
+
+/** The readout for one play read on its own, marker or not. */
+function readPlay(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Record<Side, string>): Readout {
   const descriptions = new Map(feed.descriptions.map((description) => [description.id, description]));
   const drive = feed.drives.find((d) => d.plays.some((play) => play.id === id));
   const plays = drive?.plays ?? [];
