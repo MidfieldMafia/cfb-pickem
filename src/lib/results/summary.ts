@@ -210,6 +210,38 @@ export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[], weeklyW
   return { game, combined, contenders, winners: weeklyWin!.winners };
 }
 
+/** One row of the Reveal's Tiebreaker Guesses card. */
+export interface TiebreakerGuessRow {
+  score: WeeklyScore;
+  /** Tied for first on points, so this Guess is one that decided the Weekly Win. */
+  contender: boolean;
+}
+
+/**
+ * Every member who played the Week, with their Tiebreaker Guess: the rows of
+ * the card under the Tiebreaker Game on the Reveal.
+ *
+ * Closest Guess first. Before the game is final there is no error to rank by,
+ * so the Guesses keep the order `scores` arrived in: the week's standings.
+ * Either way, a member
+ * who made no Guess sorts last: the engine scores a missing Guess as 0, so
+ * after the final it carries an error that could rank it above real Guesses.
+ *
+ * The members tied for first stay where their closeness puts them and are
+ * marked as `contender`, the same points-tied group `tiebreakerOutcome` names.
+ * Empty when the Week has no Tiebreaker Game on its board.
+ */
+export function tiebreakerGuesses(reveal: Reveal, scores: WeeklyScore[], weeklyWin: WeeklyWin | null): TiebreakerGuessRow[] {
+  const outcome = tiebreakerOutcome(reveal, scores, weeklyWin);
+  if (outcome === null) return [];
+  const contenders = new Set(outcome.contenders.map((c) => c.member.id));
+  const noGuess = (s: WeeklyScore) => Number(s.tiebreakerGuess === null);
+  return scores
+    .filter((s) => s.played)
+    .sort((a, b) => noGuess(a) - noGuess(b) || (a.tiebreakerError ?? 0) - (b.tiebreakerError ?? 0))
+    .map((score) => ({ score, contender: contenders.has(score.member.id) }));
+}
+
 /** One Game as one member played it: the pick-history row. */
 export interface BreakdownRow {
   game: GameView;

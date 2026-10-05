@@ -5,8 +5,8 @@ import { Pennant } from "@/components/pennant";
 
 import { TeamLogo } from "@/components/team-logo";
 import { clockLabel } from "@/lib/results/result";
-import type { Reveal, RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
-import { guessLabel } from "@/lib/results/summary";
+import type { Reveal, RevealPick, ScoredMember } from "@/lib/results/results";
+import { guessLabel, type TiebreakerGuessRow } from "@/lib/results/summary";
 import { isVoid } from "@/lib/slate/json";
 
 /** The chip that sums up one side: "✓ 4 picks" once the game is final, "4 picks" before. */
@@ -100,15 +100,18 @@ function Side({
   );
 }
 
-/** The Tiebreaker Guesses of the members tied for first, closest first once the Tiebreaker Game is final. */
-function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewerId: number }) {
-  const sorted = [...scores].sort((a, b) => (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity));
-  if (sorted.length === 0) return null;
+/**
+ * Every Tiebreaker Guess of the week, in the order `tiebreakerGuesses` gives.
+ * When first place was tied on points, the contenders carry a "Tied 1st" chip:
+ * theirs are the Guesses that decided the Weekly Win.
+ */
+function TiebreakerGuesses({ guesses, viewerId }: { guesses: TiebreakerGuessRow[]; viewerId: number }) {
+  if (guesses.length === 0) return null;
   return (
     <Card className="gap-1 border-secondary p-2.5">
       <p className="text-xs font-bold uppercase tracking-[0.08em] text-secondary">Tiebreaker Guesses</p>
       <ul className="space-y-0.5">
-        {sorted.map((s) => {
+        {guesses.map(({ score: s, contender }) => {
           const you = s.member.id === viewerId;
           return (
             <li
@@ -116,9 +119,10 @@ function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewer
               className={`flex items-center gap-2 rounded-md px-1.5 py-1 ${you ? "bg-accent" : ""}`}
             >
               <Pennant avatarId={s.member.avatarId} name={s.member.displayName} size={20} />
-              <span className={`min-w-0 flex-1 truncate text-sm ${you ? "font-extrabold" : "font-semibold"}`}>
+              <span className={`min-w-0 flex-1 truncate text-sm ${you || contender ? "font-extrabold" : "font-semibold"}`}>
                 {you ? "You" : s.member.displayName}
               </span>
+              {contender ? <Badge variant="outline">Tied 1st</Badge> : null}
               <span className="text-xs text-muted-foreground tabular-nums">{guessLabel(s)}</span>
             </li>
           );
@@ -130,18 +134,16 @@ function TiebreakerGuesses({ scores, viewerId }: { scores: WeeklyScore[]; viewer
 
 /**
  * Every member's pick per game, graded once the game is final. Rendered on /week after the Deadline.
- * `guessers` are the member ids whose Tiebreaker Guesses to list: those tied for first.
+ * `guesses` are the rows of the Tiebreaker Guesses card, shown under the Tiebreaker Game.
  */
 export function RevealList({
   reveal,
-  scores,
   viewerId,
-  guessers,
+  guesses,
 }: {
   reveal: Reveal;
-  scores: WeeklyScore[];
   viewerId: number;
-  guessers: Set<number>;
+  guesses: TiebreakerGuessRow[];
 }) {
   const members = new Map(reveal.members.map((m) => [m.id, m]));
   return (
@@ -188,7 +190,7 @@ export function RevealList({
                 />
               </div>
               {tiebreaker ? (
-                <TiebreakerGuesses scores={scores.filter((s) => guessers.has(s.member.id))} viewerId={viewerId} />
+                <TiebreakerGuesses guesses={guesses} viewerId={viewerId} />
               ) : null}
             </li>
           );

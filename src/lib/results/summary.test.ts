@@ -18,6 +18,7 @@ import {
   seasonChampion,
   seasonStatusLabel,
   standing,
+  tiebreakerGuesses,
   tiebreakerOutcome,
   weeklyWinners,
   weeklyWinSentence,
@@ -339,6 +340,100 @@ describe("what the tiebreaker game settled", () => {
     expect(tiebreakerOutcome(reveal([{ ...texas, picks: [] }], null), scores, weeklyWin)).toBeNull();
     // A Week naming a Tiebreaker Game that is not on the board it was handed.
     expect(tiebreakerOutcome(reveal([{ ...texas, picks: [] }], 999), scores, weeklyWin)).toBeNull();
+  });
+});
+
+describe("the Tiebreaker Guesses card", () => {
+  const texas = view(1, "Ohio State", "Texas", final(31, 28));
+  const board = reveal([{ ...texas, picks: [] }], texas.game.id);
+  const KIM = member(4, "Kim");
+  const SAM = member(5, "Sam");
+
+  function shown(rows: ReturnType<typeof tiebreakerGuesses>) {
+    return rows.map((r) => [r.score.member.displayName, r.contender]);
+  }
+
+  test("with one leader, lists every member who played, closest guess first, and nobody stands out", () => {
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerGuess: 70, tiebreakerError: 11 }),
+      score(JONAH, 20, { tiebreakerGuess: 59, tiebreakerError: 0 }),
+      score(ALEX, 10, { tiebreakerGuess: 55, tiebreakerError: 4 }),
+    ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 30, decidedBy: "points" };
+
+    expect(shown(tiebreakerGuesses(board, scores, weeklyWin))).toEqual([
+      ["Jonah", false],
+      ["Alex", false],
+      ["Grandma", false],
+    ]);
+  });
+
+  test("leaves out members who sat the week out", () => {
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerGuess: 55, tiebreakerError: 4 }),
+      score(JONAH, 0, { played: false }),
+    ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 30, decidedBy: "points" };
+
+    expect(shown(tiebreakerGuesses(board, scores, weeklyWin))).toEqual([["Grandma", false]]);
+  });
+
+  test("marks the members tied for first, in their place by closeness within the full list", () => {
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerGuess: 55, tiebreakerError: 4 }),
+      score(JONAH, 30, { tiebreakerGuess: 70, tiebreakerError: 11 }),
+      score(ALEX, 20, { tiebreakerGuess: 59, tiebreakerError: 0 }),
+    ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 30, decidedBy: "tiebreaker" };
+
+    expect(shown(tiebreakerGuesses(board, scores, weeklyWin))).toEqual([
+      ["Alex", false],
+      ["Grandma", true],
+      ["Jonah", true],
+    ]);
+  });
+
+  test("members who made no Guess sort last, however small the error the engine gave them", () => {
+    // The engine scores a missing Guess as 0, so after the final it carries an
+    // error like anyone else's. It is still not a Guess to rank by.
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerGuess: null, tiebreakerError: 3 }),
+      score(JONAH, 20, { tiebreakerGuess: 70, tiebreakerError: 11 }),
+      score(ALEX, 10, { tiebreakerGuess: 55, tiebreakerError: 4 }),
+    ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 30, decidedBy: "points" };
+
+    expect(shown(tiebreakerGuesses(board, scores, weeklyWin))).toEqual([
+      ["Alex", false],
+      ["Jonah", false],
+      ["Grandma", false],
+    ]);
+  });
+
+  test("before the Tiebreaker Game is final, guesses keep the week's standings order, no-guesses still last", () => {
+    const open = view(1, "Ohio State", "Texas");
+    const openBoard = reveal([{ ...open, picks: [] }], open.game.id);
+    const scores = [
+      score(GRANDMA, 30, { tiebreakerGuess: null }),
+      score(JONAH, 30, { tiebreakerGuess: 70 }),
+      score(ALEX, 20, { tiebreakerGuess: 59 }),
+      score(KIM, 10, { tiebreakerGuess: 41 }),
+      score(SAM, 0, { played: false }),
+    ];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA, JONAH], points: 30, decidedBy: "shared" };
+
+    expect(shown(tiebreakerGuesses(openBoard, scores, weeklyWin))).toEqual([
+      ["Jonah", true],
+      ["Alex", false],
+      ["Kim", false],
+      ["Grandma", true],
+    ]);
+  });
+
+  test("is empty without a Tiebreaker Game", () => {
+    const scores = [score(GRANDMA, 30, { tiebreakerGuess: 55 })];
+    const weeklyWin: WeeklyWin = { winners: [GRANDMA], points: 30, decidedBy: "points" };
+    expect(tiebreakerGuesses(reveal([{ ...texas, picks: [] }], null), scores, weeklyWin)).toEqual([]);
   });
 });
 
