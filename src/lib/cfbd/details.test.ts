@@ -14,7 +14,7 @@ describe("game detail for the pick screen", () => {
 
     // Values read straight from the recorded responses: Michigan beat Western Michigan 13-12
     // on 276 yards to 221; Oklahoma beat UTEP 51-0 on 401 yards to 198. The Week 2 AP poll has
-    // Oklahoma 10th and Michigan 16th; the line is Oklahoma -1.5; Open-Meteo says 8% at kickoff.
+    // Oklahoma 10th and Michigan 16th; the line is Oklahoma -1.5 with a total of 46.5; Open-Meteo says 8% at kickoff.
     expect(details.get(OKLAHOMA_AT_MICHIGAN)).toEqual({
       kickoff: "2026-09-12T16:00:00.000Z",
       venue: "Michigan Stadium",
@@ -22,6 +22,7 @@ describe("game detail for the pick screen", () => {
       tv: "FOX",
       homeWp: 0.568,
       spread: "Oklahoma -1.5",
+      overUnder: 46.5,
       weather: { temperature: 83, precipitation: 8, icon: "cloud-sun", wind: 10 },
       home: { rank: 16, record: "1–0", pointsFor: 13, pointsAgainst: 12, yardsFor: 276, yardsAgainst: 221 },
       away: { rank: 10, record: "1–0", pointsFor: 51, pointsAgainst: 0, yardsFor: 401, yardsAgainst: 198 },
@@ -50,6 +51,7 @@ describe("game detail for the pick screen", () => {
     const game = details.get(OKLAHOMA_AT_MICHIGAN)!;
     expect(game.home).toEqual({ rank: 16, record: "0–0", pointsFor: null, pointsAgainst: null, yardsFor: null, yardsAgainst: null });
     expect(game.spread).toBe("Pick");
+    expect(game.overUnder).toBeNull();
     expect(game.homeWp).toBeNull();
     expect(game.weather?.precipitation).toBeNull();
     // Neither a book nor the model has a number, so the game carries no entry at all.

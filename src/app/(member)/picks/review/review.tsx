@@ -16,6 +16,8 @@ import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { tiebreakerGuessError } from "@/lib/picks/limits";
 import { firstOpenGame, liveGames, lockGameOf, remainingLabel } from "@/lib/picks/progress";
 import { usePickSheet } from "@/lib/picks/use-pick-sheet";
+
+import { tiebreakerOverUnder } from "../guess-step";
 import { plural } from "@/lib/plural";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
 
@@ -60,9 +62,11 @@ function StepRow({
 }
 
 /**
- * Every pick on one screen. Tap a row to change it in the pick flow; choose
- * the Lock of the Week from a drawer of your own picks; type the Tiebreaker
- * Guess. The countdown runs on the server clock, and at zero the screen
+ * Every pick on one screen. Tap a row to change it in the pick flow. The Lock
+ * of the Week and Tiebreaker Guess rows open the pick flow's own pages for
+ * them, which come back here; the Lock card's drawer stays as the one place to
+ * take a Lock off ("No Lock this week"), and the Guess field at the foot stays
+ * for a quick change. The countdown runs on the server clock, and at zero the screen
  * flips to its locked state without a reload.
  */
 export function Review({ initial }: { initial: SheetJson }) {
@@ -96,6 +100,7 @@ export function Review({ initial }: { initial: SheetJson }) {
   const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
   const groups = groupByKickoff(sheet.games);
+  const overUnder = tiebreakerOverUnder(sheet);
   const tiebreakerLine = tiebreakerGame
     ? `Combined final score, ${tiebreakerGame.awayTeam} at ${tiebreakerGame.homeTeam}`
     : "Combined final score of the Tiebreaker Game";
@@ -242,7 +247,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           }
           action={progress.lockSet ? "Change" : "Set"}
           disabled={locked}
-          onClick={() => setLockOpen(true)}
+          onClick={() => router.push("/picks?step=lock")}
         />
         <StepRow
           done={progress.guessSet}
@@ -250,7 +255,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           detail={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : tiebreakerLine}
           action={progress.guessSet ? "Change" : "Set"}
           disabled={locked}
-          onClick={() => document.getElementById("tiebreaker-guess")?.focus()}
+          onClick={() => router.push("/picks?step=guess")}
         />
       </section>
 
@@ -332,7 +337,7 @@ export function Review({ initial }: { initial: SheetJson }) {
               id="tiebreaker-guess"
               inputMode="numeric"
               pattern="[0-9]*"
-              placeholder="e.g. 52"
+              placeholder={overUnder === null ? undefined : String(overUnder)}
               value={guess}
               disabled={locked}
               aria-label="Tiebreaker Guess"

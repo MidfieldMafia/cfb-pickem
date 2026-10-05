@@ -69,6 +69,13 @@ export interface GameDetail {
   homeWp: number | null;
   /** From the favorite's perspective, e.g. "Georgia −6.5". "Pick" when even. */
   spread: string;
+  /**
+   * The sportsbooks' total for the game, e.g. 46.5: the Tiebreaker Guess's
+   * placeholder, a neutral reference where an example number would anchor the
+   * guess. Null when no book has posted one. Absent from snapshots taken
+   * before it existed, so a reader treats a missing value as null.
+   */
+  overUnder?: number | null;
   /** Null until the paid-tier /games/weather feed is wired. */
   weather: Weather | null;
   home: TeamDetail;

@@ -192,6 +192,7 @@ describe("slate builder", () => {
       tv: "FOX",
       homeWp: 0.568,
       spread: "Oklahoma -1.5",
+      overUnder: 46.5,
       // Open-Meteo's 8% at kickoff: the seeded week runs with the forecast on,
       // so a game stored here carries the same detail production would store.
       weather: { temperature: 83, precipitation: 8 },

@@ -29,7 +29,7 @@ const pickOf = (view: SheetGameJson) => ({
 });
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 
 /** Answers each tap in turn, holding the last answer for any tap after them. */
 function answering(...responses: Response[]) {
@@ -65,13 +65,22 @@ const pressed = (name: string) => tile(name).getAttribute("aria-pressed");
 
 describe("a tap on a team", () => {
   /**
-   * Opened on the last game with the rest of the slate already in, so the save
-   * completes the sheet and the advance lands on review rather than swapping
-   * the tiles out from under the assertion.
+   * Opened on the last game with the rest of the slate already in, and the
+   * Lock and Guess set, so the save completes the sheet and the advance lands
+   * on review rather than swapping the tiles out from under the assertion.
    */
   test("saves the pick, marks the tile, and moves on when the slate is done", async () => {
     const sent = answering(ok());
-    render(<PickFlow sheet={sheet({ picks: [pickOf(MIAMI), pickOf(MICHIGAN)] })} startGameId={TEXAS.game.id} />);
+    render(
+      <PickFlow
+        sheet={sheet({
+          picks: [pickOf(MIAMI), pickOf(MICHIGAN)],
+          lock: { state: "counts", gameId: MIAMI.game.id },
+          tiebreakerGuess: 52,
+        })}
+        startGameId={TEXAS.game.id}
+      />,
+    );
 
     tile("Texas").click();
 
@@ -79,6 +88,22 @@ describe("a tap on a team", () => {
     expect(sent).toEqual([{ gameId: TEXAS.game.id, teamId: TEXAS.game.homeTeamId }]);
     expect(pressed("Ohio State")).toBe("false");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/picks/review"));
+  });
+
+  /**
+   * The walk's wiring only: which pages it covers is `walkAfterSave`'s, and
+   * tested there. With neither set, the save that fills the sheet opens the
+   * Lock page, as the first of two, instead of Review.
+   */
+  test("the save that fills the sheet walks on to the Lock page", async () => {
+    answering(ok());
+    render(<PickFlow sheet={sheet({ picks: [pickOf(MIAMI), pickOf(MICHIGAN)] })} startGameId={TEXAS.game.id} />);
+
+    tile("Texas").click();
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Pick your Lock" })).toBeTruthy());
+    expect(screen.getByText("Lock of the Week · 1 of 2")).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
 
   /**
@@ -166,8 +191,8 @@ describe("the header", () => {
 });
 
 /**
- * The Lock of the Week and the Tiebreaker Guess are only settable on review,
- * and the flow walks the slate in order — so review had to be reachable from
+ * Review is where the Lock of the Week and the Tiebreaker Guess are seen
+ * together, and the flow walks the slate in order — so review had to be reachable from
  * every game, not just the last one, where a member who was three games in
  * could only get there by picking out the rest of the slate first.
  */

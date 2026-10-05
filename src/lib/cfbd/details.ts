@@ -48,6 +48,16 @@ interface BookSpread {
   spread: number;
 }
 
+/** The first total a sportsbook posted for each game, from the same `/lines` read as the spread. */
+function bookTotals(betting: CfbdBettingGame[]): Map<number, number> {
+  const totals = new Map<number, number>();
+  for (const b of betting) {
+    const total = b.lines.find((l) => l.overUnder !== null)?.overUnder;
+    if (total != null) totals.set(b.id, total);
+  }
+  return totals;
+}
+
 /**
  * The line the first sportsbook posted for each game, preferring the feed's own
  * formatting. Comes back on `WeekFeed`, so the slate builder shows it without
@@ -202,6 +212,7 @@ export async function weekDetails(
 
   const ranks = rankLookup(pollWeeks, query.week);
   const bookSpreads = bookLines(betting);
+  const totals = bookTotals(betting);
   const lines = new Map(Array.from(bookSpreads, ([id, line]) => [id, line.formatted]));
   const recordByTeam = new Map(records.map((r) => [r.teamId, r.total]));
   const statValue = new Map(stats.map((s) => [`${s.team}|${s.statName}`, s.statValue]));
@@ -239,6 +250,7 @@ export async function weekDetails(
       tv: tvByGame.get(game.id) ?? null,
       homeWp: wp?.homeWinProbability ?? null,
       spread: spreadText(game, bookSpreads, wp?.spread),
+      overUnder: totals.get(game.id) ?? null,
       weather: toWeather(weatherByGame.get(game.id), rainByGame.get(game.id) ?? null, kickoff, venue),
       home: form(game.homeId, game.homeTeam),
       away: form(game.awayId, game.awayTeam),
