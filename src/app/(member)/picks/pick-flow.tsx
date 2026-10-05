@@ -101,7 +101,9 @@ function ProgressStrip({
             aria-current={cur ? "step" : undefined}
             aria-label={`${label}${done ? ", set" : ""}`}
             onClick={() => onOpen(page)}
-            className="grid min-h-tap min-w-tap shrink-0 place-items-center"
+            // As narrow as a game segment, not 44px wide: centred in a 44px box the
+            // two markers sat 26px apart and read as separate from the strip.
+            className="grid min-h-tap w-[26px] shrink-0 place-items-center"
           >
             <span
               className={`grid size-[22px] place-items-center rounded-full ${
