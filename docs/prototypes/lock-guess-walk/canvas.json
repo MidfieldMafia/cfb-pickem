@@ -1,0 +1,64 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Combined.dc.html": {
+      "h": 780,
+      "is_interactive": true,
+      "title": "B · One page, one Save",
+      "w": 360,
+      "x": 440,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 780,
+      "is_interactive": true,
+      "title": "A · Two pages, the strip grows",
+      "w": 360,
+      "x": 0,
+      "y": 0
+    },
+    "Tiles.dc.html": {
+      "h": 780,
+      "is_interactive": true,
+      "title": "C · Two pages, pick-screen style",
+      "w": 360,
+      "x": 880,
+      "y": 0
+    },
+    "Today.dc.html": {
+      "h": 780,
+      "is_interactive": true,
+      "title": "Today, for comparison",
+      "w": 360,
+      "x": 1320,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-04T18:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "heading": {
+      "kind": "title1",
+      "maxW": 1680,
+      "text": "After the last pick: the Lock and the Guess",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Combined.dc.html",
+    "Tiles.dc.html",
+    "Today.dc.html"
+  ],
+  "pages": [],
+  "title": "Lock and Guess walk (#381)"
+}

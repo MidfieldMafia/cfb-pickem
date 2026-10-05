@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>C · Two pages, pick-screen style</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ss{--bg:#F7F1E3;--fg:#241F1A;--card:#FBF6EC;--primary:#1F4034;--primary-fg:#FBF6EC;--secondary:#A94B17;--secondary-fg:#FBF6EC;--muted:#EAE0CC;--muted-fg:#6F6152;--accent:#EFE7D5;--border:#9C845F;--win:#6A9449;--win-fg:#241F1A;--destructive:#8E2B20}
+.ss.dark{--bg:#1C1714;--fg:#F2E9D8;--card:#241E19;--primary:#5C9A74;--primary-fg:#16120F;--secondary:#D2712E;--secondary-fg:#16120F;--muted:#2E2720;--muted-fg:#B3A38B;--accent:#332B23;--border:#7A6952;--win:#93C06B;--win-fg:#16120F;--destructive:#D46A50}
+a{color:var(--primary)}a:hover{color:var(--fg)}
+.ss button{font-family:inherit;color:inherit}
+.ss input::placeholder{color:var(--muted-fg);opacity:0.6}
+</style>
+</helmet>
+<div class="ss {{themeClass}}" style="width: 360px; height: 780px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font-family: Manrope, sans-serif; font-size: 15px; line-height: 22px; overflow: hidden">
+
+<header style="height: 72px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 16px; box-sizing: border-box">
+<div style="width: 44px; height: 44px; border-radius: 22px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-fg)" stroke-width="2" stroke-linejoin="round"><path d="M5 3v18"></path><path d="M5 4l14 5-14 5"></path></svg></div>
+<div style="flex-grow: 1; min-width: 0">
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 22px; line-height: 28px">{{title}}</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--muted-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{subtitle}}</div>
+</div>
+<sc-if value="{{showChip}}" hint-placeholder-val="{{ true }}">
+<span style="{{chipStyle}}">{{chipText}}</span>
+</sc-if>
+</header>
+
+<sc-if value="{{showStrip}}" hint-placeholder-val="{{ true }}">
+<nav aria-label="Games" style="flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 16px; height: 44px">
+<sc-for list="{{segs}}" as="g" hint-placeholder-count="10">
+<span style="{{g.style}}"></span>
+</sc-for>
+</nav>
+</sc-if>
+
+<sc-if value="{{showPills}}" hint-placeholder-val="{{ false }}">
+<nav aria-label="Steps" style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 0 16px; height: 44px">
+<span style="font-size: 13px; font-weight: 700; color: var(--muted-fg); display: flex; align-items: center; gap: 4px; margin-right: 4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--win)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>{{pickCount}}</span>
+<sc-for list="{{pills}}" as="p" hint-placeholder-count="2">
+<span style="{{p.style}}">{{p.label}}</span>
+</sc-for>
+</nav>
+</sc-if>
+
+<sc-if value="{{isLast}}" hint-placeholder-val="{{ true }}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 12px">
+<div style="display: flex; flex-direction: column; font-size: 14px; line-height: 18px; color: var(--muted-fg)"><span>{{kick}}</span><span style="font-size: 12px">{{venue}}</span></div>
+<div style="flex: 1; display: flex; align-items: stretch; gap: 6px">
+<button type="button" onClick="{{pickAway}}" style="{{awayTile}}"><img src="{{awayLogo}}" alt="" style="width: 72px; height: 72px"><span style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 22px; line-height: 26px">{{awayName}}</span><span style="font-size: 12px; color: var(--muted-fg); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700">Away</span></button>
+<div style="width: 24px; flex-shrink: 0; align-self: center; text-align: center; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-fg)">at</div>
+<button type="button" onClick="{{pickHome}}" style="{{homeTile}}"><img src="{{homeLogo}}" alt="" style="width: 72px; height: 72px"><span style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 22px; line-height: 26px">{{homeName}}</span><span style="font-size: 12px; color: var(--muted-fg); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700">Home</span></button>
+</div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 8px">
+<span style="flex: 1; font-size: 14px; line-height: 20px; color: var(--muted-fg)">{{lastHint}}</span>
+<button type="button" onClick="{{skipLast}}" style="min-height: 36px; padding: 0 12px; border: 1px solid var(--border); background: transparent; border-radius: 8px; display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; cursor: pointer">{{skipLabel}}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isLock}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 0 16px 8px">
+<div style="display: flex; flex-direction: column">
+<h2 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 24px; line-height: 30px">Pick your Lock</h2>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--muted-fg)">One of your picks scores 2× if it wins. Nothing extra if it loses.</p>
+</div>
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 6px">
+<sc-for list="{{lockTiles}}" as="t" hint-placeholder-count="10">
+<button type="button" aria-pressed="{{t.pressed}}" onClick="{{t.choose}}" style="{{t.style}}"><sc-if value="{{t.picked}}" hint-placeholder-val="{{ true }}"><img src="{{t.logo}}" alt="" style="width: 36px; height: 36px"></sc-if><sc-if value="{{t.open}}" hint-placeholder-val="{{ false }}"><span style="width: 36px; height: 36px; box-sizing: border-box; border-radius: 18px; border: 2px dashed var(--secondary)"></span></sc-if><span style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 16px; line-height: 20px">{{t.team}}</span><span style="font-size: 11px; line-height: 14px; opacity: 0.8">{{t.matchup}}</span></button>
+</sc-for>
+</div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 8px">
+<span style="flex: 1; font-size: 14px; line-height: 20px; color: var(--muted-fg)">{{lockHint}}</span>
+<button type="button" onClick="{{noLock}}" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer">Skip for now</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isGuess}}" hint-placeholder-val="{{ false }}">
+<form onSubmit="{{saveGuess}}" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 0 16px 8px; margin: 0">
+<h2 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 24px; line-height: 30px">Your Tiebreaker Guess</h2>
+<div style="border: 2px solid var(--secondary); border-radius: 14px; background: var(--card); padding: 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 8px">
+<span style="display: flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; background: var(--secondary); color: var(--secondary-fg); font-size: 12px; font-weight: 700"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"></path><path d="M7 21h10"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path></svg>Tiebreaker Game</span>
+<div style="display: flex; align-items: center; gap: 16px">
+<span style="display: flex; flex-direction: column; align-items: center; gap: 4px"><img src="/_blob/6590d44b89f71da1ef6dbaf7485bd1b6" alt="" style="width: 52px; height: 52px"><span style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 16px">Oklahoma</span></span>
+<span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-fg)">at</span>
+<span style="display: flex; flex-direction: column; align-items: center; gap: 4px"><img src="/_blob/a081f82643a1e470d1b2b3743d07588f" alt="" style="width: 52px; height: 52px"><span style="font-family: Chivo, sans-serif; font-weight: 900; font-size: 16px">Texas</span></span>
+</div>
+<span style="font-size: 12px; color: var(--muted-fg)">Sat 3:30 PM · Your pick: Texas</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+<input id="guess-c" aria-label="Tiebreaker Guess, combined final score" inputmode="numeric" pattern="[0-9]*" placeholder="47.5" value="{{typed}}" onInput="{{type}}" style="width: 160px; height: 84px; box-sizing: border-box; border: 0; border-bottom: 3px solid var(--secondary); background: transparent; color: var(--fg); text-align: center; font-family: Chivo, sans-serif; font-weight: 900; font-size: 60px">
+<label for="guess-c" style="font-size: 13px; line-height: 18px; color: var(--muted-fg); text-align: center">Combined final score. The over/under is 47.5. Closest guess wins ties.</label>
+</div>
+<sc-if value="{{hasErr}}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--destructive)">{{err}}</p></sc-if>
+<div style="margin-top: auto; display: flex; flex-direction: column">
+<button type="submit" style="height: 48px; border: 0; border-radius: 10px; background: var(--primary); color: var(--primary-fg); font-size: 16px; font-weight: 700; cursor: pointer">Save and review</button>
+<button type="button" onClick="{{later}}" style="min-height: 44px; border: 0; background: transparent; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer">Skip for now</button>
+</div>
+</form>
+</sc-if>
+
+<sc-if value="{{isReview}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0 16px 12px">
+<p style="margin: 0; display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted-fg)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Deadline in <strong style="color: var(--fg); font-variant-numeric: tabular-nums">1d 04:12:09</strong></p>
+<div style="height: 8px; border-radius: 4px; background: var(--muted); overflow: hidden"><div style="{{progressStyle}}"></div></div>
+<section style="{{stepBox}}">
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: {{labelColor}}">{{remainingLabel}}</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+<button type="button" onClick="{{r.go}}" style="min-height: 44px; width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 2px; border: 0; background: transparent; text-align: left; cursor: pointer">
+<sc-if value="{{r.done}}" hint-placeholder-val="{{ true }}"><span style="width: 22px; height: 22px; border-radius: 11px; background: var(--win); color: var(--win-fg); display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></sc-if>
+<sc-if value="{{r.owed}}" hint-placeholder-val="{{ false }}"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; border: 2px dashed var(--secondary); flex-shrink: 0"></span></sc-if>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700; line-height: 20px">{{r.label}}</span><span style="font-size: 12px; line-height: 16px; color: var(--muted-fg)">{{r.detail}}</span></span>
+<span style="font-size: 14px; font-weight: 700; color: {{r.actionColor}}">{{r.action}}</span>
+</button>
+</sc-for>
+</section>
+<div style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary); padding-top: 4px">Your picks</div>
+<ul style="margin: 0; padding: 0; list-style: none; flex-shrink: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--card); overflow: hidden">
+<sc-for list="{{pickList}}" as="p" hint-placeholder-count="10">
+<li style="{{p.liStyle}}"><button type="button" onClick="{{p.go}}" style="width: 100%; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 4px 12px; border: 0; background: transparent; text-align: left; cursor: pointer">
+<sc-if value="{{p.picked}}" hint-placeholder-val="{{ true }}"><img src="{{p.logo}}" alt="" style="width: 28px; height: 28px; flex-shrink: 0"></sc-if>
+<sc-if value="{{p.open}}" hint-placeholder-val="{{ false }}"><span style="width: 28px; height: 28px; box-sizing: border-box; border-radius: 14px; border: 1px dashed var(--border); flex-shrink: 0"></span></sc-if>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 12px; line-height: 16px; color: var(--muted-fg)">{{p.matchup}}</span><span style="{{p.teamStyle}}">{{p.team}}</span></span>
+<sc-if value="{{p.isLock}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; background: var(--secondary); color: var(--secondary-fg); font-size: 12px; font-weight: 700"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>Lock</span></sc-if>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted-fg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="m9 18 6-6-6-6"></path></svg>
+</button></li>
+</sc-for>
+</ul>
+<button type="button" onClick="{{restart}}" style="align-self: flex-start; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: 15px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer">Play it again from game 9</button>
+</div>
+</sc-if>
+
+<nav aria-label="Tabs" style="height: 64px; flex-shrink: 0; border-top: 1px solid var(--muted); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr))">
+<a href="#" style="color: var(--fg); text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 8px"><span style="width: 56px; height: 28px; border-radius: 14px; background: var(--primary); color: var(--primary-fg); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg></span><span style="font-size: 11px; line-height: 14px; font-weight: 700">Picks</span></a>
+<a href="#" style="color: var(--fg); text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 8px"><span style="width: 56px; height: 28px; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path></svg></span><span style="font-size: 11px; line-height: 14px; font-weight: 500">Live Board</span></a>
+<a href="#" style="color: var(--fg); text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 8px"><span style="width: 56px; height: 28px; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3"></path><path d="M7 5H4v2a3 3 0 0 0 3 3"></path></svg></span><span style="font-size: 11px; line-height: 14px; font-weight: 500">Leaderboard</span></a>
+<a href="#" style="color: var(--fg); text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 8px"><span style="width: 56px; height: 28px; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></span><span style="font-size: 11px; line-height: 14px; font-weight: 500">Chat</span></a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"missing":{"editor":"enum","options":["both","lock","guess"],"default":"both"},"dark":{"editor":"boolean","default":false},"$preview":{"width":360,"height":780}}'>
+const VARIANT = 'C';
+const LOGO = {
+  'Alabama': '/_blob/66784b8769e2c79733a8c7d04f5586d8',
+  'Tennessee': '/_blob/ae577b9ad1435adef64267983ff659b5',
+  'Georgia': '/_blob/e168ce19e95c3f04d790b2b6c152f67f',
+  'Auburn': '/_blob/d37ac5f197aae2dc0d9bbe8842d2ba90',
+  'Ohio State': '/_blob/91c4f1cda8a74e4bb5b96516adad0e85',
+  'Illinois': '/_blob/68d6679119dc3dc33219fbae5fa7e53e',
+  'Texas': '/_blob/a081f82643a1e470d1b2b3743d07588f',
+  'Oklahoma': '/_blob/6590d44b89f71da1ef6dbaf7485bd1b6',
+  'Oregon': '/_blob/7ffa24cbce374c81b21e56528c17b27d',
+  'Washington': '/_blob/869db3c297cefc1b737100f13c435191',
+  'Michigan': '/_blob/8a3b592a9e30badb256177d55fb64fb7',
+  'Minnesota': '/_blob/837cde6f970b89e97ede51426917195c',
+  'Ole Miss': '/_blob/1f696cda6b3d47ca0ec0f737f4ee6f56',
+  'LSU': '/_blob/f45fd90fa1985ec4f4dad2a2dac09a33',
+  'Penn State': '/_blob/fe800bf7bdde36acbbeb1ab899d73b42',
+  'Iowa': '/_blob/e008f021afae172d5068196b06dbcf7c',
+  'Clemson': '/_blob/18c4093c35b5962658b87f02f3a17742',
+  'Florida State': '/_blob/7016c738ffacfccef3effeaebce7ad4f',
+  'USC': '/_blob/3957ce851fc5f9e67a4839c4cadc6114',
+  'Notre Dame': '/_blob/534d141fd5ed4e093260c68579e5e5e1'
+};
+// Games 1–8 start picked; 9 and 10 start open, so a run begins on game 9.
+const SLATE = [
+  { away: 'Tennessee', home: 'Alabama', pick: 'Alabama', kick: 'Sat 12:00 PM · ESPN', venue: 'Bryant-Denny Stadium · Tuscaloosa' },
+  { away: 'Auburn', home: 'Georgia', pick: 'Georgia', kick: 'Sat 12:00 PM · ABC', venue: 'Sanford Stadium · Athens' },
+  { away: 'Illinois', home: 'Ohio State', pick: 'Ohio State', kick: 'Sat 12:00 PM · FOX', venue: 'Ohio Stadium · Columbus' },
+  { away: 'Oklahoma', home: 'Texas', pick: 'Texas', kick: 'Sat 3:30 PM · ABC', venue: 'Cotton Bowl · Dallas' },
+  { away: 'Oregon', home: 'Washington', pick: 'Oregon', kick: 'Sat 3:30 PM · CBS', venue: 'Husky Stadium · Seattle' },
+  { away: 'Minnesota', home: 'Michigan', pick: 'Michigan', kick: 'Sat 3:30 PM · BTN', venue: 'Michigan Stadium · Ann Arbor' },
+  { away: 'LSU', home: 'Ole Miss', pick: 'Ole Miss', kick: 'Sat 3:30 PM · SECN', venue: 'Vaught-Hemingway Stadium · Oxford' },
+  { away: 'Iowa', home: 'Penn State', pick: 'Penn State', kick: 'Sat 7:30 PM · NBC', venue: 'Beaver Stadium · University Park' },
+  { away: 'Florida State', home: 'Clemson', pick: null, kick: 'Sat 7:30 PM · ESPN', venue: 'Memorial Stadium · Clemson' },
+  { away: 'Notre Dame', home: 'USC', pick: null, kick: 'Sat 7:30 PM · ABC', venue: 'Los Angeles Memorial Coliseum · Los Angeles' }
+];
+const START = 8;
+const LAST = SLATE.length - 1;
+const DELAY = 650;
+const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+class Component extends DCLogic {
+  eff() {
+    const s = this.state || {};
+    const m = this.props.missing ?? 'both';
+    const made = s.made || {};
+    return {
+      made,
+      step: s.step || 'pick',
+      idx: s.idx ?? START,
+      picks: SLATE.map((g, i) => (i in made ? made[i] : g.pick)),
+      lock: s.lockTouched ? s.lock : (m === 'guess' ? 'Texas' : null),
+      guess: s.guessTouched ? s.guess : (m === 'lock' ? 52 : null),
+      walk: s.walk || [],
+      back: s.back || '',
+      typed: s.typed ?? '',
+      err: s.err || '',
+      flash: s.flash || ''
+    };
+  }
+  owed(e) {
+    const w = [];
+    if (!e.lock) w.push('lock');
+    if (e.guess == null) w.push('guess');
+    return w;
+  }
+  // Where a Lock or Guess page goes when it is done: back to Review if it was opened
+  // from there, else the next page of the walk, else Review.
+  after(e, step) {
+    if (e.back === 'review') return 'review';
+    return e.walk[e.walk.indexOf(step) + 1] || 'review';
+  }
+  go(patch) {
+    clearTimeout(this.timer);
+    this.setState({ flash: '', err: '', ...patch });
+  }
+  soon(patch) {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.setState({ flash: '', ...patch }), DELAY);
+  }
+  renderVals() {
+    const e = this.eff();
+    const i = e.idx;
+    const game = SLATE[i];
+    const picked = e.picks.filter(Boolean).length;
+    const firstOpen = e.picks.findIndex((p) => !p);
+
+    // A save that leaves no open game starts the walk, covering only what is missing.
+    // Changing a pick on a full sheet never does.
+    const choose = (team) => () => {
+      const wasOpen = !e.picks[i];
+      const picks = e.picks.slice();
+      picks[i] = team;
+      const open = picks.findIndex((p) => !p);
+      const walk = wasOpen && open === -1 ? this.owed(e) : [];
+      let next;
+      if (walk.length) next = { step: walk[0] };
+      else if (i < LAST) next = { step: 'pick', idx: i + 1 };
+      else if (open !== -1) next = { step: 'pick', idx: open };
+      else next = { step: 'review' };
+      clearTimeout(this.timer);
+      this.setState({ made: { ...e.made, [i]: team }, flash: 'pick', walk, back: '', err: '' });
+      this.soon(next);
+    };
+    const pickTile = (team) => {
+      const on = e.picks[i] === team;
+      const dim = e.picks[i] && !on;
+      return 'flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-radius: 14px; cursor: pointer; padding: 12px 8px; background: ' + (on ? 'var(--muted)' : 'var(--card)') + '; border: ' + (on ? '3px solid var(--primary)' : '1px solid var(--border)') + '; opacity: ' + (dim ? '0.45' : '1');
+    };
+    let pickHint = 'Tap a team — it saves as you go, no submit step.';
+    if (e.flash === 'pick') {
+      if (e.walk.length) pickHint = 'Saved. Now your ' + (e.walk[0] === 'lock' ? 'Lock…' : 'Tiebreaker Guess…');
+      else if (i < LAST) pickHint = 'Saved. Next game…';
+      else if (firstOpen !== -1) pickHint = 'Saved. Back to game ' + (firstOpen + 1) + '…';
+      else pickHint = 'Saved. On to review…';
+    }
+
+    const chooseLock = (team) => () => {
+      clearTimeout(this.timer);
+      this.setState({ lockTouched: true, lock: team, flash: 'lock' });
+      this.soon({ step: this.after(this.eff(), 'lock') });
+    };
+    const lockRows = SLATE.map((g, k) => {
+      const team = e.picks[k];
+      if (!team) {
+        return {
+          picked: false, open: true, team: 'No pick yet', matchup: g.away + ' at ' + g.home, pressed: 'false', logo: '',
+          choose: () => this.go({ step: 'pick', idx: k, back: '' }),
+          style: 'min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; border-radius: 12px; cursor: pointer; border: 2px dashed var(--secondary); background: transparent; color: var(--secondary)'
+        };
+      }
+      const on = e.lock === team;
+      const dim = e.flash === 'lock' && !on;
+      return {
+        picked: true, open: false, team, logo: LOGO[team], matchup: g.away + ' at ' + g.home, pressed: on ? 'true' : 'false',
+        choose: chooseLock(team),
+        style: 'min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; border-radius: 12px; cursor: pointer; border: ' + (on ? '3px solid var(--secondary)' : '1px solid var(--border)') + '; background: ' + (on ? 'var(--secondary)' : 'var(--card)') + '; color: ' + (on ? 'var(--secondary-fg)' : 'var(--fg)') + '; opacity: ' + (dim ? '0.45' : '1')
+      };
+    });
+    const lockNext = this.after(e, 'lock');
+
+    const remaining = (firstOpen === -1 ? 0 : 1) + (e.lock ? 0 : 1) + (e.guess != null ? 0 : 1);
+    const stepsDone = picked + (e.lock ? 1 : 0) + (e.guess != null ? 1 : 0);
+    const owedBox = remaining > 0;
+    const inWalk = e.step === 'lock' || e.step === 'guess';
+    const walkSteps = e.back === 'review' ? [e.step] : e.walk;
+    const two = walkSteps.length === 2;
+
+    let title = 'Week 6', subtitle = 'Game ' + (i + 1) + ' of 10';
+    if (e.step === 'lock') subtitle = two ? 'Lock of the Week · 1 of 2' : 'Lock of the Week';
+    if (e.step === 'guess') subtitle = two ? 'Tiebreaker Guess · 2 of 2' : 'Tiebreaker Guess';
+    if (e.step === 'review') { title = 'Review picks'; subtitle = 'Week 6'; }
+
+    const doneOf = (k) => (k === 'lock' ? !!e.lock : e.guess != null);
+    const dotKinds = e.step === 'pick' ? this.owed(e) : walkSteps;
+    const dots = dotKinds.map((k) => {
+      const cur = e.step === k;
+      let s = 'width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-left: 4px; ';
+      s += doneOf(k) ? 'background: var(--secondary); color: var(--secondary-fg);' : 'border: 2px dashed var(--secondary); color: var(--secondary);';
+      if (cur) s += ' box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--secondary);';
+      return { isLock: k === 'lock', isGuess: k === 'guess', label: k === 'lock' ? 'Lock of the Week' : 'Tiebreaker Guess', style: s };
+    });
+    const pills = walkSteps.map((k) => {
+      const cur = e.step === k;
+      return {
+        label: k === 'lock' ? 'Lock' : 'Guess',
+        style: 'min-height: 26px; box-sizing: border-box; padding: 0 12px; border-radius: 13px; display: flex; align-items: center; font-size: 13px; font-weight: 700; ' +
+          (cur ? 'background: var(--secondary); color: var(--secondary-fg);' : doneOf(k) ? 'background: var(--muted); color: var(--fg);' : 'border: 2px dashed var(--secondary); color: var(--secondary);')
+      };
+    });
+
+    const pickList = SLATE.map((g, k) => {
+      const team = e.picks[k];
+      return {
+        picked: !!team, open: !team, logo: team ? LOGO[team] : '',
+        matchup: g.away + ' at ' + g.home + (k === 3 ? ' · Tiebreaker' : ''),
+        team: team || 'No pick yet',
+        isLock: !!team && e.lock === team,
+        teamStyle: team ? 'font-family: Chivo, sans-serif; font-weight: 900; font-size: 17px; line-height: 22px' : 'font-size: 14px; line-height: 20px; font-weight: 700; color: var(--secondary)',
+        liStyle: k ? 'border-top: 1px solid var(--muted)' : '',
+        go: () => this.go({ step: 'pick', idx: k, back: '' })
+      };
+    });
+
+    const rows = [
+      {
+        label: 'Make every pick', done: firstOpen === -1, owed: firstOpen !== -1,
+        detail: firstOpen === -1 ? 'All 10 picked' : plural(10 - picked, 'game') + ' still open',
+        action: firstOpen === -1 ? 'Change' : 'Set',
+        go: () => this.go({ step: 'pick', idx: firstOpen === -1 ? 0 : firstOpen, back: '' })
+      },
+      {
+        label: 'Lock of the Week', done: !!e.lock, owed: !e.lock,
+        detail: e.lock ? e.lock + ' counts 2×' : 'One pick counts 2×',
+        action: e.lock ? 'Change' : 'Set',
+        go: () => this.go({ step: 'lock', back: 'review' })
+      },
+      {
+        label: 'Tiebreaker Guess', done: e.guess != null, owed: e.guess == null,
+        detail: e.guess != null ? e.guess + ' points combined' : 'Combined final score, Oklahoma at Texas',
+        action: e.guess != null ? 'Change' : 'Set',
+        go: () => this.go({ step: 'guess', back: 'review', typed: e.guess != null ? String(e.guess) : '' })
+      }
+    ].map((r) => ({ ...r, actionColor: r.done ? 'var(--muted-fg)' : 'var(--secondary)' }));
+
+    return {
+      themeClass: this.props.dark ? 'dark' : '',
+      title, subtitle,
+      showChip: !inWalk,
+      chipText: e.step === 'review' ? stepsDone + ' of 12' : (e.picks[i] ? 'Saved' : 'Pending'),
+      chipStyle: 'min-height: 28px; box-sizing: border-box; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0; ' +
+        (e.step === 'review'
+          ? (owedBox ? 'border: 1px solid var(--border);' : 'background: var(--primary); color: var(--primary-fg);')
+          : (e.picks[i] ? 'background: var(--win); color: var(--win-fg);' : 'border: 1px dashed #A48746; color: var(--fg);')),
+      showStrip: VARIANT === 'A' ? e.step !== 'review' : e.step === 'pick',
+      showPills: VARIANT === 'C' && inWalk,
+      pickCount: plural(picked, 'pick'),
+      segs: e.picks.map((p, k) => ({
+        style: 'flex: 1; height: 8px; border-radius: 4px; background: ' + (p ? 'var(--primary)' : 'var(--muted)') + ';' + (e.step === 'pick' && k === i ? ' box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary);' : '')
+      })),
+      dots, pills,
+      isLast: e.step === 'pick', isLock: e.step === 'lock', isGuess: e.step === 'guess', isReview: e.step === 'review',
+      kick: game.kick, venue: game.venue,
+      awayName: game.away, homeName: game.home, awayLogo: LOGO[game.away], homeLogo: LOGO[game.home],
+      pickAway: choose(game.away), pickHome: choose(game.home),
+      awayTile: pickTile(game.away), homeTile: pickTile(game.home),
+      lastHint: pickHint,
+      skipLabel: e.picks[i] ? (i < LAST ? 'Next' : 'Review picks') : 'Skip for now',
+      skipLast: () => this.go(i < LAST ? { step: 'pick', idx: i + 1 } : { step: 'review' }),
+      lockRows, lockTiles: lockRows,
+      lockHint: e.flash === 'lock' ? 'Locked. ' + (lockNext === 'guess' ? 'Next, your guess…' : 'On to review…') : 'Tap a pick to lock it.',
+      noLock: () => this.go({ step: lockNext }),
+      typed: e.typed,
+      type: (ev) => this.setState({ typed: ev.target.value.replace(/\D/g, ''), err: '' }),
+      hasErr: !!e.err, err: e.err,
+      saveGuess: (ev) => {
+        ev.preventDefault();
+        const v = Number(e.typed);
+        if (e.typed.trim() === '') return this.setState({ err: 'Enter a guess first.' });
+        if (!Number.isInteger(v) || v < 0 || v > 200) return this.setState({ err: 'The guess is a whole number of points, 0 to 200.' });
+        this.go({ guessTouched: true, guess: v, step: this.after(e, 'guess') });
+      },
+      later: () => this.go({ step: this.after(e, 'guess') }),
+      progressStyle: 'height: 8px; background: var(--primary); width: ' + picked * 10 + '%',
+      stepBox: 'display: flex; flex-direction: column; gap: 6px; border-radius: 12px; padding: 10px; border: 1px solid ' + (owedBox ? 'var(--secondary)' : 'var(--border)') + '; background: ' + (owedBox ? 'var(--accent)' : 'var(--card)'),
+      labelColor: owedBox ? 'var(--secondary)' : 'var(--muted-fg)',
+      remainingLabel: remaining ? plural(remaining, 'thing') + ' left before the deadline' : 'You’re all set for Week 6',
+      rows, pickList,
+      restart: () => {
+        clearTimeout(this.timer);
+        this.setState({ step: 'pick', idx: START, made: {}, lockTouched: false, guessTouched: false, walk: [], back: '', typed: '', err: '', flash: '' });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
