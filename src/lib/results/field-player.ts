@@ -310,17 +310,19 @@ function driveLabel(plays: number, yards: number | null): string {
 export function readout(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Record<Side, string>): Readout {
   const all = feed.drives.flatMap((drive) => drive.plays);
   const at = all.findIndex((play) => play.id === id);
-  const marker = all[at];
-  const before = marker && isMarker(marker.playType) ? all.slice(0, at).findLast((play) => !isMarker(play.playType)) : undefined;
-  if (!before) return readPlay(feed, id, teams, labels);
+  const landed = all[at];
+  const lastSnap =
+    landed && isMarker(landed.playType) ? all.slice(0, at).findLast((play) => !isMarker(play.playType)) : undefined;
+  if (!lastSnap) return readPlay(feed, id, teams, labels);
   return {
-    ...readPlay(feed, before.id, teams, labels),
-    text: marker.playText,
-    score: { home: marker.homeScore, away: marker.awayScore },
-    clock: clockLabel({ period: marker.period, clock: marker.clock }),
+    ...readPlay(feed, lastSnap.id, teams, labels),
+    text: landed.playText,
+    score: { home: landed.homeScore, away: landed.awayScore },
+    clock: clockLabel({ period: landed.period, clock: landed.clock }),
   };
 }
 
+/** The readout for one play read on its own, marker or not. */
 function readPlay(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Record<Side, string>): Readout {
   const descriptions = new Map(feed.descriptions.map((description) => [description.id, description]));
   const drive = feed.drives.find((d) => d.plays.some((play) => play.id === id));

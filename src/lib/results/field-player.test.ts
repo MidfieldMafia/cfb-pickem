@@ -243,13 +243,13 @@ describe("readout", () => {
       const drives = DRIVES.map((drive) => {
         const at = drive.plays.findIndex((play) => play.id === id(after));
         if (at === -1) return drive;
-        const scored = drive.plays[at];
+        const score = drive.plays[at];
         const added = {
-          ...scored,
+          ...score,
           id: id(marker.suffix),
-          teamId: scored.teamId === TEAMS.homeTeamId ? TEAMS.awayTeamId : TEAMS.homeTeamId,
+          teamId: score.teamId === TEAMS.homeTeamId ? TEAMS.awayTeamId : TEAMS.homeTeamId,
           playType: marker.playType,
-          playTypeId: 21,
+          playTypeId: 21, // CFBD's Timeout; only playType makes it a marker
           yardsGained: 0,
           playText: marker.playText,
         };
@@ -258,12 +258,12 @@ describe("readout", () => {
       if (!marker.nextDrive) return drives;
       // Move it to the head of the drive after the score's.
       const from = drives.findIndex((drive) => drive.plays.some((play) => play.id === id(marker.suffix)));
-      const added = drives[from].plays.find((play) => play.id === id(marker.suffix))!;
+      const moved = drives[from].plays.find((play) => play.id === id(marker.suffix))!;
       return drives.map((drive, i) =>
         i === from
-          ? { ...drive, plays: drive.plays.filter((play) => play !== added) }
+          ? { ...drive, plays: drive.plays.filter((play) => play !== moved) }
           : i === from + 1
-            ? { ...drive, plays: [added, ...drive.plays] }
+            ? { ...drive, plays: [moved, ...drive.plays] }
             : drive,
       );
     }
@@ -287,7 +287,7 @@ describe("readout", () => {
         withMarker("153", { suffix: "1531", playType: "Timeout", playText: "Timeout Coastal Carolina, clock 03:13", nextDrive: true }),
       );
       expect(readout(game, id("1531"), TEAMS, LABELS)).toMatchObject({
-        drive: "7 plays, 75 yds",
+        drive: readout(WHOLE, id("153"), TEAMS, LABELS).drive,
         down: "Kickoff",
         flash: { label: "Touchdown", yard: 100 },
         text: "Timeout Coastal Carolina, clock 03:13",
