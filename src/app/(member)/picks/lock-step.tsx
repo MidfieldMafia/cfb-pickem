@@ -16,8 +16,8 @@ export const SKIP = "min-h-tap px-3 text-sm font-semibold underline underline-of
 /**
  * "Pick your Lock": a 2-column grid of the member's picks, one tile per live
  * game. Tapping a tile saves the Lock and the flow moves on; "Skip for now"
- * moves on without saving anything. Taking a Lock back off stays on Review's
- * drawer, which keeps "No Lock this week".
+ * moves on without saving anything. There is no "No Lock this week": a Lock
+ * only adds points, so once set it is moved, never taken off.
  *
  * The walk only runs on a full sheet, but Review opens this page whenever, so
  * an open game shows as a dashed "No pick yet" tile that opens that game.
