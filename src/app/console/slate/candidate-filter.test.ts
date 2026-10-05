@@ -15,7 +15,8 @@ const WEEK_2 = { year: 2026, week: 2 };
 
 /**
  * Week 2 of 2026 as the feed recorded it: 86 games, 23 with a ranked side, 49
- * both-FBS, and 15 touching the SEC, 17 the Big Ten, 14 the ACC and 15 the Big 12.
+ * both-FBS, and 15 touching the SEC, 17 the Big Ten, 14 the ACC and 15 the
+ * Big 12.
  */
 const week2 = () => weekCandidates(recordedCfbd("2026-week-2"), WEEK_2, recordedOpenMeteo("2026-week-2"));
 
@@ -81,17 +82,6 @@ describe("which candidates survive the pills", () => {
     expect(matches(rankedAway, "ranked", false, "")).toBe(true);
   });
 
-  test('"sec" asks whether either side is in it, not both', async () => {
-    const candidates = await week2();
-
-    expect(candidates.filter((c) => matches(c, "sec", false, ""))).toHaveLength(15);
-    // Only one of the 15 is an all-SEC game, so a rule reading both sides would keep 1.
-    for (const c of candidates.filter((c) => !matches(c, "sec", false, ""))) {
-      expect(c.homeConference).not.toBe("SEC");
-      expect(c.awayConference).not.toBe("SEC");
-    }
-  });
-
   test('"sec" counts an SEC home team and an SEC away team alike', async () => {
     const candidates = await week2();
     // Arizona State (Big 12) at Texas A&M (SEC): the SEC side is at home.
@@ -108,6 +98,8 @@ describe("which candidates survive the pills", () => {
 
 describe("the conference pills", () => {
   // CFBD's own spelling of each conference, which is what a candidate carries.
+  // At most one game per conference is an all-conference game (none for the
+  // Big Ten), so a rule reading both sides would keep at most 1.
   test.each([
     ["sec", "SEC", 15],
     ["big-ten", "Big Ten", 17],
@@ -126,20 +118,20 @@ describe("the conference pills", () => {
   test("a game between two of them shows under both pills", async () => {
     const candidates = await week2();
     // Rutgers (Big Ten) at Boston College (ACC).
-    const rutgers = candidates.find((c) => c.cfbdGameId === 401858214)!;
+    const bigTenAtAcc = candidates.find((c) => c.cfbdGameId === 401858214)!;
     // Iowa State (Big 12) at Iowa (Big Ten).
-    const iowa = candidates.find((c) => c.cfbdGameId === 401856788)!;
+    const big12AtBigTen = candidates.find((c) => c.cfbdGameId === 401856788)!;
 
-    expect(rutgers).toMatchObject({ awayConference: "Big Ten", homeConference: "ACC" });
-    expect(matches(rutgers, "big-ten", false, "")).toBe(true);
-    expect(matches(rutgers, "acc", false, "")).toBe(true);
-    expect(matches(rutgers, "big-12", false, "")).toBe(false);
-    expect(matches(rutgers, "sec", false, "")).toBe(false);
+    expect(bigTenAtAcc).toMatchObject({ awayConference: "Big Ten", homeConference: "ACC" });
+    expect(matches(bigTenAtAcc, "big-ten", false, "")).toBe(true);
+    expect(matches(bigTenAtAcc, "acc", false, "")).toBe(true);
+    expect(matches(bigTenAtAcc, "big-12", false, "")).toBe(false);
+    expect(matches(bigTenAtAcc, "sec", false, "")).toBe(false);
 
-    expect(iowa).toMatchObject({ awayConference: "Big 12", homeConference: "Big Ten" });
-    expect(matches(iowa, "big-12", false, "")).toBe(true);
-    expect(matches(iowa, "big-ten", false, "")).toBe(true);
-    expect(matches(iowa, "acc", false, "")).toBe(false);
+    expect(big12AtBigTen).toMatchObject({ awayConference: "Big 12", homeConference: "Big Ten" });
+    expect(matches(big12AtBigTen, "big-12", false, "")).toBe(true);
+    expect(matches(big12AtBigTen, "big-ten", false, "")).toBe(true);
+    expect(matches(big12AtBigTen, "acc", false, "")).toBe(false);
   });
 });
 

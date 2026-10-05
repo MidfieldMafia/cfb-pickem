@@ -1,26 +1,30 @@
 import type { CandidateGame } from "@/lib/cfbd/candidates";
 
-/** The pills a commissioner narrows the week's candidates with. */
-export type Filter = "all" | "ranked" | ConferenceFilter;
-
-type ConferenceFilter = "sec" | "big-ten" | "acc" | "big-12";
-
-/** Each conference pill's conference, spelled as CFBD spells it on a candidate. */
-const CONFERENCES: Record<ConferenceFilter, string> = {
+/**
+ * Each conference pill, keyed as it appears in `?filter=` and mapped to the
+ * conference as CFBD spells it on a candidate, which is also the pill's label.
+ */
+const CONFERENCES = {
   sec: "SEC",
   "big-ten": "Big Ten",
   acc: "ACC",
   "big-12": "Big 12",
-};
+} as const;
+
+type ConferenceFilter = keyof typeof CONFERENCES;
+
+/** The pills a commissioner narrows the week's candidates with. */
+export type Filter = "all" | "ranked" | ConferenceFilter;
 
 export const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "ranked", label: "Ranked" },
-  { key: "sec", label: "SEC" },
-  { key: "big-ten", label: "Big Ten" },
-  { key: "acc", label: "ACC" },
-  { key: "big-12", label: "Big 12" },
+  ...Object.entries(CONFERENCES).map(([key, conference]) => ({ key: key as ConferenceFilter, label: conference })),
 ];
+
+function isConference(filter: Filter): filter is ConferenceFilter {
+  return filter in CONFERENCES;
+}
 
 /** The `?filter=` a commissioner asked for, or "all" when it is missing or nonsense. */
 export function filterParam(param: string | undefined): Filter {
@@ -41,15 +45,16 @@ export function fbsOnlyParam(param: string | undefined): boolean {
 /**
  * Whether a feed candidate survives the pills, the FBS-only toggle, and the
  * search box. Ranked means either side is ranked and a conference pill means
- * either side is in that conference — a rule about the matchup rather than about one team, which is the
- * part that reads wrong when it sits inline in the page. FBS-only is the
+ * either side is in that conference — a rule about the matchup rather than
+ * about one team, which is the part that reads wrong when it sits inline in
+ * the page. FBS-only is the
  * opposite shape: it hides a game unless *both* sides are classified `fbs`,
  * since a game with one FCS side is still a cupcake.
  */
 export function matches(candidate: CandidateGame, filter: Filter, fbsOnly: boolean, query: string): boolean {
   if (fbsOnly && (candidate.homeClassification !== "fbs" || candidate.awayClassification !== "fbs")) return false;
   if (filter === "ranked" && candidate.homeRank === null && candidate.awayRank === null) return false;
-  if (filter !== "all" && filter !== "ranked") {
+  if (isConference(filter)) {
     const conference = CONFERENCES[filter];
     if (candidate.homeConference !== conference && candidate.awayConference !== conference) return false;
   }
