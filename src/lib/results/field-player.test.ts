@@ -232,6 +232,79 @@ describe("readout", () => {
     const game = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
     expect(readout(game, id("755"), TEAMS, LABELS)).toMatchObject({ down: "1st & Goal", spot: "CCU 8", gain: 100 });
   });
+
+  describe("a marker logged after a score keeps the score's drive (#391)", () => {
+    /**
+     * The recording with a marker logged after the play ending in `after`: in
+     * the same drive, or at the head of the next one. The marker comes from
+     * the defence, as a timeout before the kickoff usually does.
+     */
+    function withMarker(after: string, marker: { suffix: string; playType: string; playText: string; nextDrive?: boolean }) {
+      const drives = DRIVES.map((drive) => {
+        const at = drive.plays.findIndex((play) => play.id === id(after));
+        if (at === -1) return drive;
+        const scored = drive.plays[at];
+        const added = {
+          ...scored,
+          id: id(marker.suffix),
+          teamId: scored.teamId === TEAMS.homeTeamId ? TEAMS.awayTeamId : TEAMS.homeTeamId,
+          playType: marker.playType,
+          playTypeId: 21,
+          yardsGained: 0,
+          playText: marker.playText,
+        };
+        return { ...drive, plays: [...drive.plays.slice(0, at + 1), added, ...drive.plays.slice(at + 1)] };
+      });
+      if (!marker.nextDrive) return drives;
+      // Move it to the head of the drive after the score's.
+      const from = drives.findIndex((drive) => drive.plays.some((play) => play.id === id(marker.suffix)));
+      const added = drives[from].plays.find((play) => play.id === id(marker.suffix))!;
+      return drives.map((drive, i) =>
+        i === from
+          ? { ...drive, plays: drive.plays.filter((play) => play !== added) }
+          : i === from + 1
+            ? { ...drive, plays: [added, ...drive.plays] }
+            : drive,
+      );
+    }
+
+    test("a field goal then a timeout", () => {
+      const scored = readout(WHOLE, id("122"), TEAMS, LABELS);
+      const game = feedThrough("1221", withMarker("122", { suffix: "1221", playType: "Timeout", playText: "Timeout Liberty, clock 05:19" }));
+      expect(readout(game, id("1221"), TEAMS, LABELS)).toMatchObject({
+        drive: scored.drive,
+        down: "Kickoff",
+        flash: { label: "Field goal", yard: -10 },
+        text: "Timeout Liberty, clock 05:19",
+        clock: "Q1 · 5:19",
+      });
+      expect(scored.drive).toMatch(/^\d+ plays, \d+ yds$/);
+    });
+
+    test("a touchdown then a timeout filed under the next drive", () => {
+      const game = feedThrough(
+        "1531",
+        withMarker("153", { suffix: "1531", playType: "Timeout", playText: "Timeout Coastal Carolina, clock 03:13", nextDrive: true }),
+      );
+      expect(readout(game, id("1531"), TEAMS, LABELS)).toMatchObject({
+        drive: "7 plays, 75 yds",
+        down: "Kickoff",
+        flash: { label: "Touchdown", yard: 100 },
+        text: "Timeout Coastal Carolina, clock 03:13",
+      });
+    });
+
+    test("a field goal then the end of the quarter", () => {
+      const scored = readout(WHOLE, id("122"), TEAMS, LABELS);
+      const game = feedThrough("1221", withMarker("122", { suffix: "1221", playType: "End Period", playText: "End of 1st Quarter" }));
+      expect(readout(game, id("1221"), TEAMS, LABELS)).toMatchObject({ drive: scored.drive, text: "End of 1st Quarter" });
+    });
+
+    test("a timeout mid-drive still reads the drive so far", () => {
+      // Liberty's timeout after the incompletion on 2nd & 6 at the CCU8.
+      expect(readout(WHOLE, id("56"), TEAMS, LABELS).drive).toBe(readout(WHOLE, id("51"), TEAMS, LABELS).drive);
+    });
+  });
 });
 
 describe("downLabel", () => {
