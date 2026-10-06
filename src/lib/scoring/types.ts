@@ -1,6 +1,6 @@
 /**
  * Scoring engine types. Plain data in, plain data out. Vocabulary follows
- * CONTEXT.md: Member, Rules, Week, Game, Pick, Lock of the Week,
+ * GLOSSARY.md: Member, Rules, Week, Game, Pick, Lock of the Week,
  * Tiebreaker Guess, Void, Weekly Score, Weekly Win, Leaderboard.
  *
  * Timestamps are ISO 8601 strings in UTC. The engine never reads a clock;

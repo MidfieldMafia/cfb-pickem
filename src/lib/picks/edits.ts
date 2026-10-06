@@ -11,7 +11,7 @@
  * under it — runs the same either way, which is the point.
  *
  * The Slate comes from the caller, already loaded. Vocabulary follows
- * CONTEXT.md; `now` is the server clock, injected so tests can sit on either
+ * GLOSSARY.md; `now` is the server clock, injected so tests can sit on either
  * side of the Deadline.
  */
 import "server-only";

@@ -1,6 +1,6 @@
 /**
  * Starting a new Season (#251). Only one Season is active at a time
- * (CONTEXT.md); starting the next makes it the one, carrying the last one's
+ * (GLOSSARY.md); starting the next makes it the one, carrying the last one's
  * Rules over, and clears everything that lasts only a Season. So far that is
  * Chat.
  *

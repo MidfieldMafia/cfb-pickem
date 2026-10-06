@@ -57,7 +57,7 @@ right and there is no entry to write.
 
 ## 3. Write them in the app's language
 
-Use `CONTEXT.md` terms exactly — Slate, Deadline, Group, Join Link, Pennant,
+Use `GLOSSARY.md` terms exactly — Slate, Deadline, Group, Join Link, Pennant,
 Lock of the Week, Played Week. They are what the screens say, so they are what
 the reader already knows.
 

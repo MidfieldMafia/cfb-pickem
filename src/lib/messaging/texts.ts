@@ -8,7 +8,7 @@
  * promises and what the button does cannot drift apart. Delivery then walks the
  * plan and writes one `text_messages` row per try.
  *
- * Vocabulary follows CONTEXT.md. Every writer takes the database first and the
+ * Vocabulary follows GLOSSARY.md. Every writer takes the database first and the
  * `SmsSender` second; `now` is the server clock, injected so tests can sit on
  * either side of the Deadline and either side of a month's end.
  */

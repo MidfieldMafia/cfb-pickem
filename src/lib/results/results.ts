@@ -2,7 +2,7 @@
  * Results, read back: the Reveal that grades everyone's picks once the
  * Deadline has passed, the Weekly Scores and the Leaderboard built from it,
  * and what the results console shows. Writing a result — the feed, a Result
- * Override, a Void — is `./writes`. Vocabulary follows CONTEXT.md. Every
+ * Override, a Void — is `./writes`. Vocabulary follows GLOSSARY.md. Every
  * function takes the database first; `now` is the server clock, injected so
  * tests can sit anywhere in the week.
  */
@@ -225,7 +225,7 @@ export interface Reveal {
 
 /*
  * From here down the module says the same words as `@/lib/scoring/types` —
- * Weekly Score, Weekly Win, Leaderboard, from CONTEXT.md — in database ids
+ * Weekly Score, Weekly Win, Leaderboard, from GLOSSARY.md — in database ids
  * rather than the engine's strings. Two spellings of one vocabulary is the
  * point of an adapter; screens import these, and only this module and
  * `engine.ts` ever see the engine's.

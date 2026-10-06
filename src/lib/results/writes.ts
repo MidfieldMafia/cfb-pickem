@@ -4,7 +4,7 @@
  * now"; and the commissioner's four changes on top of it — Result Override,
  * clearing it, Void, and Restore — each checked against the state the Game is
  * in and logged in `result_audits` on the way through. Vocabulary follows
- * CONTEXT.md; every function takes the database first, and `now` is the
+ * GLOSSARY.md; every function takes the database first, and `now` is the
  * server clock, injected so tests can sit anywhere in the week.
  *
  * Reading a result back is not here. `effectiveResult` in `./result` decides

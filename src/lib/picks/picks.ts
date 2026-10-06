@@ -9,7 +9,7 @@
  * and whether it could be read yet. `weekEntries` is now the only one, and
  * `seasonEntries` is the same fold over several Weeks at once.
  *
- * Vocabulary follows CONTEXT.md. Every function takes the database first and
+ * Vocabulary follows GLOSSARY.md. Every function takes the database first and
  * the Slate the caller already loaded; `now` is the server clock, injected so
  * tests can sit on either side of the Deadline.
  */
