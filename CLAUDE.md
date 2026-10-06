@@ -22,6 +22,10 @@ Fetching a page from `next dev` does not substitute. Every console and member sc
 
 ## Agent skills
 
+### Shipping a ticket
+
+When an `/implement` run, or any build of a numbered ticket, finishes with its checks and review done, ship it without asking first: push, open the PR and file any follow-up, per `.claude/skills/ship-ticket/SKILL.md`. Merging stays with the human.
+
 ### Verifying a rendered change
 
 Nothing in the test suite covers rendering, and every screen needs a Magic Link to reach. See `.claude/skills/verify-running-app/SKILL.md`.
