@@ -1,5 +1,5 @@
 /**
- * Saturday Slate database schema. Vocabulary follows CONTEXT.md: Season,
+ * Saturday Slate database schema. Vocabulary follows GLOSSARY.md: Season,
  * Week, Game, Member, Group, Pick, Lock of the Week, Tiebreaker Guess, Void,
  * Result Override. All timestamps are UTC. No point totals are stored;
  * scoring recomputes from picks and results on every read.

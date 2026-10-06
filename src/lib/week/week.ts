@@ -1,7 +1,7 @@
 /**
  * The Week a member is standing in: the published Slate, their own pick
  * sheet, and — once the Deadline has passed — the Reveal. Vocabulary follows
- * CONTEXT.md.
+ * GLOSSARY.md.
  *
  * Every screen used to compose this by hand: `publishedSlate`, then
  * `pickSheet`, then the score refresh, then the grading, each re-deriving the

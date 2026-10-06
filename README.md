@@ -4,7 +4,7 @@ A private college football pick'em for friends and family. Each week the commiss
 publishes a slate of games, members pick winners one game at a time, picks lock at the
 first kickoff, and the app grades them against real scores and keeps the season leaderboard.
 
-- Domain terms: [`CONTEXT.md`](CONTEXT.md)
+- Domain terms: [`GLOSSARY.md`](GLOSSARY.md)
 - Roadmap and tickets: [issue #1](https://github.com/MidfieldMafia/cfb-pickem/issues/1)
 - Research and decisions: [`docs/research/`](docs/research/), [`docs/adr/`](docs/adr/)
 

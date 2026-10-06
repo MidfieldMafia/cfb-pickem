@@ -1,6 +1,6 @@
 /**
  * The Slate: the games a commissioner chooses for a Week, published as a
- * whole. Vocabulary follows CONTEXT.md: Week, Slate, Game, Tiebreaker Game,
+ * whole. Vocabulary follows GLOSSARY.md: Week, Slate, Game, Tiebreaker Game,
  * Deadline, Void. Every function takes the database first and checks the
  * acting member; the production caller passes Neon, tests pass PGlite.
  */

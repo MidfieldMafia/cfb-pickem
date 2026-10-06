@@ -7,7 +7,7 @@
  * exist once and the audit row is a property of the Authority rather than of
  * three functions that live here.
  *
- * Vocabulary follows CONTEXT.md. Every function takes the database first and
+ * Vocabulary follows GLOSSARY.md. Every function takes the database first and
  * the acting commissioner second; `now` is the server clock, injected so
  * tests can sit on either side of the Deadline.
  */

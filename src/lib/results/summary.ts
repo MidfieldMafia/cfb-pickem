@@ -1,7 +1,7 @@
 /**
  * What the season screens say about a graded Week: a member's record, where
  * they finished, how the Weekly Win was decided, what the Tiebreaker Game did,
- * and one member's own week game by game. Vocabulary follows CONTEXT.md.
+ * and one member's own week game by game. Vocabulary follows GLOSSARY.md.
  *
  * Kept free of database imports, like `picks/progress.ts` and
  * `results/result.ts`. Everything here works on the wire shapes a screen is
