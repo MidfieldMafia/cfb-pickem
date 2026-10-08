@@ -2,13 +2,12 @@ import { describe, expect, test } from "vitest";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
 import {
+  ALL_FINAL,
   FAMU_AT_MIAMI,
   familyGroup,
   feedWith,
-  type Finals,
   guessAs,
   lockAs,
-  OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   pickAs,
   publishWeek2,
@@ -39,24 +38,14 @@ async function familyWeek(db: Db, actor: Member, now?: Date, options: WeekOption
   return scoredWeek(db, actor, await familyOf(db), now, options);
 }
 
-async function familyReview(
-  db: Db,
-  weekNumber: number | undefined,
-  now?: Date,
-  options: WeekOptions = {},
-) {
-  return weekInReview(
-    db,
-    weekNumber,
-    now,
-    { ...options, group: await familyOf(db) },
-  );
+async function familyReview(db: Db, weekNumber: number | undefined, now?: Date, options: WeekOptions = {}) {
+  return weekInReview(db, await familyOf(db), weekNumber, now, options);
 }
 
 /** A Week past its Deadline, graded on the family's board; anything else here is a test that asked for the wrong thing. */
 function gradedOf(week: ScoredWeek | null): ScoredWeek & { result: GradedWeekResult } {
   if (!week?.result) throw new Error(`expected a graded Week, got ${week?.state ?? "none"}`);
-  return { ...week, result: week.result };
+  return week as ScoredWeek & { result: GradedWeekResult };
 }
 
 /** Michigan reported final. `calls` counts feed reads, so a test can prove the gate held. */
@@ -284,13 +273,6 @@ describe("the week in review", () => {
     expect(feed.calls).toBe(1);
   });
 });
-
-/** Every game on Week 2's slate final: Miami and Michigan win at home, Ohio State at Texas. */
-const ALL_FINAL: Finals = {
-  [FAMU_AT_MIAMI]: [7, 45],
-  [OKLAHOMA_AT_MICHIGAN]: [24, 27],
-  [OHIO_STATE_AT_TEXAS]: [31, 28],
-};
 
 describe("the landing route (#91's states)", () => {
   test("goes to the Leaderboard when no week is published", async () => {

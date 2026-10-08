@@ -32,7 +32,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
   const choice = await currentGroupChoice();
   if (choice === null) return <NoGroup member={member} />;
   const params = await searchParams;
-  const review = await weekInReview(db(), weekParam(params.week), new Date(), { cfbd, group: choice.current.id });
+  const review = await weekInReview(db(), choice.current.id, weekParam(params.week), new Date(), { cfbd });
   const menu = <MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />;
 
   if (!review) {

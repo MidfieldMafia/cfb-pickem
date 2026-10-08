@@ -201,6 +201,13 @@ export function guessAs(db: Db, member: Member, slate: Slate, guess: number | nu
 /** Scores by recorded game id: `[away, home]`. */
 export type Finals = Record<number, [away: number, home: number]>;
 
+/** Every game on Week 2's slate final: Miami and Michigan win at home, Ohio State at Texas. */
+export const ALL_FINAL: Finals = {
+  [FAMU_AT_MIAMI]: [7, 45],
+  [OKLAHOMA_AT_MICHIGAN]: [24, 27],
+  [OHIO_STATE_AT_TEXAS]: [31, 28],
+};
+
 /**
  * A running score by recorded game id, with the live detail the board would
  * show for it. `possession` is the feed's **raw** string, not a resolved side,

@@ -1,16 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { ingestResults } from "@/lib/results/writes";
 import { slateFor } from "@/lib/slate/slate";
-import {
-  FAMU_AT_MIAMI,
-  familyGroup,
-  feedWith,
-  type Finals,
-  OHIO_STATE_AT_TEXAS,
-  OKLAHOMA_AT_MICHIGAN,
-  publishWeek2,
-  SUNDAY,
-} from "@/test/week-2";
+import { ALL_FINAL, familyGroup, feedWith, publishWeek2, SUNDAY } from "@/test/week-2";
 import { currentWeek, scoredWeek } from "./week";
 
 /**
@@ -66,8 +57,7 @@ describe("the current week's state", () => {
   // score: telling live from settled must not cost a group's board.
   test("comes from the Slate's Games, with no grading at all", async () => {
     const { db, week, grandma } = await publishWeek2();
-    const finals: Finals = { [FAMU_AT_MIAMI]: [7, 45], [OKLAHOMA_AT_MICHIGAN]: [24, 27], [OHIO_STATE_AT_TEXAS]: [31, 28] };
-    await ingestResults(db, feedWith(finals), await slateFor(db, week.id), SUNDAY);
+    await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
 
     passes.boards = passes.weeks = passes.seasons = 0;
     expect((await currentWeek(db, grandma, SUNDAY))?.state).toBe("settled");

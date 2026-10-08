@@ -17,7 +17,7 @@ import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
-import { effectiveResult, settled } from "@/lib/results/result";
+import { weekSettled } from "@/lib/results/engine";
 import { groupPlayedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
 import { refreshStatsIfStale } from "@/lib/results/box-scores";
 import { refreshResultsIfStale } from "@/lib/results/writes";
@@ -95,14 +95,9 @@ export async function freshSlate(db: Db, cfbd: () => CfbdClient, now: Date = new
   return deadlinePassed(published.week, now) ? refreshQuietly(db, cfbd, published, now) : published;
 }
 
-/** The published Slate, through the feed first when the caller drives it. Null when no Week is published. */
-function loadSlate(db: Db, now: Date, options: WeekOptions): Promise<Slate | null> {
-  return options.cfbd ? freshSlate(db, options.cfbd, now) : publishedSlate(db);
-}
-
 function stateOf(slate: Slate, now: Date): WeekState {
   if (!deadlinePassed(slate.week, now)) return "open";
-  return slate.games.every((game) => settled(effectiveResult(game, now))) ? "settled" : "live";
+  return weekSettled(slate.games, now) ? "settled" : "live";
 }
 
 /**
@@ -111,17 +106,13 @@ function stateOf(slate: Slate, now: Date): WeekState {
  * the "not published" throw inside `weekEntries` is unreachable from here: null
  * is the only way "there is no Week" comes back.
  *
- * Nothing here grades. Whether the Week is live or settled comes from its
- * Games, so a redirect or a pick page pays for one member's sheet, not a whole
- * group's board; `scoredWeek` is for the screens that show the scores.
+ * Nothing here grades, and nothing pulls the feed. Whether the Week is live
+ * or settled comes from its stored Games, so a redirect or a pick page pays
+ * for one member's sheet, not a whole group's board; `scoredWeek` is for the
+ * screens that show the scores.
  */
-export async function currentWeek(
-  db: Db,
-  actor: Member,
-  now: Date = new Date(),
-  options: WeekOptions = {},
-): Promise<WeekContext | null> {
-  const slate = await loadSlate(db, now, options);
+export async function currentWeek(db: Db, actor: Member, now: Date = new Date()): Promise<WeekContext | null> {
+  const slate = await publishedSlate(db);
   if (!slate) return null;
   return { state: stateOf(slate, now), slate, sheet: await pickSheet(db, actor, slate, now) };
 }
@@ -142,7 +133,7 @@ export async function scoredWeek(
   now: Date = new Date(),
   options: WeekOptions = {},
 ): Promise<ScoredWeek | null> {
-  const slate = await loadSlate(db, now, options);
+  const slate = options.cfbd ? await freshSlate(db, options.cfbd, now) : await publishedSlate(db);
   if (!slate) return null;
   const state = stateOf(slate, now);
   const [sheet, result] = await Promise.all([
@@ -209,14 +200,11 @@ export interface WeekReview {
  */
 export async function weekInReview(
   db: Db,
+  group: number,
   weekNumber: number | undefined,
   now: Date = new Date(),
-  options: WeekOptions & { group?: number | null } = {},
+  options: WeekOptions = {},
 ): Promise<WeekReview | null> {
-  // A member in no group has no week to look back at, which is the same "there
-  // is nothing here yet" this screen already had a shape for.
-  const group = options.group ?? null;
-  if (group === null) return null;
   const season = await activeSeason(db);
   // The group's played Weeks, not the Season's: a Week nobody here picked has
   // nothing to reveal, so it is not offered and `?week=` for it lands on the latest (#332).

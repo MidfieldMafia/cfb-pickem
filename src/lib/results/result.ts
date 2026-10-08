@@ -142,7 +142,7 @@ export function underway(result: Pick<GameResult, "phase">): boolean {
   return result.phase === "due" || result.phase === "in_progress";
 }
 
-/** Final or Void: nothing the feed says can change what counts. A Week whose every Game is settled is complete. */
+/** Final or Void: nothing the feed says can change what counts. */
 export function settled(result: Pick<GameResult, "phase">): boolean {
   return result.phase === "final" || result.phase === "void";
 }
