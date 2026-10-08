@@ -118,13 +118,14 @@ export function Review({ initial }: { initial: SheetJson }) {
 
   const pickFor = (gameId: number) => sheet.picks.find((p) => p.gameId === gameId);
   const picked = (gameId: number) => pickFor(gameId) !== undefined;
-  const open = progress.liveGames - progress.picksMade;
+  const open = progress.countingGames - progress.picksMade;
   const lockGameId = lockGameOf(sheet.lock);
   const lockDropped = sheet.lock.state === "dropped";
   const lockGame = sheet.games.find((g) => g.game.id === lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
   const tiebreakerGame = tiebreakerView(sheet)?.game;
-  const steps = progress.liveGames + 2;
+  // A Lock needs a counting game to sit on, so a wholly Void slate has no Lock step to finish.
+  const steps = progress.countingGames + (progress.countingGames > 0 ? 1 : 0) + 1;
   const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
   const groups = groupByKickoff(sheet.games);
@@ -214,7 +215,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       </header>
 
       <Progress
-        value={progress.liveGames ? (progress.picksMade / progress.liveGames) * 100 : 0}
+        value={progress.countingGames ? (progress.picksMade / progress.countingGames) * 100 : 0}
         aria-label="Picks made"
       />
 
@@ -239,7 +240,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         <StepRow
           done={open === 0}
           label="Make every pick"
-          detail={open ? `${plural(open, "game")} still open` : `All ${progress.liveGames} picked`}
+          detail={open ? `${plural(open, "game")} still open` : `All ${progress.countingGames} picked`}
           action={open ? "Set" : "Change"}
           disabled={locked}
           onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.game.id}` : "/picks")}

@@ -134,7 +134,7 @@ describe("pick entry routes", () => {
     );
 
     expect(sheet.games.map((g) => g.game.id)).toEqual([miami.id, michigan.id, texas.id]);
-    expect(sheet.progress).toMatchObject({ liveGames: 3, picksMade: 1 });
+    expect(sheet.progress).toMatchObject({ countingGames: 3, picksMade: 1 });
     expect(sheet.locked).toBe(false);
   });
 });

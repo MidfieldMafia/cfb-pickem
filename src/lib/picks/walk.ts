@@ -20,7 +20,7 @@ export type WalkPage = "lock" | "guess";
  * last one open.
  */
 export function walkAfterSave(before: SheetProgress, savedGameWasOpen: boolean): WalkPage[] {
-  if (!savedGameWasOpen || before.liveGames - before.picksMade !== 1) return [];
+  if (!savedGameWasOpen || before.countingGames - before.picksMade !== 1) return [];
   const pages: WalkPage[] = [];
   if (before.lockOpen) pages.push("lock");
   if (!before.guessSet) pages.push("guess");

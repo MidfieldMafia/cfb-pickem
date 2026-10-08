@@ -14,8 +14,8 @@ import { isVoid, type GameView } from "@/lib/slate/json";
 /** What is left before the Deadline. */
 export interface SheetProgress {
   /** Games that still count: the slate minus its Void games. */
-  liveGames: number;
-  /** Live games the member has a Pick in. */
+  countingGames: number;
+  /** Counting games the member has a Pick in. */
   picksMade: number;
   /** True when a Lock of the Week counts this week. A Dropped Lock does not. */
   lockSet: boolean;
@@ -23,8 +23,8 @@ export interface SheetProgress {
   guessSet: boolean;
   /**
    * True when a Lock of the Week is still to set: none counts yet and the
-   * slate has a live game to put one on. Returned rather than left to the
-   * screens, which otherwise re-derive it from `lockSet` and `liveGames`.
+   * slate has a counting game to put one on. Returned rather than left to the
+   * screens, which otherwise re-derive it from `lockSet` and `countingGames`.
    */
   lockOpen: boolean;
   /**
@@ -73,26 +73,26 @@ export function lockGameOf(lock: LockState): number | null {
 }
 
 /** The games that still count. The Void rule is applied here, not on the screens. */
-export function liveGames<G extends GameView>(games: readonly G[]): G[] {
+export function countingGames<G extends GameView>(games: readonly G[]): G[] {
   return games.filter((g) => !isVoid(g));
 }
 
-/** The first live Game with no Pick: where "keep picking" sends the member. */
+/** The first counting Game with no Pick: where "keep picking" sends the member. */
 export function firstOpenGame<G extends GameView>(
   games: readonly G[],
   picked: (gameId: number) => boolean,
 ): G | undefined {
-  return liveGames(games).find((g) => !picked(g.game.id));
+  return countingGames(games).find((g) => !picked(g.game.id));
 }
 
 /**
- * True once every live Game has a Pick: the Week's entry half is done, and what
+ * True once every counting Game has a Pick: the Week's entry half is done, and what
  * is left — the Lock of the Week, the Tiebreaker Guess — is review's business.
  *
  * A wholly Void slate has nothing to pick and counts as complete.
  */
 export function picksComplete(progress: SheetProgress): boolean {
-  return progress.picksMade === progress.liveGames;
+  return progress.picksMade === progress.countingGames;
 }
 
 /**
@@ -114,19 +114,19 @@ export function sheetProgress({
   lock: LockState;
   tiebreakerGuess: number | null;
 }): SheetProgress {
-  const live = liveGames(games);
-  const picksMade = live.filter((g) => picked(g.game.id)).length;
+  const counting = countingGames(games);
+  const picksMade = counting.filter((g) => picked(g.game.id)).length;
   const lockSet = lock.state === "counts";
   const guessSet = tiebreakerGuess !== null;
-  // A Lock needs a live game to sit on, so a wholly voided slate leaves none to set.
-  const lockOpen = live.length > 0 && !lockSet;
+  // A Lock needs a counting game to sit on, so a wholly voided slate leaves none to set.
+  const lockOpen = counting.length > 0 && !lockSet;
   return {
-    liveGames: live.length,
+    countingGames: counting.length,
     picksMade,
     lockSet,
     guessSet,
     lockOpen,
-    remaining: (picksMade < live.length ? 1 : 0) + (lockOpen ? 1 : 0) + (guessSet ? 0 : 1),
+    remaining: (picksMade < counting.length ? 1 : 0) + (lockOpen ? 1 : 0) + (guessSet ? 0 : 1),
   };
 }
 
