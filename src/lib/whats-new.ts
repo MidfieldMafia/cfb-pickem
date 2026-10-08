@@ -1,7 +1,7 @@
 /**
  * Whether this browser has seen a What's new entry. It lives in
  * `localStorage`, not on the member, so a new device shows the entry once
- * more: the modal is a stopgap until the tutorial, and not worth a column.
+ * more: seeing a week's news twice costs a tap, and is not worth a column.
  *
  * Storage can be missing or throw (a private window, blocked site data), and
  * then the entry counts as seen: a modal that reappears on every visit is
