@@ -199,7 +199,7 @@ describe("failure isolation", () => {
 
     const slate = await freshSlate(db, () => failing.feed, SATURDAY_EVENING);
 
-    expect(effectiveResult(slate!.games.find((g) => g.id === michigan.id)!)).toMatchObject({ status: "final" });
+    expect(effectiveResult(slate!.games.find((g) => g.id === michigan.id)!, SATURDAY_EVENING)).toMatchObject({ phase: "final" });
     expect(failing.reads.teams).toBe(1);
     expect(await finalStats(db, await reload(michigan.id))).toBeNull();
 

@@ -11,9 +11,15 @@
 import type { Game, PossessionSide } from "@/db/schema";
 import { newerScore, type LiveFeed } from "./live-feed";
 
-export type ResultStatus = "pending" | "final" | "void";
+/**
+ * Where a Game stands, worked out once so no caller rebuilds it from the score
+ * and the clock. `due` is past kickoff with no word from the feed yet — feed
+ * lag, a weather hold, or a postponement nobody has voided — and a screen
+ * shows it as it shows `scheduled`, by its kickoff time.
+ */
+export type GamePhase = "scheduled" | "due" | "in_progress" | "final" | "void";
 
-/** Where a final score came from. Null while pending or void. */
+/** Where a final score came from. Null until final, and for a Void. */
 export type ResultSource = "feed" | "override";
 
 /** A home and away score pair. */
@@ -84,19 +90,19 @@ export type ResultLabel = "Scheduled" | "In progress" | "Final" | "Final · over
 
 /**
  * A Game's result as scoring and screens see it. The whole answer, so no
- * screen re-derives part of it — `status`, `homeScore` and `awayScore` are
+ * screen re-derives part of it — `phase`, `homeScore` and `awayScore` are
  * what counts, `live` is the running score that does not, `shown` is the pair
  * to put on screen whichever of those it came from, and `label` is what to
  * call it.
  */
 export interface GameResult {
-  status: ResultStatus;
+  phase: GamePhase;
   homeScore: number | null;
   awayScore: number | null;
   source: ResultSource | null;
   /**
-   * The feed's running score and clock. Set only while pending and under way;
-   * null once final, void, or before kickoff.
+   * The feed's running score and clock. Set only while `in_progress`, and
+   * null in every other phase.
    */
   live: LiveScore | null;
   /**
@@ -124,10 +130,20 @@ function feedFinalOf(game: Game): Score | null {
     : null;
 }
 
-export function effectiveResult(game: Game): GameResult {
+/** True while a Game is past kickoff and not yet final: `due` or `in_progress`. */
+export function underway(result: Pick<GameResult, "phase">): boolean {
+  return result.phase === "due" || result.phase === "in_progress";
+}
+
+/**
+ * The result, decided in this order: the Void, then the Result Override, then
+ * the feed's final, then the feed's running score, then the clock. `now` is
+ * the server's: it decides `due`, and nothing else here reads it.
+ */
+export function effectiveResult(game: Game, now: Date): GameResult {
   if (game.void) {
     return {
-      status: "void",
+      phase: "void",
       homeScore: null,
       awayScore: null,
       source: null,
@@ -142,7 +158,7 @@ export function effectiveResult(game: Game): GameResult {
     const override = { homeScore: game.overrideHomeScore, awayScore: game.overrideAwayScore };
     return {
       ...override,
-      status: "final",
+      phase: "final",
       source: "override",
       live: null,
       shown: override,
@@ -155,7 +171,7 @@ export function effectiveResult(game: Game): GameResult {
   if (final) {
     return {
       ...final,
-      status: "final",
+      phase: "final",
       source: "feed",
       live: null,
       shown: final,
@@ -182,7 +198,7 @@ export function effectiveResult(game: Game): GameResult {
         }
       : null;
   return {
-    status: "pending",
+    phase: live ? "in_progress" : game.kickoff <= now ? "due" : "scheduled",
     homeScore: null,
     awayScore: null,
     source: null,
@@ -195,9 +211,15 @@ export function effectiveResult(game: Game): GameResult {
   };
 }
 
-/** "Oklahoma 24, Michigan 27", or "pending" / "void": the audit log reads without joins. */
+/**
+ * "Oklahoma 24, Michigan 27", or "pending" / "void": the audit log reads
+ * without joins. Every phase short of final is "pending", as it always was,
+ * so old and new audit rows read alike — and the clock never decides a row.
+ */
 export function describeResult(game: Game): string {
-  const result = effectiveResult(game);
-  if (result.status !== "final") return result.status;
+  // Any instant will do: the clock only tells `due` from `scheduled`, and both are "pending" here.
+  const result = effectiveResult(game, game.kickoff);
+  if (result.phase === "void") return "void";
+  if (result.phase !== "final") return "pending";
   return `${game.awayTeam} ${result.awayScore}, ${game.homeTeam} ${result.homeScore}`;
 }

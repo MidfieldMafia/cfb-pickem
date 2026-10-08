@@ -136,7 +136,7 @@ describe("the current week", () => {
     expect(feed.calls).toBe(1);
     const michiganRow = graded.result.reveal.games.find((g) => g.game.id === michigan.id)!;
     expect(michiganRow.result).toEqual({
-      status: "final",
+      phase: "final",
       awayScore: 24,
       homeScore: 27,
       source: "feed",
@@ -166,7 +166,7 @@ describe("the current week", () => {
 
     const current = gradedOf(await familyWeek(db,grandma, SUNDAY, { graded: true, cfbd: angryFeed }));
     expect(current.sheet.locked).toBe(true);
-    expect(current.result.reveal.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("pending");
+    expect(current.result.reveal.games.find((g) => g.game.id === michigan.id)!.result.phase).toBe("due");
   });
 });
 
@@ -288,7 +288,7 @@ describe("the week in review", () => {
 
     expect(feed.calls).toBe(1);
     // Graded off the rows the pull left behind, not the ones the read started from.
-    expect(review.result.reveal.games.find((g) => g.game.id === michigan.id)!.result.status).toBe("final");
+    expect(review.result.reveal.games.find((g) => g.game.id === michigan.id)!.result.phase).toBe("final");
     expect(review.result.scores.find((s) => s.member.id === grandma.id)!.points).toBe(10);
 
     await familyReview(db,2, SUNDAY, { cfbd: () => feed });

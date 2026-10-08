@@ -50,7 +50,7 @@ export default async function SlateBuilder({
   );
   const candidates = feed.games;
   const feedError = feed.error;
-  const slateGames = slate.games.map(toGameView);
+  const slateGames = slate.games.map((game) => toGameView(game, new Date()));
   const shown = toSlateCandidates(
     sortCandidates(
       candidates.filter((c) => matches(c, filter, fbsOnly, q)),

@@ -203,8 +203,9 @@ interface Landed {
 function SheetHeader({ game, serverNow, landed }: { game: LiveGameJson; serverNow: string; landed: Landed | null }) {
   const { result, detail } = game;
   const g = game.game;
-  const final = result.status === "final" && result.shown !== null;
-  const beforeKickoff = result.status === "pending" && result.live === null;
+  const final = result.phase === "final" && result.shown !== null;
+  // A Due game is past its kickoff with no word from the feed: it keeps the kickoff layout until a score arrives.
+  const preGame = result.phase === "scheduled" || result.phase === "due";
   const ball = landed ? landed.ball : result.live ? sideWithBall(result.live) : null;
   const awayScore = landed?.score.away ?? result.shown?.awayScore ?? 0;
   const homeScore = landed?.score.home ?? result.shown?.homeScore ?? 0;
@@ -216,8 +217,8 @@ function SheetHeader({ game, serverNow, landed }: { game: LiveGameJson; serverNo
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 px-4 pt-2 pb-3">
-      <TeamColumn team={g.awayTeam} rank={g.awayRank} record={beforeKickoff ? (detail?.away.record ?? null) : null} lost={awayLost} />
-      {beforeKickoff ? (
+      <TeamColumn team={g.awayTeam} rank={g.awayRank} record={preGame ? (detail?.away.record ?? null) : null} lost={awayLost} />
+      {preGame ? (
         <div className="flex flex-col items-center gap-0.5">
           <p className="font-display text-2xl leading-10 font-black whitespace-nowrap">{day}</p>
           <span className="text-sm font-semibold whitespace-nowrap tabular-nums text-muted-foreground">{time}</span>
@@ -255,7 +256,7 @@ function SheetHeader({ game, serverNow, landed }: { game: LiveGameJson; serverNo
           </span>
         </div>
       )}
-      <TeamColumn team={g.homeTeam} rank={g.homeRank} record={beforeKickoff ? (detail?.home.record ?? null) : null} lost={homeLost} />
+      <TeamColumn team={g.homeTeam} rank={g.homeRank} record={preGame ? (detail?.home.record ?? null) : null} lost={homeLost} />
     </div>
   );
 }
@@ -595,7 +596,7 @@ function GameInformation({ game }: { game: LiveGameJson }) {
 
 /** Everyone's Tiebreaker Guess, closest first once the game is final. */
 function TiebreakerSection({ game, scores, viewerId }: { game: LiveGameJson; scores: WeeklyScore[]; viewerId: number }) {
-  const final = game.result.status === "final";
+  const final = game.result.phase === "final";
   const combined = final && game.result.shown ? game.result.shown.homeScore + game.result.shown.awayScore : null;
   const guessed = scores.filter((s) => s.tiebreakerGuess !== null);
   const sorted = [...guessed].sort((a, b) =>
@@ -654,9 +655,9 @@ function SheetBody({
 }: SheetProps & { game: LiveGameJson }) {
   const { result } = game;
   const g = game.game;
-  const live = result.status === "pending" && result.live !== null;
-  const beforeKickoff = result.status === "pending" && result.live === null;
-  const final = result.status === "final";
+  const live = result.phase === "in_progress";
+  const preGame = result.phase === "scheduled" || result.phase === "due";
+  const final = result.phase === "final";
   const feed = useGamePlays(g.id, live, final);
   const teams = useMemo(
     () => ({ homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId, homeTeam: g.homeTeam, awayTeam: g.awayTeam }),
@@ -716,7 +717,7 @@ function SheetBody({
             <p className="text-sm text-muted-foreground">Stats arrive shortly after the final.</p>
           )
         ) : null}
-        {beforeKickoff ? <GameInformation game={game} /> : null}
+        {preGame ? <GameInformation game={game} /> : null}
       </div>
     </>
   );

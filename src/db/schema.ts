@@ -80,7 +80,7 @@ export const weeks = pgTable(
  * words in its own `GameStatus`, and the two are deliberately not tied
  * together: nothing carries this column's value into that union. What reads it
  * is `results/result.ts`, comparing against this enum to fold the Void and the
- * Result Override into a `ResultStatus`, and `results/engine.ts` builds the
+ * Result Override into a `GamePhase`, and `results/engine.ts` builds the
  * engine's status from *that* — so the engine's union sits three hops away
  * across two translations. The `satisfies readonly GameStatus[]` that used to
  * stand here read as a drift guard but bound two types with no data path

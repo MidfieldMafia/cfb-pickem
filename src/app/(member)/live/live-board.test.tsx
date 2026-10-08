@@ -24,6 +24,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { FinalStats } from "@/lib/results/box-score";
 import type { LiveFeed } from "@/lib/results/live-feed";
 import type { GameResult } from "@/lib/results/result";
+import { DUE, finalResult, liveResult, SCHEDULED, voidResult } from "@/test/game";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import type { MemberJson } from "@/lib/slate/json";
 import type { LiveGameJson, WeekStateJson } from "@/lib/week/json";
@@ -43,38 +44,10 @@ function member(id: number): ScoredMember {
 const FAMILY: ScoredMember[] = Array.from({ length: 12 }, (_, i) => member(i + 1));
 const VIEWER: MemberJson = FAMILY[0];
 
-const FINAL: GameResult = {
-  status: "final",
-  awayScore: 21,
-  homeScore: 34,
-  source: "feed",
-  live: null,
-  shown: { awayScore: 21, homeScore: 34 },
-  label: "Final",
-  note: null,
-  feedFinal: null,
-};
-
-const PENDING: GameResult = {
-  status: "pending",
-  homeScore: null,
-  awayScore: null,
-  source: null,
-  live: null,
-  shown: null,
-  label: "Scheduled",
-  note: null,
-  feedFinal: null,
-};
-
-const LIVE: GameResult = {
-  ...PENDING,
-  live: { awayScore: 10, homeScore: 28, period: 3, clock: "08:12", possession: null, lastPlay: null, situation: null, feed: null },
-  shown: { awayScore: 10, homeScore: 28 },
-  label: "In progress",
-};
-
-const VOIDED: GameResult = { ...PENDING, status: "void", label: "Void", note: "Postponed to December" };
+const FINAL = finalResult(21, 34);
+const PENDING = SCHEDULED;
+const LIVE = liveResult(10, 28, { period: 3, clock: "08:12" });
+const VOIDED = voidResult("Postponed to December");
 
 function game(result: GameResult, picks: RevealPick[] = []): LiveGameJson {
   return {
@@ -166,6 +139,17 @@ describe("the states a Saturday passes through", () => {
     expect(screen.getByText(/8:12/)).not.toBeNull();
   });
 
+  test("a Due game, past kickoff with no word from the feed, shows exactly what a scheduled one does", () => {
+    const board = (result: GameResult) => {
+      render(<LiveBoard initial={state({ complete: false, games: [game(result)] })} viewer={VIEWER} />);
+      const text = screen.getByRole("button", { name: /details/ }).textContent;
+      cleanup();
+      return text;
+    };
+
+    expect(board(DUE)).toBe(board(PENDING));
+  });
+
   test("a final game shows its word, and a Void shows why", () => {
     render(<LiveBoard initial={state()} viewer={VIEWER} />);
     expect(screen.getByText("Final")).not.toBeNull();
@@ -186,17 +170,21 @@ describe("the states a Saturday passes through", () => {
     expect(screen.getByText("+6.5")).not.toBeNull();
   });
 
-  test("orders live games first, then what hasn't kicked off, then finals and voids", () => {
+  test("orders live games first, then what has no score yet, then finals and voids", () => {
     const live = { ...game(LIVE), game: { ...game(LIVE).game, id: 1, awayTeam: "Live Away", homeTeam: "Live Home" } };
     const scheduled = { ...game(PENDING), game: { ...game(PENDING).game, id: 2, awayTeam: "Sched Away", homeTeam: "Sched Home" } };
     const final = { ...game(FINAL), game: { ...game(FINAL).game, id: 3, awayTeam: "Final Away", homeTeam: "Final Home" } };
     const voided = { ...game(VOIDED), game: { ...game(VOIDED).game, id: 4, awayTeam: "Void Away", homeTeam: "Void Home" } };
 
-    render(<LiveBoard initial={state({ games: [voided, final, scheduled, live], complete: false })} viewer={VIEWER} />);
+    // Due waits with the scheduled games, in the order it was handed.
+    const due = { ...game(DUE), game: { ...game(DUE).game, id: 5, awayTeam: "Due Away", homeTeam: "Due Home" } };
+
+    render(<LiveBoard initial={state({ games: [voided, final, due, scheduled, live], complete: false })} viewer={VIEWER} />);
 
     const order = screen.getAllByRole("button", { name: /details/ }).map((el) => el.getAttribute("aria-label"));
     expect(order).toEqual([
       "Live Away at Live Home, details",
+      "Due Away at Due Home, details",
       "Sched Away at Sched Home, details",
       "Final Away at Final Home, details",
       "Void Away at Void Home, details",

@@ -10,9 +10,10 @@
  *
  * Client-safe, like `picks/progress.ts`: no database imports.
  */
+import { underway } from "@/lib/results/result";
 import type { WeekStateJson } from "./json";
 
-/** While any slate game is under way: a score thirty seconds old is a live one. */
+/** While any slate game is under way, from kickoff on: a score thirty seconds old is a live one. */
 export const LIVE_POLL_MS = 30_000;
 /** Between games, and before the first kickoff: the next thing to learn is a kickoff, and five minutes is soon enough. */
 export const IDLE_POLL_MS = 5 * 60_000;
@@ -23,5 +24,5 @@ export const IDLE_POLL_MS = 5 * 60_000;
  */
 export function nextPollMs(state: Pick<WeekStateJson, "complete" | "games">): number | null {
   if (state.complete) return null;
-  return state.games.some((row) => row.result.live !== null) ? LIVE_POLL_MS : IDLE_POLL_MS;
+  return state.games.some((row) => underway(row.result)) ? LIVE_POLL_MS : IDLE_POLL_MS;
 }

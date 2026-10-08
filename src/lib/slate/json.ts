@@ -57,8 +57,9 @@ export function toGameJson(game: Game): GameJson {
   };
 }
 
-export function toGameView(game: Game): GameView {
-  return { game: toGameJson(game), result: effectiveResult(game) };
+/** `now` is the server's clock at serve time: the phone renders the phase it is handed and never works one out. */
+export function toGameView(game: Game, now: Date): GameView {
+  return { game: toGameJson(game), result: effectiveResult(game, now) };
 }
 
 /**
@@ -67,7 +68,7 @@ export function toGameView(game: Game): GameView {
  * that used to decide it read one answer.
  */
 export function isVoid(view: GameView): boolean {
-  return view.result.status === "void";
+  return view.result.phase === "void";
 }
 
 /** Why a Game is Void, or null when it is not. The Void's note, never the Override's. */
@@ -105,11 +106,11 @@ export interface SlateJson {
   deadline: string | null;
 }
 
-export function toSlateJson(slate: Slate): SlateJson {
+export function toSlateJson(slate: Slate, now: Date): SlateJson {
   return {
     week: toWeekJson(slate.week),
     year: slate.season.year,
-    games: slate.games.map(toGameView),
+    games: slate.games.map((game) => toGameView(game, now)),
     deadline: slate.deadline?.toISOString() ?? null,
   };
 }

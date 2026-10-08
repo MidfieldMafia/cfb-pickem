@@ -14,7 +14,7 @@ import { GameSheet } from "./game-sheet";
 import { useDeadlineClock } from "@/lib/picks/clock";
 import { teamBarColors } from "@/lib/results/bar-colors";
 import { downAndDistance, lastPlayLine } from "@/lib/results/live-row";
-import { clockLabel, sideWithBall, type GameResult, type LiveScore } from "@/lib/results/result";
+import { clockLabel, sideWithBall, type GamePhase, type GameResult, type LiveScore } from "@/lib/results/result";
 import type { RevealGame, RevealPick } from "@/lib/results/results";
 import { sideStanding } from "@/lib/results/side";
 import { record, standing } from "@/lib/results/summary";
@@ -172,11 +172,15 @@ function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson 
   );
 }
 
-/** Live first, then what hasn't kicked off, then finals and voids — the board should lead with the action. */
+/**
+ * Live first, then what hasn't kicked off, then finals and voids — the board
+ * should lead with the action. A Due game waits with the scheduled ones: it
+ * shows its kickoff time as they do, until the feed has a score for it.
+ */
+const ORDER: Record<GamePhase, number> = { in_progress: 0, due: 1, scheduled: 1, final: 2, void: 3 };
+
 function orderKey(result: GameResult): number {
-  if (result.status === "void") return 3;
-  if (result.status === "final") return 2;
-  return result.live ? 0 : 1;
+  return ORDER[result.phase];
 }
 
 /**
@@ -369,7 +373,7 @@ function LastPlay({ live, serverNow }: { live: LiveScore; serverNow: string }) {
  * split bar — so it reads as done at a glance without a shape change that
  * would reflow the list under a mid-scroll reader (#93). Void keeps its own,
  * stronger recede (the whole card at reduced opacity); the two never overlap
- * since a Void game's `result.status` is `"void"`, not `"final"`.
+ * since a Void game's `result.phase` is `"void"`, not `"final"`.
  */
 function GameRow({
   row,
@@ -392,7 +396,7 @@ function GameRow({
   const awaySide = sideStanding(result, "away");
   const homeSide = sideStanding(result, "home");
   const earned = mine?.outcome === "correct" ? mine.points : null;
-  const final = result.status === "final";
+  const final = result.phase === "final";
   const ball = result.live ? sideWithBall(result.live) : null;
   const situation = result.live ? downAndDistance(result.live, game) : null;
 
@@ -414,9 +418,9 @@ function GameRow({
             }`}
           >
             {situation ??
-              (result.status === "pending" && !result.live ? (
+              (result.phase === "scheduled" || result.phase === "due" ? (
                 <LocalTime at={game.kickoff} style="slot" />
-              ) : result.status === "final" ? (
+              ) : final ? (
                 result.label
               ) : null)}
           </span>

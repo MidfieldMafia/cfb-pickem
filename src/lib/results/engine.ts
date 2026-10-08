@@ -12,16 +12,20 @@ import { lockGameOf } from "@/lib/picks/progress";
 import type * as engine from "@/lib/scoring/types";
 import { effectiveResult } from "./result";
 
-export function toEngineGame(game: Game): engine.Game {
-  const result = effectiveResult(game);
+/**
+ * One Game for the engine. The engine has no `due`: a Game past kickoff with
+ * nothing from the feed scores exactly as a scheduled one does.
+ */
+export function toEngineGame(game: Game, now: Date): engine.Game {
+  const result = effectiveResult(game, now);
   return {
     id: String(game.id),
     homeTeam: String(game.homeTeamId),
     awayTeam: String(game.awayTeamId),
     homeScore: result.homeScore,
     awayScore: result.awayScore,
-    status: result.status === "final" ? "final" : result.live ? "in_progress" : "scheduled",
-    void: result.status === "void",
+    status: result.phase === "final" || result.phase === "in_progress" ? result.phase : "scheduled",
+    void: result.phase === "void",
   };
 }
 
@@ -33,14 +37,14 @@ export type EngineEntry = Pick<Entry<{ id: number }>, "member" | "picks" | "lock
  * must be frozen (published). A Dropped Lock goes in on its game like any
  * other: the engine drops it itself, from the Void it is handed.
  */
-export function toEngineWeek(week: Week, games: Game[], entries: readonly EngineEntry[]): engine.Week {
+export function toEngineWeek(week: Week, games: Game[], entries: readonly EngineEntry[], now: Date): engine.Week {
   if (!week.deadline) throw new Error("A week without a deadline cannot be scored.");
   return {
     weekNumber: week.weekNumber,
     deadline: week.deadline.toISOString(),
     published: week.published,
     tiebreakerGameId: week.tiebreakerGameId === null ? null : String(week.tiebreakerGameId),
-    games: games.map(toEngineGame),
+    games: games.map((game) => toEngineGame(game, now)),
     picks: entries.flatMap((m) =>
       m.picks.map((p) => ({ memberId: String(m.member.id), gameId: String(p.gameId), team: String(p.teamId) })),
     ),

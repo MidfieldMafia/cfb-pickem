@@ -37,7 +37,7 @@ import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
 import { applyGamePatches, gameWithWeek, slateFor, type Slate } from "@/lib/slate/slate";
 import { toLiveFeed, type LiveFeed } from "./live-feed";
-import { describeResult, effectiveResult } from "./result";
+import { describeResult, effectiveResult, underway, type GameResult } from "./result";
 
 /** Every refusal a result write makes, whichever of the four changes or the form in front of it. */
 export class InvalidResult extends Refusal {}
@@ -282,7 +282,7 @@ export async function ingestResults(
   const board = new Map((await cfbd.scoreboard()).map((g) => [g.id, g]));
   const unlisted = new Set(
     slate.games
-      .filter((g) => !board.has(g.cfbdGameId) && effectiveResult(g).status === "pending" && g.kickoff <= now)
+      .filter((g) => !board.has(g.cfbdGameId) && underway(effectiveResult(g, now)))
       .map((g) => g.cfbdGameId),
   );
   const feed = new Map(
@@ -298,7 +298,7 @@ export async function ingestResults(
   // Live is what this pass leaves under way, not what the rows walked in
   // with: a game kicking off now is fetched now, and one going final is not.
   const live = slate.games.filter(
-    (game) => nextOf.get(game.id)?.status === "in_progress" && effectiveResult(game).status === "pending",
+    (game) => nextOf.get(game.id)?.status === "in_progress" && !settled(effectiveResult(game, now)),
   );
   const plays = await ingestPlays(db, cfbd, live, now);
   return {
@@ -317,14 +317,19 @@ export async function ingestResults(
   };
 }
 
+/** Final or Void: nothing the feed says can change what counts. */
+function settled(result: GameResult): boolean {
+  return result.phase === "final" || result.phase === "void";
+}
+
 /**
  * How long the current claim holds: the live interval while any slate game
- * is under way, the idle one otherwise. Read off the rows in hand, so the
- * decision costs nothing and a test can put a game in progress and watch the
- * gate tighten.
+ * is under way — from its kickoff, before the feed has a score for it — and
+ * the idle one otherwise. Read off the rows in hand, so the decision costs
+ * nothing and a test can put a game in progress and watch the gate tighten.
  */
-export function refreshInterval(slateGames: Game[]): number {
-  return slateGames.some((g) => effectiveResult(g).live !== null) ? LIVE_REFRESH_INTERVAL_MS : REFRESH_INTERVAL_MS;
+export function refreshInterval(slateGames: Game[], now: Date): number {
+  return slateGames.some((g) => underway(effectiveResult(g, now))) ? LIVE_REFRESH_INTERVAL_MS : REFRESH_INTERVAL_MS;
 }
 
 export type RefreshOutcome =
@@ -365,9 +370,9 @@ export async function refreshResultsIfStale(
 ): Promise<RefreshedSlate> {
   const weekId = slate.week.id;
   if (!slate.week.published) return { outcome: "idle", slate };
-  const waiting = slate.games.some((g) => effectiveResult(g).status === "pending" && g.kickoff <= now);
+  const waiting = slate.games.some((g) => underway(effectiveResult(g, now)));
   if (!waiting) return { outcome: "idle", slate };
-  const cutoff = new Date(now.getTime() - refreshInterval(slate.games));
+  const cutoff = new Date(now.getTime() - refreshInterval(slate.games, now));
   const claimed = await db
     .update(weeks)
     .set({ scoreboardFetchedAt: now })

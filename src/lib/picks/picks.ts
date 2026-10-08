@@ -117,7 +117,7 @@ export async function weekEntries<M extends { id: number }>(
   const locked = deadlinePassed(slate.week, now);
   if ("board" in whose && !locked) throw new PicksHidden();
   const rows = await readRows(db, [slate.week.id], slate.games, "own" in whose ? whose.own.id : undefined);
-  return { deadline, locked, entries: foldWeek(slate.week, slate.games, whose, rows) };
+  return { deadline, locked, entries: foldWeek(slate.week, slate.games, whose, rows, now) };
 }
 
 /** A Week with its Games in slate order: what `seasonEntries` needs to fold one Week's rows. */
@@ -159,7 +159,7 @@ export async function seasonEntries<M extends { id: number }>(
       // The board is decided a Week at a time: joining the *group* in Week 4
       // keeps a member off Weeks 1 to 3 of it, and a week that ran while they
       // were removed is theirs on neither — exactly as `score-week.ts` has it.
-      return [week.id, foldWeek(week, games, { board }, own)];
+      return [week.id, foldWeek(week, games, { board }, own, now)];
     }),
   );
 }
@@ -268,14 +268,20 @@ async function readRows(db: Db, weekIds: number[], games: Game[], memberId?: num
  * side effect of a failed map lookup rather than as anyone's decision — and
  * what keeps one person's single set of Picks off a board they do not play on.
  */
-function foldWeek<M extends { id: number }>(week: Week, games: Game[], whose: Whose<M>, rows: Rows): Entry<M>[] {
+function foldWeek<M extends { id: number }>(
+  week: Week,
+  games: Game[],
+  whose: Whose<M>,
+  rows: Rows,
+  now: Date,
+): Entry<M>[] {
   const people: readonly M[] =
     "own" in whose
       ? [whose.own]
       : "chasing" in whose
         ? roster(whose.chasing, week)
         : roster(whose.board, week, pickers(rows));
-  const views = games.map(toGameView);
+  const views = games.map((game) => toGameView(game, now));
   const order = new Map(games.map((g, i) => [g.id, i]));
   const picksOf = new Map<number, PickRow[]>();
   for (const r of rows.picks) {

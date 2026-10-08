@@ -4,7 +4,7 @@
  * games-left line on the card back to the Live Board.
  */
 import { describe, expect, test } from "vitest";
-import type { GameResult } from "@/lib/results/result";
+import { DUE, finalResult, liveResult, SCHEDULED, voidResult } from "@/test/game";
 import type { GradedWeek, LeaderboardRow, WeeklyScore } from "@/lib/results/results";
 import { gamesLeftLabel, revealHref, SEASON_PARAM, selectedWeek, stripTiles, weekInProgress } from "./week-view";
 
@@ -138,13 +138,17 @@ describe("the tiles", () => {
 });
 
 describe("the games left in a Week in progress", () => {
-  const live = { status: "pending", live: { homeScore: 7, awayScore: 3 } } as unknown as GameResult;
-  const toCome = { status: "pending", live: null } as unknown as GameResult;
-  const final = { status: "final", live: null } as unknown as GameResult;
-  const voided = { status: "void", live: null } as unknown as GameResult;
+  const live = liveResult(3, 7);
+  const toCome = SCHEDULED;
+  const final = finalResult(3, 7);
+  const voided = voidResult();
 
   test("counts live games and games to kick off, and nothing that is over", () => {
     expect(gamesLeftLabel([live, live, toCome, final, voided])).toBe("2 games live · 1 to kick off");
+  });
+
+  test("counts a Due game, past kickoff with no score yet, as live rather than to kick off", () => {
+    expect(gamesLeftLabel([DUE, toCome])).toBe("1 game live · 1 to kick off");
   });
 
   test("says 'game' once, on whichever half comes first", () => {

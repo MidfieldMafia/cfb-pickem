@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { GameResult } from "./result";
+import { finalResult, SCHEDULED, voidResult } from "@/test/game";
 import type {
   LeaderboardRow,
   Reveal,
@@ -31,43 +31,9 @@ import {
  * holds, built by hand. Two teams per game, ids that read as themselves.
  */
 
-const PENDING: GameResult = {
-  status: "pending",
-  homeScore: null,
-  awayScore: null,
-  source: null,
-  live: null,
-  shown: null,
-  label: "Scheduled",
-  note: null,
-  feedFinal: null,
-};
-
-function final(away: number, home: number): GameResult {
-  return {
-    status: "final",
-    awayScore: away,
-    homeScore: home,
-    source: "feed",
-    live: null,
-    shown: { awayScore: away, homeScore: home },
-    label: "Final",
-    note: null,
-    feedFinal: null,
-  };
-}
-
-const VOID: GameResult = {
-  status: "void",
-  homeScore: null,
-  awayScore: null,
-  source: null,
-  live: null,
-  shown: null,
-  label: "Void",
-  note: "Postponed to December",
-  feedFinal: null,
-};
+const PENDING = SCHEDULED;
+const final = finalResult;
+const VOID = voidResult("Postponed to December");
 
 function gameJson(id: number, away: string, home: string): GameJson {
   return {
@@ -83,7 +49,7 @@ function gameJson(id: number, away: string, home: string): GameJson {
   };
 }
 
-function view(id: number, away: string, home: string, result: GameResult = PENDING): GameView {
+function view(id: number, away: string, home: string, result: GameView["result"] = PENDING): GameView {
   return { game: gameJson(id, away, home), result };
 }
 

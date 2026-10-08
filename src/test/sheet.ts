@@ -9,6 +9,7 @@
  * everywhere else in the suite.
  */
 import type { GameResult } from "@/lib/results/result";
+import { SCHEDULED, voidResult } from "@/test/game";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { NO_LOCK, sheetProgress } from "@/lib/picks/progress";
 
@@ -17,25 +18,7 @@ export const DEADLINE = "2026-09-11T00:00:00.000Z";
 /** Two hours before it, on the server's clock. */
 export const SERVER_NOW = "2026-09-10T22:00:00.000Z";
 
-/** A game with no result yet, which is every game while picks are open. */
-const SCHEDULED: GameResult = {
-  status: "pending",
-  homeScore: null,
-  awayScore: null,
-  source: null,
-  live: null,
-  shown: null,
-  label: "Scheduled",
-  note: null,
-  feedFinal: null,
-};
-
-export const VOIDED: GameResult = {
-  ...SCHEDULED,
-  status: "void",
-  label: "Void",
-  note: "Cancelled for weather.",
-};
+export const VOIDED = voidResult("Cancelled for weather.");
 
 interface GameSpec {
   id: number;

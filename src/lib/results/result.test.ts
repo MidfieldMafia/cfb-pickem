@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { LiveFeed } from "./live-feed";
-import { clockLabel, sideWithBall, type LiveScore } from "./result";
+import { AFTER_KICKOFF, BEFORE_KICKOFF, gameRow, KICKOFF, resultOf } from "@/test/game";
+import { clockLabel, describeResult, sideWithBall, underway, type LiveScore } from "./result";
 
 /**
  * The one spelling of where a game in progress stands. Three screens put it
@@ -73,5 +74,60 @@ describe("the team with the ball", () => {
   test("falls back to the scoreboard only when the feed carries no play", () => {
     expect(sideWithBall(live)).toBe("home");
     expect(sideWithBall({ ...live, possession: null })).toBeNull();
+  });
+});
+
+/**
+ * Where a Game stands: one phase, decided in one order — the Void, the Result
+ * Override, the feed's final, the feed's running score, then the clock.
+ */
+describe("a Game's phase", () => {
+  const inProgress = { status: "in_progress" as const, awayScore: 7, homeScore: 3, period: 2, clock: "04:10" };
+
+  test("is scheduled before kickoff and due after it, until the feed says anything", () => {
+    expect(resultOf({}, BEFORE_KICKOFF)).toMatchObject({ phase: "scheduled", live: null, shown: null, label: "Scheduled" });
+    // Due shows as scheduled does: the same label, nothing to score, no live score.
+    expect(resultOf({}, AFTER_KICKOFF)).toMatchObject({ phase: "due", live: null, shown: null, label: "Scheduled" });
+    // Kickoff itself is past it.
+    expect(resultOf({}, KICKOFF).phase).toBe("due");
+  });
+
+  test("is in progress once the feed has a running score, whatever the clock says", () => {
+    // An early start: the feed's word beats the kickoff time.
+    expect(resultOf(inProgress, BEFORE_KICKOFF)).toMatchObject({ phase: "in_progress", label: "In progress" });
+    expect(resultOf(inProgress, AFTER_KICKOFF).live).toMatchObject({ awayScore: 7, homeScore: 3, period: 2 });
+  });
+
+  test("is final from the feed's final", () => {
+    expect(resultOf({ status: "final", awayScore: 24, homeScore: 27 }, AFTER_KICKOFF)).toMatchObject({
+      phase: "final",
+      source: "feed",
+      live: null,
+    });
+  });
+
+  test("is final from a Result Override standing over a feed that is still in progress", () => {
+    const result = resultOf({ ...inProgress, overrideAwayScore: 24, overrideHomeScore: 27 }, AFTER_KICKOFF);
+    expect(result).toMatchObject({ phase: "final", source: "override", awayScore: 24, homeScore: 27, live: null });
+  });
+
+  test("is void over everything, an override included", () => {
+    const result = resultOf({ ...inProgress, void: true, voidNote: "Lightning", overrideAwayScore: 24, overrideHomeScore: 27 });
+    expect(result).toMatchObject({ phase: "void", live: null, shown: null, note: "Lightning" });
+  });
+
+  test("is under way while due or in progress, and at no other phase", () => {
+    expect(underway(resultOf({}, AFTER_KICKOFF))).toBe(true);
+    expect(underway(resultOf(inProgress, AFTER_KICKOFF))).toBe(true);
+    expect(underway(resultOf({}, BEFORE_KICKOFF))).toBe(false);
+    expect(underway(resultOf({ status: "final", awayScore: 24, homeScore: 27 }, AFTER_KICKOFF))).toBe(false);
+    expect(underway(resultOf({ void: true }, AFTER_KICKOFF))).toBe(false);
+  });
+
+  test("never reaches the audit log: every phase short of final is written as pending", () => {
+    expect(describeResult(gameRow())).toBe("pending");
+    expect(describeResult(gameRow(inProgress))).toBe("pending");
+    expect(describeResult(gameRow({ void: true }))).toBe("void");
+    expect(describeResult(gameRow({ status: "final", awayScore: 24, homeScore: 27 }))).toBe("Oklahoma 24, Michigan 27");
   });
 });

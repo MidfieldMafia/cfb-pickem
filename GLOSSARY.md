@@ -56,7 +56,7 @@ The set of about ten games the commissioners choose for a week, played by every 
 _Avoid_: Schedule, card, board
 
 **Game**:
-One matchup on a slate, backed by a CollegeFootballData game and its live score.
+One matchup on a slate, backed by a CollegeFootballData game and its live score. A Game is Scheduled, Due (past kickoff with no word from the data feed), In progress, Final or Void.
 _Avoid_: Match, matchup, fixture
 
 **Tiebreaker Game**:
