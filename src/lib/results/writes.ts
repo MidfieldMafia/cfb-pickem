@@ -37,7 +37,7 @@ import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
 import { applyGamePatches, gameWithWeek, slateFor, type Slate } from "@/lib/slate/slate";
 import { toLiveFeed, type LiveFeed } from "./live-feed";
-import { describeResult, effectiveResult, REVIEW_AFTER_MS, underway, type GameResult } from "./result";
+import { describeResult, effectiveResult, REVIEW_AFTER_MS, settled, underway } from "./result";
 
 /** Every refusal a result write makes, whichever of the four changes or the form in front of it. */
 export class InvalidResult extends Refusal {}
@@ -315,11 +315,6 @@ export async function ingestResults(
       now,
     ),
   };
-}
-
-/** Final or Void: nothing the feed says can change what counts. */
-function settled(result: GameResult): boolean {
-  return result.phase === "final" || result.phase === "void";
 }
 
 /**
