@@ -21,13 +21,17 @@ ls "/c/Program Files/Google/Chrome/Application/chrome.exe"          # Windows
 Edge is Chromium too and drives the same if Chrome is absent; find its path the
 same way.
 
+Write Windows paths with forward slashes, as below. Windows accepts them, and
+no quoting layer can eat them: a Bash heredoc drops a level of doubled
+backslashes, and #336 launched a Chrome path that no longer existed.
+
 ```js
 const puppeteer = require("puppeteer-core");
 
 const CHROME =
   process.platform === "darwin"
     ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    : "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,

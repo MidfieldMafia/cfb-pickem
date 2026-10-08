@@ -31,7 +31,7 @@ const puppeteer = createRequire(path.join(arg("puppeteer"), "package.json"))("pu
 const CHROME =
   process.platform === "darwin"
     ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    : "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
 const pick = (rel, preferStaged) => {
   const s = path.join(staged, rel);
