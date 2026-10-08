@@ -6,7 +6,7 @@ import { TeamLogo } from "@/components/team-logo";
 
 import { shortSchool } from "@/lib/logos";
 import type { SheetJson } from "@/lib/picks/json";
-import { liveGames, lockGameOf } from "@/lib/picks/progress";
+import { countingGames, lockGameOf } from "@/lib/picks/progress";
 import type { ShownPick } from "@/lib/picks/use-pick-sheet";
 import { teamName } from "@/lib/slate/json";
 
@@ -14,7 +14,7 @@ import { teamName } from "@/lib/slate/json";
 export const SKIP = "min-h-tap px-3 text-sm font-semibold underline underline-offset-4";
 
 /**
- * "Pick your Lock": a 2-column grid of the member's picks, one tile per live
+ * "Pick your Lock": a 2-column grid of the member's picks, one tile per counting
  * game. Tapping a tile saves the Lock and the flow moves on; "Skip for now"
  * moves on without saving anything. There is no "No Lock this week": a Lock
  * only adds points, so once set it is moved, never taken off.
@@ -59,7 +59,7 @@ export function LockStep({
       </div>
 
       <ul className="grid min-h-0 flex-1 auto-rows-[minmax(var(--spacing-tap),1fr)] grid-cols-2 gap-1.5 overflow-y-auto">
-        {liveGames(sheet.games).map(({ game }) => {
+        {countingGames(sheet.games).map(({ game }) => {
           const matchup = `${shortSchool(game.awayTeam)} at ${shortSchool(game.homeTeam)}`;
           const shown = pick(game.id);
           if (shown?.state !== "saved") {

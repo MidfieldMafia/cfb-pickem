@@ -92,10 +92,11 @@ describe("toSheetJson", () => {
     const { db, slate, grandma, miami, michigan, texas, read } = await sheetAt();
 
     expect((await read(THURSDAY)).progress).toEqual({
-      liveGames: 3,
+      countingGames: 3,
       picksMade: 0,
       lockSet: false,
       guessSet: false,
+      lockApplies: true,
       lockOpen: true,
       remaining: 3,
     });
@@ -107,10 +108,11 @@ describe("toSheetJson", () => {
     await guessAs(db, grandma, slate, 55, THURSDAY);
 
     expect((await read(THURSDAY)).progress).toEqual({
-      liveGames: 3,
+      countingGames: 3,
       picksMade: 3,
       lockSet: true,
       guessSet: true,
+      lockApplies: true,
       lockOpen: false,
       remaining: 0,
     });

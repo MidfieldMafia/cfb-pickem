@@ -3,7 +3,7 @@ import type { GameView } from "@/lib/slate/json";
 import { SCHEDULED, voidResult } from "@/test/game";
 import {
   firstOpenGame,
-  liveGames,
+  countingGames,
   lockOn,
   NO_LOCK,
   picksComplete,
@@ -38,9 +38,9 @@ function countFor(pickedIds: number[], over: Over = {}): SheetProgress {
 
 describe("what is left before the deadline", () => {
   test("a Void game is off the count, and a pick on one does not fill it", () => {
-    expect(countFor([])).toEqual({ liveGames: 2, picksMade: 0, lockSet: false, guessSet: false, lockOpen: true, remaining: 3 });
+    expect(countFor([])).toEqual({ countingGames: 2, picksMade: 0, lockSet: false, guessSet: false, lockApplies: true, lockOpen: true, remaining: 3 });
     // A pick left over from before the Void still exists; it just stops counting.
-    expect(countFor([2])).toMatchObject({ liveGames: 2, picksMade: 0, remaining: 3 });
+    expect(countFor([2])).toMatchObject({ countingGames: 2, picksMade: 0, remaining: 3 });
     expect(countFor([1, 3])).toMatchObject({ picksMade: 2, remaining: 2 });
   });
 
@@ -52,7 +52,7 @@ describe("what is left before the deadline", () => {
 
   test("every pick but no Lock has one thing left", () => {
     const progress = countFor([1, 3], { tiebreakerGuess: 52 });
-    expect(progress).toEqual({ liveGames: 2, picksMade: 2, lockSet: false, guessSet: true, lockOpen: true, remaining: 1 });
+    expect(progress).toEqual({ countingGames: 2, picksMade: 2, lockSet: false, guessSet: true, lockApplies: true, lockOpen: true, remaining: 1 });
     expect(remainingLabel(progress, 2, false)).toBe("1 thing left before the deadline");
   });
 
@@ -74,7 +74,7 @@ describe("what is left before the deadline", () => {
       lock: NO_LOCK,
       tiebreakerGuess: 52,
     });
-    expect(progress).toEqual({ liveGames: 0, picksMade: 0, lockSet: false, guessSet: true, lockOpen: false, remaining: 0 });
+    expect(progress).toEqual({ countingGames: 0, picksMade: 0, lockSet: false, guessSet: true, lockApplies: false, lockOpen: false, remaining: 0 });
   });
 
   test("the label reads the same wherever it is shown", () => {
@@ -119,8 +119,8 @@ describe("the state of a Lock", () => {
 });
 
 describe("finding the games behind the counts", () => {
-  test("the live games are the slate minus its Void games", () => {
-    expect(liveGames(SLATE).map((g) => g.game.id)).toEqual([1, 3]);
+  test("the counting games are the slate minus its Void games", () => {
+    expect(countingGames(SLATE).map((g) => g.game.id)).toEqual([1, 3]);
   });
 
   test("the first open game skips Void games and games already picked", () => {

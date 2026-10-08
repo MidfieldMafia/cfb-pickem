@@ -94,7 +94,7 @@ describe("the reminder view", () => {
 
     expect(row(view, grandma).reminder).toEqual({
       picksMade: 2,
-      liveGames: 3,
+      countingGames: 3,
       lockSet: true,
       guessSet: true,
       status: "Missing 1 pick",

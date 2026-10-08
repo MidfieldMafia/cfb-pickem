@@ -12,7 +12,7 @@ import { TeamLogo } from "@/components/team-logo";
 
 import { formatCountdown } from "@/lib/picks/clock";
 import { tiebreakerView, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
-import { firstOpenGame, lockGameOf, remainingLabel } from "@/lib/picks/progress";
+import { firstOpenGame, lockGameOf, picksComplete, remainingLabel } from "@/lib/picks/progress";
 import { usePickSheet } from "@/lib/picks/use-pick-sheet";
 import { plural } from "@/lib/plural";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
@@ -118,13 +118,15 @@ export function Review({ initial }: { initial: SheetJson }) {
 
   const pickFor = (gameId: number) => sheet.picks.find((p) => p.gameId === gameId);
   const picked = (gameId: number) => pickFor(gameId) !== undefined;
-  const open = progress.liveGames - progress.picksMade;
+  const open = progress.countingGames - progress.picksMade;
   const lockGameId = lockGameOf(sheet.lock);
   const lockDropped = sheet.lock.state === "dropped";
   const lockGame = sheet.games.find((g) => g.game.id === lockGameId)?.game;
   const lockPick = lockGame ? pickFor(lockGame.id) : undefined;
   const tiebreakerGame = tiebreakerView(sheet)?.game;
-  const steps = progress.liveGames + 2;
+  // A wholly Void slate has nothing to pick and nowhere to put a Lock, so neither is a step.
+  const nothingToPick = progress.countingGames === 0;
+  const steps = progress.countingGames + (progress.lockApplies ? 1 : 0) + 1;
   const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
   const groups = groupByKickoff(sheet.games);
@@ -214,7 +216,7 @@ export function Review({ initial }: { initial: SheetJson }) {
       </header>
 
       <Progress
-        value={progress.liveGames ? (progress.picksMade / progress.liveGames) * 100 : 0}
+        value={nothingToPick ? 100 : (progress.picksMade / progress.countingGames) * 100}
         aria-label="Picks made"
       />
 
@@ -237,27 +239,35 @@ export function Review({ initial }: { initial: SheetJson }) {
           {!progress.remaining && !locked ? <Check size={16} strokeWidth={3} className="text-win-foreground" /> : null}
         </div>
         <StepRow
-          done={open === 0}
+          done={picksComplete(progress)}
           label="Make every pick"
-          detail={open ? `${plural(open, "game")} still open` : `All ${progress.liveGames} picked`}
+          detail={
+            nothingToPick
+              ? "Every game is void"
+              : open
+                ? `${plural(open, "game")} still open`
+                : `All ${progress.countingGames} picked`
+          }
           action={open ? "Set" : "Change"}
-          disabled={locked}
+          disabled={locked || nothingToPick}
           onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.game.id}` : "/picks")}
         />
-        <StepRow
-          done={progress.lockSet}
-          label="Lock of the Week"
-          detail={
-            lockGame && lockPick
-              ? lockDropped
-                ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
-                : `${teamName(lockGame, lockPick.teamId)} counts ${sheet.lockMultiplier}×`
-              : `One pick counts ${sheet.lockMultiplier}×`
-          }
-          action={progress.lockSet ? "Change" : "Set"}
-          disabled={locked}
-          onClick={() => router.push(LOCK_PAGE)}
-        />
+        {progress.lockApplies ? (
+          <StepRow
+            done={progress.lockSet}
+            label="Lock of the Week"
+            detail={
+              lockGame && lockPick
+                ? lockDropped
+                  ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
+                  : `${teamName(lockGame, lockPick.teamId)} counts ${sheet.lockMultiplier}×`
+                : `One pick counts ${sheet.lockMultiplier}×`
+            }
+            action={progress.lockSet ? "Change" : "Set"}
+            disabled={locked}
+            onClick={() => router.push(LOCK_PAGE)}
+          />
+        ) : null}
         <StepRow
           done={progress.guessSet}
           label="Tiebreaker Guess"
@@ -282,30 +292,32 @@ export function Review({ initial }: { initial: SheetJson }) {
         </section>
       ))}
 
-      <section>
-        <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
-        <SummaryCard
-          set={!!(lockGame && lockPick)}
-          locked={locked}
-          icon={<Lock size={18} />}
-          title={lockGame && lockPick ? teamName(lockGame, lockPick.teamId) : locked ? "No Lock this week" : "Choose your Lock"}
-          detail={
-            lockGame && lockPick
-              ? `${
-                  lockDropped
-                    ? locked
-                      ? "That game is void, so no Lock counts this week"
-                      : "That game is void and scores zero; choose another Lock"
-                    : `${sheet.lockMultiplier}× points if they win`
-                } · ${lockGame.awayTeam} at ${lockGame.homeTeam}`
-              : `One pick counts ${sheet.lockMultiplier}× this week.`
-          }
-          onClick={() => router.push(LOCK_PAGE)}
-        />
-        <Link href="/rules" className={LINK}>
-          See how to play
-        </Link>
-      </section>
+      {progress.lockApplies ? (
+        <section>
+          <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
+          <SummaryCard
+            set={!!(lockGame && lockPick)}
+            locked={locked}
+            icon={<Lock size={18} />}
+            title={lockGame && lockPick ? teamName(lockGame, lockPick.teamId) : locked ? "No Lock this week" : "Choose your Lock"}
+            detail={
+              lockGame && lockPick
+                ? `${
+                    lockDropped
+                      ? locked
+                        ? "That game is void, so no Lock counts this week"
+                        : "That game is void and scores zero; choose another Lock"
+                      : `${sheet.lockMultiplier}× points if they win`
+                  } · ${lockGame.awayTeam} at ${lockGame.homeTeam}`
+                : `One pick counts ${sheet.lockMultiplier}× this week.`
+            }
+            onClick={() => router.push(LOCK_PAGE)}
+          />
+          <Link href="/rules" className={LINK}>
+            See how to play
+          </Link>
+        </section>
+      ) : null}
 
       <section>
         <h2 className={`pb-1 pt-2 ${LABEL}`}>Tiebreaker Guess</h2>

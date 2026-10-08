@@ -9,7 +9,7 @@ import { InvalidMember } from "@/lib/members/members";
 import { memberSheet } from "@/lib/picks/console";
 import { toSheetJson } from "@/lib/picks/json";
 import { MAX_TIEBREAKER_GUESS } from "@/lib/picks/limits";
-import { lockGameOf, liveGames } from "@/lib/picks/progress";
+import { lockGameOf, countingGames } from "@/lib/picks/progress";
 import { safeInteger } from "@/lib/parse";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
 import { consoleWeek, isPublished } from "@/lib/slate/slate";
@@ -57,7 +57,7 @@ export default async function MemberPicks({
   // show a Game any differently from the way they see it.
   const sheet = toSheetJson(loaded.sheet);
   const pickFor = new Map(sheet.picks.map((p) => [p.gameId, p.teamId]));
-  const pickedGames = liveGames(sheet.games).filter((view) => pickFor.has(view.game.id));
+  const pickedGames = countingGames(sheet.games).filter((view) => pickFor.has(view.game.id));
   const hidden = { memberId: member.id, weekId: week.id };
 
   return (

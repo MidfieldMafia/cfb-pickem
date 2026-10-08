@@ -23,7 +23,7 @@ import { plural } from "@/lib/plural";
 import { teamName, toGameView } from "@/lib/slate/json";
 import { slateFor, type Slate } from "@/lib/slate/slate";
 import { pickSheet, weekEntries, type Entry, type PickSheet } from "./picks";
-import { liveGames } from "./progress";
+import { countingGames } from "./progress";
 
 async function loadMember(db: Db, memberId: number): Promise<Member> {
   const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
@@ -52,7 +52,7 @@ export async function memberSheet(
 export interface MemberProgress<M = Member> extends Entry<M> {
   /** The team a counting Lock of the Week sits on; null when there is none or it is a Dropped Lock. */
   lockTeam: string | null;
-  /** Nothing left: every live game picked, a Lock that counts, and a Tiebreaker Guess. */
+  /** Nothing left: every counting game picked, a Lock that counts if there is a game to put one on, and a Tiebreaker Guess. */
   complete: boolean;
 }
 
@@ -61,7 +61,7 @@ export interface PickReport {
   week: Week;
   season: Season;
   deadline: Date;
-  /** Live games on the slate: the number of picks a finished member has. */
+  /** Counting games on the slate: the number of picks a finished member has. */
   needed: number;
   /** Active members who joined before the Deadline, in the order they joined. */
   members: MemberProgress[];
@@ -91,7 +91,7 @@ export async function pickReport(db: Db, weekId: number, now: Date = new Date())
     week: slate.week,
     season: slate.season,
     deadline,
-    needed: liveGames(slate.games.map((game) => toGameView(game, now))).length,
+    needed: countingGames(slate.games.map((game) => toGameView(game, now))).length,
     members: progress,
     ready: progress.filter((m) => m.complete).length,
     serverNow: now,
@@ -138,7 +138,7 @@ export function deadlineInCentral(deadline: Date): string {
 /** What one member still owes, for the reminder: "2 picks, Lock of the Week, Tiebreaker Guess". */
 export function owed(row: Pick<MemberProgress<unknown>, "progress">): string[] {
   const missing: string[] = [];
-  const picksLeft = row.progress.liveGames - row.progress.picksMade;
+  const picksLeft = row.progress.countingGames - row.progress.picksMade;
   if (picksLeft > 0) missing.push(plural(picksLeft, "pick"));
   if (row.progress.lockOpen) missing.push("Lock of the Week");
   if (!row.progress.guessSet) missing.push("Tiebreaker Guess");

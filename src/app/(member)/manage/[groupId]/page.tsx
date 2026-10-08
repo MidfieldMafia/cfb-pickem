@@ -239,7 +239,7 @@ function MemberRow({
         </div>
         {row.reminder ? (
           <Badge variant={row.reminder.status === "Done" ? "win" : "pending"}>
-            {row.reminder.picksMade} of {row.reminder.liveGames}
+            {row.reminder.picksMade} of {row.reminder.countingGames}
           </Badge>
         ) : null}
       </div>

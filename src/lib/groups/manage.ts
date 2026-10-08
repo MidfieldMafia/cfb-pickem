@@ -87,7 +87,7 @@ export async function manageGroup(db: Db, actor: Member, groupId: number): Promi
 /** One member's standing on the Week, with nothing that says what they picked. */
 export interface Reminder {
   picksMade: number;
-  liveGames: number;
+  countingGames: number;
   lockSet: boolean;
   guessSet: boolean;
   /** "Done", or "Missing 10 picks, Lock of the Week, Tiebreaker Guess". */
@@ -170,7 +170,7 @@ export async function manageView(db: Db, manager: Manager, now: Date = new Date(
       reminder: row
         ? {
             picksMade: row.progress.picksMade,
-            liveGames: row.progress.liveGames,
+            countingGames: row.progress.countingGames,
             lockSet: row.progress.lockSet,
             guessSet: row.progress.guessSet,
             status: row.complete ? "Done" : `Missing ${owed(row).join(", ")}`,
