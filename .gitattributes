@@ -1,10 +1,7 @@
-# Store every text file LF in the index. Until this line, the repo's LF index
-# rested on Git for Windows' installer default (core.autocrlf=true); a checkout
-# with autocrlf=false could commit CRLF and nothing would stop it.
-* text=auto
-
-# Shell scripts must keep LF endings. core.autocrlf=true would otherwise write
-# CRLF into a Windows working copy, and Git Bash then fails the script with
-# `$'\r': command not found` -- including .claude/hooks/preflight.sh, which runs
-# in every fresh worktree.
-*.sh text eol=lf
+# Every text file is LF, in the index and in the working copy alike. Without
+# eol=lf, Git for Windows' installer default (core.autocrlf=true) checks files
+# out as CRLF, and every scripted edit trips on it: Git Bash `sed -i` silently
+# strips the CRs, a Python or Node replace that matches on "\n" misses, and a
+# shell script fails with `$'\r': command not found` -- including
+# .claude/hooks/preflight.sh, which runs in every fresh worktree.
+* text=auto eol=lf
