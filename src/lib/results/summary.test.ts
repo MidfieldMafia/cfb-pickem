@@ -265,7 +265,6 @@ describe("the Tiebreaker Guesses card", () => {
       ["Grandma", true],
     ]);
   });
-
 });
 
 describe("one member's own week", () => {

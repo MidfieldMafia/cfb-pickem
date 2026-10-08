@@ -143,7 +143,10 @@ export function weeklyWinners(win: WeeklyWin | null, complete: boolean): Set<num
   return new Set(complete ? (win?.winners.map((m) => m.id) ?? []) : []);
 }
 
-/** The members tied for the lead on points, whose Guesses decided the Weekly Win: the engine's `contenders`. */
+/**
+ * The members tied for the lead on points, whose Guesses decide the Weekly Win:
+ * the engine's `contenders`, so none in a Week with no Tiebreaker Game to measure against.
+ */
 export function weeklyContenders(win: WeeklyWin | null): Set<number> {
   return new Set(win?.contenders.map((m) => m.id) ?? []);
 }

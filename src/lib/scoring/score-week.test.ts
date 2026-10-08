@@ -248,13 +248,14 @@ describe("scoreWeek", () => {
       expect(result.scores.map((s) => s.place)).toEqual([1, 1]);
     });
 
-    it("is shared when the Tiebreaker Game has no final score yet", () => {
+    it("is shared, with the tied members as contenders, while the Tiebreaker Game is still to finish", () => {
       const result = scoreWeek(
         rules2026,
         week({
-          games,
-          tiebreakerGameId: null,
+          games: [games[0], { ...games[1], status: "in_progress" }],
+          tiebreakerGameId: "g2",
           picks: tiedPicks,
+          tiebreakerGuesses: [{ memberId: "jonah", guess: 40 }],
         }),
         members,
       );
@@ -267,6 +268,24 @@ describe("scoreWeek", () => {
       });
       // Two unknown errors are level, not unordered: still a shared first.
       expect(result.scores.map((s) => s.place)).toEqual([1, 1]);
+    });
+
+    it("is shared with no contenders when there is no Tiebreaker Game to measure a Guess against", () => {
+      const none = scoreWeek(rules2026, week({ games, tiebreakerGameId: null, picks: tiedPicks }), members);
+      const voided = scoreWeek(
+        rules2026,
+        week({ games: [games[0], { ...games[1], void: true }], tiebreakerGameId: "g2", picks: tiedPicks }),
+        members,
+      );
+
+      for (const result of [none, voided]) {
+        expect(result.weeklyWin).toEqual({
+          winners: ["jonah", "alex"],
+          points: 10,
+          decidedBy: "shared",
+          contenders: [],
+        });
+      }
     });
 
     it("is null when nobody played the week", () => {
@@ -321,15 +340,6 @@ describe("scoreWeek", () => {
     expect(result.scores.map((s) => s.memberId)).toEqual(["jonah", "alex"]);
   });
 
-  /**
-   * The second half of a Played Week: joining in time is not enough, the member
-   * has to have picked.
-   *
-   * A member who sat the week out keeps their row, at zero, so the week's own
-   * screens can show that they did not pick rather than making them disappear.
-   * What marks the week as not theirs is `played`, which `scoreSeason` filters
-   * on and `decideWeeklyWin` never sees.
-   */
   describe("places", () => {
     const four: Member[] = [
       ...members,
@@ -370,6 +380,15 @@ describe("scoreWeek", () => {
     });
   });
 
+  /**
+   * The second half of a Played Week: joining in time is not enough, the member
+   * has to have picked.
+   *
+   * A member who sat the week out keeps their row, at zero, so the week's own
+   * screens can show that they did not pick rather than making them disappear.
+   * What marks the week as not theirs is `played`, which `scoreSeason` filters
+   * on and `decideWeeklyWin` never sees.
+   */
   describe("a week with no Picks is not a Played Week", () => {
     it("keeps a member who made no Pick on the board at zero, with the week not counted", () => {
       const result = scoreWeek(

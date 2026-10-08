@@ -139,16 +139,22 @@ function compareWeekly(a: Unplaced, b: Unplaced): number {
   return ea === eb ? 0 : ea - eb;
 }
 
-function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
+/**
+ * `guessDecides` is whether the Week has a Tiebreaker Game a Guess can be
+ * measured against: named, on the Slate and not Void. Without one, a points
+ * tie is simply shared, and nobody is a contender in a tiebreak that cannot
+ * happen.
+ */
+function decideWeeklyWin(scores: WeeklyScore[], guessDecides: boolean): WeeklyWin | null {
   const [top] = scores;
   if (!top) return null;
   const onPoints = scores.filter((s) => s.points === top.points);
   if (onPoints.length === 1) {
     return { winners: [top.memberId], points: top.points, decidedBy: "points", contenders: [] };
   }
-  const contenders = onPoints.map((s) => s.memberId);
+  const contenders = guessDecides ? onPoints.map((s) => s.memberId) : [];
   if (top.tiebreakerError === null) {
-    return { winners: contenders, points: top.points, decidedBy: "shared", contenders };
+    return { winners: onPoints.map((s) => s.memberId), points: top.points, decidedBy: "shared", contenders };
   }
   const closest = onPoints.filter((s) => s.tiebreakerError === top.tiebreakerError);
   return {
@@ -203,7 +209,8 @@ function playedWeek(member: Member, week: Week, pickers: ReadonlySet<MemberId>):
 }
 
 export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResult {
-  const tiebreakerTotal = combinedFinalScore(week.games.find((g) => g.id === week.tiebreakerGameId));
+  const tiebreakerGame = week.games.find((g) => g.id === week.tiebreakerGameId);
+  const tiebreakerTotal = combinedFinalScore(tiebreakerGame);
   const index = indexWeek(week);
   const sorted = members
     .filter((member) => onBoard(member, week))
@@ -220,6 +227,9 @@ export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResu
     weekNumber: week.weekNumber,
     complete,
     scores,
-    weeklyWin: decideWeeklyWin(scores.filter((s) => s.played)),
+    weeklyWin: decideWeeklyWin(
+      scores.filter((s) => s.played),
+      tiebreakerGame !== undefined && !tiebreakerGame.void,
+    ),
   };
 }

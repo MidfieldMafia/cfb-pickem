@@ -263,7 +263,11 @@ export interface WeeklyWin {
   winners: ScoredMember[];
   points: number;
   decidedBy: engine.WeeklyWinDecidedBy;
-  /** Tied for the lead on points, closest Guess first; empty when one member led outright. */
+  /**
+   * Tied for the lead on points, in finish order; empty when one member led
+   * outright, or the Week has no Tiebreaker Game a Guess could be measured
+   * against. See the engine's `WeeklyWin.contenders`.
+   */
   contenders: ScoredMember[];
 }
 

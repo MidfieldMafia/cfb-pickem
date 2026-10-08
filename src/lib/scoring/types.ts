@@ -173,9 +173,15 @@ export interface WeeklyWin {
   points: number;
   decidedBy: WeeklyWinDecidedBy;
   /**
-   * The played members tied for the lead on points, closest Tiebreaker Guess
-   * first: the group the Guess was asked to separate. Empty when one member
-   * led outright, since nobody's place then turned on a Guess.
+   * The played members tied for the lead on points: the group the Guess was
+   * asked to separate. In the Week's finish order, so smallest
+   * `tiebreakerError` first once the Tiebreaker Game is final (a missing Guess
+   * scored as 0, as everywhere in the engine), and the order members arrived
+   * in before then.
+   *
+   * Empty when one member led outright, and when the Week has no Tiebreaker
+   * Game to measure a Guess against — none named, or it is Void — since
+   * nobody's place then turns on a Guess.
    */
   contenders: MemberId[];
 }

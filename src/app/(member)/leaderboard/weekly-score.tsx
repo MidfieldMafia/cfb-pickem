@@ -6,12 +6,14 @@ import type { WeeklyScore } from "@/lib/results/results";
 import { guessLabel, record } from "@/lib/results/summary";
 
 /**
- * Everyone's Weekly Score in finish order, as the engine sorted it: points,
- * then Tiebreaker Guess closeness. Members level on both share a place, which
- * is why the place is the engine's `place` rather than the row's index.
+ * Everyone's Weekly Score in finish order, as the engine sorted it: Played
+ * Weeks first, then points, then Tiebreaker Guess closeness. Members level on
+ * all three share a place, which is why the place is the engine's `place`
+ * rather than the row's index.
  *
- * Only the members tied for first carry a Guess: theirs are the ones that
- * decided the Weekly Win, and a Guess under every row is noise.
+ * Only the members tied for first carry a Guess, and only in a Week with a
+ * Tiebreaker Game to decide it: theirs are the Guesses that settled the Weekly
+ * Win, and a Guess under every row is noise.
  */
 export function WeeklyScoreList({
   scores,
