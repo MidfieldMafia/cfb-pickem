@@ -185,6 +185,7 @@ describe("the week result", () => {
       winners: [{ id: grandma.id, displayName: "Grandma", avatarId: null }],
       points: 30,
       decidedBy: "points",
+      contenders: [],
     });
     // The same pass produced the board: the Reveal is not a second grading.
     expect(result.reveal.games.find((g) => g.game.id === michigan.id)!.picks.map((p) => p.outcome)).toEqual([

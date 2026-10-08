@@ -75,22 +75,6 @@ function listNames(members: ScoredMember[]): string {
   return andJoin(members.map((m) => m.displayName));
 }
 
-/**
- * Played Weeks first, then points descending, then Tiebreaker Guess closeness:
- * the engine's own week order, from `compareWeekly` in `score-week.ts`.
- *
- * The first clause is what keeps a place number agreeing with the row it sits
- * on. Without it, a member who sat the week out would *share* a place with one
- * who picked and scored nothing — the two are level on points and on a
- * Tiebreaker error neither has — while the engine still sorted them below, so
- * the list would read in an order its own numbers did not explain.
- */
-function finishedAhead(a: WeeklyScore, b: WeeklyScore): boolean {
-  if (a.played !== b.played) return a.played;
-  if (a.points !== b.points) return a.points > b.points;
-  return (a.tiebreakerError ?? Infinity) < (b.tiebreakerError ?? Infinity);
-}
-
 /** Where a member came in a Week, and how many were on its board. */
 export interface Standing {
   /** 1-based. Members level on points and on Tiebreaker Guess closeness share a place. */
@@ -106,9 +90,8 @@ export interface Standing {
 }
 
 /**
- * One member's place in a Week. Counted as "everybody strictly ahead of me,
- * plus one" rather than as a row index, so two members who are level share a
- * place instead of one of them being told they lost on read order.
+ * One member's place in a Week, as the engine placed them: two members who are
+ * level share a place instead of one of them being told they lost on read order.
  *
  * Null when the member was not on the Week's board at all — they joined after
  * its Deadline, and a place in a week they never had a chance at is not a fair
@@ -118,7 +101,7 @@ export interface Standing {
 export function standing(scores: WeeklyScore[], memberId: number): Standing | null {
   const mine = scores.find((s) => s.member.id === memberId);
   if (!mine) return null;
-  const place = scores.filter((s) => finishedAhead(s, mine)).length + 1;
+  const { place } = mine;
   return { place, of: scores.length, label: `${ordinal(place)} of ${scores.length}` };
 }
 
@@ -161,56 +144,7 @@ export function weeklyWinners(win: WeeklyWin | null, complete: boolean): Set<num
   return new Set(complete ? (win?.winners.map((m) => m.id) ?? []) : []);
 }
 
-/** One member tied for the week's lead by points: their Guess and its error, once the Tiebreaker Game is final. */
-export interface TiebreakerContender {
-  member: ScoredMember;
-  guess: number | null;
-  /** Absolute error against the combined final score; null until the game is final, or if they never guessed. */
-  error: number | null;
-}
-
-/** The Tiebreaker Game and what it settled. */
-export interface TiebreakerOutcome {
-  game: GameView;
-  /** Combined final score of the two teams. Null until the game is final, and for a Void. */
-  combined: number | null;
-  /**
-   * Everyone tied for the week's lead by points, closest Guess first. Empty
-   * when a single member led outright: nobody's placement turned on the
-   * Guess, so there is no group for this sentence to name. This is the same
-   * points-tied group `decideWeeklyWin` (score-week.ts) resolves — recomputed
-   * here from `weeklyWin.points` rather than threaded through, since a Week's
-   * screens already hold both.
-   */
-  contenders: TiebreakerContender[];
-  /** The contenders who actually won the week: more than one only when the Guess also tied, or nobody in the group guessed. */
-  winners: ScoredMember[];
-}
-
-/**
- * The Tiebreaker Game's outcome, from the board and the scores of one graded
- * pass. Null when the Week has no Tiebreaker Game, when the one it names is
- * not on the Slate, or when nobody played the Week.
- */
-export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[], weeklyWin: WeeklyWin | null): TiebreakerOutcome | null {
-  const { tiebreakerGameId } = reveal.week;
-  if (tiebreakerGameId === null) return null;
-  const game = reveal.games.find((g) => g.game.id === tiebreakerGameId);
-  if (!game) return null;
-  const { shown, phase } = game.result;
-  const combined = phase === "final" && shown ? shown.homeScore + shown.awayScore : null;
-  // Played only. A member who made no Pick sits at zero, so a week won on zero
-  // points would otherwise sweep them into the tie and name them as a
-  // contender in a tiebreak they were never in.
-  const tied = weeklyWin === null ? [] : scores.filter((s) => s.played && s.points === weeklyWin.points);
-  if (tied.length < 2) return { game, combined, contenders: [], winners: [] };
-  const contenders = [...tied]
-    .sort((a, b) => (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity))
-    .map((s) => ({ member: s.member, guess: s.tiebreakerGuess, error: s.tiebreakerError }));
-  return { game, combined, contenders, winners: weeklyWin!.winners };
-}
-
-/** One row of the Reveal's Tiebreaker Guesses card. */
+/** One row of a Tiebreaker Guesses card, on the Reveal or the Live Board's Game sheet. */
 export interface TiebreakerGuessRow {
   score: WeeklyScore;
   /** Tied for first on points, so this Guess is one that decided the Weekly Win. */
@@ -219,22 +153,22 @@ export interface TiebreakerGuessRow {
 
 /**
  * Every member who played the Week, with their Tiebreaker Guess: the rows of
- * the card under the Tiebreaker Game on the Reveal.
+ * the card under the Tiebreaker Game, wherever it is shown.
+ *
+ * Played only, as the Weekly Win is: a Guess alone does not make a Played
+ * Week, so a member who guessed and picked nothing is not in this tiebreak.
  *
  * Closest Guess first. Before the game is final there is no error to rank by,
  * so the Guesses keep the order `scores` arrived in: the week's standings.
- * Either way, a member
- * who made no Guess sorts last: the engine scores a missing Guess as 0, so
- * after the final it carries an error that could rank it above real Guesses.
+ * Either way, a member who made no Guess sorts last: the engine scores a
+ * missing Guess as 0, so after the final it carries an error that could rank
+ * it above real Guesses.
  *
  * The members tied for first stay where their closeness puts them and are
- * marked as `contender`, the same points-tied group `tiebreakerOutcome` names.
- * Empty when the Week has no Tiebreaker Game on its board.
+ * marked as `contender`: the engine's `weeklyWin.contenders`.
  */
-export function tiebreakerGuesses(reveal: Reveal, scores: WeeklyScore[], weeklyWin: WeeklyWin | null): TiebreakerGuessRow[] {
-  const outcome = tiebreakerOutcome(reveal, scores, weeklyWin);
-  if (outcome === null) return [];
-  const contenders = new Set(outcome.contenders.map((c) => c.member.id));
+export function tiebreakerGuesses(scores: WeeklyScore[], weeklyWin: WeeklyWin | null): TiebreakerGuessRow[] {
+  const contenders = new Set(weeklyWin?.contenders.map((m) => m.id) ?? []);
   const noGuess = (s: WeeklyScore) => Number(s.tiebreakerGuess === null);
   return scores
     .filter((s) => s.played)

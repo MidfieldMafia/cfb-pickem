@@ -549,6 +549,7 @@ export function LiveBoard({
         game={openGame}
         members={members}
         scores={state.scores}
+        weeklyWin={state.weeklyWin}
         viewerId={viewer.id}
         tiebreakerGameId={state.week.tiebreakerGameId}
         locked={state.locked}

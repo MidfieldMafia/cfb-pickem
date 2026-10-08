@@ -101,7 +101,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
               scores={shown.scores}
               winners={weeklyWinners(shown.weeklyWin, shown.complete)}
               viewerId={member.id}
-              guessers={new Set()}
+              guessers={new Set(shown.weeklyWin?.contenders.map((m) => m.id) ?? [])}
             />
             {won ? <p className="pt-3 text-sm text-muted-foreground">{won}.</p> : null}
           </>

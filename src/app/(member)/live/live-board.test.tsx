@@ -79,6 +79,7 @@ function score(who: ScoredMember, points: number): WeeklyScore {
   return {
     member: who,
     played: true,
+    place: 1,
     points,
     correct: points / 10,
     incorrect: 0,
@@ -532,6 +533,35 @@ describe("the sheet a tap opens", () => {
     openGame();
     expect(fetch).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  test("the Tiebreaker card lists the Reveal's rows: members who played, in the Week's standings before the final", () => {
+    const [you, noGuess, guessOnly, trailing] = FAMILY;
+    render(
+      <LiveBoard
+        initial={state({
+          week: { id: 1, weekNumber: 2, published: true, tiebreakerGameId: 1 },
+          complete: false,
+          games: [game(PENDING)],
+          members: [you, noGuess, guessOnly, trailing],
+          scores: [
+            { ...score(you, 30), tiebreakerGuess: 50 },
+            { ...score(noGuess, 20), place: 2 },
+            { ...score(trailing, 10), place: 3, tiebreakerGuess: 31 },
+            // A Guess without a Pick buys no week, so no say in its tiebreak.
+            { ...score(guessOnly, 0), place: 4, played: false, tiebreakerGuess: 44 },
+          ],
+        })}
+        viewer={VIEWER}
+      />,
+    );
+
+    openGame();
+    const card = screen.getByText("Tiebreaker Guesses").parentElement!.parentElement!;
+    // Standings order, not Guess order: the lower Guess does not lead.
+    expect(card.textContent).toMatch(/You50.*Member 431/);
+    expect(card.textContent).not.toMatch(/Member 3/);
+    expect(card.textContent).toMatch(/1 member has not guessed yet/);
   });
 });
 

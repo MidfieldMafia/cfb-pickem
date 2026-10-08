@@ -37,7 +37,12 @@ describe("Week 1 of 2026 fixture", () => {
   });
 
   it("gives Jonah the Weekly Win on the tiebreaker", () => {
-    expect(result.weeklyWin).toEqual({ winners: ["jonah"], points: 80, decidedBy: "tiebreaker" });
+    expect(result.weeklyWin).toEqual({
+      winners: ["jonah"],
+      points: 80,
+      decidedBy: "tiebreaker",
+      contenders: ["jonah", "grandma"],
+    });
   });
 
   it("reports Locks: hit, missed, and dropped by the Void", () => {
@@ -141,6 +146,6 @@ describe("Week 2 on the Week 1 fixture: a week with no Picks is not a Played Wee
       true,
     );
     // Jonah is the only one in the running, so the week is his outright.
-    expect(second.weeklyWin).toEqual({ winners: ["jonah"], points: 10, decidedBy: "points" });
+    expect(second.weeklyWin).toEqual({ winners: ["jonah"], points: 10, decidedBy: "points", contenders: [] });
   });
 });
