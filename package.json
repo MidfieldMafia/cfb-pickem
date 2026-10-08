@@ -22,6 +22,7 @@
     "changelog": "tsx scripts/changelog.ts",
     "icons": "tsx scripts/icons.ts",
     "splash": "tsx scripts/splash.ts",
+    "sessions": "tsx scripts/sessions.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
