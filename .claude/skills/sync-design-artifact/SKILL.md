@@ -92,11 +92,13 @@ README greps come back clean.
 
 ## 4. Render every preview
 
-`puppeteer-core` drives the machine's Chrome, as in `verify-running-app/browser.md`:
+`puppeteer-core` drives the machine's Chrome, from the same once-per-machine install as
+`verify-running-app/browser.md`:
 
 ```bash
-npm i puppeteer-core --prefix "$SCRATCH" --no-audit --no-fund
-node .design-artifact/render.mjs --artifact .design-artifact/artifact --shots "$SCRATCH/shots" --puppeteer "$SCRATCH"
+PPT="$HOME/.cache/slate-browser"
+[ -f "$PPT/.installed" ] || { npm i puppeteer-core --prefix "$PPT" --no-audit --no-fund && touch "$PPT/.installed"; }
+node .design-artifact/render.mjs --artifact .design-artifact/artifact --shots "$SCRATCH/shots" --puppeteer "$PPT"
 ```
 
 It renders each preview as the page does, once with the Artifact's current bundle (`old`) and
