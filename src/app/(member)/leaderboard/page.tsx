@@ -9,7 +9,7 @@ import { NoGroup } from "@/components/no-group";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { effectiveResult, seasonResult } from "@/lib/results/results";
-import { seasonChampion, seasonStatusLabel, weeklyWinners, weeklyWinSentence } from "@/lib/results/summary";
+import { seasonChampion, seasonStatusLabel, weeklyContenders, weeklyWinners, weeklyWinSentence } from "@/lib/results/summary";
 import { MAX_WEEK_NUMBER } from "@/lib/slate/slate";
 import { freshSlate } from "@/lib/week/week";
 import { LeaderboardTable } from "./leaderboard-table";
@@ -101,7 +101,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
               scores={shown.scores}
               winners={weeklyWinners(shown.weeklyWin, shown.complete)}
               viewerId={member.id}
-              guessers={new Set(shown.weeklyWin?.contenders.map((m) => m.id) ?? [])}
+              guessers={weeklyContenders(shown.weeklyWin)}
             />
             {won ? <p className="pt-3 text-sm text-muted-foreground">{won}.</p> : null}
           </>

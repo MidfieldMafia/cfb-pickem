@@ -12,6 +12,7 @@ import type {
   WeeklyScore,
   WeeklyWin,
 } from "./types";
+import { sharedPositions } from "./positions";
 
 /** Both final scores, or null when the game has not finished with a score on each side. */
 function finalScores(game: Game): { home: number; away: number } | null {
@@ -138,17 +139,6 @@ function compareWeekly(a: Unplaced, b: Unplaced): number {
   return ea === eb ? 0 : ea - eb;
 }
 
-/** Places for a sorted Week: one more than the number strictly ahead, so a tie shares. */
-function placed(sorted: Unplaced[]): WeeklyScore[] {
-  const scores: WeeklyScore[] = [];
-  sorted.forEach((score, i) => {
-    const prev = scores[i - 1];
-    const place = prev && compareWeekly(prev, score) === 0 ? prev.place : i + 1;
-    scores.push({ ...score, place });
-  });
-  return scores;
-}
-
 function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
   const [top] = scores;
   if (!top) return null;
@@ -215,14 +205,14 @@ function playedWeek(member: Member, week: Week, pickers: ReadonlySet<MemberId>):
 export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResult {
   const tiebreakerTotal = combinedFinalScore(week.games.find((g) => g.id === week.tiebreakerGameId));
   const index = indexWeek(week);
-  const scores = placed(
-    members
-      .filter((member) => onBoard(member, week))
-      .map((member) =>
-        scoreMember(rules, week, index, member, tiebreakerTotal, playedWeek(member, week, index.pickers)),
-      )
-      .sort(compareWeekly),
-  );
+  const sorted = members
+    .filter((member) => onBoard(member, week))
+    .map((member) =>
+      scoreMember(rules, week, index, member, tiebreakerTotal, playedWeek(member, week, index.pickers)),
+    )
+    .sort(compareWeekly);
+  const places = sharedPositions(sorted, compareWeekly);
+  const scores: WeeklyScore[] = sorted.map((score, i) => ({ ...score, place: places[i] }));
   const complete = week.games.every((g) => g.void || g.status === "final");
   // Only the members who played are in the running: a week nobody picked has no
   // winner, rather than being shared between everyone who was on the board.

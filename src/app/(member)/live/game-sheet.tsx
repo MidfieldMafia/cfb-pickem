@@ -25,8 +25,8 @@ import { awayShare, type FinalStats, type Leader, type LeaderKey, type LeaderRow
 import type { GamePlaysJson } from "@/lib/results/live-feed";
 import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
 import { clockLabel, sideWithBall } from "@/lib/results/result";
-import type { RevealPick, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/results";
-import { tiebreakerGuesses } from "@/lib/results/summary";
+import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import { guessOrder } from "@/lib/results/summary";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
 import { plural } from "@/lib/plural";
 import { fetchGamePlays } from "@/lib/week/client";
@@ -596,26 +596,16 @@ function GameInformation({ game }: { game: LiveGameJson }) {
 }
 
 /**
- * The Guesses of everyone who played, in the Reveal's order: `tiebreakerGuesses`,
+ * The Guesses of everyone who played, in the Reveal's order: `guessOrder`,
  * closest first once the game is final and the Week's standings before it.
  * Members with no Guess are counted rather than listed.
  */
-function TiebreakerSection({
-  game,
-  scores,
-  weeklyWin,
-  viewerId,
-}: {
-  game: LiveGameJson;
-  scores: WeeklyScore[];
-  weeklyWin: WeeklyWin | null;
-  viewerId: number;
-}) {
+function TiebreakerSection({ game, scores, viewerId }: { game: LiveGameJson; scores: WeeklyScore[]; viewerId: number }) {
   const final = game.result.phase === "final";
   const combined = final && game.result.shown ? game.result.shown.homeScore + game.result.shown.awayScore : null;
-  const rows = tiebreakerGuesses(scores, weeklyWin);
-  const sorted = rows.filter((r) => r.score.tiebreakerGuess !== null).map((r) => r.score);
-  const missing = rows.length - sorted.length;
+  const played = guessOrder(scores);
+  const sorted = played.filter((s) => s.tiebreakerGuess !== null);
+  const missing = played.length - sorted.length;
   return (
     <Card className="grid gap-2 border-secondary p-2.5">
       <div className="flex items-baseline gap-2">
@@ -648,7 +638,6 @@ function TiebreakerSection({
 interface SheetProps {
   members: Map<number, ScoredMember>;
   scores: WeeklyScore[] | null;
-  weeklyWin: WeeklyWin | null;
   viewerId: number;
   tiebreakerGameId: number | null;
   locked: boolean;
@@ -661,7 +650,6 @@ function SheetBody({
   game,
   members,
   scores,
-  weeklyWin,
   viewerId,
   tiebreakerGameId,
   locked,
@@ -723,7 +711,7 @@ function SheetBody({
         ) : (
           <OwnPickCard game={game} deadline={deadline} />
         )}
-        {g.id === tiebreakerGameId && scores ? <TiebreakerSection game={game} scores={scores} weeklyWin={weeklyWin} viewerId={viewerId} /> : null}
+        {g.id === tiebreakerGameId && scores ? <TiebreakerSection game={game} scores={scores} viewerId={viewerId} /> : null}
         {live && card ? <RecentPlaysCard card={card} /> : null}
         {final && feed ? (
           feed.final ? (

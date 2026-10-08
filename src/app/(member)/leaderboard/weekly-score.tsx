@@ -31,13 +31,12 @@ export function WeeklyScoreList({
       <ul className="divide-y divide-border">
       {scores.map((score) => {
         const you = score.member.id === viewerId;
-        const { place } = score;
         return (
           <li
             key={score.member.id}
             className={`flex items-center gap-2 p-3 ${you ? "bg-muted" : ""}`}
           >
-            <span className="w-4 text-sm text-muted-foreground tabular-nums">{place}</span>
+            <span className="w-4 text-sm text-muted-foreground tabular-nums">{score.place}</span>
             <Pennant avatarId={score.member.avatarId} name={score.member.displayName} size={28} />
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5">

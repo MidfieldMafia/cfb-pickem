@@ -1,3 +1,4 @@
+import { sharedPositions } from "./positions";
 import { scoreWeek } from "./score-week";
 import type {
   LeaderboardRow,
@@ -88,13 +89,8 @@ function compareSeason(a: LeaderboardRow, b: LeaderboardRow): number {
 /** Assign 1-based ranks; rows that tie on every tiebreak share a rank and the next rank is skipped. */
 function rank(rows: LeaderboardRow[]): LeaderboardRow[] {
   const sorted = [...rows].sort(compareSeason);
-  const ranked: LeaderboardRow[] = [];
-  sorted.forEach((row, i) => {
-    const previous = ranked[i - 1];
-    const tied = previous !== undefined && compareSeason(previous, row) === 0;
-    ranked.push({ ...row, rank: tied ? previous.rank : i + 1 });
-  });
-  return ranked;
+  const ranks = sharedPositions(sorted, compareSeason);
+  return sorted.map((row, i) => ({ ...row, rank: ranks[i] }));
 }
 
 /** The Leaderboard over a set of graded weeks: one row per member, ranked. */

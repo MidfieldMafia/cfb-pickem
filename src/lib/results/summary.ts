@@ -101,8 +101,7 @@ export interface Standing {
 export function standing(scores: WeeklyScore[], memberId: number): Standing | null {
   const mine = scores.find((s) => s.member.id === memberId);
   if (!mine) return null;
-  const { place } = mine;
-  return { place, of: scores.length, label: `${ordinal(place)} of ${scores.length}` };
+  return { place: mine.place, of: scores.length, label: `${ordinal(mine.place)} of ${scores.length}` };
 }
 
 /**
@@ -144,16 +143,14 @@ export function weeklyWinners(win: WeeklyWin | null, complete: boolean): Set<num
   return new Set(complete ? (win?.winners.map((m) => m.id) ?? []) : []);
 }
 
-/** One row of a Tiebreaker Guesses card, on the Reveal or the Live Board's Game sheet. */
-export interface TiebreakerGuessRow {
-  score: WeeklyScore;
-  /** Tied for first on points, so this Guess is one that decided the Weekly Win. */
-  contender: boolean;
+/** The members tied for the lead on points, whose Guesses decided the Weekly Win: the engine's `contenders`. */
+export function weeklyContenders(win: WeeklyWin | null): Set<number> {
+  return new Set(win?.contenders.map((m) => m.id) ?? []);
 }
 
 /**
- * Every member who played the Week, with their Tiebreaker Guess: the rows of
- * the card under the Tiebreaker Game, wherever it is shown.
+ * Every member who played the Week, in the order a Tiebreaker Guesses card
+ * lists them, wherever it is shown.
  *
  * Played only, as the Weekly Win is: a Guess alone does not make a Played
  * Week, so a member who guessed and picked nothing is not in this tiebreak.
@@ -163,17 +160,28 @@ export interface TiebreakerGuessRow {
  * Either way, a member who made no Guess sorts last: the engine scores a
  * missing Guess as 0, so after the final it carries an error that could rank
  * it above real Guesses.
- *
- * The members tied for first stay where their closeness puts them and are
- * marked as `contender`: the engine's `weeklyWin.contenders`.
  */
-export function tiebreakerGuesses(scores: WeeklyScore[], weeklyWin: WeeklyWin | null): TiebreakerGuessRow[] {
-  const contenders = new Set(weeklyWin?.contenders.map((m) => m.id) ?? []);
+export function guessOrder(scores: WeeklyScore[]): WeeklyScore[] {
   const noGuess = (s: WeeklyScore) => Number(s.tiebreakerGuess === null);
   return scores
     .filter((s) => s.played)
-    .sort((a, b) => noGuess(a) - noGuess(b) || (a.tiebreakerError ?? 0) - (b.tiebreakerError ?? 0))
-    .map((score) => ({ score, contender: contenders.has(score.member.id) }));
+    .sort((a, b) => noGuess(a) - noGuess(b) || (a.tiebreakerError ?? 0) - (b.tiebreakerError ?? 0));
+}
+
+/** One row of the Reveal's Tiebreaker Guesses card. */
+export interface TiebreakerGuessRow {
+  score: WeeklyScore;
+  /** Tied for first on points, so this Guess is one that decided the Weekly Win. */
+  contender: boolean;
+}
+
+/**
+ * The Reveal's card: `guessOrder`, with the members tied for first marked as
+ * `contender` where their closeness puts them.
+ */
+export function tiebreakerGuesses(scores: WeeklyScore[], weeklyWin: WeeklyWin | null): TiebreakerGuessRow[] {
+  const contenders = weeklyContenders(weeklyWin);
+  return guessOrder(scores).map((score) => ({ score, contender: contenders.has(score.member.id) }));
 }
 
 /** One Game as one member played it: the pick-history row. */
