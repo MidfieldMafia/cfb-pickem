@@ -119,7 +119,7 @@ describe("the state of a Lock", () => {
 });
 
 describe("finding the games behind the counts", () => {
-  test("the live games are the slate minus its Void games", () => {
+  test("the counting games are the slate minus its Void games", () => {
     expect(countingGames(SLATE).map((g) => g.game.id)).toEqual([1, 3]);
   });
 

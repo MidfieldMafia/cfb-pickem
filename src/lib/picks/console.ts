@@ -52,7 +52,7 @@ export async function memberSheet(
 export interface MemberProgress<M = Member> extends Entry<M> {
   /** The team a counting Lock of the Week sits on; null when there is none or it is a Dropped Lock. */
   lockTeam: string | null;
-  /** Nothing left: every counting game picked, a Lock that counts, and a Tiebreaker Guess. */
+  /** Nothing left: every counting game picked, a Lock that counts if there is a game to put one on, and a Tiebreaker Guess. */
   complete: boolean;
 }
 
