@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { GameView } from "@/lib/slate/json";
+import { SCHEDULED, voidResult } from "@/test/game";
 import {
   firstOpenGame,
   liveGames,
@@ -15,7 +16,7 @@ import {
 function view(id: number, voided = false): GameView {
   return {
     game: { id } as GameView["game"],
-    result: { status: voided ? "void" : "pending" } as GameView["result"],
+    result: voided ? voidResult() : SCHEDULED,
   };
 }
 

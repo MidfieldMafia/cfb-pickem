@@ -79,7 +79,7 @@ describe("the reveal", () => {
     const [miamiRow, michiganRow, texasRow] = reveal.games;
     // A final game grades each pick; an unpicked game leaves the member off the game.
     expect(michiganRow.result).toEqual({
-      status: "final",
+      phase: "final",
       awayScore: 24,
       homeScore: 27,
       source: "feed",
@@ -93,8 +93,8 @@ describe("the reveal", () => {
       { memberId: jonah.id, teamId: michigan.awayTeamId, outcome: "incorrect", lock: null, points: 0 },
       { memberId: grandma.id, teamId: michigan.homeTeamId, outcome: "correct", lock: "counts", points: 20 },
     ]);
-    // A pending game shows the picks without a grade.
-    expect(texasRow.result.status).toBe("pending");
+    // A game yet to kick off shows the picks without a grade.
+    expect(texasRow.result.phase).toBe("scheduled");
     expect(texasRow.picks.map((p) => [p.memberId, p.outcome])).toEqual([
       [jonah.id, "pending"],
       [grandma.id, "pending"],
@@ -118,7 +118,7 @@ describe("the reveal", () => {
       [grandma.id, "incorrect", "counts"],
     ]);
     const texasRow = reveal.games.find((g) => g.game.id === texas.id)!;
-    expect(texasRow.result.status).toBe("void");
+    expect(texasRow.result.phase).toBe("void");
     expect(texasRow.picks.map((p) => p.outcome)).toEqual(["void", "void"]);
   });
 

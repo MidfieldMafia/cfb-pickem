@@ -4,7 +4,7 @@
  * default-selection rule and the labels are held to the ticket by a test
  * rather than by eye.
  */
-import type { GameResult } from "@/lib/results/result";
+import { underway, type GameResult } from "@/lib/results/result";
 import type { GradedWeek, LeaderboardRow } from "@/lib/results/results";
 import { ordinal } from "@/lib/results/summary";
 import { plural } from "@/lib/plural";
@@ -110,9 +110,9 @@ export function stripTiles({
  * are not counted; "game" is said once, on whichever half comes first.
  */
 export function gamesLeftLabel(results: readonly GameResult[]): string {
-  const pending = results.filter((r) => r.status === "pending");
-  const live = pending.filter((r) => r.live !== null).length;
-  const toKickOff = pending.length - live;
+  // A `due` Game is past its kickoff, so it is live here, not still to kick off.
+  const live = results.filter(underway).length;
+  const toKickOff = results.filter((r) => r.phase === "scheduled").length;
   const parts: string[] = [];
   if (live > 0) parts.push(`${plural(live, "game")} live`);
   if (toKickOff > 0) parts.push(parts.length ? `${toKickOff} to kick off` : `${plural(toKickOff, "game")} to kick off`);

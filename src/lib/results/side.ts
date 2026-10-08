@@ -25,7 +25,7 @@ function compare(score: Score, side: Side, settled: boolean): SideStanding {
 }
 
 export function sideStanding(result: GameResult, side: Side): SideStanding {
-  if (result.status === "final" && result.homeScore !== null && result.awayScore !== null) {
+  if (result.phase === "final" && result.homeScore !== null && result.awayScore !== null) {
     return compare({ homeScore: result.homeScore, awayScore: result.awayScore }, side, true);
   }
   if (result.live) return compare(result.live, side, false);

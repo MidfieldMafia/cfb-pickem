@@ -78,7 +78,7 @@ export function toWeekStateJson(week: WeekContext): WeekStateJson {
   const { slate, sheet } = week;
   const result = week.state === "live" || week.state === "settled" ? week.result : null;
   const detailOf = new Map(slate.games.map((game) => [game.id, game.detail]));
-  const games = result ? result.reveal.games : slate.games.map((game) => ({ ...toGameView(game), picks: [] }));
+  const games = result ? result.reveal.games : slate.games.map((game) => ({ ...toGameView(game, sheet.serverNow), picks: [] }));
   return {
     week: toWeekJson(slate.week),
     year: slate.season.year,

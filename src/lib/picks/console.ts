@@ -91,7 +91,7 @@ export async function pickReport(db: Db, weekId: number, now: Date = new Date())
     week: slate.week,
     season: slate.season,
     deadline,
-    needed: liveGames(slate.games.map(toGameView)).length,
+    needed: liveGames(slate.games.map((game) => toGameView(game, now))).length,
     members: progress,
     ready: progress.filter((m) => m.complete).length,
     serverNow: now,

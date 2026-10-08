@@ -152,8 +152,8 @@ async function seasonPositions(db: Db, cfbd: CfbdClient, season: Season, now: Da
  * two it is waiting on. A game voided after its stats arrived is not final,
  * so it has none either.
  */
-export async function finalStats(db: Db, game: Game): Promise<FinalStats | null> {
-  if (effectiveResult(game).status !== "final") return null;
+export async function finalStats(db: Db, game: Game, now: Date = new Date()): Promise<FinalStats | null> {
+  if (effectiveResult(game, now).phase !== "final") return null;
   const row = await db.query.gameStats.findFirst({ where: eq(gameStats.gameId, game.id) });
   if (!row) return null;
   const colors = teamBarColors(game.awayTeamId, game.homeTeamId);

@@ -152,7 +152,7 @@ export function RevealList({
       <ul className="space-y-3">
         {reveal.games.map((row) => {
           const { game, result } = row;
-          const final = result.status === "final";
+          const final = result.phase === "final";
           const clock = result.live ? clockLabel(result.live) : null;
           const away = row.picks.filter((p) => p.teamId === game.awayTeamId);
           const home = row.picks.filter((p) => p.teamId === game.homeTeamId);

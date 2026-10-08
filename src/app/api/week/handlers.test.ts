@@ -399,7 +399,7 @@ describe("the week state", () => {
     expect(moved.status).toBe(200);
     expect(moved.headers.get("etag")).not.toBe(etag);
     const state = await json<WeekStateJson>(moved);
-    expect(state.games[0].result).toMatchObject({ status: "final", awayScore: 7, homeScore: 45 });
+    expect(state.games[0].result).toMatchObject({ phase: "final", awayScore: 7, homeScore: 45 });
   });
 
   test("each game carries its stored detail, and a refreshed detail changes the ETag", async () => {

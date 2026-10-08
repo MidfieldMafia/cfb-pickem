@@ -11,51 +11,14 @@
  * write path in the app produces one.
  */
 import { describe, expect, test } from "vitest";
-import type { Game, Member, Week } from "@/db/schema";
+import type { Member, Week } from "@/db/schema";
 import type { EngineEntry } from "./engine";
 import { rules2026 } from "@/lib/scoring/fixtures/build";
 import { scoreWeek } from "@/lib/scoring";
+import { AFTER_KICKOFF, gameRow as game, KICKOFF } from "@/test/game";
 import { toEngineGame, toEngineMember, toEngineWeek } from "./engine";
 
-const KICKOFF = new Date("2026-09-12T16:00:00Z");
 const DEADLINE = new Date("2026-09-11T00:00:00Z");
-
-/** Oklahoma at Michigan, scheduled and unplayed. Tests override only what they are about. */
-function game(overrides: Partial<Game> = {}): Game {
-  return {
-    id: 7,
-    weekId: 1,
-    cfbdGameId: 401856679,
-    homeTeamId: 130,
-    homeTeam: "Michigan",
-    homeRank: null,
-    homeConference: "Big Ten",
-    awayTeamId: 201,
-    awayTeam: "Oklahoma",
-    awayRank: null,
-    awayConference: "SEC",
-    kickoff: KICKOFF,
-    spread: null,
-    detail: null,
-    homeScore: null,
-    awayScore: null,
-    status: "scheduled",
-    period: null,
-    clock: null,
-    possession: null,
-    lastPlay: null,
-    situation: null,
-    liveFeed: null,
-    void: false,
-    voidNote: null,
-    overrideHomeScore: null,
-    overrideAwayScore: null,
-    overrideNote: null,
-    createdAt: KICKOFF,
-    updatedAt: KICKOFF,
-    ...overrides,
-  };
-}
 
 function week(overrides: Partial<Week> = {}): Week {
   return {
@@ -94,7 +57,7 @@ const noPicks: EngineEntry = { member: { id: 1 }, picks: [], lock: { state: "non
 
 describe("a game on its way to the engine", () => {
   test("carries the feed's final score, with the teams as ids", () => {
-    expect(toEngineGame(game({ status: "final", homeScore: 27, awayScore: 24 }))).toEqual({
+    expect(toEngineGame(game({ status: "final", homeScore: 27, awayScore: 24 }), AFTER_KICKOFF)).toEqual({
       id: "7",
       homeTeam: "130",
       awayTeam: "201",
@@ -108,6 +71,7 @@ describe("a game on its way to the engine", () => {
   test("a Result Override replaces the feed's score, and the engine is never told which it was", () => {
     const corrected = toEngineGame(
       game({ status: "final", homeScore: 27, awayScore: 24, overrideHomeScore: 27, overrideAwayScore: 30 }),
+      AFTER_KICKOFF,
     );
 
     expect(corrected).toMatchObject({ status: "final", homeScore: 27, awayScore: 30 });
@@ -116,7 +80,7 @@ describe("a game on its way to the engine", () => {
   });
 
   test("a Void arrives as void with no score, whatever the feed said", () => {
-    const voided = toEngineGame(game({ status: "final", homeScore: 27, awayScore: 24, void: true }));
+    const voided = toEngineGame(game({ status: "final", homeScore: 27, awayScore: 24, void: true }), AFTER_KICKOFF);
 
     expect(voided).toMatchObject({ homeScore: null, awayScore: null, void: true });
     // A void game is settled by the flag, not by the status it happens to carry.
@@ -124,7 +88,7 @@ describe("a game on its way to the engine", () => {
   });
 
   test("a Void beats a Result Override: a game that will not count cannot be corrected into counting", () => {
-    expect(toEngineGame(game({ void: true, overrideHomeScore: 27, overrideAwayScore: 30 }))).toMatchObject({
+    expect(toEngineGame(game({ void: true, overrideHomeScore: 27, overrideAwayScore: 30 }), AFTER_KICKOFF)).toMatchObject({
       homeScore: null,
       awayScore: null,
       void: true,
@@ -135,7 +99,7 @@ describe("a game on its way to the engine", () => {
     // The feed can report a game complete before the scores land. Passing it
     // through as final would grade every pick on it incorrect: there is no
     // winner, so nobody picked one.
-    const half = toEngineGame(game({ status: "final", homeScore: null, awayScore: 24 }));
+    const half = toEngineGame(game({ status: "final", homeScore: null, awayScore: 24 }), AFTER_KICKOFF);
 
     expect(half.status).not.toBe("final");
     expect(half).toMatchObject({ homeScore: null, awayScore: null });
@@ -144,23 +108,27 @@ describe("a game on its way to the engine", () => {
   test("a game in play reaches the engine unfinished, with its running score withheld", () => {
     // Pending is pending: a Live Board colours a pick from the score on the
     // Game row, never from a score the engine was allowed to grade.
-    const live = toEngineGame(game({ status: "in_progress", homeScore: 3, awayScore: 0 }));
+    const live = toEngineGame(game({ status: "in_progress", homeScore: 3, awayScore: 0 }), AFTER_KICKOFF);
 
-    expect(live.status).not.toBe("final");
+    expect(live.status).toBe("in_progress");
     expect(live).toMatchObject({ homeScore: null, awayScore: null, void: false });
+  });
+
+  test("a Due game reaches the engine as scheduled: the engine has no word for it, and needs none", () => {
+    expect(toEngineGame(game(), AFTER_KICKOFF)).toMatchObject({ status: "scheduled", homeScore: null, void: false });
   });
 });
 
 describe("a week on its way to the engine", () => {
   test("refuses a week with no deadline, because scoring cannot say who played it", () => {
-    expect(() => toEngineWeek(week({ deadline: null }), [game()], [])).toThrow(/deadline/);
+    expect(() => toEngineWeek(week({ deadline: null }), [game()], [], AFTER_KICKOFF)).toThrow(/deadline/);
   });
 
   test("flattens every member's picks, lock and guess, and leaves out the ones nobody set", () => {
     const built = toEngineWeek(week(), [game(), game({ id: 8, homeTeamId: 61, awayTeamId: 99 })], [
       { member: { id: 1 }, picks: [{ gameId: 7, teamId: 130, updatedAt: KICKOFF }], lock: { state: "counts", gameId: 7 }, tiebreakerGuess: 51 },
       { member: { id: 2 }, picks: [{ gameId: 8, teamId: 99, updatedAt: KICKOFF }], lock: { state: "none" }, tiebreakerGuess: null },
-    ]);
+    ], AFTER_KICKOFF);
 
     expect(built).toMatchObject({ weekNumber: 2, published: true, tiebreakerGameId: "7" });
     expect(built.deadline).toBe(DEADLINE.toISOString());
@@ -175,7 +143,7 @@ describe("a week on its way to the engine", () => {
   });
 
   test("a week with no Tiebreaker Game says so, rather than naming game zero", () => {
-    expect(toEngineWeek(week({ tiebreakerGameId: null }), [game()], [noPicks]).tiebreakerGameId).toBeNull();
+    expect(toEngineWeek(week({ tiebreakerGameId: null }), [game()], [noPicks], AFTER_KICKOFF).tiebreakerGameId).toBeNull();
   });
 
   test("a member's join date crosses as an instant, so scoring can tell which weeks they played", () => {
@@ -238,8 +206,8 @@ describe("the bridge under the engine", () => {
     const feed = game({ status: "final", homeScore: 27, awayScore: 24 });
     const corrected = game({ ...feed, overrideHomeScore: 24, overrideAwayScore: 27 });
 
-    const asFed = scoreWeek(rules2026, toEngineWeek(week(), [feed], picked), graders);
-    const asCorrected = scoreWeek(rules2026, toEngineWeek(week(), [corrected], picked), graders);
+    const asFed = scoreWeek(rules2026, toEngineWeek(week(), [feed], picked, AFTER_KICKOFF), graders);
+    const asCorrected = scoreWeek(rules2026, toEngineWeek(week(), [corrected], picked, AFTER_KICKOFF), graders);
 
     // Michigan picked and Locked: 20 on the feed's score, nothing once the commissioner flips it.
     expect(asFed.scores[0]).toMatchObject({ points: 20, correct: 1, incorrect: 0 });
@@ -249,7 +217,7 @@ describe("the bridge under the engine", () => {
   test("a Void drops the Lock sitting on it and leaves the week incomplete for nobody", () => {
     const voided = game({ status: "final", homeScore: 27, awayScore: 24, void: true, voidNote: "Postponed" });
 
-    const result = scoreWeek(rules2026, toEngineWeek(week(), [voided], picked), graders);
+    const result = scoreWeek(rules2026, toEngineWeek(week(), [voided], picked, AFTER_KICKOFF), graders);
 
     expect(result.scores[0]).toMatchObject({ points: 0, lock: { gameId: "7", dropped: true } });
     expect(result.scores[0].picks[0].outcome).toBe("void");

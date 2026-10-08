@@ -204,9 +204,15 @@ export async function addGame(
   return game;
 }
 
-export async function setTiebreaker(db: Db, actor: Commissioner, weekId: number, gameId: number): Promise<Week> {
+export async function setTiebreaker(
+  db: Db,
+  actor: Commissioner,
+  weekId: number,
+  gameId: number,
+  now: Date = new Date(),
+): Promise<Week> {
   const game = await loadGame(db, gameId, weekId);
-  if (effectiveResult(game).status === "void") throw new InvalidSlate("A void game cannot be the Tiebreaker Game.");
+  if (effectiveResult(game, now).phase === "void") throw new InvalidSlate("A void game cannot be the Tiebreaker Game.");
   const [updated] = await db.update(weeks).set({ tiebreakerGameId: gameId }).where(eq(weeks.id, weekId)).returning();
   return updated;
 }

@@ -46,18 +46,17 @@ import {
   type GameResult,
   type LiveScore,
   type ResultLabel,
+  REVIEW_AFTER_MS,
+  underway,
 } from "./result";
 import { toEngineMember, toEngineWeek } from "./engine";
 
-export { clockLabel, effectiveResult };
+export { clockLabel, effectiveResult, REVIEW_AFTER_MS, underway };
 export type { GameResult, LiveScore, ResultLabel };
 
-/** A game still pending this long after kickoff is postponed, canceled, or stuck in the feed: a commissioner should look. */
-export const REVIEW_AFTER_MS = 6 * 3600_000;
-
-/** True for a pending, non-void game whose kickoff was long enough ago that a final should exist by now. */
+/** True for an under-way game whose kickoff was long enough ago that a final should exist by now. */
 export function needsReview(game: Game, now: Date): boolean {
-  return effectiveResult(game).status === "pending" && game.kickoff.getTime() + REVIEW_AFTER_MS <= now.getTime();
+  return underway(effectiveResult(game, now)) && game.kickoff.getTime() + REVIEW_AFTER_MS <= now.getTime();
 }
 
 /**
@@ -172,7 +171,7 @@ export async function resultsConsole(
     year: season.year,
     week: toWeekJson(slate.week),
     weeks: weeks.map(toWeekJson),
-    rows: slate.games.map((game) => ({ ...toGameView(game), review: needsReview(game, now) })),
+    rows: slate.games.map((game) => ({ ...toGameView(game, now), review: needsReview(game, now) })),
     review: reviewNotice(slate.games, now),
     feedCheckedAt: slate.week.scoreboardFetchedAt,
     log,
@@ -351,7 +350,7 @@ function toWeeklyWin(win: engine.WeeklyWin | null, byId: Map<string, ScoredMembe
  * are indexed once, so a game's row is a lookup per member rather than a scan
  * of that member's whole week.
  */
-function revealFrom(slate: Slate, rows: readonly BoardMember[], graded: engine.WeekResult): Reveal {
+function revealFrom(slate: Slate, rows: readonly BoardMember[], graded: engine.WeekResult, now: Date): Reveal {
   const scoreOf = new Map(graded.scores.map((s) => [s.memberId, s]));
   const board = rows.map((member) => {
     const score = scoreOf.get(String(member.id));
@@ -382,7 +381,7 @@ function revealFrom(slate: Slate, rows: readonly BoardMember[], graded: engine.W
           points: pick.points,
         });
       }
-      return { ...toGameView(game), picks };
+      return { ...toGameView(game, now), picks };
     }),
   };
 }
@@ -415,13 +414,18 @@ export async function weekResult(
   const group = await groupBoard(db, groupId);
   const { entries } = await weekEntries(db, slate, { board: group }, now);
   const rows = entries.map((entry) => entry.member);
-  const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, entries), rows.map(toEngineMember));
-  return gradedWeekResult(slate, rows, graded);
+  const graded = scoreWeek(slate.season.rules, toEngineWeek(slate.week, slate.games, entries, now), rows.map(toEngineMember));
+  return gradedWeekResult(slate, rows, graded, now);
 }
 
 /** One graded Week and its Reveal, from a grading that has already happened. */
-function gradedWeekResult(slate: Slate, rows: readonly BoardMember[], graded: engine.WeekResult): GradedWeekResult {
-  return { ...toGradedWeek(slate.week, graded, memberIndex(rows)), reveal: revealFrom(slate, rows, graded) };
+function gradedWeekResult(
+  slate: Slate,
+  rows: readonly BoardMember[],
+  graded: engine.WeekResult,
+  now: Date,
+): GradedWeekResult {
+  return { ...toGradedWeek(slate.week, graded, memberIndex(rows)), reveal: revealFrom(slate, rows, graded, now) };
 }
 
 /**
@@ -506,7 +510,7 @@ async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPa
 
   const graded = scoreSeason(
     season.rules,
-    weekGames.map(({ week, games: slateGames }) => toEngineWeek(week, slateGames, boards.get(week.id)!)),
+    weekGames.map(({ week, games: slateGames }) => toEngineWeek(week, slateGames, boards.get(week.id)!, now)),
     rows.map(toEngineMember),
   );
   return { season, played, rows, graded };

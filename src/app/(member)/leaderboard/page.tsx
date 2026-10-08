@@ -53,7 +53,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
   // whenever there is one: only the latest played Week can be.
   const left =
     shown !== null && shown === going && slate?.week.id === going.week.id
-      ? gamesLeftLabel(slate.games.map(effectiveResult))
+      ? gamesLeftLabel(slate.games.map((game) => effectiveResult(game, now)))
       : "";
   // Null when nobody played the Week, which is not the same as an empty
   // sentence: interpolating it straight into the footnote puts "null" on the board.

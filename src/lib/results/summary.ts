@@ -197,8 +197,8 @@ export function tiebreakerOutcome(reveal: Reveal, scores: WeeklyScore[], weeklyW
   if (tiebreakerGameId === null) return null;
   const game = reveal.games.find((g) => g.game.id === tiebreakerGameId);
   if (!game) return null;
-  const { shown, status } = game.result;
-  const combined = status === "final" && shown ? shown.homeScore + shown.awayScore : null;
+  const { shown, phase } = game.result;
+  const combined = phase === "final" && shown ? shown.homeScore + shown.awayScore : null;
   // Played only. A member who made no Pick sits at zero, so a week won on zero
   // points would otherwise sweep them into the tie and name them as a
   // contender in a tiebreak they were never in.

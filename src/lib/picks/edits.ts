@@ -109,7 +109,7 @@ async function writePick(
   now: Date,
 ): Promise<void> {
   const game = gameOnSlate(slate, edit.gameId);
-  if (effectiveResult(game).status === "void") throw new InvalidPick("That game is void; it scores zero for everyone.");
+  if (effectiveResult(game, now).phase === "void") throw new InvalidPick("That game is void; it scores zero for everyone.");
   if (edit.teamId !== game.homeTeamId && edit.teamId !== game.awayTeamId) {
     throw new InvalidPick("Pick one of the two teams in the game.");
   }
@@ -165,7 +165,7 @@ async function writeLock(
     await db.delete(locks).where(and(eq(locks.memberId, memberId), eq(locks.weekId, weekId)));
   } else {
     const game = gameOnSlate(slate, edit.gameId);
-    if (effectiveResult(game).status === "void") throw new InvalidPick("That game is void; it cannot be the Lock of the Week.");
+    if (effectiveResult(game, now).phase === "void") throw new InvalidPick("That game is void; it cannot be the Lock of the Week.");
     const pick = await ownPick(db, memberId, edit.gameId);
     if (!pick) throw new InvalidPick("Pick a winner in that game before locking it.");
     // The pick is in hand, so the new Lock names itself without a second read.

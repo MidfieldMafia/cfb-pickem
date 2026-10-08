@@ -57,7 +57,7 @@ describe("toSheetJson", () => {
     });
     // Void is the result's word, not a field of its own on the Game.
     expect(first.game).not.toHaveProperty("void");
-    expect(first.result).toMatchObject({ status: "pending", label: "Scheduled", shown: null });
+    expect(first.result).toMatchObject({ phase: "scheduled", label: "Scheduled", shown: null });
     expect("detail" in first).toBe(true);
     // The join key stays on the server: no screen can reach the feed's id.
     expect(first.game).not.toHaveProperty("cfbdGameId");
@@ -126,7 +126,7 @@ describe("toSheetJson", () => {
 
     expect(json.lock).toEqual({ state: "dropped", gameId: michigan.id });
     expect(json.games.find((g) => g.game.id === michigan.id)!.result).toMatchObject({
-      status: "void",
+      phase: "void",
       label: "Void",
       note: "Lightning; no makeup.",
       shown: null,

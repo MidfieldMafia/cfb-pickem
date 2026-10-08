@@ -64,7 +64,7 @@ export function toSheetJson(sheet: PickSheet): SheetJson {
     serverNow: sheet.serverNow.toISOString(),
     locked: sheet.locked,
     tiebreakerGameId: sheet.week.tiebreakerGameId,
-    games: sheet.games.map((g) => ({ ...toGameView(g), detail: g.detail })),
+    games: sheet.games.map((g) => ({ ...toGameView(g, sheet.serverNow), detail: g.detail })),
     picks: sheet.picks.map((p) => ({ gameId: p.gameId, teamId: p.teamId, updatedAt: p.updatedAt.toISOString() })),
     lock: sheet.lock,
     lockMultiplier: sheet.season.rules.lockMultiplier,
