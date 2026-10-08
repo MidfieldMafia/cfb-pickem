@@ -37,7 +37,7 @@ import { noteError } from "@/lib/notes";
 import { Refusal } from "@/lib/refusal";
 import { applyGamePatches, gameWithWeek, slateFor, type Slate } from "@/lib/slate/slate";
 import { toLiveFeed, type LiveFeed } from "./live-feed";
-import { describeResult, effectiveResult, underway, type GameResult } from "./result";
+import { describeResult, effectiveResult, REVIEW_AFTER_MS, underway, type GameResult } from "./result";
 
 /** Every refusal a result write makes, whichever of the four changes or the form in front of it. */
 export class InvalidResult extends Refusal {}
@@ -323,13 +323,27 @@ function settled(result: GameResult): boolean {
 }
 
 /**
+ * Whether a game holds the gate to the live interval: in progress, or Due —
+ * past kickoff with no score yet, so the first one is fetched within thirty
+ * seconds. A Due game stops counting once `needsReview` flags it: by then it
+ * is postponed or stuck rather than late, and a postponement nobody has voided
+ * would otherwise spend a metered `/games` call every thirty seconds for as
+ * long as members load the app.
+ */
+function atLiveRate(game: Game, now: Date): boolean {
+  const { phase } = effectiveResult(game, now);
+  if (phase === "in_progress") return true;
+  return phase === "due" && now.getTime() < game.kickoff.getTime() + REVIEW_AFTER_MS;
+}
+
+/**
  * How long the current claim holds: the live interval while any slate game
- * is under way — from its kickoff, before the feed has a score for it — and
- * the idle one otherwise. Read off the rows in hand, so the decision costs
- * nothing and a test can put a game in progress and watch the gate tighten.
+ * is in progress or freshly Due (`atLiveRate`), and the idle one otherwise.
+ * Read off the rows in hand, so the decision costs nothing and a test can put
+ * a game in progress and watch the gate tighten.
  */
 export function refreshInterval(slateGames: Game[], now: Date): number {
-  return slateGames.some((g) => underway(effectiveResult(g, now))) ? LIVE_REFRESH_INTERVAL_MS : REFRESH_INTERVAL_MS;
+  return slateGames.some((g) => atLiveRate(g, now)) ? LIVE_REFRESH_INTERVAL_MS : REFRESH_INTERVAL_MS;
 }
 
 export type RefreshOutcome =

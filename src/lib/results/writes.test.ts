@@ -18,9 +18,9 @@ import {
   SUNDAY,
   THURSDAY,
 } from "@/test/week-2";
-import { AFTER_KICKOFF, BEFORE_KICKOFF, gameRow } from "@/test/game";
+import { AFTER_KICKOFF, BEFORE_KICKOFF, gameRow, KICKOFF } from "@/test/game";
 import { effectiveResult } from "./result";
-import { needsReview, resultAuditsFor } from "./results";
+import { needsReview, resultAuditsFor, REVIEW_AFTER_MS } from "./results";
 import {
   clearOverride,
   ingestResults,
@@ -320,12 +320,13 @@ describe("results ingest", () => {
     expect(feed.reads).toEqual({ scoreboard: 2, games: 1, livePlays: 2 });
   });
 
-  test("the gate holds thirty seconds from a game's kickoff until it is final, and five minutes before then", async () => {
+  test("the gate holds thirty seconds while a game is in progress or freshly Due, and five minutes for one long overdue", async () => {
     const { db, jonah, miami, michigan, reload, refresh } = await setup();
     const kickoff = new Date("2026-09-12T16:05:00Z");
     const at = (seconds: number) => new Date(kickoff.getTime() + seconds * 1000);
 
-    // Miami kicked off on Friday and the feed has said nothing since: Due, so the thirty-second tier already.
+    // Miami kicked off on Friday and the feed has said nothing since: Due, but long past the review
+    // window, so on its own it holds the gate to five minutes. This claim finds Michigan under way.
     const live = feedWith({}, { [OKLAHOMA_AT_MICHIGAN]: [7, 3, 1, "10:00"] });
     expect(await refresh(live, kickoff)).toBe("refreshed");
     expect(await reload(michigan.id)).toMatchObject({ status: "in_progress", period: 1 });
@@ -334,13 +335,19 @@ describe("results ingest", () => {
     // Each claim is a scoreboard read and one play-by-play read for the one live game.
     expect(live.reads).toEqual({ scoreboard: 2, games: 0, livePlays: 2 });
 
-    // Michigan ends and Miami is voided: Texas has not kicked off, so nothing is waiting on the feed.
+    // Michigan ends. Miami is still Due, so the gate stays open — on the five-minute tier, since it is
+    // past the review window: a game the feed has lost for that long is a commissioner's to settle.
     const done = feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] });
     expect(await refresh(done, at(60))).toBe("refreshed");
     expect(await reload(michigan.id)).toMatchObject({ status: "final", period: null, clock: null });
+    expect(await refresh(done, at(60 + 30))).toBe("fresh");
+    expect(await refresh(done, at(60 + 299))).toBe("fresh");
+    expect(await refresh(done, at(60 + 300))).toBe("refreshed");
+
+    // Miami is voided, and Texas has not kicked off: nothing is waiting on the feed.
     await voidGame(db, jonah, miami.id, "Lightning");
-    expect(await refresh(done, at(120))).toBe("idle");
-    expect(done.calls).toBe(1);
+    expect(await refresh(done, at(60 + 600))).toBe("idle");
+    expect(done.calls).toBe(2);
   });
 
   test("concurrent requests elect one caller, and the rest read what it wrote", async () => {
@@ -425,6 +432,20 @@ describe("how long a refresh claim holds", () => {
     );
     expect(refreshInterval([gameRow({ status: "final", awayScore: 7, homeScore: 0 })], AFTER_KICKOFF)).toBe(REFRESH_INTERVAL_MS);
     expect(refreshInterval([gameRow({ void: true })], AFTER_KICKOFF)).toBe(REFRESH_INTERVAL_MS);
+  });
+
+  test("a Due game drops to the idle interval once it is flagged for review; a game in progress never does", () => {
+    const flagged = new Date(KICKOFF.getTime() + REVIEW_AFTER_MS);
+    const scheduled = gameRow();
+
+    expect(refreshInterval([scheduled], new Date(flagged.getTime() - 1))).toBe(LIVE_REFRESH_INTERVAL_MS);
+    // Six hours with no word from the feed is a postponement nobody has voided, not feed lag.
+    expect(needsReview(scheduled, flagged)).toBe(true);
+    expect(refreshInterval([scheduled], flagged)).toBe(REFRESH_INTERVAL_MS);
+    // A long game in overtime is still a game in progress.
+    expect(refreshInterval([gameRow({ status: "in_progress", awayScore: 7, homeScore: 0 })], flagged)).toBe(
+      LIVE_REFRESH_INTERVAL_MS,
+    );
   });
 });
 

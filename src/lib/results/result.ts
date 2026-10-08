@@ -130,6 +130,13 @@ function feedFinalOf(game: Game): Score | null {
     : null;
 }
 
+/**
+ * A game still under way this long after kickoff is postponed, canceled, or
+ * stuck in the feed: a commissioner should look (`needsReview`), and the
+ * server stops refreshing for it at the live rate (`refreshInterval`).
+ */
+export const REVIEW_AFTER_MS = 6 * 3600_000;
+
 /** True while a Game is past kickoff and not yet final: `due` or `in_progress`. */
 export function underway(result: Pick<GameResult, "phase">): boolean {
   return result.phase === "due" || result.phase === "in_progress";

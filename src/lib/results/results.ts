@@ -46,17 +46,15 @@ import {
   type GameResult,
   type LiveScore,
   type ResultLabel,
+  REVIEW_AFTER_MS,
   underway,
 } from "./result";
 import { toEngineMember, toEngineWeek } from "./engine";
 
-export { clockLabel, effectiveResult, underway };
+export { clockLabel, effectiveResult, REVIEW_AFTER_MS, underway };
 export type { GameResult, LiveScore, ResultLabel };
 
-/** A game still under way this long after kickoff is postponed, canceled, or stuck in the feed: a commissioner should look. */
-export const REVIEW_AFTER_MS = 6 * 3600_000;
-
-/** True for a pending, non-void game whose kickoff was long enough ago that a final should exist by now. */
+/** True for an under-way game whose kickoff was long enough ago that a final should exist by now. */
 export function needsReview(game: Game, now: Date): boolean {
   return underway(effectiveResult(game, now)) && game.kickoff.getTime() + REVIEW_AFTER_MS <= now.getTime();
 }
