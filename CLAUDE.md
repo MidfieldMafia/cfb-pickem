@@ -38,6 +38,11 @@ is prose for the league, written weekly by a routine — see
 for that prose, so fixing its wording there is enough; the JSON follows on the
 next run.
 
+Every PR body carries a `Members see:` line: `yes`, `behind <FLAG>`,
+`commissioners only` or `no`, then a few words on what changes for them. The
+routine trusts that line to decide what reaches What's new, and leaves out a PR
+whose line is missing or names a flag.
+
 ### Issue tracker
 
 Issues live in GitHub Issues for `MidfieldMafia/cfb-pickem`; each roadmap is a `wayfinder:map` issue (v1, v2 and v3 so far) and every ticket is a sub-issue of one with an `owner:jonah` or `owner:alex` label. See `docs/agents/issue-tracker.md`.

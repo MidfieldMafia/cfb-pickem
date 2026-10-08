@@ -42,7 +42,13 @@ If it says nothing has merged, stop. Do not open an empty PR.
 
 ## 2. Keep only what a member would notice
 
-Most weeks, half of what merged does not belong here. Cut:
+Start from each PR's `Members see:` line (`yes`, `behind <FLAG>`,
+`commissioners only` or `no`). Trust it. A PR whose line is missing, or names a
+flag, gets no bullet: list it under "Left out" in the PR body instead. Leaving a
+change out is the safe failure; announcing something members can't see yet is
+the worse one.
+
+Among the rest, most weeks half of what merged still does not belong here. Cut:
 
 - refactors, seams, test coverage, type work — anything whose result is the same
   screen it was before,
@@ -63,7 +69,14 @@ the reader already knows.
 
 Address the reader as "you", say what is now true rather than what was done to
 the code, and leave out PR and issue numbers — the generated half below already
-has every one of them.
+has every one of them. Keep the tone plain: full stops, and words that describe
+rather than sell.
+
+Hold each bullet to about **30 words**: one sentence on what's new, and at most
+one short sentence on how to get to it. Name the feature, not its contents — a
+member finds the parts by opening it. "Tap a game on the Live Board for its game
+sheet: what's on before kickoff, while it's live and once it's final." A
+catch-up week may run long; a single bullet should not.
 
 > - The Live Board shows possession, down and distance, and the last play while
 >   games are running.
