@@ -15,7 +15,7 @@ import type { GameDetail } from "@/lib/detail";
 import type { PickSheet } from "@/lib/picks/picks";
 import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/results";
 import { toGameView, toWeekJson, type WeekJson } from "@/lib/slate/json";
-import type { WeekContext } from "./week";
+import type { ScoredWeek } from "./week";
 
 /**
  * A Live Board Game: the Reveal's Game, plus the stored `detail` (kickoff ·
@@ -70,13 +70,12 @@ export interface WeekStateJson {
 /**
  * The Week a member is standing in, as the phone reads it. Before the
  * Deadline the Games carry no picks but the viewer's own and the standings
- * are null — the Reveal is what the Deadline gates, and `currentWeek` never
+ * are null — the Reveal is what the Deadline gates, and `scoredWeek` never
  * grades before it — so the two shapes of the screen are one shape with two
  * empty halves.
  */
-export function toWeekStateJson(week: WeekContext): WeekStateJson {
-  const { slate, sheet } = week;
-  const result = week.state === "live" || week.state === "settled" ? week.result : null;
+export function toWeekStateJson(week: ScoredWeek): WeekStateJson {
+  const { slate, sheet, result } = week;
   const detailOf = new Map(slate.games.map((game) => [game.id, game.detail]));
   const games = result ? result.reveal.games : slate.games.map((game) => ({ ...toGameView(game, sheet.serverNow), picks: [] }));
   return {
@@ -85,7 +84,7 @@ export function toWeekStateJson(week: WeekContext): WeekStateJson {
     deadline: sheet.deadline.toISOString(),
     serverNow: sheet.serverNow.toISOString(),
     locked: sheet.locked,
-    complete: result?.complete ?? false,
+    complete: week.state === "settled",
     members: result?.reveal.members ?? [],
     games: games.map((game) => ({
       ...game,

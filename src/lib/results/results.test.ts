@@ -6,10 +6,9 @@ import type { CfbdClient } from "@/lib/cfbd/types";
 import { PicksHidden } from "@/lib/picks/picks";
 import { slateFor } from "@/lib/slate/slate";
 import {
-  FAMU_AT_MIAMI,
+  ALL_FINAL,
   familyGroup,
   feedWith,
-  type Finals,
   joinAt,
   lockAs,
   pickAs,
@@ -151,13 +150,6 @@ describe("the reveal", () => {
     expect(every.filter((lock) => lock === "dropped")).toHaveLength(1);
   });
 });
-
-/** Every game reported: Miami and Michigan win at home, Ohio State wins at Texas 31–28. */
-const ALL_FINAL: Finals = {
-  [FAMU_AT_MIAMI]: [7, 45],
-  [OKLAHOMA_AT_MICHIGAN]: [24, 27],
-  [OHIO_STATE_AT_TEXAS]: [31, 28],
-};
 
 describe("the week result", () => {
   test("hands back the Weekly Scores and the Weekly Win the board was graded from", async () => {

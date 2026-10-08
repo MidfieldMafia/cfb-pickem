@@ -6,7 +6,7 @@ import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { toMemberJson } from "@/lib/slate/json";
 import { toWeekStateJson } from "@/lib/week/json";
-import { currentWeek } from "@/lib/week/week";
+import { scoredWeek } from "@/lib/week/week";
 import { NoSlate } from "../picks/no-slate";
 import { LiveBoard } from "./live-board";
 
@@ -20,11 +20,7 @@ export default async function Live() {
   const member = await requireMember();
   const choice = await currentGroupChoice();
   if (choice === null) return <NoGroup member={member} />;
-  const week = await currentWeek(db(), member, new Date(), {
-    graded: true,
-    cfbd,
-    group: choice.current.id,
-  });
+  const week = await scoredWeek(db(), member, choice.current.id, new Date(), { cfbd });
   if (!week) return <NoSlate />;
   return (
     <LiveBoard

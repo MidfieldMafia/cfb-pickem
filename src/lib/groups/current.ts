@@ -78,19 +78,6 @@ export async function groupChoice(
 }
 
 /**
- * Just the id, for the reads that only need to know which board to compute.
- * Delegates rather than repeating the fallback, so there is one statement of
- * which group is current and not two that could drift.
- */
-export async function currentGroupId(
-  db: Db,
-  memberId: number,
-  remembered: string | undefined,
-): Promise<number | null> {
-  return (await groupChoice(db, memberId, remembered))?.current.id ?? null;
-}
-
-/**
  * The same answer for a screen, from the request's own cookies. Cached per
  * request because the page and the header both ask — and because the header
  * needs the whole choice while the page needs only the id, this is the one read

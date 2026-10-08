@@ -19,7 +19,7 @@ import { toSheetJson } from "@/lib/picks/json";
 import { pickSheet } from "@/lib/picks/picks";
 import { gamePlays } from "@/lib/results/plays";
 import { toWeekStateJson, type WeekStateJson } from "@/lib/week/json";
-import { currentWeek } from "@/lib/week/week";
+import { scoredWeek } from "@/lib/week/week";
 
 /** How one route reads its own body into the one edit shape. */
 type ToEdit = (body: Record<string, unknown>) => PickEdit;
@@ -91,18 +91,14 @@ function weekStateEtag(state: WeekStateJson, group: number | null): string {
  * will not answer leaves the Week readable with the scores it had.
  *
  * 401 and 404 match `withPickContext`; this does not go through it because
- * `currentWeek` already composes the Week from the published Slate, and
+ * `scoredWeek` already composes the Week from the published Slate, and
  * reading the Slate twice per poll would be the one cost the poll can avoid.
  */
 export async function getWeekState(request: Request, route: PickRoute): Promise<Response> {
   const actor = await route.currentMember();
   if (!actor) return Response.json({ error: "Open your Magic Link to sign in." } satisfies ApiError, { status: 401 });
   const group = (await route.currentGroup?.()) ?? null;
-  const week = await currentWeek(route.db, actor, route.now?.() ?? new Date(), {
-    graded: true,
-    cfbd: route.cfbd,
-    group,
-  });
+  const week = await scoredWeek(route.db, actor, group, route.now?.() ?? new Date(), { cfbd: route.cfbd });
   if (!week) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
   const state = toWeekStateJson(week);
   const etag = weekStateEtag(state, group);

@@ -192,6 +192,15 @@ function onBoard(member: Member, week: Week): boolean {
 }
 
 /**
+ * Every Game final or Void: nothing left that could change a Weekly Score.
+ * The one statement of it — the app asks it of a Slate through
+ * `results/engine.weekSettled` rather than restating it.
+ */
+export function weekComplete(games: readonly Game[]): boolean {
+  return games.every((g) => g.void || g.status === "final");
+}
+
+/**
  * A Played Week: on the board, *and* holding at least one Pick.
  *
  * This second half lives only here. It decides whether a week counts, not who
@@ -220,12 +229,11 @@ export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResu
     .sort(compareWeekly);
   const places = sharedPositions(sorted, compareWeekly);
   const scores: WeeklyScore[] = sorted.map((score, i) => ({ ...score, place: places[i] }));
-  const complete = week.games.every((g) => g.void || g.status === "final");
   // Only the members who played are in the running: a week nobody picked has no
   // winner, rather than being shared between everyone who was on the board.
   return {
     weekNumber: week.weekNumber,
-    complete,
+    complete: weekComplete(week.games),
     scores,
     weeklyWin: decideWeeklyWin(
       scores.filter((s) => s.played),

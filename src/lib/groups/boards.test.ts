@@ -15,15 +15,12 @@ import { groupPlayedWeeks, seasonResult } from "@/lib/results/results";
 import { slateFor } from "@/lib/slate/slate";
 import {
   addGroup,
-  FAMU_AT_MIAMI,
+  ALL_FINAL,
   familyGroup,
   feedWith,
-  type Finals,
   joinAt,
   joinGroup,
   lockAs,
-  OHIO_STATE_AT_TEXAS,
-  OKLAHOMA_AT_MICHIGAN,
   pickAs,
   publishWeek2,
   SUNDAY,
@@ -34,13 +31,6 @@ import { ingestResults } from "@/lib/results/writes";
 
 /** The Monday after Week 2, for a restore that lands once the week is settled. */
 const MONDAY = new Date("2026-09-14T12:00:00Z");
-
-/** Miami and Michigan win at home; Ohio State win at Texas 31–28. */
-const ALL_FINAL: Finals = {
-  [FAMU_AT_MIAMI]: [7, 45],
-  [OKLAHOMA_AT_MICHIGAN]: [24, 27],
-  [OHIO_STATE_AT_TEXAS]: [31, 28],
-};
 
 /**
  * Week 2 played out: Grandma takes Michigan (Locked) and Ohio State for 30,
