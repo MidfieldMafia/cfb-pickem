@@ -171,6 +171,16 @@ describe("the states a Saturday passes through", () => {
     expect(screen.getByText("+6.5")).not.toBeNull();
   });
 
+  test("a favorite whose name starts with the other team's is not the other team's favorite", () => {
+    const g = game(PENDING);
+    const scheduled = { ...g, game: { ...g.game, awayTeam: "Texas", homeTeam: "Texas Tech", spread: "Texas Tech -3" } };
+    render(<LiveBoard initial={state({ complete: false, games: [scheduled] })} viewer={VIEWER} />);
+
+    // Texas is the first line, Texas Tech the second: the line is Tech's.
+    const lines = screen.getAllByText(/^[-+]3$/).map((el) => el.textContent);
+    expect(lines).toEqual(["+3", "-3"]);
+  });
+
   test("orders live games first, then what has no score yet, then finals and voids", () => {
     const live = { ...game(LIVE), game: { ...game(LIVE).game, id: 1, awayTeam: "Live Away", homeTeam: "Live Home" } };
     const scheduled = { ...game(PENDING), game: { ...game(PENDING).game, id: 2, awayTeam: "Sched Away", homeTeam: "Sched Home" } };

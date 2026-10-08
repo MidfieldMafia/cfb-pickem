@@ -27,6 +27,7 @@ import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
 import { clockLabel, sideWithBall } from "@/lib/results/result";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import { guessOrder } from "@/lib/results/summary";
+import { spreadHeadline } from "@/lib/spread";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
 import { plural } from "@/lib/plural";
 import { fetchGamePlays } from "@/lib/week/client";
@@ -115,11 +116,6 @@ function useLocalLabel(format: (timeZone?: string) => string): string {
     () => format(),
     () => format("UTC"),
   );
-}
-
-/** "Georgia -6.5" as the feed may write it, with a true minus sign. */
-function spreadText(spread: string): string {
-  return spread.replace(/-(?=\d)/, "−");
 }
 
 /** One team's column in the header: logo, "#rank Name" wrapping and never truncated, and its record before kickoff. */
@@ -588,7 +584,7 @@ function GameInformation({ game }: { game: LiveGameJson }) {
       {spread ? (
         <InfoRow icon={<Scale size={18} aria-hidden />}>
           <span className="flex-1 text-sm font-semibold">Spread</span>
-          <span className="text-sm tabular-nums">{spread === "Pick" ? "Pick" : spreadText(spread)}</span>
+          <span className="text-sm tabular-nums">{spreadHeadline(spread)}</span>
         </InfoRow>
       ) : null}
     </Card>

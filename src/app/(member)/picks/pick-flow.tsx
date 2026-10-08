@@ -12,7 +12,7 @@ import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
 
 import { track } from "@/lib/analytics/analytics";
-import { matchupColors } from "@/lib/matchup-colors";
+import { teamBarColors } from "@/lib/results/bar-colors";
 import type { SheetGameJson, SheetJson } from "@/lib/picks/json";
 import { firstOpenGame } from "@/lib/picks/progress";
 import { usePickSheet, type ShownPick } from "@/lib/picks/use-pick-sheet";
@@ -294,7 +294,7 @@ export function PickFlow({
     leave("guess");
   };
 
-  const [awayColor, homeColor] = matchupColors(game.awayTeam, game.homeTeam);
+  const { away: awayColor, home: homeColor } = teamBarColors(game.awayTeamId, game.homeTeamId);
 
   return (
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
@@ -393,6 +393,7 @@ export function PickFlow({
           <MatchupPanel
             awayTeam={game.awayTeam}
             homeTeam={game.homeTeam}
+            colors={[awayColor, homeColor]}
             spread={detail?.spread ?? game.spread}
             detail={detail}
           />

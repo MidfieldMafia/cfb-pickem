@@ -16,6 +16,7 @@ import { teamBarColors } from "@/lib/results/bar-colors";
 import { downAndDistance, lastPlayLine } from "@/lib/results/live-row";
 import { clockLabel, sideWithBall, type GamePhase, type GameResult, type LiveScore } from "@/lib/results/result";
 import type { RevealGame, RevealPick } from "@/lib/results/results";
+import { isFavoredLine, spreadSides } from "@/lib/spread";
 import { sideStanding } from "@/lib/results/side";
 import { record, standing } from "@/lib/results/summary";
 import { plural } from "@/lib/plural";
@@ -183,23 +184,6 @@ function orderKey(result: GameResult): number {
   return ORDER[result.phase];
 }
 
-/**
- * "Georgia -6.5" → "-6.5" on Georgia's line, "+6.5" on the other; "Pick" →
- * "PK" on both; null when nobody has set one yet.
- *
- * `spreadText` (cfbd/details.ts) writes a plain ASCII hyphen for the
- * win-probability model's fallback line; a sportsbook's own `formattedSpread`
- * is free-form text from the feed, so both a hyphen and a proper minus sign
- * are matched here rather than assuming one.
- */
-function spreadLabel(spread: string | null, team: string): string {
-  if (spread === null) return "–";
-  if (spread === "Pick") return "PK";
-  const favored = spread.startsWith(team);
-  const number = spread.replace(/^.*\s(?=[-−+])/, "");
-  return favored ? number : `+${number.replace(/^[-−]/, "")}`;
-}
-
 function ownPick(row: RevealGame, viewerId: number): RevealPick | undefined {
   return row.picks.find((p) => p.memberId === viewerId);
 }
@@ -246,7 +230,7 @@ function SideLine({
   rank,
   teamId,
   score,
-  spread,
+  line,
   dim,
   final,
   pick,
@@ -256,14 +240,15 @@ function SideLine({
   rank: number | null;
   teamId: number;
   score: number | null;
-  spread: string | null;
+  /** This side's share of the spread, from `spreadSides`; null when nobody has set one yet. */
+  line: string | null;
   dim: boolean;
   final: boolean;
   pick: RevealPick | undefined;
   hasBall: boolean;
 }) {
   const mine = pick && pick.teamId === teamId && pick.outcome !== "void" && pick.outcome !== "unpicked" ? pick : undefined;
-  const favored = spread !== null && spread !== "Pick" && spread.startsWith(team);
+  const favored = line !== null && isFavoredLine(line);
   return (
     <div className="grid min-h-8 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
       <TeamLogo team={team} size={22} className={dim || final ? "opacity-50" : ""} />
@@ -283,7 +268,7 @@ function SideLine({
         <span
           className={`min-w-8 text-right font-display text-[17px] tabular-nums ${favored ? "text-foreground" : "text-muted-foreground"}`}
         >
-          {spreadLabel(spread, team)}
+          {line ?? "–"}
         </span>
       ) : (
         <span
@@ -393,6 +378,7 @@ function GameRow({
   const mine = ownPick(row, viewerId);
   const awayPicks = row.picks.filter((p) => p.teamId === game.awayTeamId).length;
   const homePicks = row.picks.filter((p) => p.teamId === game.homeTeamId).length;
+  const sides = game.spread === null ? null : spreadSides(game.spread, game.awayTeam);
   const awaySide = sideStanding(result, "away");
   const homeSide = sideStanding(result, "home");
   const earned = mine?.outcome === "correct" ? mine.points : null;
@@ -443,7 +429,7 @@ function GameRow({
           rank={game.awayRank}
           teamId={game.awayTeamId}
           score={result.shown?.awayScore ?? null}
-          spread={game.spread}
+          line={sides?.[0] ?? null}
           dim={awaySide === "lost"}
           final={final}
           pick={mine}
@@ -454,7 +440,7 @@ function GameRow({
           rank={game.homeRank}
           teamId={game.homeTeamId}
           score={result.shown?.homeScore ?? null}
-          spread={game.spread}
+          line={sides?.[1] ?? null}
           dim={homeSide === "lost"}
           final={final}
           pick={mine}

@@ -5,7 +5,7 @@
  * is why this is a function with tests rather than a ternary in the markup.
  */
 import { describe, expect, test } from "vitest";
-import { spreadSides } from "./spread";
+import { isFavoredLine, spreadHeadline, spreadSides } from "./spread";
 
 describe("spreadSides", () => {
   test("the favorite carries the line and the underdog carries its mirror", () => {
@@ -37,5 +37,24 @@ describe("spreadSides", () => {
     // The line is matched on a *space* then a sign, so "Miami-OH" survives.
     expect(spreadSides("Miami-OH −1.5", "Miami-OH")).toEqual(["−1.5", "+1.5"]);
     expect(spreadSides("Miami-OH −1.5", "Buffalo")).toEqual(["+1.5", "−1.5"]);
+  });
+});
+
+describe("isFavoredLine", () => {
+  test("only the side carrying the minus is the favorite", () => {
+    expect(isFavoredLine("−6.5")).toBe(true);
+    expect(isFavoredLine("-6.5")).toBe(true);
+    expect(isFavoredLine("+6.5")).toBe(false);
+    expect(isFavoredLine("PK")).toBe(false);
+  });
+});
+
+describe("spreadHeadline", () => {
+  test("writes a true minus sign and spells out a pick'em", () => {
+    expect(spreadHeadline("Georgia -6.5")).toBe("Georgia −6.5");
+    expect(spreadHeadline("Georgia −6.5")).toBe("Georgia −6.5");
+    expect(spreadHeadline("Miami-OH -1.5")).toBe("Miami-OH −1.5");
+    expect(spreadHeadline("Pick")).toBe("Pick");
+    expect(spreadHeadline("PK")).toBe("Pick");
   });
 });
