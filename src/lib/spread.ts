@@ -1,8 +1,8 @@
 /**
  * The spread arrives from the feed as one string naming the favorite — "Georgia
- * −6.5" — but the matchup panel shows a number over each team. Splitting it is
- * the only real logic on that row, so it sits here where a test can reach it
- * rather than inside the component.
+ * −6.5" — but every screen that shows it (the pick sheet's matchup panel, the
+ * Live Board, the Game sheet) puts a number on each team. This is the one read
+ * of that string, here where a test can reach it rather than inside a component.
  */
 
 /** True for the side of a `spreadSides` pair that carries the line, the favorite's. */
