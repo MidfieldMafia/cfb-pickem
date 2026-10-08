@@ -12,6 +12,8 @@ import { PickFlow } from "./pick-flow";
  * `?game=<id>` when the review screen sends the member back to change one, or
  * on the Lock or Guess page with `?step=lock|guess`, which Review's rows use.
  * Once the Deadline has passed there is nothing to enter, so it goes to review.
+ * So does `?step=lock` on a slate with no game to put a Lock on, as Skip for
+ * now would from that page: it could only show an empty list.
  */
 export default async function Picks({
   searchParams,
@@ -23,6 +25,7 @@ export default async function Picks({
   if (!week) return <NoSlate />;
   if (week.sheet.locked) redirect("/picks/review");
   const { game, step } = await searchParams;
+  if (step === "lock" && !week.sheet.progress.lockApplies) redirect("/picks/review");
   const startGameId = typeof game === "string" ? Number(game) : undefined;
   const startPage: WalkPage | undefined = step === "lock" || step === "guess" ? step : undefined;
   return <PickFlow sheet={toSheetJson(week.sheet)} startGameId={startGameId} startPage={startPage} />;

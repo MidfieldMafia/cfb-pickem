@@ -18,7 +18,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { SheetGameJson } from "@/lib/picks/json";
-import { MIAMI, MICHIGAN, SERVER_NOW, TEXAS, sheet } from "@/test/sheet";
+import { MIAMI, MICHIGAN, SERVER_NOW, TEXAS, VOIDED, sheet } from "@/test/sheet";
 import { PickFlow } from "./pick-flow";
 
 /** A pick the server has already taken, as the wire carries it. */
@@ -215,5 +215,31 @@ describe("the way to review", () => {
 
     await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/Picks are locked/));
     expect(reviewLink()?.getAttribute("href")).toBe("/picks/review");
+  });
+});
+
+describe("the progress strip", () => {
+  /** The strip's markers after the games, by their accessible names. */
+  const markers = () =>
+    screen
+      .getByRole("navigation", { name: "Games" })
+      .querySelectorAll("button")
+      .values()
+      .map((b) => b.getAttribute("aria-label"))
+      .filter((label) => !label?.startsWith("Game "))
+      .toArray();
+
+  test("ends in the Lock and the Guess on a slate with games to pick", () => {
+    render(<PickFlow sheet={sheet()} />);
+
+    expect(markers()).toEqual(["Lock of the Week", "Tiebreaker Guess"]);
+  });
+
+  // #416: no counting game means no Lock to place, so the marker would open an empty page.
+  test("leaves the Lock out on a wholly Void slate", () => {
+    const allVoid = [MIAMI, MICHIGAN, TEXAS].map((view) => ({ ...view, result: VOIDED }));
+    render(<PickFlow sheet={sheet({ games: allVoid })} />);
+
+    expect(markers()).toEqual(["Tiebreaker Guess"]);
   });
 });
