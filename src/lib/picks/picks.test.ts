@@ -178,7 +178,7 @@ describe("one reader for a Week's entries", () => {
     expect(before.lock).toEqual({ state: "none" });
     expect(before.tiebreakerGuess).toBe(55);
     // Every pick but no Lock is one thing left.
-    expect(before.progress).toEqual({ countingGames: 3, picksMade: 3, lockSet: false, guessSet: true, lockOpen: true, remaining: 1 });
+    expect(before.progress).toEqual({ countingGames: 3, picksMade: 3, lockSet: false, guessSet: true, lockApplies: true, lockOpen: true, remaining: 1 });
 
     await lockAs(db, grandma, slate, miami.id, THURSDAY);
     const counts = of((await weekEntries(db, await fresh(), { chasing: await board() }, THURSDAY)).entries, grandma.id)!;
@@ -190,7 +190,7 @@ describe("one reader for a Week's entries", () => {
     await voidGame(db, jonah, miami.id, "Hurricane");
     const dropped = of((await weekEntries(db, await fresh(), { chasing: await board() }, THURSDAY)).entries, grandma.id)!;
     expect(dropped.lock).toEqual({ state: "dropped", gameId: miami.id });
-    expect(dropped.progress).toEqual({ countingGames: 2, picksMade: 2, lockSet: false, guessSet: true, lockOpen: true, remaining: 1 });
+    expect(dropped.progress).toEqual({ countingGames: 2, picksMade: 2, lockSet: false, guessSet: true, lockApplies: true, lockOpen: true, remaining: 1 });
 
     // The member's own sheet is the same entry: one reader, so the two cannot disagree.
     const own = await pickSheet(db, grandma, await fresh(), THURSDAY);

@@ -12,7 +12,7 @@ import { TeamLogo } from "@/components/team-logo";
 
 import { formatCountdown } from "@/lib/picks/clock";
 import { tiebreakerView, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
-import { firstOpenGame, lockGameOf, remainingLabel } from "@/lib/picks/progress";
+import { firstOpenGame, lockGameOf, picksComplete, remainingLabel } from "@/lib/picks/progress";
 import { usePickSheet } from "@/lib/picks/use-pick-sheet";
 import { plural } from "@/lib/plural";
 import { isVoid, teamName, voidNote } from "@/lib/slate/json";
@@ -126,8 +126,7 @@ export function Review({ initial }: { initial: SheetJson }) {
   const tiebreakerGame = tiebreakerView(sheet)?.game;
   // A wholly Void slate has nothing to pick and nowhere to put a Lock, so neither is a step.
   const nothingToPick = progress.countingGames === 0;
-  const lockApplies = progress.lockSet || progress.lockOpen;
-  const steps = progress.countingGames + (lockApplies ? 1 : 0) + 1;
+  const steps = progress.countingGames + (progress.lockApplies ? 1 : 0) + 1;
   const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
   const groups = groupByKickoff(sheet.games);
@@ -240,7 +239,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           {!progress.remaining && !locked ? <Check size={16} strokeWidth={3} className="text-win-foreground" /> : null}
         </div>
         <StepRow
-          done={open === 0}
+          done={picksComplete(progress)}
           label="Make every pick"
           detail={
             nothingToPick
@@ -253,7 +252,7 @@ export function Review({ initial }: { initial: SheetJson }) {
           disabled={locked || nothingToPick}
           onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.game.id}` : "/picks")}
         />
-        {lockApplies ? (
+        {progress.lockApplies ? (
           <StepRow
             done={progress.lockSet}
             label="Lock of the Week"
@@ -293,7 +292,7 @@ export function Review({ initial }: { initial: SheetJson }) {
         </section>
       ))}
 
-      {lockApplies ? (
+      {progress.lockApplies ? (
         <section>
           <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
           <SummaryCard

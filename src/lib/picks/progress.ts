@@ -22,9 +22,16 @@ export interface SheetProgress {
   /** True when the Tiebreaker Guess is in. */
   guessSet: boolean;
   /**
-   * True when a Lock of the Week is still to set: none counts yet and the
-   * slate has a counting game to put one on. Returned rather than left to the
-   * screens, which otherwise re-derive it from `lockSet` and `countingGames`.
+   * True when the Lock of the Week is a step this week at all: one counts, or
+   * the slate has a counting game to put one on. A wholly Void slate has
+   * neither, so the screens leave the Lock out rather than offer a step that
+   * can never be finished.
+   */
+  lockApplies: boolean;
+  /**
+   * True when a Lock of the Week is still to set: it applies and none counts
+   * yet. Returned rather than left to the screens, which otherwise re-derive
+   * it from `lockSet` and `countingGames`.
    */
   lockOpen: boolean;
   /**
@@ -119,12 +126,14 @@ export function sheetProgress({
   const lockSet = lock.state === "counts";
   const guessSet = tiebreakerGuess !== null;
   // A Lock needs a counting game to sit on, so a wholly voided slate leaves none to set.
-  const lockOpen = counting.length > 0 && !lockSet;
+  const lockApplies = lockSet || counting.length > 0;
+  const lockOpen = lockApplies && !lockSet;
   return {
     countingGames: counting.length,
     picksMade,
     lockSet,
     guessSet,
+    lockApplies,
     lockOpen,
     remaining: (picksMade < counting.length ? 1 : 0) + (lockOpen ? 1 : 0) + (guessSet ? 0 : 1),
   };
