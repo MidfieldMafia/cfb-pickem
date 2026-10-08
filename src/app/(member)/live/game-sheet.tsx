@@ -26,6 +26,7 @@ import type { GamePlaysJson } from "@/lib/results/live-feed";
 import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
 import { clockLabel, sideWithBall } from "@/lib/results/result";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import { guessOrder } from "@/lib/results/summary";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
 import { plural } from "@/lib/plural";
 import { fetchGamePlays } from "@/lib/week/client";
@@ -594,15 +595,17 @@ function GameInformation({ game }: { game: LiveGameJson }) {
   );
 }
 
-/** Everyone's Tiebreaker Guess, closest first once the game is final. */
+/**
+ * The Guesses of everyone who played, in the Reveal's order: `guessOrder`,
+ * closest first once the game is final and the Week's standings before it.
+ * Members with no Guess are counted rather than listed.
+ */
 function TiebreakerSection({ game, scores, viewerId }: { game: LiveGameJson; scores: WeeklyScore[]; viewerId: number }) {
   const final = game.result.phase === "final";
   const combined = final && game.result.shown ? game.result.shown.homeScore + game.result.shown.awayScore : null;
-  const guessed = scores.filter((s) => s.tiebreakerGuess !== null);
-  const sorted = [...guessed].sort((a, b) =>
-    final ? (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity) : a.tiebreakerGuess! - b.tiebreakerGuess!,
-  );
-  const missing = scores.length - guessed.length;
+  const played = guessOrder(scores);
+  const sorted = played.filter((s) => s.tiebreakerGuess !== null);
+  const missing = played.length - sorted.length;
   return (
     <Card className="grid gap-2 border-secondary p-2.5">
       <div className="flex items-baseline gap-2">

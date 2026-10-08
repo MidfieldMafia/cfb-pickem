@@ -145,6 +145,12 @@ export interface WeeklyScore {
    * first for the read path; only the engine answers the second.
    */
   played: boolean;
+  /**
+   * 1-based place in the Week's finish order. Members level on everything that
+   * order compares — played, points and Tiebreaker error — share a place, so a
+   * tie is never broken by read order.
+   */
+  place: number;
   points: number;
   correct: number;
   incorrect: number;
@@ -166,6 +172,18 @@ export interface WeeklyWin {
   winners: MemberId[];
   points: number;
   decidedBy: WeeklyWinDecidedBy;
+  /**
+   * The played members tied for the lead on points: the group the Guess was
+   * asked to separate. In the Week's finish order, so smallest
+   * `tiebreakerError` first once the Tiebreaker Game is final (a missing Guess
+   * scored as 0, as everywhere in the engine), and the order members arrived
+   * in before then.
+   *
+   * Empty when one member led outright, and when the Week has no Tiebreaker
+   * Game to measure a Guess against — none named, or it is Void — since
+   * nobody's place then turns on a Guess.
+   */
+  contenders: MemberId[];
 }
 
 export interface WeekResult {

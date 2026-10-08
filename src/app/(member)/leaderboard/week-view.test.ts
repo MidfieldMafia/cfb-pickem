@@ -18,6 +18,7 @@ function score(id: number, points: number, played = true): WeeklyScore {
   return {
     member: member(id),
     played,
+    place: 1,
     points,
     correct: 0,
     incorrect: 0,

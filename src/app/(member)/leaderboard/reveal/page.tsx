@@ -59,7 +59,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
   const weekNumber = slate.week.weekNumber;
   const won = weeklyWinSentence(weeklyWin, complete);
   const mine = scores.find((s) => s.member.id === member.id) ?? null;
-  const guesses = tiebreakerGuesses(reveal, scores, weeklyWin);
+  const guesses = tiebreakerGuesses(scores, weeklyWin);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">

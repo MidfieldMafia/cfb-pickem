@@ -12,6 +12,7 @@ import type {
   WeeklyScore,
   WeeklyWin,
 } from "./types";
+import { sharedPositions } from "./positions";
 
 /** Both final scores, or null when the game has not finished with a score on each side. */
 function finalScores(game: Game): { home: number; away: number } | null {
@@ -79,6 +80,9 @@ function indexWeek(week: Week): WeekIndex {
   };
 }
 
+/** A Weekly Score before the Week is sorted, which is what decides its place. */
+type Unplaced = Omit<WeeklyScore, "place">;
+
 function scoreMember(
   rules: Rules,
   week: Week,
@@ -86,7 +90,7 @@ function scoreMember(
   member: Member,
   tiebreakerTotal: number | null,
   played: boolean,
-): WeeklyScore {
+): Unplaced {
   const lockGameId = index.locks.get(member.id);
   const picks: PickResult[] = week.games.map((game) => {
     const team = index.picks.get(`${member.id}:${game.id}`);
@@ -123,28 +127,41 @@ function scoreMember(
  *
  * `played` leads so that a member who sat the week out lands below one who
  * picked and scored nothing. Both show zero, and only one of them turned up.
+ *
+ * Zero means level on all three, which is what makes two members share a
+ * place. Two unknown errors compare equal rather than as `Infinity - Infinity`.
  */
-function compareWeekly(a: WeeklyScore, b: WeeklyScore): number {
+function compareWeekly(a: Unplaced, b: Unplaced): number {
   if (a.played !== b.played) return a.played ? -1 : 1;
   if (a.points !== b.points) return b.points - a.points;
-  return (a.tiebreakerError ?? Infinity) - (b.tiebreakerError ?? Infinity);
+  const ea = a.tiebreakerError ?? Infinity;
+  const eb = b.tiebreakerError ?? Infinity;
+  return ea === eb ? 0 : ea - eb;
 }
 
-function decideWeeklyWin(scores: WeeklyScore[]): WeeklyWin | null {
+/**
+ * `guessDecides` is whether the Week has a Tiebreaker Game a Guess can be
+ * measured against: named, on the Slate and not Void. Without one, a points
+ * tie is simply shared, and nobody is a contender in a tiebreak that cannot
+ * happen.
+ */
+function decideWeeklyWin(scores: WeeklyScore[], guessDecides: boolean): WeeklyWin | null {
   const [top] = scores;
   if (!top) return null;
   const onPoints = scores.filter((s) => s.points === top.points);
   if (onPoints.length === 1) {
-    return { winners: [top.memberId], points: top.points, decidedBy: "points" };
+    return { winners: [top.memberId], points: top.points, decidedBy: "points", contenders: [] };
   }
+  const contenders = guessDecides ? onPoints.map((s) => s.memberId) : [];
   if (top.tiebreakerError === null) {
-    return { winners: onPoints.map((s) => s.memberId), points: top.points, decidedBy: "shared" };
+    return { winners: onPoints.map((s) => s.memberId), points: top.points, decidedBy: "shared", contenders };
   }
   const closest = onPoints.filter((s) => s.tiebreakerError === top.tiebreakerError);
   return {
     winners: closest.map((s) => s.memberId),
     points: top.points,
     decidedBy: closest.length === 1 ? "tiebreaker" : "shared",
+    contenders,
   };
 }
 
@@ -192,14 +209,17 @@ function playedWeek(member: Member, week: Week, pickers: ReadonlySet<MemberId>):
 }
 
 export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResult {
-  const tiebreakerTotal = combinedFinalScore(week.games.find((g) => g.id === week.tiebreakerGameId));
+  const tiebreakerGame = week.games.find((g) => g.id === week.tiebreakerGameId);
+  const tiebreakerTotal = combinedFinalScore(tiebreakerGame);
   const index = indexWeek(week);
-  const scores = members
+  const sorted = members
     .filter((member) => onBoard(member, week))
     .map((member) =>
       scoreMember(rules, week, index, member, tiebreakerTotal, playedWeek(member, week, index.pickers)),
     )
     .sort(compareWeekly);
+  const places = sharedPositions(sorted, compareWeekly);
+  const scores: WeeklyScore[] = sorted.map((score, i) => ({ ...score, place: places[i] }));
   const complete = week.games.every((g) => g.void || g.status === "final");
   // Only the members who played are in the running: a week nobody picked has no
   // winner, rather than being shared between everyone who was on the board.
@@ -207,6 +227,9 @@ export function scoreWeek(rules: Rules, week: Week, members: Member[]): WeekResu
     weekNumber: week.weekNumber,
     complete,
     scores,
-    weeklyWin: decideWeeklyWin(scores.filter((s) => s.played)),
+    weeklyWin: decideWeeklyWin(
+      scores.filter((s) => s.played),
+      tiebreakerGame !== undefined && !tiebreakerGame.void,
+    ),
   };
 }

@@ -157,7 +157,7 @@ describe("scoreWeek", () => {
         members,
       );
 
-      expect(result.weeklyWin).toEqual({ winners: ["jonah"], points: 20, decidedBy: "points" });
+      expect(result.weeklyWin).toEqual({ winners: ["jonah"], points: 20, decidedBy: "points", contenders: [] });
       const jonah = result.scores.find((s) => s.memberId === "jonah")!;
       expect(jonah.tiebreakerGuess).toBe(45);
       expect(jonah.tiebreakerError).toBe(7);
@@ -188,8 +188,16 @@ describe("scoreWeek", () => {
         members,
       );
 
-      expect(result.weeklyWin).toEqual({ winners: ["alex"], points: 10, decidedBy: "tiebreaker" });
-      expect(result.scores.map((s) => s.memberId)).toEqual(["alex", "jonah"]);
+      expect(result.weeklyWin).toEqual({
+        winners: ["alex"],
+        points: 10,
+        decidedBy: "tiebreaker",
+        contenders: ["alex", "jonah"],
+      });
+      expect(result.scores.map((s) => [s.memberId, s.place])).toEqual([
+        ["alex", 1],
+        ["jonah", 2],
+      ]);
     });
 
     it("treats a missing Tiebreaker Guess as a guess of 0", () => {
@@ -207,7 +215,12 @@ describe("scoreWeek", () => {
       const alex = result.scores.find((s) => s.memberId === "alex")!;
       expect(alex.tiebreakerGuess).toBeNull();
       expect(alex.tiebreakerError).toBe(38);
-      expect(result.weeklyWin).toEqual({ winners: ["jonah"], points: 10, decidedBy: "tiebreaker" });
+      expect(result.weeklyWin).toEqual({
+        winners: ["jonah"],
+        points: 10,
+        decidedBy: "tiebreaker",
+        contenders: ["jonah", "alex"],
+      });
     });
 
     it("is shared when scores and tiebreaker errors both tie", () => {
@@ -225,21 +238,54 @@ describe("scoreWeek", () => {
         members,
       );
 
-      expect(result.weeklyWin).toEqual({ winners: ["jonah", "alex"], points: 10, decidedBy: "shared" });
+      expect(result.weeklyWin).toEqual({
+        winners: ["jonah", "alex"],
+        points: 10,
+        decidedBy: "shared",
+        contenders: ["jonah", "alex"],
+      });
+      // Level on everything the order compares, so they share first.
+      expect(result.scores.map((s) => s.place)).toEqual([1, 1]);
     });
 
-    it("is shared when the Tiebreaker Game has no final score yet", () => {
+    it("is shared, with the tied members as contenders, while the Tiebreaker Game is still to finish", () => {
       const result = scoreWeek(
         rules2026,
         week({
-          games,
-          tiebreakerGameId: null,
+          games: [games[0], { ...games[1], status: "in_progress" }],
+          tiebreakerGameId: "g2",
           picks: tiedPicks,
+          tiebreakerGuesses: [{ memberId: "jonah", guess: 40 }],
         }),
         members,
       );
 
-      expect(result.weeklyWin).toEqual({ winners: ["jonah", "alex"], points: 10, decidedBy: "shared" });
+      expect(result.weeklyWin).toEqual({
+        winners: ["jonah", "alex"],
+        points: 10,
+        decidedBy: "shared",
+        contenders: ["jonah", "alex"],
+      });
+      // Two unknown errors are level, not unordered: still a shared first.
+      expect(result.scores.map((s) => s.place)).toEqual([1, 1]);
+    });
+
+    it("is shared with no contenders when there is no Tiebreaker Game to measure a Guess against", () => {
+      const none = scoreWeek(rules2026, week({ games, tiebreakerGameId: null, picks: tiedPicks }), members);
+      const voided = scoreWeek(
+        rules2026,
+        week({ games: [games[0], { ...games[1], void: true }], tiebreakerGameId: "g2", picks: tiedPicks }),
+        members,
+      );
+
+      for (const result of [none, voided]) {
+        expect(result.weeklyWin).toEqual({
+          winners: ["jonah", "alex"],
+          points: 10,
+          decidedBy: "shared",
+          contenders: [],
+        });
+      }
     });
 
     it("is null when nobody played the week", () => {
@@ -292,6 +338,46 @@ describe("scoreWeek", () => {
     );
 
     expect(result.scores.map((s) => s.memberId)).toEqual(["jonah", "alex"]);
+  });
+
+  describe("places", () => {
+    const four: Member[] = [
+      ...members,
+      { id: "grandma", joinedAt: "2026-08-01T00:00:00Z" },
+      { id: "kim", joinedAt: "2026-08-01T00:00:00Z" },
+    ];
+
+    it("counts everyone strictly ahead, so a tie shares a place and the next one skips", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
+          tiebreakerGameId: "g2",
+          picks: [
+            { memberId: "jonah", gameId: "g1", team: "Georgia" },
+            { memberId: "jonah", gameId: "g2", team: "Texas" },
+            { memberId: "alex", gameId: "g1", team: "Georgia" },
+            { memberId: "grandma", gameId: "g1", team: "Georgia" },
+            { memberId: "kim", gameId: "g1", team: "Clemson" },
+          ],
+          tiebreakerGuesses: [
+            { memberId: "alex", guess: 40 },
+            { memberId: "grandma", guess: 36 },
+          ],
+        }),
+        four,
+      );
+
+      // Alex and Grandma are level on points and each 2 off the Tiebreaker's 38.
+      expect(result.scores.map((s) => [s.memberId, s.place])).toEqual([
+        ["jonah", 1],
+        ["alex", 2],
+        ["grandma", 2],
+        ["kim", 4],
+      ]);
+      // Jonah led outright, so the Guesses separated nobody at the top.
+      expect(result.weeklyWin!.contenders).toEqual([]);
+    });
   });
 
   /**
@@ -409,7 +495,12 @@ describe("scoreWeek", () => {
 
       // Alex scored nothing, but Alex is the only one in the running: a member
       // who never picked cannot tie their way into a share of the week.
-      expect(result.weeklyWin).toEqual({ winners: ["alex"], points: 0, decidedBy: "points" });
+      expect(result.weeklyWin).toEqual({ winners: ["alex"], points: 0, decidedBy: "points", contenders: [] });
+      // And they do not share Alex's place either: level on zero, but one turned up.
+      expect(result.scores.map((s) => [s.memberId, s.played, s.place])).toEqual([
+        ["alex", true, 1],
+        ["jonah", false, 2],
+      ]);
     });
 
     it("has no Weekly Win in a week nobody picked, though everyone is still on the board", () => {

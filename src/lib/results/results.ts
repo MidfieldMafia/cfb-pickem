@@ -243,6 +243,8 @@ export interface WeeklyScore {
    * says they sat it out, and the season ignores the row entirely.
    */
   played: boolean;
+  /** 1-based place in the Week, from the engine; members level on everything share one. */
+  place: number;
   points: number;
   correct: number;
   incorrect: number;
@@ -261,6 +263,12 @@ export interface WeeklyWin {
   winners: ScoredMember[];
   points: number;
   decidedBy: engine.WeeklyWinDecidedBy;
+  /**
+   * Tied for the lead on points, in finish order; empty when one member led
+   * outright, or the Week has no Tiebreaker Game a Guess could be measured
+   * against. See the engine's `WeeklyWin.contenders`.
+   */
+  contenders: ScoredMember[];
 }
 
 /** One Week graded: what a week-results screen renders, without the board. */
@@ -319,6 +327,7 @@ function toWeeklyScore(score: engine.WeeklyScore, byId: Map<string, ScoredMember
   return {
     member: byId.get(score.memberId)!,
     played: score.played,
+    place: score.place,
     points: score.points,
     correct: score.correct,
     incorrect: score.incorrect,
@@ -342,7 +351,13 @@ function toGradedWeek(week: Week, graded: engine.WeekResult, byId: Map<string, S
 
 function toWeeklyWin(win: engine.WeeklyWin | null, byId: Map<string, ScoredMember>): WeeklyWin | null {
   if (win === null) return null;
-  return { winners: win.winners.map((id) => byId.get(id)!), points: win.points, decidedBy: win.decidedBy };
+  const member = (id: string) => byId.get(id)!;
+  return {
+    winners: win.winners.map(member),
+    points: win.points,
+    decidedBy: win.decidedBy,
+    contenders: win.contenders.map(member),
+  };
 }
 
 /**
