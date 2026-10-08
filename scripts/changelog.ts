@@ -74,24 +74,39 @@ type Entry = {
  * and `mergedAt` tells them apart.
  */
 async function mergedPulls(repo: string, withBodies = false): Promise<Pull[]> {
-  const fields = withBodies
-    ? "{number, title, mergedAt: .merged_at, author: .user.login, url: .html_url, body}"
-    : "{number, title, mergedAt: .merged_at, author: .user.login, url: .html_url}";
-  const { stdout } = await run(
-    "gh",
-    [
-      "api",
-      `repos/${repo}/pulls?state=closed&base=main&per_page=100`,
-      "--paginate",
-      "--jq",
-      `.[] | select(.merged_at != null) | ${fields}`,
-    ],
-    { maxBuffer: 32 * 1024 * 1024 },
-  );
-  return stdout
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line) as Pull)
+  type RawPull = {
+    number: number;
+    title: string;
+    merged_at: string | null;
+    user: { login: string } | null;
+    html_url: string;
+    body: string | null;
+  };
+
+  // Pages by number rather than `--paginate`: GitHub's next-page links use
+  // `repositories/{id}/...`, which the Claude Code cloud proxy refuses.
+  const raw: RawPull[] = [];
+  for (let page = 1; ; page++) {
+    const { stdout } = await run(
+      "gh",
+      ["api", `repos/${repo}/pulls?state=closed&base=main&per_page=100&page=${page}`],
+      { maxBuffer: 32 * 1024 * 1024 },
+    );
+    const batch = JSON.parse(stdout) as RawPull[];
+    raw.push(...batch);
+    if (batch.length < 100) break;
+  }
+
+  return raw
+    .filter((pull): pull is RawPull & { merged_at: string } => pull.merged_at !== null)
+    .map((pull) => ({
+      number: pull.number,
+      title: pull.title,
+      mergedAt: pull.merged_at,
+      author: pull.user?.login ?? "",
+      url: pull.html_url,
+      ...(withBodies ? { body: pull.body } : {}),
+    }))
     .sort((a, b) => b.mergedAt.localeCompare(a.mergedAt));
 }
 
@@ -194,7 +209,9 @@ function nextDay(date: string): string {
 }
 
 async function main() {
-  const { stdout: slug } = await run("gh", ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]);
+  // REST, not `gh repo view`: that one is GraphQL, which Claude Code cloud
+  // sessions refuse, and the weekly routine runs in one.
+  const { stdout: slug } = await run("gh", ["api", "repos/{owner}/{repo}", "--jq", ".full_name"]);
   const repo = slug.trim();
 
   const existing = await readFile(CHANGELOG, "utf8").catch(() => "");
