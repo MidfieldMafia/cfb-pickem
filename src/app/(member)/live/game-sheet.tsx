@@ -27,7 +27,7 @@ import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
 import { clockLabel, sideWithBall } from "@/lib/results/result";
 import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
 import { guessOrder } from "@/lib/results/summary";
-import { spreadHeadline } from "@/components/picks/spread";
+import { spreadHeadline } from "@/lib/spread";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
 import { plural } from "@/lib/plural";
 import { fetchGamePlays } from "@/lib/week/client";

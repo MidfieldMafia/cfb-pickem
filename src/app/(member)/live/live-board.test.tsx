@@ -176,8 +176,6 @@ describe("the states a Saturday passes through", () => {
     const scheduled = { ...g, game: { ...g.game, awayTeam: "Texas", homeTeam: "Texas Tech", spread: "Texas Tech -3" } };
     render(<LiveBoard initial={state({ complete: false, games: [scheduled] })} viewer={VIEWER} />);
 
-    expect(screen.getAllByText("-3")).toHaveLength(1);
-    expect(screen.getAllByText("+3")).toHaveLength(1);
     // Texas is the first line, Texas Tech the second: the line is Tech's.
     const lines = screen.getAllByText(/^[-+]3$/).map((el) => el.textContent);
     expect(lines).toEqual(["+3", "-3"]);

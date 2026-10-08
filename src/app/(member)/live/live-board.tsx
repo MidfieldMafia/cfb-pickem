@@ -16,7 +16,7 @@ import { teamBarColors } from "@/lib/results/bar-colors";
 import { downAndDistance, lastPlayLine } from "@/lib/results/live-row";
 import { clockLabel, sideWithBall, type GamePhase, type GameResult, type LiveScore } from "@/lib/results/result";
 import type { RevealGame, RevealPick } from "@/lib/results/results";
-import { isFavoredLine, spreadSides } from "@/components/picks/spread";
+import { isFavoredLine, spreadSides } from "@/lib/spread";
 import { sideStanding } from "@/lib/results/side";
 import { record, standing } from "@/lib/results/summary";
 import { plural } from "@/lib/plural";

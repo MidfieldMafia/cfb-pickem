@@ -1,7 +1,6 @@
 import { CAPS_LABEL as LABEL } from "@saturday-slate/design-system";
 
-import { teamBarColors } from "@/lib/results/bar-colors";
-import { isFavoredLine, spreadSides } from "./spread";
+import { isFavoredLine, spreadSides } from "@/lib/spread";
 import type { MatchupDetail } from "./types";
 
 const ROW = "grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 text-[13px] tabular-nums";
@@ -78,26 +77,23 @@ function StatBar({
  * card border, so it cannot be mistaken for a tap target.
  *
  * Takes primitives rather than a wire type so it drops into any caller holding
- * a slate: PickFlow passes `game.awayTeam`, `game.homeTeam`, their ids, `game.spread`.
+ * a slate: PickFlow passes `game.awayTeam`, `game.homeTeam`, the bar colours, `game.spread`.
  */
 export function MatchupPanel({
   awayTeam,
   homeTeam,
-  awayTeamId,
-  homeTeamId,
+  colors,
   spread,
   detail,
 }: {
   awayTeam: string;
   homeTeam: string;
-  awayTeamId: number;
-  homeTeamId: number;
+  /** The [away, home] bar pair, which the caller also paints its tiles with. */
+  colors: [string, string];
   spread: string | null;
   detail: MatchupDetail | null;
 }) {
   const sides = spread ? spreadSides(spread, awayTeam) : null;
-  const bars = teamBarColors(awayTeamId, homeTeamId);
-  const colors: [string, string] = [bars.away, bars.home];
   const homeWin = detail?.homeWp == null ? null : Math.round(detail.homeWp * 100);
 
   if (!sides && !detail) return null;
