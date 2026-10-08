@@ -64,10 +64,10 @@ function useFittedNameSize(ref: RefObject<HTMLSpanElement | null>, text: string)
  * `record` and `side` are the additions. `record` is null until #32 wires
  * /records, and the tile simply omits the line.
  *
- * `color` comes from the caller's `matchupColors(away, home)` rather than a
+ * `color` comes from the caller's `teamBarColors(awayId, homeId)` rather than a
  * bare `teamColor(name)` lookup here, so the underline agrees with the split
- * bars above when two primaries are too close and the panel falls back to a
- * secondary — see `src/lib/matchup-colors.ts`.
+ * bars above and on the Live Board when two colours are too close and one side
+ * gives way — see `src/lib/results/bar-colors.ts`.
  */
 export function TeamTile({
   name,

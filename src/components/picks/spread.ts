@@ -5,6 +5,16 @@
  * rather than inside the component.
  */
 
+/** True for the side of a `spreadSides` pair that carries the line, the favorite's. */
+export function isFavoredLine(line: string): boolean {
+  return line.startsWith("−") || line.startsWith("-");
+}
+
+/** "Georgia -6.5" as the feed may write it, with a true minus sign; "Pick" stays "Pick". */
+export function spreadHeadline(spread: string): string {
+  return spread === "PK" ? "Pick" : spread.replace(/-(?=\d)/, "−");
+}
+
 /** Splits "Georgia −6.5" into what the away side and the home side of the spread row show. */
 export function spreadSides(spread: string, away: string): [string, string] {
   if (spread === "Pick" || spread === "PK") return ["PK", "PK"];

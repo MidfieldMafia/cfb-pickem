@@ -1,7 +1,7 @@
 import { CAPS_LABEL as LABEL } from "@saturday-slate/design-system";
 
-import { matchupColors } from "@/lib/matchup-colors";
-import { spreadSides } from "./spread";
+import { teamBarColors } from "@/lib/results/bar-colors";
+import { isFavoredLine, spreadSides } from "./spread";
 import type { MatchupDetail } from "./types";
 
 const ROW = "grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 text-[13px] tabular-nums";
@@ -36,6 +36,7 @@ function SplitBar({
 function StatBar({
   awayTeam,
   homeTeam,
+  colors,
   label,
   away,
   home,
@@ -43,6 +44,7 @@ function StatBar({
 }: {
   awayTeam: string;
   homeTeam: string;
+  colors: [string, string];
   label: string;
   /** Null before a team's first game or for an FCS opponent: the side shows a dash and the bar splits evenly. */
   away: number | null;
@@ -62,7 +64,7 @@ function StatBar({
         <span className={`${LABEL} text-center text-[10px] leading-3`}>{label}</span>
         <SplitBar
           awayShare={known ? Math.round((away / total) * 100) : 50}
-          colors={matchupColors(awayTeam, homeTeam)}
+          colors={colors}
           label={`${label}: ${awayTeam} ${away ?? "unknown"}, ${homeTeam} ${home ?? "unknown"}`}
         />
       </span>
@@ -76,21 +78,26 @@ function StatBar({
  * card border, so it cannot be mistaken for a tap target.
  *
  * Takes primitives rather than a wire type so it drops into any caller holding
- * a slate: PickFlow passes `game.awayTeam`, `game.homeTeam`, `game.spread`.
+ * a slate: PickFlow passes `game.awayTeam`, `game.homeTeam`, their ids, `game.spread`.
  */
 export function MatchupPanel({
   awayTeam,
   homeTeam,
+  awayTeamId,
+  homeTeamId,
   spread,
   detail,
 }: {
   awayTeam: string;
   homeTeam: string;
+  awayTeamId: number;
+  homeTeamId: number;
   spread: string | null;
   detail: MatchupDetail | null;
 }) {
   const sides = spread ? spreadSides(spread, awayTeam) : null;
-  const favored = (side: string) => side.startsWith("−") || side.startsWith("-");
+  const bars = teamBarColors(awayTeamId, homeTeamId);
+  const colors: [string, string] = [bars.away, bars.home];
   const homeWin = detail?.homeWp == null ? null : Math.round(detail.homeWp * 100);
 
   if (!sides && !detail) return null;
@@ -99,12 +106,12 @@ export function MatchupPanel({
     <div className="grid gap-2 px-1 pt-1.5 pb-2.5">
       {sides ? (
         <div className={ROW}>
-          <span className={favored(sides[0]) ? "font-extrabold text-foreground" : "font-medium text-muted-foreground"}>
+          <span className={isFavoredLine(sides[0]) ? "font-extrabold text-foreground" : "font-medium text-muted-foreground"}>
             {sides[0]}
           </span>
           <span className={`${LABEL} text-center text-[10px] leading-3`}>Spread</span>
           <span
-            className={`text-right ${favored(sides[1]) ? "font-extrabold text-foreground" : "font-medium text-muted-foreground"}`}
+            className={`text-right ${isFavoredLine(sides[1]) ? "font-extrabold text-foreground" : "font-medium text-muted-foreground"}`}
           >
             {sides[1]}
           </span>
@@ -118,6 +125,7 @@ export function MatchupPanel({
               key={key}
               awayTeam={awayTeam}
               homeTeam={homeTeam}
+              colors={colors}
               label={label}
               away={detail.away[key]}
               home={detail.home[key]}
@@ -136,7 +144,7 @@ export function MatchupPanel({
           </div>
           <SplitBar
             awayShare={100 - homeWin}
-            colors={matchupColors(awayTeam, homeTeam)}
+            colors={colors}
             label={`${awayTeam} ${100 - homeWin}%, ${homeTeam} ${homeWin}%`}
             className="h-2"
           />
