@@ -5,11 +5,17 @@
 
 ## Set up
 
-Install the driver into the scratchpad, so `package.json` stays clean:
+Install the driver once per machine, outside the repo so `package.json` stays
+clean, and reuse it. A scratchpad install is thrown away with the session; #336
+spent 1m38s reinstalling it.
 
 ```bash
-npm i puppeteer-core --prefix "$SCRATCH" --no-audit --no-fund
+PPT="$HOME/.cache/slate-browser"
+[ -f "$PPT/.installed" ] || { npm i puppeteer-core --prefix "$PPT" --no-audit --no-fund && touch "$PPT/.installed"; }
 ```
+
+`.installed` is written only after npm succeeds, so an interrupted install is
+retried rather than trusted. To take a newer `puppeteer-core`, `rm -rf "$PPT"`.
 
 It ships no browser. Confirm Chrome is where the script will look:
 
@@ -25,8 +31,12 @@ Write Windows paths with forward slashes, as below. Windows accepts them, and
 no quoting layer can eat them: a Bash heredoc drops a level of doubled
 backslashes, and #336 launched a Chrome path that no longer existed.
 
+Load it by path, so the script can live in the scratchpad:
+
 ```js
-const puppeteer = require("puppeteer-core");
+const path = require("path");
+const os = require("os");
+const puppeteer = require(path.join(os.homedir(), ".cache/slate-browser/node_modules/puppeteer-core"));
 
 const CHROME =
   process.platform === "darwin"

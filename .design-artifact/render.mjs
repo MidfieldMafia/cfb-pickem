@@ -6,7 +6,8 @@
 //   node .design-artifact/render.mjs --artifact <dir> --shots <dir> --puppeteer <dir>
 //
 // --artifact   the folder the Artifact `read` saved into (it holds project/...)
-// --puppeteer  a folder with puppeteer-core installed (`npm i puppeteer-core --prefix <dir>`);
+// --puppeteer  a folder with puppeteer-core installed (`npm i puppeteer-core --prefix <dir>`;
+//              the skill reuses one at ~/.cache/slate-browser);
 //              it drives the machine's own Chrome, as the verify-running-app skill does.
 import fs from "node:fs";
 import path from "node:path";
