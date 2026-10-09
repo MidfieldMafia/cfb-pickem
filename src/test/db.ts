@@ -1,3 +1,6 @@
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { dataDir } from "@electric-sql/pglite-prepopulatedfs";
@@ -41,4 +44,21 @@ function template(): Promise<Blob | File> {
 export async function createTestDb(): Promise<Db> {
   const client = new PGlite({ loadDataDir: await template() });
   return drizzle({ client, schema });
+}
+
+/**
+ * A copy of the committed migrations that stops at `lastTag`, for a database
+ * as it stood then. Migrating to this, writing rows, then migrating the real
+ * folder runs the later migrations over those rows, which is how a data
+ * migration's backfill is tested.
+ */
+export function migrationsThrough(lastTag: string): string {
+  const folder = mkdtempSync(join(tmpdir(), "migrations-"));
+  cpSync("drizzle", folder, { recursive: true });
+  const journalPath = join(folder, "meta", "_journal.json");
+  const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: { tag: string }[] };
+  const last = journal.entries.findIndex((entry) => entry.tag === lastTag);
+  if (last < 0) throw new Error(`No migration ${lastTag}`);
+  writeFileSync(journalPath, JSON.stringify({ ...journal, entries: journal.entries.slice(0, last + 1) }));
+  return folder;
 }

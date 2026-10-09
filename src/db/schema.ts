@@ -27,6 +27,7 @@ import type { GameDetail } from "@/lib/detail";
 import type { BoxScore, Positions } from "@/lib/results/box-score";
 import type { LiveFeed } from "@/lib/results/live-feed";
 import type { Rules } from "@/lib/scoring/types";
+import { tourIds } from "@/tours/ids";
 
 const utc = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -593,6 +594,25 @@ export const chatReactions = pgTable(
     createdAt: utc("created_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.messageId, t.memberId] }), index("chat_reactions_member_idx").on(t.memberId)],
+);
+
+/**
+ * A Tour a member has dismissed, by Done, Skip or Escape alike (#429). No row
+ * means show it; a row means never again, on any device. Leaving mid-Tour
+ * writes nothing, and no progress is kept. The migration that made this
+ * table gave every member already welcomed a `welcome` row, so only members
+ * who finish setup afterwards see the Welcome Tour.
+ */
+export const tourDismissals = pgTable(
+  "tour_dismissals",
+  {
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    tourId: text("tour_id", { enum: tourIds }).notNull(),
+    dismissedAt: utc("dismissed_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.memberId, t.tourId] })],
 );
 
 export const seasonsRelations = relations(seasons, ({ many }) => ({ weeks: many(weeks) }));

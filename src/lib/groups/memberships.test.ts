@@ -4,9 +4,6 @@
  * anyone sees, and the seam the group-scoped boards will build on answers who
  * is in a group, as what, since when, and with which gaps.
  */
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
@@ -18,7 +15,7 @@ import type { Db } from "@/db/types";
 import type { Commissioner } from "@/lib/members/authority";
 import { seasonResult, weekResult } from "@/lib/results/results";
 import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
-import { createTestDb } from "@/test/db";
+import { createTestDb, migrationsThrough } from "@/test/db";
 import {
   FAMU_AT_MIAMI,
   feedWith,
@@ -45,18 +42,6 @@ const columnsThen = Object.fromEntries(
 
 /** The migration before groups: the schema production ran through Week 2. */
 const BEFORE_GROUPS = "0004_live-clock";
-
-/** A copy of the committed migrations that stops at `lastTag`, for a database as it stood then. */
-function migrationsThrough(lastTag: string): string {
-  const folder = mkdtempSync(join(tmpdir(), "migrations-"));
-  cpSync("drizzle", folder, { recursive: true });
-  const journalPath = join(folder, "meta", "_journal.json");
-  const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: { tag: string }[] };
-  const last = journal.entries.findIndex((entry) => entry.tag === lastTag);
-  if (last < 0) throw new Error(`No migration ${lastTag}`);
-  writeFileSync(journalPath, JSON.stringify({ ...journal, entries: journal.entries.slice(0, last + 1) }));
-  return folder;
-}
 
 const WEDNESDAY = new Date("2026-09-09T18:00:00Z");
 /** After Week 2's Deadline: joined too late to count in it. */

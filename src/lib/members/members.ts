@@ -18,6 +18,7 @@ import {
   sessions,
   textMessages,
   tiebreakerGuesses,
+  tourDismissals,
   type Member,
 } from "@/db/schema";
 import type { Db } from "@/db/types";
@@ -235,7 +236,7 @@ export async function pickCountByMember(db: Db, _actor: Commissioner): Promise<M
  * Every row that names them goes in one batch with the member, so a failure
  * leaves them whole rather than half deleted. That includes their Feedback
  * and its screenshots (#237), their Chat messages (#248), their reactions and
- * everyone's reactions to their messages (#249).
+ * everyone's reactions to their messages (#249), and the Tours they dismissed (#429).
  */
 export async function removeMember(db: Db, actor: Commissioner, memberId: number): Promise<Member> {
   if (memberId === actor.id) throw new InvalidMember("You cannot delete yourself.");
@@ -264,11 +265,12 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     tx.delete(chatReactions).where(eq(chatReactions.memberId, memberId)),
     tx.delete(chatReactions).where(inArray(chatReactions.messageId, theirMessages)),
     tx.delete(chatMessages).where(eq(chatMessages.memberId, memberId)),
+    tx.delete(tourDismissals).where(eq(tourDismissals.memberId, memberId)),
     // A message they took down stays down; it just no longer names who did it.
     tx.update(chatMessages).set({ removedBy: null }).where(eq(chatMessages.removedBy, memberId)),
     tx.delete(members).where(eq(members.id, memberId)).returning(),
   ]);
-  const [deleted] = writes[15];
+  const [deleted] = writes[16];
   return deleted;
 }
 
