@@ -1,6 +1,6 @@
 "use client";
 
-import { ListOrdered, Lock, Megaphone, Target, Timer, X, type LucideIcon } from "lucide-react";
+import { Lock, Megaphone, Target, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -24,16 +24,6 @@ const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: stri
       icon: Target,
       title: "The over/under on your Guess",
       body: "When a line is out, the Tiebreaker Guess page shows the game's over/under as a starting point.",
-    },
-    {
-      icon: ListOrdered,
-      title: "Everyone's Guess, every week",
-      body: "Every Reveal shows the Tiebreaker Guesses card, closest guess first, not just weeks with a tie for first.",
-    },
-    {
-      icon: Timer,
-      title: "First scores sooner",
-      body: "The Live Board checks for scores every 30 seconds from kickoff, so a game's first score shows up sooner.",
     },
   ],
 };
