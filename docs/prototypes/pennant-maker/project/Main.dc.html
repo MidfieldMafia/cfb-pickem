@@ -30,7 +30,7 @@ a{color:#1F4034}a:hover{color:#241F1A}
 <span style="margin-left: {{item.overlap}}; border-radius: 50%; box-shadow: 0 0 0 2px #FBF6EC; line-height: 0"><dc-import name="Pennant" p="{{item.p}}" size="{{ 28 }}" hint-size="28px,28px"></dc-import></span>
 </sc-for>
 </span>
-<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600; font-size: 16px">Flags</span><span style="display: block; font-size: 14px; color: #6F6152">15 pennants, or make your own</span></span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600; font-size: 16px">Flags</span><span style="display: block; font-size: 14px; color: rgb(111, 97, 82)">15 presets, or make your own</span></span>
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6F6152" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
 </button>
 <div style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #9C845F; border-radius: 14px; background: #FBF6EC; display: flex; align-items: center; gap: 12px">
@@ -214,6 +214,9 @@ const PRESETS = [
   ['sky-star', 'Sky Star', 'sky', 'star', 'cream'], ['moss-trim', 'Moss Trim', 'moss', 'trim', 'pine', 'stone'],
   ['ink-bands', 'Ink Twin Bands', 'ink', 'bands', 'gold']
 ].map(([id, name, flag, pattern, mark, pole]) => ({ id, name, design: { flag, pattern, mark, pole: pole || 'ink', bg: 'auto' } }));
+// Presets run in the colour picker's order (greens, blues, purples and reds,
+// oranges, neutrals): with no names on the grid, colour is what people scan by.
+PRESETS.sort((a, b) => FLAGS.findIndex((c) => c.id === a.design.flag) - FLAGS.findIndex((c) => c.id === b.design.flag));
 const BLANK = { flag: 'pine', pattern: 'plain', mark: 'cream', pole: 'ink', bg: 'auto' };
 const SEL = '0 0 0 2px #F7F1E3, 0 0 0 4px #1F4034';
 const UNSEL = 'inset 0 0 0 1px rgba(36,31,26,0.22)';
