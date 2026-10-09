@@ -40,7 +40,7 @@ a{color:#1F4034}a:hover{color:#241F1A}
 </button>
 </sc-for>
 </div>
-<p style="margin: 0; font-size: 13px; color: #6F6152">Tap a flag to open it in the maker. Save it as it is, or change it first.</p>
+<p style="margin: 0; font-size: 13px; color: #6F6152">Tap a flag to make it yours, or make your own.</p>
 </div>
 </sc-if>
 
@@ -200,19 +200,20 @@ function same(a, b) { return ['flag', 'pattern', 'mark', 'pole', 'bg'].every((k)
 
 class Component extends DCLogic {
   renderVals() {
-    const s = Object.assign({ screen: 'flags', design: BLANK, from: null, saved: null }, this.state);
+    // `saved` is the chosen pennant; `custom` is the member's own design, kept
+    // while they try presets so "Yours" and "Make your own" can bring it back.
+    const s = Object.assign({ screen: 'flags', design: BLANK, saved: null, custom: null }, this.state);
     const d = s.design;
     const set = (key, val) => this.setState({ design: Object.assign({}, d, { [key]: val }) });
-    const fromPreset = s.from ? PRESETS.find((p) => p.id === s.from) : null;
-    const unchanged = fromPreset ? same(d, fromPreset.design) : false;
     const savedId = s.saved ? (s.saved.from || 'custom') : null;
     const cell = (on) => ({ border: on ? '#1F4034' : 'transparent', cellBg: on ? '#EFE7D5' : 'transparent', pressed: on });
 
+    // A tap on a tile chooses it. Only "Make your own" opens the maker.
     const tiles = [];
-    if (s.saved && !s.saved.from) {
-      tiles.push(Object.assign({ name: 'Yours', p: spec(s.saved.design, LIGHT), open: () => this.setState({ screen: 'edit', design: s.saved.design, from: null }) }, cell(true)));
+    if (s.custom) {
+      tiles.push(Object.assign({ name: 'Yours', p: spec(s.custom, LIGHT), open: () => this.setState({ saved: { design: s.custom, from: null } }) }, cell(savedId === 'custom')));
     }
-    PRESETS.forEach((pr) => tiles.push(Object.assign({ name: pr.name, p: spec(pr.design, LIGHT), open: () => this.setState({ screen: 'edit', design: pr.design, from: pr.id }) }, cell(savedId === pr.id))));
+    PRESETS.forEach((pr) => tiles.push(Object.assign({ name: pr.name, p: spec(pr.design, LIGHT), open: () => this.setState({ saved: { design: pr.design, from: pr.id } }) }, cell(savedId === pr.id))));
 
     const swatches = (ids, key) => ids.map((id) => {
       const c = color(id);
@@ -229,11 +230,11 @@ class Component extends DCLogic {
       savedP: s.saved ? spec(s.saved.design, LIGHT) : spec(BLANK, LIGHT),
       savedName: s.saved ? (s.saved.from ? PRESETS.find((p) => p.id === s.saved.from).name : 'Your own') : '',
       tiles: tiles,
-      makeOwn: () => this.setState({ screen: 'edit', design: BLANK, from: null }),
+      makeOwn: () => this.setState({ screen: 'edit', design: s.custom || BLANK }),
       back: () => this.setState({ screen: 'flags' }),
-      save: () => this.setState({ screen: 'flags', saved: { design: d, from: unchanged ? s.from : null } }),
-      title: fromPreset ? fromPreset.name : 'Make your own',
-      status: fromPreset ? (unchanged ? 'Preset' : 'Edited') : 'New',
+      save: () => this.setState({ screen: 'flags', custom: d, saved: { design: d, from: null } }),
+      title: 'Make your own',
+      status: s.custom ? 'Editing yours' : 'New',
       pv: spec(d, LIGHT),
       flagName: color(d.flag).name,
       markName: color(d.mark).name,
