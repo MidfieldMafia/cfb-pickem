@@ -13,7 +13,7 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
   id: "2026-10-04",
-  label: "What's new · Oct 4–8",
+  label: "What's new · Oct 4–10",
   items: [
     {
       icon: Lock,
