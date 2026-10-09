@@ -4,7 +4,6 @@ import { CircleAlert } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import {
   BackLink,
-  Button,
   Pennant,
   PENNANT_FLAG_COLORS,
   PENNANT_MARK_COLORS,
@@ -24,25 +23,29 @@ import { findAvatar, ownAvatarId } from "@/lib/avatars";
  * preview at 96, and at 28 and 20 because those are the leaderboard's and
  * chat's real sizes, over five settings in one scroll.
  *
- * Nothing here is stored. Done hands the design back to the picker, which
- * chooses it; the page's own Save commits it, the way a photo crop does. Back
- * drops whatever was changed since the maker opened.
+ * Nothing here is stored. Each change hands the design to the picker, which
+ * chooses it the way a tap on a preset does, so the page's own Save is the one
+ * button that commits it. There is no Done: a second button over Save read as
+ * two steps. Opening the maker and backing out unchanged chooses nothing.
  */
 export function PennantMaker({
   initial,
   editing,
-  onDone,
+  onChange,
   onBack,
 }: {
   initial: PennantDesign;
   /** The member already has a design, which `initial` is. */
   editing: boolean;
-  onDone: (design: PennantDesign) => void;
+  onChange: (design: PennantDesign) => void;
   onBack: () => void;
 }) {
   const [design, setDesign] = useState(initial);
-  const set = <K extends keyof PennantDesign>(key: K, value: PennantDesign[K]) =>
-    setDesign((d) => ({ ...d, [key]: value }));
+  const set = <K extends keyof PennantDesign>(key: K, value: PennantDesign[K]) => {
+    const next = { ...design, [key]: value };
+    setDesign(next);
+    onChange(next);
+  };
   const preview = findAvatar(ownAvatarId(design));
   const clash = design.patternColor === design.flag && design.pattern !== "plain";
 
@@ -133,10 +136,6 @@ export function PennantMaker({
           />
         ))}
       </Setting>
-
-      <Button type="button" size="lg" className="w-full" onClick={() => onDone(design)}>
-        Done
-      </Button>
     </div>
   );
 }

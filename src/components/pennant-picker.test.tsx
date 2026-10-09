@@ -42,32 +42,42 @@ describe("Make your own", () => {
     expect(screen.queryByText("Done")).toBeNull();
   });
 
-  test("Done chooses the design made, and the tile then edits it", () => {
-    render(<PennantPicker welcome />);
+  test("every change chooses the design, with no button of its own over the page's Save", () => {
+    render(<PennantPicker welcome selected="pennants-04" />);
     openFlags();
     tap("Make your own");
     expect(screen.getByText("New")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+
     pick("Flag color", "Plum");
+    expect(posted()).toBe("own-plum-plain-cream-ink-auto");
     pick("Pattern", "Star");
     pick("Pole", "Gold");
     expect(screen.getByText("Flag color · Plum")).toBeTruthy();
-    tap("Done");
-
     expect(posted()).toBe("own-plum-star-cream-gold-auto");
+  });
+
+  test("Back keeps the design chosen, and the tile then edits it", () => {
+    render(<PennantPicker welcome />);
+    openFlags();
+    tap("Make your own");
+    pick("Flag color", "Plum");
+    pick("Pattern", "Star");
+    tap("Back to Flags");
+
+    expect(posted()).toBe("own-plum-star-cream-ink-auto");
     expect(button("Edit your own flag").getAttribute("aria-pressed")).toBe("true");
 
     tap("Edit your own flag");
     expect(screen.getByText("Editing yours")).toBeTruthy();
     expect(picked("Flag color", "Plum")).toBe("true");
     expect(picked("Pattern", "Star")).toBe("true");
-    expect(picked("Pole", "Gold")).toBe("true");
   });
 
-  test("Back leaves the maker without choosing anything", () => {
+  test("opening the maker and backing out unchanged chooses nothing", () => {
     render(<PennantPicker welcome selected="pennants-04" />);
     openFlags();
     tap("Make your own");
-    pick("Flag color", "Moss");
     tap("Back to Flags");
     expect(posted()).toBe("pennants-04");
     expect(button("Make your own")).toBeTruthy();

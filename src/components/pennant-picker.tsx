@@ -33,8 +33,8 @@ import { PhotoCrop } from "./photo-crop";
  * card, and choosing it posts back its own `photo-…` id. Either stays one tap
  * away while the member tries flags, until the page is left.
  *
- * `welcome` also puts "Make your own" first in Flags (#398). Its maker's Done
- * chooses an `own-…` id, which the page's Save commits like any other. The
+ * `welcome` also puts "Make your own" first in Flags (#398). Every change in
+ * its maker chooses an `own-…` id, which the page's Save commits like any other. The
  * tile shows the member's design while it is their pennant, or once made on
  * this page; a member who saved something else since starts blank (#427).
  */
@@ -122,10 +122,9 @@ export function PennantPicker({ selected, welcome = false }: { selected?: string
           initial={ownFlag ?? BLANK_PENNANT}
           editing={ownFlag !== undefined}
           onBack={() => setView({ level: "flags" })}
-          onDone={(design) => {
+          onChange={(design) => {
             setMade(design);
             setChosen(ownAvatarId(design));
-            setView({ level: "flags" });
           }}
         />
       ) : null}
