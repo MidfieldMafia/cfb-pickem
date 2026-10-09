@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { db } from "@/db";
 import { CURRENT_GROUP_COOKIE, currentGroupCookieOptions, groupChoice } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
+import { dismissFor } from "@/lib/tours/dismissals";
 
 /**
  * Remembers the group a member tapped, per device.
@@ -29,4 +30,9 @@ export async function switchGroup(formData: FormData): Promise<void> {
   if (!choice?.groups.some((group) => group.id === wanted)) return;
   const store = await cookies();
   store.set(CURRENT_GROUP_COOKIE, String(wanted), currentGroupCookieOptions());
+}
+
+/** The Tour runner's Done, Skip and Escape. `dismissFor` says what it checks. */
+export async function dismissTourAction(tourId: string): Promise<void> {
+  await dismissFor({ db: db(), requireMember }, tourId);
 }
