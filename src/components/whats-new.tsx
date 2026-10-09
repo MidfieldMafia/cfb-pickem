@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleHelp, Megaphone, Palette, Radio, SmilePlus, X, type LucideIcon } from "lucide-react";
+import { Flag, Lock, Megaphone, Target, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -12,28 +12,23 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-09-27",
-  label: "What's new · Sep 27–Oct 3",
+  id: "2026-10-04",
+  label: "What's new · Oct 4–10",
   items: [
     {
-      icon: Radio,
-      title: "More on every live game",
-      body: "Live rows show the down and distance, the last play, and a football on the side with the ball.",
+      icon: Flag,
+      title: "Make your own Pennant",
+      body: "On the welcome page, Flags now has a Make your own maker: pick colors, a pattern and a pole for a flag of your own.",
     },
     {
-      icon: Palette,
-      title: "Picks in team colours",
-      body: "Once picks are revealed, each game's split bar is drawn in the two schools' colours.",
+      icon: Lock,
+      title: "Lock and Guess after your picks",
+      body: "After your last pick, you go straight to your Lock of the Week and Tiebreaker Guess. Skip for now leaves them for later.",
     },
     {
-      icon: SmilePlus,
-      title: "See who reacted",
-      body: "In Chat, press and hold a reaction to see who left it. Tap one to add yours.",
-    },
-    {
-      icon: CircleHelp,
-      title: "A shorter How to play",
-      body: "The rules on one page: points, your Lock, the Tiebreaker Guess and the Deadline.",
+      icon: Target,
+      title: "The over/under on your Guess",
+      body: "When a line is out, the Tiebreaker Guess page shows the game's over/under as a starting point.",
     },
   ],
 };
