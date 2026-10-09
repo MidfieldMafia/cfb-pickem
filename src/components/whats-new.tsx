@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Megaphone, Target, X, type LucideIcon } from "lucide-react";
+import { Flag, Lock, Megaphone, Target, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -15,6 +15,11 @@ const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: stri
   id: "2026-10-04",
   label: "What's new · Oct 4–10",
   items: [
+    {
+      icon: Flag,
+      title: "Make your own Pennant",
+      body: "On the welcome page, Flags now has a Make your own maker: pick colours, a pattern and a pole for a flag of your own.",
+    },
     {
       icon: Lock,
       title: "Lock and Guess after your picks",
