@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pennant</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<span style="display: inline-block; flex-shrink: 0; width: {{px}}; height: {{px}}; border-radius: 50%; overflow: hidden; line-height: 0; vertical-align: middle">
+<svg viewBox="0 0 64 64" width="{{size}}" height="{{size}}" aria-hidden="true">
+<circle cx="32" cy="32" r="32" fill="{{bg}}"></circle>
+<g transform="translate(32 32) scale(1.25) translate(-33.5 -31)">
+<rect x="11" y="9" width="5" height="46" rx="2" fill="{{pole}}"></rect>
+<circle cx="13.5" cy="9" r="3" fill="{{pole}}"></circle>
+<path d="M16 13 L56 28 L16 43 Z" fill="{{flag}}"></path>
+<path d="{{d}}" fill="{{mark}}"></path>
+</g>
+</svg>
+</span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"p":{"editor":null},"size":{"editor":"int","default":72},"$preview":{"width":72,"height":72}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props.p || { bg: '#E1E4CF', flag: '#6A9449', pole: '#241F1A', d: 'M22 30a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z', mark: '#241F1A' };
+    const size = this.props.size ?? 72;
+    return { size: size, px: size + 'px', bg: p.bg, flag: p.flag, pole: p.pole, d: p.d || 'M0 0Z', mark: p.mark };
+  }
+}
+</script>
+</body>
+</html>
