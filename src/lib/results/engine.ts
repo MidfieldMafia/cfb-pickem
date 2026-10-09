@@ -9,6 +9,7 @@ import type { Game, Week } from "@/db/schema";
 import type { RemovalPeriod } from "@/lib/groups/memberships";
 import type { Entry } from "@/lib/picks/picks";
 import { lockGameOf } from "@/lib/picks/progress";
+import { weekComplete } from "@/lib/scoring";
 import type * as engine from "@/lib/scoring/types";
 import { effectiveResult } from "./result";
 
@@ -27,6 +28,15 @@ export function toEngineGame(game: Game, now: Date): engine.Game {
     status: result.phase === "final" || result.phase === "in_progress" ? result.phase : "scheduled",
     void: result.phase === "void",
   };
+}
+
+/**
+ * Whether a Slate's Week is complete, by the same rule and the same effective
+ * results the grading uses, so a Week cannot read settled here and in
+ * progress on its graded board.
+ */
+export function weekSettled(games: readonly Game[], now: Date): boolean {
+  return weekComplete(games.map((game) => toEngineGame(game, now)));
 }
 
 /** What the engine reads of one member's entry. */

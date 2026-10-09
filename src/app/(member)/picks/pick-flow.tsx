@@ -51,13 +51,14 @@ const PAGE_TITLE: Record<WalkPage, string> = { lock: "Lock of the Week", guess: 
 /**
  * One segment per game, then a lock and a scale marker: filled once set,
  * dashed while owed, ringed on the page you are on. Every segment and marker
- * jumps there.
+ * jumps there. A slate with no game to put a Lock on draws no lock marker.
  */
 function ProgressStrip({
   games,
   picks,
   current,
   set,
+  lockApplies,
   onJump,
   onOpen,
 }: {
@@ -66,6 +67,8 @@ function ProgressStrip({
   /** The game or walk page on screen. */
   current: number | WalkPage;
   set: Record<WalkPage, boolean>;
+  /** `SheetProgress.lockApplies`: false when the Lock step could never be finished (#411). */
+  lockApplies: boolean;
   onJump: (index: number) => void;
   onOpen: (page: WalkPage) => void;
 }) {
@@ -91,7 +94,7 @@ function ProgressStrip({
           </button>
         );
       })}
-      {MARKERS.map(({ page, label, Icon }) => {
+      {MARKERS.filter(({ page }) => page !== "lock" || lockApplies).map(({ page, label, Icon }) => {
         const done = set[page];
         const cur = page === current;
         return (
@@ -324,6 +327,7 @@ export function PickFlow({
         picks={picks}
         current={page ?? index}
         set={{ lock: progress.lockSet, guess: progress.guessSet }}
+        lockApplies={progress.lockApplies}
         onJump={goTo}
         // Within a walk a marker moves between its pages and keeps the rest owed;
         // anywhere else it opens that page on its own, which goes back to Review.

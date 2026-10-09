@@ -6,7 +6,7 @@
 import { describe, expect, test } from "vitest";
 import { membershipRemovals } from "@/db/schema";
 import { addGroup, familyGroup, joinGroup, seedWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
-import { currentGroupId, groupChoice, manageHref } from "./current";
+import { groupChoice, manageHref } from "./current";
 import { MABRY_FAMILY } from "./memberships";
 
 describe("the group a member is looking at", () => {
@@ -17,7 +17,7 @@ describe("the group a member is looking at", () => {
     await joinGroup(db, friends, grandma, TUESDAY);
 
     // While the membership stands, the device's choice is honoured.
-    expect(await currentGroupId(db, grandma.id, String(friends.id))).toBe(friends.id);
+    expect((await groupChoice(db, grandma.id, String(friends.id)))?.current.id).toBe(friends.id);
 
     // Removed and not restored. The cookie still names Friends, but it is not
     // hers any more, so it is ignored rather than landing her on a board she
@@ -26,7 +26,7 @@ describe("the group a member is looking at", () => {
       .insert(membershipRemovals)
       .values({ groupId: friends.id, memberId: grandma.id, removedAt: THURSDAY });
 
-    expect(await currentGroupId(db, grandma.id, String(friends.id))).toBe(family.id);
+    expect((await groupChoice(db, grandma.id, String(friends.id)))?.current.id).toBe(family.id);
   });
 });
 

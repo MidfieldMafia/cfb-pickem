@@ -177,8 +177,10 @@ describe("the states a Saturday passes through", () => {
     render(<LiveBoard initial={state({ complete: false, games: [scheduled] })} viewer={VIEWER} />);
 
     // Texas is the first line, Texas Tech the second: the line is Tech's.
-    const lines = screen.getAllByText(/^[-+]3$/).map((el) => el.textContent);
-    expect(lines).toEqual(["+3", "-3"]);
+    const lines = screen.getAllByText(/^[-+]3$/);
+    expect(lines.map((el) => el.textContent)).toEqual(["+3", "-3"]);
+    // Only Tech's line is drawn as the favorite's.
+    expect(lines.map((el) => el.classList.contains("text-foreground"))).toEqual([false, true]);
   });
 
   test("orders live games first, then what has no score yet, then finals and voids", () => {

@@ -33,6 +33,13 @@ describe("spreadSides", () => {
     expect(spreadSides("Notre Dame −2.5", "Texas A&M")).toEqual(["+2.5", "−2.5"]);
   });
 
+  test("a team whose name starts with the other's is not taken for the favorite", () => {
+    // "Texas Tech -3" begins with "Texas", so a prefix match would favor both.
+    expect(spreadSides("Texas Tech -3", "Texas Tech")).toEqual(["-3", "+3"]);
+    expect(spreadSides("Texas Tech -3", "Texas")).toEqual(["+3", "-3"]);
+    expect(spreadSides("Texas −3", "Texas Tech")).toEqual(["+3", "−3"]);
+  });
+
   test("a hyphenated team name keeps its hyphen", () => {
     // The line is matched on a *space* then a sign, so "Miami-OH" survives.
     expect(spreadSides("Miami-OH −1.5", "Miami-OH")).toEqual(["−1.5", "+1.5"]);

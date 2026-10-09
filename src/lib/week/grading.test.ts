@@ -1,6 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
-import { familyGroup, publishWeek2, SUNDAY } from "@/test/week-2";
-import { currentWeek } from "./week";
+import { ingestResults } from "@/lib/results/writes";
+import { slateFor } from "@/lib/slate/slate";
+import { ALL_FINAL, familyGroup, feedWith, publishWeek2, SUNDAY } from "@/test/week-2";
+import { currentWeek, scoredWeek } from "./week";
 
 /**
  * How many times a request grades. The counters wrap the real functions, so
@@ -43,9 +45,22 @@ describe("grading the current week for the Live Board", () => {
     const group = (await familyGroup(db)).id;
 
     passes.boards = passes.weeks = passes.seasons = 0;
-    const week = await currentWeek(db, grandma, SUNDAY, { graded: true, group });
+    const week = await scoredWeek(db, grandma, group, SUNDAY);
 
-    if (week?.state !== "live") throw new Error(`expected a live Week, got ${week?.state}`);
+    if (week?.state !== "live" || !week.result) throw new Error(`expected a graded live Week, got ${week?.state}`);
     expect(passes).toEqual({ boards: 1, weeks: 1, seasons: 0 });
+  });
+});
+
+describe("the current week's state", () => {
+  // The landing redirects and the pick pages read it, and none of them shows a
+  // score: telling live from settled must not cost a group's board.
+  test("comes from the Slate's Games, with no grading at all", async () => {
+    const { db, week, grandma } = await publishWeek2();
+    await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
+
+    passes.boards = passes.weeks = passes.seasons = 0;
+    expect((await currentWeek(db, grandma, SUNDAY))?.state).toBe("settled");
+    expect(passes).toEqual({ boards: 0, weeks: 0, seasons: 0 });
   });
 });

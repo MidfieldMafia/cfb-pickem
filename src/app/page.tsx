@@ -4,17 +4,13 @@ import { Button, Wordmark } from "@saturday-slate/design-system";
 
 import { TextMyLink } from "@/components/text-my-link";
 import { db } from "@/db";
-import { currentGroup } from "@/lib/groups/current";
 import { currentMember } from "@/lib/members/current";
 import { currentWeek, landingRoute } from "@/lib/week/week";
 
 export default async function Home() {
   const member = await currentMember();
   if (member) {
-    // Without the group the Week grades to nothing, and `landingRoute` would
-    // read a settled Week as still live and send them to the Live Board.
-    const week = await currentWeek(db(), member, new Date(), { graded: true, group: await currentGroup() });
-    redirect(landingRoute(week));
+    redirect(landingRoute(await currentWeek(db(), member)));
   }
 
   // The headline is a placeholder until the design pass (#140).

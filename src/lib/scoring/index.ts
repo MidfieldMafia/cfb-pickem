@@ -20,5 +20,5 @@
  * picked in it, at whatever those picks have scored so far, so pass it only
  * once the Deadline is behind the server clock.
  */
-export { scoreWeek } from "./score-week";
+export { scoreWeek, weekComplete } from "./score-week";
 export { scoreSeason } from "./score-season";

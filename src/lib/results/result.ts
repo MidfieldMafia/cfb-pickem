@@ -142,6 +142,11 @@ export function underway(result: Pick<GameResult, "phase">): boolean {
   return result.phase === "due" || result.phase === "in_progress";
 }
 
+/** Final or Void: nothing the feed says can change what counts. */
+export function settled(result: Pick<GameResult, "phase">): boolean {
+  return result.phase === "final" || result.phase === "void";
+}
+
 /**
  * The result, decided in this order: the Void, then the Result Override, then
  * the feed's final, then the feed's running score, then the clock. `now` is

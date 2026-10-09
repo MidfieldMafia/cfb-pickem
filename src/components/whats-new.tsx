@@ -6,9 +6,10 @@ import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
 
 /**
- * The current What's new entry. A new `id` shows the modal once more to every
- * browser; the copy is the week's features in the member's words, the
- * shortlist of the CHANGELOG's What's new rather than a copy of it.
+ * The current What's new entry, written each week by the changelog routine
+ * (`.claude/skills/weekly-changelog/SKILL.md`) alongside the CHANGELOG's. A new
+ * `id` shows the modal once more to every browser; the copy is the shortlist
+ * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
   id: "2026-09-27",

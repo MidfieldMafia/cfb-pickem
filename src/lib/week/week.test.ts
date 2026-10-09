@@ -2,13 +2,12 @@ import { describe, expect, test } from "vitest";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { addGame, openWeek, publishSlate, setTiebreaker, slateFor } from "@/lib/slate/slate";
 import {
+  ALL_FINAL,
   FAMU_AT_MIAMI,
   familyGroup,
   feedWith,
-  type Finals,
   guessAs,
   lockAs,
-  OHIO_STATE_AT_TEXAS,
   OKLAHOMA_AT_MICHIGAN,
   pickAs,
   publishWeek2,
@@ -20,16 +19,8 @@ import {
 } from "@/test/week-2";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
-import {
-  currentWeek,
-  landingRoute,
-  weekInReview,
-  type GradedWeekContext,
-  type LiveWeek,
-  type SettledWeek,
-  type WeekContext,
-  type WeekOptions,
-} from "./week";
+import type { GradedWeekResult } from "@/lib/results/results";
+import { currentWeek, landingRoute, scoredWeek, weekInReview, type ScoredWeek, type WeekOptions } from "./week";
 import { ingestResults, voidGame } from "@/lib/results/writes";
 
 /**
@@ -43,35 +34,18 @@ async function familyOf(db: Db): Promise<number> {
   return (await familyGroup(db)).id;
 }
 
-function familyWeek(db: Db, actor: Member, now: Date | undefined, options: WeekOptions & { graded: true }): Promise<GradedWeekContext | null>;
-function familyWeek(db: Db, actor: Member, now?: Date, options?: WeekOptions): Promise<WeekContext | null>;
-async function familyWeek(db: Db, actor: Member, now?: Date, options: WeekOptions = {}) {
-  return currentWeek(
-    db,
-    actor,
-    now,
-    { ...options, group: await familyOf(db) },
-  );
+async function familyWeek(db: Db, actor: Member, now?: Date, options: WeekOptions = {}): Promise<ScoredWeek | null> {
+  return scoredWeek(db, actor, await familyOf(db), now, options);
 }
 
-async function familyReview(
-  db: Db,
-  weekNumber: number | undefined,
-  now?: Date,
-  options: Pick<WeekOptions, "cfbd"> = {},
-) {
-  return weekInReview(
-    db,
-    weekNumber,
-    now,
-    { ...options, group: await familyOf(db) },
-  );
+async function familyReview(db: Db, weekNumber: number | undefined, now?: Date, options: WeekOptions = {}) {
+  return weekInReview(db, await familyOf(db), weekNumber, now, options);
 }
 
-/** The graded states carry a Reveal; anything else here is a test that asked for the wrong thing. */
-function gradedOf(week: WeekContext | null): LiveWeek | SettledWeek {
-  if (week?.state !== "live" && week?.state !== "settled") throw new Error(`expected a graded Week, got ${week?.state ?? "none"}`);
-  return week;
+/** A Week past its Deadline, graded on the family's board; anything else here is a test that asked for the wrong thing. */
+function gradedOf(week: ScoredWeek | null): ScoredWeek & { result: GradedWeekResult } {
+  if (!week?.result) throw new Error(`expected a graded Week, got ${week?.state ?? "none"}`);
+  return week as ScoredWeek & { result: GradedWeekResult };
 }
 
 /** Michigan reported final. `calls` counts feed reads, so a test can prove the gate held. */
@@ -84,11 +58,12 @@ const angryFeed = (): CfbdClient => {
 describe("the current week", () => {
   test("is null until a slate is published, whatever weeks exist", async () => {
     const { db, jonah, grandma } = await seedWeek2();
-    expect(await familyWeek(db,grandma, THURSDAY)).toBeNull();
+    expect(await currentWeek(db, grandma, THURSDAY)).toBeNull();
+    expect(await familyWeek(db, grandma, THURSDAY)).toBeNull();
 
     // An open but unpublished Week is still no Week for a member: one shape, not a throw.
     await openWeek(db, jonah, 2);
-    expect(await familyWeek(db,grandma, THURSDAY)).toBeNull();
+    expect(await currentWeek(db, grandma, THURSDAY)).toBeNull();
   });
 
   test("carries the published slate and the member's own sheet before the deadline", async () => {
@@ -97,7 +72,7 @@ describe("the current week", () => {
     await lockAs(db, grandma, slate, michigan.id, THURSDAY);
     await guessAs(db, grandma, slate, 55, THURSDAY);
 
-    const current = (await familyWeek(db,grandma, THURSDAY))!;
+    const current = (await currentWeek(db, grandma, THURSDAY))!;
     expect(current.slate.week.id).toBe(week.id);
     expect(current.slate.games).toHaveLength(3);
     expect(current.sheet.locked).toBe(false);
@@ -108,7 +83,9 @@ describe("the current week", () => {
 
     // The Reveal is never open before the Deadline, asked for or not.
     expect(current.state).toBe("open");
-    expect((await familyWeek(db,grandma, THURSDAY, { graded: true }))!.state).toBe("open");
+    const scored = (await familyWeek(db, grandma, THURSDAY))!;
+    expect(scored.state).toBe("open");
+    expect(scored.result).toBeNull();
   });
 
   test("grades the week after the deadline, and only for the screen that asks", async () => {
@@ -117,11 +94,12 @@ describe("the current week", () => {
     await pickAs(db, jonah, slate, michigan, michigan.awayTeamId, THURSDAY);
 
     // Locked, but nobody asked: grading costs a read per member, so it stays undone.
-    const quiet = (await familyWeek(db,grandma, SUNDAY))!;
+    const quiet = (await currentWeek(db, grandma, SUNDAY))!;
     expect(quiet.sheet.locked).toBe(true);
-    expect(quiet.state).toBe("locked");
+    expect(quiet.state).toBe("live");
+    expect(quiet).not.toHaveProperty("result");
 
-    const shown = gradedOf(await familyWeek(db,grandma, SUNDAY, { graded: true }));
+    const shown = gradedOf(await familyWeek(db, grandma, SUNDAY));
     expect(shown.result.reveal.members.map((m) => m.displayName)).toEqual(["Jonah", "Grandma"]);
     const michiganRow = shown.result.reveal.games.find((g) => g.game.id === michigan.id)!;
     expect(michiganRow.picks.map((p) => p.memberId).sort()).toEqual([jonah.id, grandma.id].sort());
@@ -132,7 +110,7 @@ describe("the current week", () => {
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
     const feed = feedWithMichiganFinal();
 
-    const graded = gradedOf(await familyWeek(db,grandma, SUNDAY, { graded: true, cfbd: () => feed }));
+    const graded = gradedOf(await familyWeek(db, grandma, SUNDAY, { cfbd: () => feed }));
     expect(feed.calls).toBe(1);
     const michiganRow = graded.result.reveal.games.find((g) => g.game.id === michigan.id)!;
     expect(michiganRow.result).toEqual({
@@ -156,7 +134,7 @@ describe("the current week", () => {
     expect(graded.slate.games.find((g) => g.id === michigan.id)).toMatchObject({ status: "final", homeScore: 27 });
 
     // The stale gate still bounds it: a second visit inside the interval does not call again.
-    await familyWeek(db,grandma, SUNDAY, { graded: true, cfbd: () => feed });
+    await familyWeek(db, grandma, SUNDAY, { cfbd: () => feed });
     expect(feed.calls).toBe(1);
   });
 
@@ -164,7 +142,7 @@ describe("the current week", () => {
     const { db, slate, grandma, michigan } = await publishWeek2();
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
 
-    const current = gradedOf(await familyWeek(db,grandma, SUNDAY, { graded: true, cfbd: angryFeed }));
+    const current = gradedOf(await familyWeek(db, grandma, SUNDAY, { cfbd: angryFeed }));
     expect(current.sheet.locked).toBe(true);
     expect(current.result.reveal.games.find((g) => g.game.id === michigan.id)!.result.phase).toBe("due");
   });
@@ -296,22 +274,15 @@ describe("the week in review", () => {
   });
 });
 
-/** Every game on Week 2's slate final: Miami and Michigan win at home, Ohio State at Texas. */
-const ALL_FINAL: Finals = {
-  [FAMU_AT_MIAMI]: [7, 45],
-  [OKLAHOMA_AT_MICHIGAN]: [24, 27],
-  [OHIO_STATE_AT_TEXAS]: [31, 28],
-};
-
 describe("the landing route (#91's states)", () => {
   test("goes to the Leaderboard when no week is published", async () => {
     const { db, grandma } = await seedWeek2();
-    expect(landingRoute(await familyWeek(db, grandma, THURSDAY, { graded: true }))).toBe("/leaderboard");
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY))).toBe("/leaderboard");
   });
 
   test("goes to Picks before the deadline", async () => {
     const { db, grandma } = await publishWeek2();
-    expect(landingRoute(await familyWeek(db,grandma, THURSDAY, { graded: true }))).toBe("/picks");
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY))).toBe("/picks");
   });
 
   test("goes to review once every Pick is in, Lock and Guess still to set", async () => {
@@ -322,7 +293,7 @@ describe("the landing route (#91's states)", () => {
       await pickAs(db, grandma, slate, game, game.homeTeamId, THURSDAY);
     }
 
-    expect(landingRoute(await familyWeek(db,grandma, THURSDAY, { graded: true }))).toBe("/picks/review");
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY))).toBe("/picks/review");
   });
 
   test("one game still open keeps the member in the flow", async () => {
@@ -330,7 +301,7 @@ describe("the landing route (#91's states)", () => {
     await pickAs(db, grandma, slate, miami, miami.homeTeamId, THURSDAY);
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
 
-    expect(landingRoute(await familyWeek(db,grandma, THURSDAY, { graded: true }))).toBe("/picks");
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY))).toBe("/picks");
   });
 
   test("a Void game the member never picked does not hold them in the flow", async () => {
@@ -339,7 +310,7 @@ describe("the landing route (#91's states)", () => {
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
     await voidGame(db, jonah, texas.id, "Hurricane");
 
-    expect(landingRoute(await familyWeek(db,grandma, THURSDAY, { graded: true }))).toBe("/picks/review");
+    expect(landingRoute(await currentWeek(db, grandma, THURSDAY))).toBe("/picks/review");
   });
 
   test("goes to the Live Board once locked but still grading", async () => {
@@ -347,34 +318,39 @@ describe("the landing route (#91's states)", () => {
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
     await ingestResults(db, feedWithMichiganFinal(), await slateFor(db, week.id), SUNDAY);
 
-    expect(landingRoute(await familyWeek(db,grandma, SUNDAY, { graded: true }))).toBe("/live");
+    expect(landingRoute(await currentWeek(db, grandma, SUNDAY))).toBe("/live");
   });
 
   test("goes to the Leaderboard once every non-void game is final", async () => {
     const { db, week, grandma } = await publishWeek2();
     await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
 
-    expect(landingRoute(await familyWeek(db,grandma, SUNDAY, { graded: true }))).toBe("/leaderboard");
+    expect(landingRoute(await currentWeek(db, grandma, SUNDAY))).toBe("/leaderboard");
   });
 
-  test("a member in no group lands on the Live Board, where the no-group screen is", async () => {
+  test("a member in no group is told the Week has settled, with nothing graded", async () => {
+    // Settled comes from the Games, not from a board, so the member lands on
+    // the Leaderboard like anyone else, where the no-group screen also is.
     const { db, week, grandma } = await publishWeek2();
     await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
 
-    const ungrouped = await currentWeek(db, grandma, SUNDAY, { graded: true, group: null });
-    expect(ungrouped!.state).toBe("ungrouped");
-    expect(landingRoute(ungrouped)).toBe("/live");
+    const ungrouped = (await scoredWeek(db, grandma, null, SUNDAY))!;
+    expect(ungrouped.state).toBe("settled");
+    expect(ungrouped.result).toBeNull();
+    expect(landingRoute(ungrouped)).toBe("/leaderboard");
   });
 
-  test("a Week read without { graded: true } is not one landingRoute takes", async () => {
-    // The state is `locked`: past the Deadline, live or settled not known. It
-    // used to read as still live, silently, for a Week that had long settled.
-    const { db, week, grandma } = await publishWeek2();
-    await ingestResults(db, feedWith(ALL_FINAL), await slateFor(db, week.id), SUNDAY);
+  test("a Void game does not hold the Week live", async () => {
+    const { db, week, jonah, grandma, texas } = await publishWeek2();
+    await ingestResults(
+      db,
+      feedWith({ [FAMU_AT_MIAMI]: ALL_FINAL[FAMU_AT_MIAMI], [OKLAHOMA_AT_MICHIGAN]: ALL_FINAL[OKLAHOMA_AT_MICHIGAN] }),
+      await slateFor(db, week.id),
+      SUNDAY,
+    );
+    expect((await currentWeek(db, grandma, SUNDAY))!.state).toBe("live");
 
-    const ungraded = await familyWeek(db, grandma, SUNDAY);
-    expect(ungraded!.state).toBe("locked");
-    // @ts-expect-error a WeekContext that skipped the grading has no place to land
-    landingRoute(ungraded);
+    await voidGame(db, jonah, texas.id, "Hurricane");
+    expect((await currentWeek(db, grandma, SUNDAY))!.state).toBe("settled");
   });
 });
