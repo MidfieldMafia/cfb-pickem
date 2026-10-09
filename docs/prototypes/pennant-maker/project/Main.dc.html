@@ -84,7 +84,7 @@ a{color:#1F4034}a:hover{color:#241F1A}
 
 <section style="display: flex; flex-direction: column; gap: 8px">
 <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6F6152">Pattern colour · {{markName}}</p>
-<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px">
 <sc-for list="{{markSw}}" as="item" hint-placeholder-count="14">
 <button onClick="{{item.pick}}" aria-pressed="{{item.pressed}}" aria-label="{{item.name}}" style="height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><span style="width: 32px; height: 32px; border-radius: 50%; background: {{item.hex}}; box-shadow: {{item.ring}}"></span></button>
 </sc-for>
@@ -105,7 +105,7 @@ a{color:#1F4034}a:hover{color:#241F1A}
 
 <section style="display: flex; flex-direction: column; gap: 8px">
 <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6F6152">Background · {{bgName}}</p>
-<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px">
 <sc-for list="{{bgSw}}" as="item" hint-placeholder-count="15">
 <button onClick="{{item.pick}}" aria-pressed="{{item.pressed}}" aria-label="{{item.name}}" style="height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><span style="width: 32px; height: 32px; box-sizing: border-box; border-radius: 50%; background: {{item.hex}}; box-shadow: {{item.ring}}; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #6F6152">{{item.label}}</span></button>
 </sc-for>
@@ -127,13 +127,15 @@ const DARK = '#241E19';
 const PAL = [
   { id: 'moss', name: 'Moss', hex: '#6A9449' }, { id: 'sage', name: 'Sage', hex: '#5C9A74' },
   { id: 'pine', name: 'Pine', hex: '#1F4034' }, { id: 'teal', name: 'Teal', hex: '#1E6F73' },
-  { id: 'slate', name: 'Slate', hex: '#2B4A5E' }, { id: 'plum', name: 'Plum', hex: '#4A2B45' },
+  { id: 'slate', name: 'Slate', hex: '#2B4A5E' }, { id: 'sky', name: 'Sky', hex: '#3F6E96' },
+  { id: 'plum', name: 'Plum', hex: '#4A2B45' },
   { id: 'maroon', name: 'Maroon', hex: '#75222C' }, { id: 'oxblood', name: 'Oxblood', hex: '#5E1F1A' },
   { id: 'copper', name: 'Copper', hex: '#D2712E' }, { id: 'gold', name: 'Gold', hex: '#B08D2E' },
   { id: 'tan', name: 'Tan', hex: '#9C845F' }, { id: 'stone', name: 'Stone', hex: '#6F6152' },
   { id: 'ink', name: 'Ink', hex: '#241F1A' }, { id: 'cream', name: 'Cream', hex: '#FBF6EC' }
 ];
-const POLES = ['ink', 'stone', 'tan', 'gold', 'cream'];
+// No Cream pole: on a light tint it vanishes, and the flag looks like it floats.
+const POLES = ['ink', 'stone', 'tan', 'gold'];
 // No Cream flag or background: a cream flag on a paper disc reads as no pennant at all.
 const FLAGS = PAL.filter((c) => c.id !== 'cream');
 const PATTERNS = [
@@ -153,7 +155,8 @@ const PATTERNS = [
   { id: 'hoist', name: 'Hoist', d: 'M16 13 L24 16 L24 40 L16 43 Z' },
   { id: 'tricolour', name: 'Tricolour', d: 'M16 13 L42.7 23 L16 23 Z M16 33 L42.7 33 L16 43 Z' },
   { id: 'star', name: 'Star', d: 'M29.0 21.5 L30.6 25.8 L35.2 26.0 L31.6 28.8 L32.8 33.3 L29.0 30.7 L25.2 33.3 L26.4 28.8 L22.8 26.0 L27.4 25.8 Z' },
-  { id: 'ring', name: 'Ring', d: 'M22 28a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z M25 28a3 3 0 1 1 6 0a3 3 0 1 1 -6 0Z' }
+  { id: 'ring', name: 'Ring', d: 'M22 28a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z M25 28a3 3 0 1 1 6 0a3 3 0 1 1 -6 0Z' },
+  { id: 'trim', name: 'Trim', d: 'M16 13 L56 28 L16 43 Z M19 17.1 L19 38.9 L48 28 Z' }
 ];
 const PRESETS = [
   ['moss-dot', 'Moss Dot', 'moss', 'dot', 'ink'], ['oxblood-bars', 'Oxblood Bars', 'oxblood', 'bars', 'cream'],
