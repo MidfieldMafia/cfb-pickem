@@ -60,10 +60,14 @@ type Pull = {
   url: string;
 };
 
-/** One hand-written entry: the span it covers, and its bullets. */
+/**
+ * One hand-written entry: the Sunday-to-Saturday span it is labelled with, the
+ * moment it was written (`through`; older entries have none), and its bullets.
+ */
 type Entry = {
   from: string;
   to: string;
+  through?: string;
   items: string[];
 };
 
@@ -147,8 +151,16 @@ function between(source: string, start: string, end: string): string | null {
  *
  * An entry is an ISO date range as its heading and bullets beneath it:
  *
- *     ### 2026-09-15 to 2026-09-21
+ *     ### 2026-10-04 to 2026-10-10
+ *     <!-- through 2026-10-08T23:59:00Z -->
  *     - The Live Board shows possession, down and distance.
+ *
+ * The range is a Sunday-to-Saturday week, but the routine writes it on the
+ * Thursday, so the heading cannot say what the entry covers: a PR that merges
+ * on the Friday is inside the range and was never read. The `through` line is
+ * when the entry was written, and the next digest starts from it, so a Friday
+ * or Saturday merge lands in the following week's entry instead of nowhere.
+ * Entries written before the line existed end at the close of their `to` day.
  *
  * The range is deliberately not a Week number. Which Week a span belongs to is
  * a question about published Weeks and their Deadlines, which only the database
@@ -167,6 +179,8 @@ function parseWhatsNew(block: string): Entry[] {
       continue;
     }
     const bullet = /^[-*]\s+(.*\S)\s*$/.exec(line);
+    const through = /^<!--\s*through\s+(\S+)\s*-->\s*$/.exec(line);
+    if (through && current) current.through = through[1];
     if (bullet && current) current.items.push(bullet[1]);
   }
 
@@ -175,23 +189,32 @@ function parseWhatsNew(block: string): Entry[] {
 
 /** Prints the PRs a new entry would have to cover, for whoever writes it. */
 async function digest(repo: string, entries: Entry[]): Promise<void> {
-  const since = entries[0]?.to ?? "";
-  const pulls = (await mergedPulls(repo, true)).filter((pull) => day(pull.mergedAt) > since);
+  const last = entries[0];
+  const now = new Date().toISOString().slice(0, 19) + "Z";
+  const cutoff = last ? (last.through ?? `${last.to}T23:59:59Z`) : "";
+  const pulls = (await mergedPulls(repo, true)).filter(
+    (pull) => Date.parse(pull.mergedAt) > Date.parse(cutoff || "1970-01-01T00:00:00Z"),
+  );
 
   if (pulls.length === 0) {
     console.log(
-      since === ""
-        ? "No pull requests have merged into main yet."
-        : `Nothing has merged since the last entry ended (${since}).`,
+      last
+        ? `Nothing has merged since the last entry was written (${cutoff}).`
+        : "No pull requests have merged into main yet.",
     );
     return;
   }
 
-  const to = day(pulls[0].mergedAt);
-  const from = since === "" ? day(pulls[pulls.length - 1].mergedAt) : nextDay(since);
+  // Entries abut. A run in the week a previous entry already labels writes
+  // the next week's entry.
+  const from = last ? nextDay(last.to) : sunday(day(pulls[pulls.length - 1].mergedAt));
+  const today = day(now);
+  const to = saturday(today > from ? today : from);
 
   console.log(`${pulls.length} pull request(s) merged since the last entry.`);
-  console.log(`Heading for the new entry, exactly:\n\n### ${from} to ${to}\n`);
+  console.log(
+    `Heading for the new entry, and the line under it, exactly:\n\n### ${from} to ${to}\n<!-- through ${now} -->\n`,
+  );
   console.log("---");
   for (const pull of pulls) {
     const body = (pull as Pull & { body?: string }).body?.trim();
@@ -201,11 +224,26 @@ async function digest(repo: string, entries: Entry[]): Promise<void> {
   }
 }
 
+/** An ISO date moved by a number of days. */
+function addDays(date: string, days: number): string {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
 /** The day after an ISO date, so entries abut instead of overlapping. */
 function nextDay(date: string): string {
-  const next = new Date(`${date}T00:00:00Z`);
-  next.setUTCDate(next.getUTCDate() + 1);
-  return next.toISOString().slice(0, 10);
+  return addDays(date, 1);
+}
+
+/** The Sunday that starts the week an ISO date is in. */
+function sunday(date: string): string {
+  return addDays(date, -new Date(`${date}T00:00:00Z`).getUTCDay());
+}
+
+/** The Saturday that ends the week an ISO date is in. */
+function saturday(date: string): string {
+  return addDays(sunday(date), 6);
 }
 
 async function main() {

@@ -37,8 +37,12 @@ whole body, which in this repo means its "What changed" and "Judgement calls".
 Read the bodies, not just the titles. The title is written for us; you are
 writing for someone who has never seen the repo.
 
-It also prints the exact heading for the new entry. Use it verbatim. The range
-is dates, deliberately not a Week number — see `scripts/changelog.ts` for why.
+It also prints the exact heading for the new entry and a `<!-- through … -->`
+line to go under it. Use both verbatim. The range is the Sunday-to-Saturday week
+you are running in; the `through` line records when you read the digest, and the
+next run starts from it, so anything that merges after you (a Friday fix, say)
+goes into next week's entry. It is dates, deliberately not a Week number — see
+`scripts/changelog.ts` for why.
 
 If it says nothing has merged, stop. Do not open an empty PR.
 
@@ -109,11 +113,11 @@ your entry; if `entries` did not grow, the heading is malformed.
 The modal does not read `CHANGELOG.md`. Its copy is the `ENTRY` constant in
 `src/components/whats-new.tsx`, and you replace it each week:
 
-- **`id`**: the first date of the heading's range (`2026-09-28` for
-  `### 2026-09-28 to 2026-10-03`). A new `id` is what opens the modal again for
+- **`id`**: the first date of the heading's range (`2026-10-04` for
+  `### 2026-10-04 to 2026-10-10`). A new `id` is what opens the modal again for
   every browser, so it changes exactly when there is a new entry.
-- **`label`**: `What's new · ` and the range in short dates, `Sep 28–Oct 3`, or
-  `Oct 5–10` within one month.
+- **`label`**: `What's new · ` and the range in short dates, `Sep 27–Oct 3`, or
+  `Oct 4–10` within one month.
 - **`items`**: the shortlist, not a copy. Take the three to five bullets a
   member would most want pointed out, newest features first; fixes and
   background changes stay in the CHANGELOG only. Each item is a `title` of a few
