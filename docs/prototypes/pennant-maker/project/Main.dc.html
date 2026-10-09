@@ -140,6 +140,8 @@ const PAL = [
   { id: 'ink', name: 'Ink', hex: '#241F1A' }, { id: 'cream', name: 'Cream', hex: '#FBF6EC' }
 ];
 const POLES = ['ink', 'stone', 'tan', 'gold', 'cream'];
+// No Cream flag or background: a cream flag on a paper disc reads as no pennant at all.
+const FLAGS = PAL.filter((c) => c.id !== 'cream');
 const PATTERNS = [
   { id: 'plain', name: 'Plain', d: '' },
   { id: 'dot', name: 'Dot', d: 'M22 30a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z' },
@@ -212,7 +214,7 @@ class Component extends DCLogic {
     });
     const allIds = PAL.map((c) => c.id);
     const bgSw = [{ name: 'Match the flag', hex: mix(color(d.flag).hex, LIGHT, 0.18), label: 'Auto', pick: () => set('bg', 'auto'), pressed: d.bg === 'auto', ring: d.bg === 'auto' ? SEL : UNSEL }]
-      .concat(PAL.map((c) => ({ name: c.name + ' tint', hex: mix(c.hex, LIGHT, 0.18), label: '', pick: () => set('bg', c.id), pressed: d.bg === c.id, ring: d.bg === c.id ? SEL : UNSEL })));
+      .concat(FLAGS.map((c) => ({ name: c.name + ' tint', hex: mix(c.hex, LIGHT, 0.18), label: '', pick: () => set('bg', c.id), pressed: d.bg === c.id, ring: d.bg === c.id ? SEL : UNSEL })));
 
     return {
       onFlags: s.screen === 'flags',
@@ -234,7 +236,7 @@ class Component extends DCLogic {
       patternName: pattern(d.pattern).name,
       bgName: d.bg === 'auto' ? 'Matches the flag' : color(d.bg).name,
       clash: d.mark === d.flag && d.pattern !== 'plain',
-      flagSw: swatches(allIds, 'flag'),
+      flagSw: swatches(FLAGS.map((c) => c.id), 'flag'),
       markSw: swatches(allIds, 'mark'),
       poleSw: swatches(POLES, 'pole'),
       bgSw: bgSw,

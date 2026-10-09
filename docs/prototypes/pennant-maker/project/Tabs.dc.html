@@ -119,6 +119,8 @@ const PAL = [
   { id: 'ink', name: 'Ink', hex: '#241F1A' }, { id: 'cream', name: 'Cream', hex: '#FBF6EC' }
 ];
 const POLES = ['ink', 'stone', 'tan', 'gold', 'cream'];
+// No Cream flag or background: a cream flag on a paper disc reads as no pennant at all.
+const FLAGS = PAL.filter((c) => c.id !== 'cream');
 const PATTERNS = [
   { id: 'plain', name: 'Plain', d: '' },
   { id: 'dot', name: 'Dot', d: 'M22 30a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z' },
@@ -207,9 +209,9 @@ class Component extends DCLogic {
       options = colourOpts(POLES, 'pole');
     } else if (s.tab === 'bg') {
       options = [Object.assign({ name: 'Match flag', hex: mix(color(d.flag).hex, LIGHT, 0.18), isSwatch: true, isPennant: false, pick: () => set('bg', 'auto') }, cell(d.bg === 'auto'))]
-        .concat(PAL.map((c) => Object.assign({ name: c.name, hex: mix(c.hex, LIGHT, 0.18), isSwatch: true, isPennant: false, pick: () => set('bg', c.id) }, cell(d.bg === c.id))));
+        .concat(FLAGS.map((c) => Object.assign({ name: c.name, hex: mix(c.hex, LIGHT, 0.18), isSwatch: true, isPennant: false, pick: () => set('bg', c.id) }, cell(d.bg === c.id))));
     } else {
-      options = colourOpts(PAL.map((c) => c.id), s.tab);
+      options = colourOpts((s.tab === 'flag' ? FLAGS : PAL).map((c) => c.id), s.tab);
     }
 
     return {
