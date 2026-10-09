@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleHelp, Megaphone, Palette, Radio, SmilePlus, X, type LucideIcon } from "lucide-react";
+import { ListOrdered, Lock, Megaphone, Target, Timer, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -12,28 +12,28 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-09-27",
-  label: "What's new · Sep 27–Oct 3",
+  id: "2026-10-04",
+  label: "What's new · Oct 4–8",
   items: [
     {
-      icon: Radio,
-      title: "More on every live game",
-      body: "Live rows show the down and distance, the last play, and a football on the side with the ball.",
+      icon: Lock,
+      title: "Lock and Guess after your picks",
+      body: "After your last pick, you go straight to your Lock of the Week and Tiebreaker Guess. Skip for now leaves them for later.",
     },
     {
-      icon: Palette,
-      title: "Picks in team colours",
-      body: "Once picks are revealed, each game's split bar is drawn in the two schools' colours.",
+      icon: Target,
+      title: "The over/under on your Guess",
+      body: "When a line is out, the Tiebreaker Guess page shows the game's over/under as a starting point.",
     },
     {
-      icon: SmilePlus,
-      title: "See who reacted",
-      body: "In Chat, press and hold a reaction to see who left it. Tap one to add yours.",
+      icon: ListOrdered,
+      title: "Everyone's Guess, every week",
+      body: "Every Reveal shows the Tiebreaker Guesses card, closest guess first, not just weeks with a tie for first.",
     },
     {
-      icon: CircleHelp,
-      title: "A shorter How to play",
-      body: "The rules on one page: points, your Lock, the Tiebreaker Guess and the Deadline.",
+      icon: Timer,
+      title: "First scores sooner",
+      body: "The Live Board checks for scores every 30 seconds from kickoff, so a game's first score shows up sooner.",
     },
   ],
 };

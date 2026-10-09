@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-08T20:39:23.492Z",
+  "generatedAt": "2026-10-09T00:00:30.070Z",
   "entries": [
     {
       "from": "2026-10-04",
       "to": "2026-10-08",
       "items": [
-        "Pick the last game on your Slate and you go straight to your Lock of the Week, then your Tiebreaker Guess, before Review. You only see the ones you still owe, and Skip for now leaves either for later.",
+        "After your last pick, you go straight to whichever of your Lock of the Week and Tiebreaker Guess you still owe. Skip for now leaves it for later.",
         "The Tiebreaker Guess page shows the game's over/under as a starting point when a line is out.",
         "Every week's Reveal shows the Tiebreaker Guesses card, closest guess first, not just weeks with a tie for first. Members tied for first get a Tied 1st chip.",
-        "The Tiebreaker card on a Live Board game sheet lists the same people in the same order as the Reveal. On the Leaderboard's week view, members tied for first show their Guess.",
+        "A Live Board game sheet's Tiebreaker card now matches the Reveal. On the Leaderboard's week view, members tied for first show their Guess.",
         "The Live Board checks for scores every 30 seconds from kickoff, so a game's first score shows up sooner.",
-        "After a field goal or touchdown, the On the field card keeps the drive's yards and shows Kickoff, and the end zone stays lit through a timeout or the end of a quarter.",
-        "The Live Board shows the right spread for each side when one team's name starts with another's, like Texas and Texas Tech. Your picks now use the same team colours as the Live Board.",
+        "After a score, the On the field card keeps the drive's yards and shows Kickoff, and the end zone stays lit through a timeout or the quarter's end.",
+        "The Live Board shows the right spread when one team's name starts with another's, like Texas and Texas Tech. Your picks now use the Live Board's team colours.",
         "Commissioners can filter the Slate builder by Big Ten, ACC and Big 12, as well as SEC."
       ]
     },
