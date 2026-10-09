@@ -158,6 +158,13 @@ const PATTERNS = [
   { id: 'ring', name: 'Ring', d: 'M22 28a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z M25 28a3 3 0 1 1 6 0a3 3 0 1 1 -6 0Z' },
   { id: 'trim', name: 'Trim', d: 'M16 13 L56 28 L16 43 Z M19 17.1 L19 38.9 L48 28 Z' }
 ];
+// One family per row of six: splits of the whole flag, then stripes and chevrons, then marks.
+const PATTERN_ORDER = [
+  'plain', 'trim', 'hoist', 'tip', 'sash', 'tricolour',
+  'bands', 'rails', 'bars', 'cross', 'chevron', 'chevrons',
+  'dot', 'ring', 'pips', 'diamond', 'star', 'block'
+];
+PATTERNS.sort((a, b) => PATTERN_ORDER.indexOf(a.id) - PATTERN_ORDER.indexOf(b.id));
 const PRESETS = [
   ['moss-dot', 'Moss Dot', 'moss', 'dot', 'ink'], ['pink-bars', 'Pink Bars', 'pink', 'bars', 'cream'],
   ['maroon-chevrons', 'Maroon Chevrons', 'maroon', 'chevrons', 'cream'], ['ink-block', 'Ink Block', 'ink', 'block', 'tan'],
