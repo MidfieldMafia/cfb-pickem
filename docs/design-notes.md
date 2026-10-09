@@ -72,4 +72,4 @@ List rows carrying a logo, two lines of text or a trailing badge are **56px**. 4
 
 ## Avatars
 
-`public/avatars/pennants/01.svg … 12.svg`, indexed in `avatars.json` (id, name, file, color). One pennant shape, twelve palette colors, twelve flag patterns — so two members never differ by hue alone. Show them at 72px on the first-visit picker, 44px in console rows, 28px inline, 20px on chips. Store the id on the member; never let a member upload a photo.
+Every flag pennant is drawn by `pennantSvg(design)` in `packages/design-system/src/pennant-design.ts`, from a design of five settings: flag color, pattern, pattern color, pole and background. The palette (14 colors plus Cream for patterns) and the 18 patterns live there too. The 15 presets are a table in `src/lib/avatars.ts`; a member can also make their own on the welcome page (#398, #427). One pennant shape, so two members never differ by hue alone. Show them at 72px on the first-visit picker, 44px in console rows, 28px inline, 20px on chips. Store the id on the member.

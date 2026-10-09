@@ -38,7 +38,7 @@ export function WelcomeForm({
         />
       </div>
 
-      <PennantPicker selected={avatarId} photo />
+      <PennantPicker selected={avatarId} welcome />
 
       {state.error ? (
         <p role="alert" className="text-sm font-semibold text-destructive">

@@ -1,16 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { Camera, ChevronRight, CircleAlert, ImageIcon } from "lucide-react";
+import { Camera, ChevronRight, CircleAlert, ImageIcon, Pencil, Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buttonVariants, Card, Pennant, SECTION_LABEL, BackLink } from "@saturday-slate/design-system";
+import { buttonVariants, Card, Pennant, SECTION_LABEL, BackLink, BLANK_PENNANT, type PennantDesign } from "@saturday-slate/design-system";
 
-import { avatars, findAvatar, NEW_PHOTO, teamAvatarConferences, type Avatar } from "@/lib/avatars";
+import { avatars, findAvatar, NEW_PHOTO, ownAvatarId, ownDesign, teamAvatarConferences, type Avatar } from "@/lib/avatars";
+import { PennantMaker } from "./pennant-maker";
 import { PhotoCrop } from "./photo-crop";
 
 /**
  * The pennant picker every "who are you" form shares: the welcome page, a Join
- * Link, and Start a group. Two kinds of pennant live behind it — twelve flags
+ * Link, and Start a group. Two kinds of pennant live behind it — fifteen flags
  * and 136 school logos — so it is a three-level drill-down rather than one
  * grid, and therefore a client component (#224).
  *
@@ -31,14 +32,21 @@ import { PhotoCrop } from "./photo-crop";
  * `photo` when it is built. A member who already has a photo sees it in the
  * card, and choosing it posts back its own `photo-…` id. Either stays one tap
  * away while the member tries flags, until the page is left.
+ *
+ * `welcome` also puts "Make your own" first in Flags (#398). Its maker's Done
+ * chooses an `own-…` id, which the page's Save commits like any other. The
+ * tile shows the member's design while it is their pennant, or once made on
+ * this page; a member who saved something else since starts blank (#427).
  */
-export function PennantPicker({ selected, photo = false }: { selected?: string | null; photo?: boolean }) {
+export function PennantPicker({ selected, welcome = false }: { selected?: string | null; welcome?: boolean }) {
   const [chosen, setChosen] = useState(selected ?? "");
   const [view, setView] = useState<View>({ level: "root" });
   const [crop, setCrop] = useState<NewPhoto | null>(null);
+  const [made, setMade] = useState<PennantDesign | null>(null);
   const fieldset = useRef<HTMLFieldSetElement>(null);
   const saved = findAvatar(selected);
   const own: Avatar | undefined = crop ? crop.mark : saved?.kind === "photo" ? saved : undefined;
+  const ownFlag = made ?? ownDesign(selected);
   const current = chosen === NEW_PHOTO ? crop?.mark : findAvatar(chosen);
 
   useEffect(() => {
@@ -66,12 +74,12 @@ export function PennantPicker({ selected, photo = false }: { selected?: string |
           {current ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Pennant avatar={current} size={28} />
-              Yours: <span className="font-semibold text-foreground">{current.kind === "photo" ? "Your photo" : current.name}</span>
+              Yours: <span className="font-semibold text-foreground">{yoursName(current)}</span>
             </p>
           ) : null}
           <Choice
             title="Flags"
-            detail={`${avatars.length} pennants`}
+            detail={welcome ? `${avatars.length} presets, or make your own` : `${avatars.length} pennants`}
             peek={avatars.slice(0, 3)}
             onClick={() => setView({ level: "flags" })}
           />
@@ -81,7 +89,7 @@ export function PennantPicker({ selected, photo = false }: { selected?: string |
             peek={peekTeams}
             onClick={() => setView({ level: "conferences" })}
           />
-          {photo ? (
+          {welcome ? (
             <PhotoCard
               own={own}
               chosen={own !== undefined && own.id === chosen}
@@ -99,11 +107,27 @@ export function PennantPicker({ selected, photo = false }: { selected?: string |
       {view.level === "flags" ? (
         <Level title="Flags" onBack={() => setView({ level: "root" })}>
           <div className="grid grid-cols-4 gap-3">
+            {welcome ? (
+              <OwnFlagTile design={ownFlag} chosen={chosen} onOpen={() => setView({ level: "maker" })} />
+            ) : null}
             {avatars.map((avatar) => (
               <Disc key={avatar.id} avatar={avatar} size={72} chosen={chosen} onChoose={setChosen} />
             ))}
           </div>
         </Level>
+      ) : null}
+
+      {view.level === "maker" ? (
+        <PennantMaker
+          initial={ownFlag ?? BLANK_PENNANT}
+          editing={ownFlag !== undefined}
+          onBack={() => setView({ level: "flags" })}
+          onDone={(design) => {
+            setMade(design);
+            setChosen(ownAvatarId(design));
+            setView({ level: "flags" });
+          }}
+        />
       ) : null}
 
       {view.level === "conferences" ? (
@@ -152,6 +176,7 @@ function newPhoto(jpeg: Blob): NewPhoto {
 type View =
   | { level: "root" }
   | { level: "flags" }
+  | { level: "maker" }
   | { level: "conferences" }
   | { level: "teams"; conference: string };
 
@@ -261,7 +286,61 @@ function Disc({
   );
 }
 
-const NOTHING_BACK = "No photo came back from the camera. If your phone won’t let Chrome use it, choose a photo instead.";
+/** What the "Yours:" line calls the chosen pennant. */
+function yoursName(avatar: Avatar): string {
+  if (avatar.kind === "photo") return "Your photo";
+  return ownDesign(avatar.id) ? "Your own flag" : avatar.name;
+}
+
+/**
+ * "Make your own", top left of Flags. A dashed "+" until the member has a
+ * design; then the design itself, with a pencil to say a tap edits it rather
+ * than choosing it. Chosen shows on the cell, as on every other disc.
+ */
+function OwnFlagTile({
+  design,
+  chosen,
+  onOpen,
+}: {
+  design: PennantDesign | undefined;
+  chosen: string;
+  onOpen: () => void;
+}) {
+  const mark = design ? findAvatar(ownAvatarId(design)) : undefined;
+  const isChosen = mark !== undefined && mark.id === chosen;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={mark ? "Edit your own flag" : "Make your own"}
+      aria-pressed={isChosen}
+      className={`relative flex h-auto flex-col items-center rounded-xl border p-1.5 ${
+        isChosen ? "border-primary bg-accent" : "border-transparent"
+      }`}
+    >
+      {mark ? (
+        <>
+          <Pennant avatar={mark} size={72} />
+          <span
+            aria-hidden
+            className="absolute right-1 bottom-1 flex size-[22px] items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background"
+          >
+            <Pencil className="size-3" strokeWidth={2.5} />
+          </span>
+        </>
+      ) : (
+        <span
+          aria-hidden
+          className="flex size-[72px] items-center justify-center rounded-full border-2 border-dashed border-border text-primary"
+        >
+          <Plus className="size-6" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+const NOTHING_BACK ="No photo came back from the camera. If your phone won’t let Chrome use it, choose a photo instead.";
 const NOT_A_PHOTO = "That file isn’t a photo. Choose another.";
 
 /**

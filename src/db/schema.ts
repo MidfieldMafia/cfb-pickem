@@ -230,9 +230,9 @@ export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   displayName: text("display_name").notNull(),
   /**
-   * The member's Pennant, resolved by `findAvatar`: a flag id from
-   * public/avatars/avatars.json, `team-<espnId>`, or `photo-<memberId>-<hash8>`
-   * for a photo in `member_photos`. Null until the welcome page is done, and
+   * The member's Pennant, resolved by `findAvatar`: a preset `pennants-NN`, an
+   * own flag `own-<flag>-<pattern>-<patterncolor>-<pole>-<bg>`, `team-<espnId>`,
+   * or `photo-<memberId>-<hash8>` for a photo in `member_photos`. Null until the welcome page is done, and
    * after a commissioner clears a photo.
    */
   avatarId: text("avatar_id"),
