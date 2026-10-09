@@ -29,8 +29,13 @@ a{color:#1F4034}a:hover{color:#241F1A}
 <p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6F6152"><dc-import name="Pennant" p="{{savedP}}" size="{{ 28 }}" hint-size="28px,28px"></dc-import>Yours: <strong style="color: #241F1A">{{savedName}}</strong></p>
 </sc-if>
 <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
-<button onClick="{{makeOwn}}" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; border: 1px solid transparent; border-radius: 12px; background: transparent">
+<button onClick="{{makeOwn}}" aria-pressed="{{ownPressed}}" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; border: 1px solid {{ownBorder}}; border-radius: 12px; background: {{ownBg}}">
+<sc-if value="{{hasCustom}}" hint-placeholder-val="{{ false }}">
+<dc-import name="Pennant" p="{{customP}}" size="{{ 64 }}" hint-size="64px,64px"></dc-import>
+</sc-if>
+<sc-if value="{{noCustom}}" hint-placeholder-val="{{ true }}">
 <span style="width: 64px; height: 64px; box-sizing: border-box; border-radius: 50%; border: 2px dashed #9C845F; display: flex; align-items: center; justify-content: center; color: #1F4034"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+</sc-if>
 <span style="font-size: 11px; line-height: 1.2; font-weight: 700">Make your own</span>
 </button>
 <sc-for list="{{tiles}}" as="item" hint-placeholder-count="12">
@@ -200,8 +205,8 @@ function same(a, b) { return ['flag', 'pattern', 'mark', 'pole', 'bg'].every((k)
 
 class Component extends DCLogic {
   renderVals() {
-    // `saved` is the chosen pennant; `custom` is the member's own design, kept
-    // while they try presets so "Yours" and "Make your own" can bring it back.
+    // `saved` is the chosen pennant; `custom` is the member's own design. It
+    // lives in the "Make your own" tile, which reopens the maker with it.
     const s = Object.assign({ screen: 'flags', design: BLANK, saved: null, custom: null }, this.state);
     const d = s.design;
     const set = (key, val) => this.setState({ design: Object.assign({}, d, { [key]: val }) });
@@ -210,9 +215,7 @@ class Component extends DCLogic {
 
     // A tap on a tile chooses it. Only "Make your own" opens the maker.
     const tiles = [];
-    if (s.custom) {
-      tiles.push(Object.assign({ name: 'Yours', p: spec(s.custom, LIGHT), open: () => this.setState({ saved: { design: s.custom, from: null } }) }, cell(savedId === 'custom')));
-    }
+    const own = cell(savedId === 'custom');
     PRESETS.forEach((pr) => tiles.push(Object.assign({ name: pr.name, p: spec(pr.design, LIGHT), open: () => this.setState({ saved: { design: pr.design, from: pr.id } }) }, cell(savedId === pr.id))));
 
     const swatches = (ids, key) => ids.map((id) => {
@@ -230,6 +233,12 @@ class Component extends DCLogic {
       savedP: s.saved ? spec(s.saved.design, LIGHT) : spec(BLANK, LIGHT),
       savedName: s.saved ? (s.saved.from ? PRESETS.find((p) => p.id === s.saved.from).name : 'Your own') : '',
       tiles: tiles,
+      hasCustom: !!s.custom,
+      noCustom: !s.custom,
+      customP: s.custom ? spec(s.custom, LIGHT) : spec(BLANK, LIGHT),
+      ownPressed: own.pressed,
+      ownBorder: own.border,
+      ownBg: own.cellBg,
       makeOwn: () => this.setState({ screen: 'edit', design: s.custom || BLANK }),
       back: () => this.setState({ screen: 'flags' }),
       save: () => this.setState({ screen: 'flags', custom: d, saved: { design: d, from: null } }),
