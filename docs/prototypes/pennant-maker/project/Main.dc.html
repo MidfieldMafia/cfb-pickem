@@ -164,8 +164,10 @@ const PRESETS = [
   ['sage-bands', 'Sage Twin Bands', 'sage', 'bands', 'cream'], ['copper-tip', 'Copper Tip', 'copper', 'tip', 'cream'],
   ['gold-diamond', 'Gold Diamond', 'gold', 'diamond', 'cream'], ['pine-sash', 'Pine Sash', 'pine', 'sash', 'cream'],
   ['slate-cross', 'Slate Cross', 'slate', 'cross', 'cream'], ['stone-pips', 'Stone Pips', 'stone', 'pips', 'cream'],
-  ['teal-rails', 'Teal Rails', 'teal', 'rails', 'cream'], ['plum-chevron', 'Plum Chevron', 'plum', 'chevron', 'cream']
-].map(([id, name, flag, pattern, mark]) => ({ id, name, design: { flag, pattern, mark, pole: 'ink', bg: 'auto' } }));
+  ['teal-rails', 'Teal Rails', 'teal', 'rails', 'cream'], ['plum-chevron', 'Plum Chevron', 'plum', 'chevron', 'cream'],
+  ['sky-star', 'Sky Star', 'sky', 'star', 'cream'], ['tan-tricolour', 'Tan Tricolour', 'tan', 'tricolour', 'ink'],
+  ['pine-trim', 'Pine Trim', 'pine', 'trim', 'gold', 'gold']
+].map(([id, name, flag, pattern, mark, pole]) => ({ id, name, design: { flag, pattern, mark, pole: pole || 'ink', bg: 'auto' } }));
 const BLANK = { flag: 'pine', pattern: 'plain', mark: 'cream', pole: 'ink', bg: 'auto' };
 const SEL = '0 0 0 2px #F7F1E3, 0 0 0 4px #1F4034';
 const UNSEL = 'inset 0 0 0 1px rgba(36,31,26,0.22)';
