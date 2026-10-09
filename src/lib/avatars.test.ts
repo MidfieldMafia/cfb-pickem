@@ -4,7 +4,7 @@ import { pennantDataUri, type PennantDesign } from "@saturday-slate/design-syste
 import { avatars, findAvatar, ownAvatarId, ownDesign, photoAvatarId, teamAvatarConferences, teamAvatarId } from "./avatars";
 import { findLogo, teamLogos } from "./logos";
 
-const SAGE_BANDS: PennantDesign = { flag: "sage", pattern: "twinbands", mark: "pine", pole: "stone", bg: "auto" };
+const SAGE_BANDS: PennantDesign = { flag: "sage", pattern: "twinbands", patternColor: "pine", pole: "stone", bg: "auto" };
 
 describe("pennants", () => {
   it("resolves one of the fifteen flags, drawn from its design", () => {
@@ -14,7 +14,7 @@ describe("pennants", () => {
     expect(flag).toEqual({
       id: "pennants-04",
       name: "Moss Dot",
-      file: pennantDataUri({ flag: "moss", pattern: "dot", mark: "ink", pole: "ink", bg: "auto" }),
+      file: pennantDataUri({ flag: "moss", pattern: "dot", patternColor: "ink", pole: "ink", bg: "auto" }),
       color: "#6A9449",
       kind: "flag",
     });

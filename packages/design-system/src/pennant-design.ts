@@ -48,12 +48,18 @@ export const PENNANT_MARK_COLORS = [
 export type PennantFlagColor = (typeof PENNANT_FLAG_COLORS)[number]["slug"];
 export type PennantMarkColor = (typeof PENNANT_MARK_COLORS)[number]["slug"];
 
-export type PennantPole = "ink" | "stone" | "tan" | "gold";
+const POLE_SLUGS = ["ink", "stone", "tan", "gold"] as const;
+
+export type PennantPole = (typeof POLE_SLUGS)[number];
 
 /** The four poles. */
-export const PENNANT_POLES: readonly (PennantColor & { slug: PennantPole })[] = (
-  ["ink", "stone", "tan", "gold"] as const
-).map((slug) => ({ ...PENNANT_FLAG_COLORS.find((c) => c.slug === slug)!, slug }));
+export const PENNANT_POLES: readonly (PennantColor & { slug: PennantPole })[] = POLE_SLUGS.map((slug) => ({
+  ...PENNANT_FLAG_COLORS.find((c) => c.slug === slug)!,
+  slug,
+}));
+
+/** How strongly a disc is tinted with its background: the flag SVG's own circle, and the maker's swatches. */
+export const PENNANT_TINT = 0.18;
 
 export interface PennantPattern {
   slug: string;
@@ -110,13 +116,13 @@ export type PennantPatternSlug = (typeof PENNANT_PATTERNS)[number]["slug"];
 export interface PennantDesign {
   flag: PennantFlagColor;
   pattern: PennantPatternSlug;
-  mark: PennantMarkColor;
+  patternColor: PennantMarkColor;
   pole: PennantPole;
   bg: PennantFlagColor | "auto";
 }
 
 /** What the maker opens on the first time: a plain Pine flag on an Ink pole. */
-export const BLANK_PENNANT: PennantDesign = { flag: "pine", pattern: "plain", mark: "cream", pole: "ink", bg: "auto" };
+export const BLANK_PENNANT: PennantDesign = { flag: "pine", pattern: "plain", patternColor: "cream", pole: "ink", bg: "auto" };
 
 export function pennantColor(slug: PennantMarkColor): PennantColor {
   return PENNANT_MARK_COLORS.find((c) => c.slug === slug)!;
@@ -141,12 +147,12 @@ export function pennantSvg(design: PennantDesign): string {
   const { d } = pennantPattern(design.pattern);
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">` +
-    `<circle cx="32" cy="32" r="32" fill="${pennantTint(design)}" opacity=".18"/>` +
+    `<circle cx="32" cy="32" r="32" fill="${pennantTint(design)}" opacity="${PENNANT_TINT}"/>` +
     `<g transform="translate(32 32) scale(1.25) translate(-33.5 -31)">` +
     `<rect x="11" y="9" width="5" height="46" rx="2" fill="${pole}"/>` +
     `<circle cx="13.5" cy="9" r="3" fill="${pole}"/>` +
     `<path d="M16 13 L56 28 L16 43 Z" fill="${pennantColor(design.flag).hex}"/>` +
-    (d ? `<path d="${d}" fill="${pennantColor(design.mark).hex}" fill-rule="evenodd"/>` : "") +
+    (d ? `<path d="${d}" fill="${pennantColor(design.patternColor).hex}" fill-rule="evenodd"/>` : "") +
     `</g></svg>`
   );
 }

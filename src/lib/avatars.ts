@@ -40,14 +40,14 @@ const PATTERN_SLUGS = new Set<string>(PENNANT_PATTERNS.map((p) => p.slug));
  */
 function parseDesign(slots: readonly string[]): PennantDesign | undefined {
   if (slots.length !== 5) return undefined;
-  const [flag, pattern, mark, pole, bg] = slots;
+  const [flag, pattern, patternColor, pole, bg] = slots;
   const valid =
     FLAG_SLUGS.has(flag) &&
     PATTERN_SLUGS.has(pattern) &&
-    MARK_SLUGS.has(mark) &&
+    MARK_SLUGS.has(patternColor) &&
     POLE_SLUGS.has(pole) &&
     (bg === "auto" || FLAG_SLUGS.has(bg));
-  return valid ? ({ flag, pattern, mark, pole, bg } as PennantDesign) : undefined;
+  return valid ? ({ flag, pattern, patternColor, pole, bg } as PennantDesign) : undefined;
 }
 
 /**
@@ -59,7 +59,14 @@ function parseDesign(slots: readonly string[]): PennantDesign | undefined {
  * reordered. 01–03, 05 (Oxblood Bars) and 08–12 were retired and are never
  * reused: they resolve to nothing, and their member sees their initial.
  */
-const PRESETS: readonly [id: string, name: string, flag: string, pattern: string, mark: string, pole: string][] = [
+const PRESETS: readonly [
+  id: string,
+  name: string,
+  flag: PennantDesign["flag"],
+  pattern: PennantDesign["pattern"],
+  patternColor: PennantDesign["patternColor"],
+  pole: PennantDesign["pole"],
+][] = [
   ["pennants-04", "Moss Dot", "moss", "dot", "ink", "ink"],
   ["pennants-17", "Slate Cross", "slate", "cross", "cream", "tan"],
   ["pennants-07", "Ink Block", "ink", "block", "tan", "tan"],
@@ -78,11 +85,9 @@ const PRESETS: readonly [id: string, name: string, flag: string, pattern: string
 ];
 
 /** The preset flags. The other kinds are a member's own flag, a school logo and a member's photo, below. */
-export const avatars: readonly Avatar[] = PRESETS.map(([id, name, ...slots]) => {
-  const design = parseDesign([...slots, "auto"]);
-  if (!design) throw new Error(`Preset ${id} names a color or pattern the palette lacks.`);
-  return flagAvatar(id, name, design);
-});
+export const avatars: readonly Avatar[] = PRESETS.map(([id, name, flag, pattern, patternColor, pole]) =>
+  flagAvatar(id, name, { flag, pattern, patternColor, pole, bg: "auto" }),
+);
 
 const byId = new Map(avatars.map((a) => [a.id, a]));
 
@@ -152,7 +157,7 @@ const PHOTO_COLOR = "var(--muted-foreground)";
 const OWN_PREFIX = "own-";
 
 export function ownAvatarId(design: PennantDesign): string {
-  return OWN_PREFIX + [design.flag, design.pattern, design.mark, design.pole, design.bg].join("-");
+  return OWN_PREFIX + [design.flag, design.pattern, design.patternColor, design.pole, design.bg].join("-");
 }
 
 /** The design an `own-…` id spells, or `undefined` for any other id, or one that doesn't parse. */

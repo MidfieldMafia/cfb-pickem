@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleAlert } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import {
   BackLink,
@@ -9,6 +10,7 @@ import {
   PENNANT_MARK_COLORS,
   PENNANT_PATTERNS,
   PENNANT_POLES,
+  PENNANT_TINT,
   pennantColor,
   pennantPattern,
   type PennantColor,
@@ -41,8 +43,8 @@ export function PennantMaker({
   const [design, setDesign] = useState(initial);
   const set = <K extends keyof PennantDesign>(key: K, value: PennantDesign[K]) =>
     setDesign((d) => ({ ...d, [key]: value }));
-  const mark = findAvatar(ownAvatarId(design));
-  const clash = design.mark === design.flag && design.pattern !== "plain";
+  const preview = findAvatar(ownAvatarId(design));
+  const clash = design.patternColor === design.flag && design.pattern !== "plain";
 
   return (
     <div className="space-y-4">
@@ -57,10 +59,10 @@ export function PennantMaker({
       {/* Pinned, so every setting is judged against the flag it changes. */}
       <div className="sticky top-0 z-10 -mx-1 bg-background px-1 pb-1">
         <div className="flex items-center gap-4 rounded-xl border bg-card p-3">
-          <Pennant avatar={mark} size={96} />
+          <Pennant avatar={preview} size={96} />
           <div className="flex items-center gap-2.5">
-            <Pennant avatar={mark} size={28} />
-            <Pennant avatar={mark} size={20} />
+            <Pennant avatar={preview} size={28} />
+            <Pennant avatar={preview} size={20} />
             <span className="text-xs text-muted-foreground">Board, chat</span>
           </div>
         </div>
@@ -92,12 +94,17 @@ export function PennantMaker({
         })}
       </Setting>
 
-      <Setting title="Pattern color" value={pennantColor(design.mark).name} columns={5}>
+      <Setting title="Pattern color" value={pennantColor(design.patternColor).name} columns={5}>
         {PENNANT_MARK_COLORS.map((c) => (
-          <Swatch key={c.slug} color={c} chosen={design.mark === c.slug} onChoose={() => set("mark", c.slug)} />
+          <Swatch key={c.slug} color={c} chosen={design.patternColor === c.slug} onChoose={() => set("patternColor", c.slug)} />
         ))}
       </Setting>
-      {clash ? <p className="-mt-2 text-sm text-destructive">Same as the flag, so the pattern won’t show.</p> : null}
+      {clash ? (
+        <p role="status" className="-mt-2 flex gap-2 text-sm text-muted-foreground">
+          <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+          Same as the flag, so the pattern won’t show.
+        </p>
+      ) : null}
 
       <Setting title="Pole" value={pennantColor(design.pole).name} columns={7}>
         {PENNANT_POLES.map((c) => (
@@ -134,9 +141,9 @@ export function PennantMaker({
   );
 }
 
-/** A background as the disc shows it: the color at 18% over the card. */
+/** A background as the disc shows it: the color at the disc's tint over the card. */
 function tint(hex: string): string {
-  return `color-mix(in srgb, ${hex} 18%, var(--card))`;
+  return `color-mix(in srgb, ${hex} ${PENNANT_TINT * 100}%, var(--card))`;
 }
 
 /** One setting, headed `SETTING · <current value>`, over its grid of choices. */
@@ -156,7 +163,7 @@ function Setting({
   const id = useId();
   return (
     <section aria-labelledby={id} className="space-y-2">
-      <h3 id={id} className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+      <h3 id={id} className="text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">
         {title} · {value}
       </h3>
       <div className={`grid ${gap}`} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
@@ -191,10 +198,10 @@ function Swatch({
     >
       <span
         aria-hidden
-        className={`flex size-8 items-center justify-center rounded-full text-[9px] font-bold text-muted-foreground ${
+        className={`flex size-8 items-center justify-center rounded-full text-[10px] font-bold text-foreground ${
           chosen
             ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-            : "shadow-[inset_0_0_0_1px_rgb(36_31_26_/_0.22)]"
+            : "ring-1 ring-foreground/20 ring-inset"
         }`}
         style={{ background: color.hex }}
       >

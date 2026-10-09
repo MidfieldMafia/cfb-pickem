@@ -1,3 +1,8 @@
+/**
+ * The drawing itself, imported from the package source rather than
+ * `@saturday-slate/design-system`: the app resolves that to `dist/`, which only
+ * a package build refreshes, and a stale `dist/` would test the last build.
+ */
 import { describe, expect, it } from "vitest";
 import {
   PENNANT_FLAG_COLORS,
@@ -10,7 +15,7 @@ import {
   type PennantDesign,
 } from "../../packages/design-system/src/pennant-design";
 
-const PLUM_STAR: PennantDesign = { flag: "plum", pattern: "star", mark: "cream", pole: "ink", bg: "auto" };
+const PLUM_STAR: PennantDesign = { flag: "plum", pattern: "star", patternColor: "cream", pole: "ink", bg: "auto" };
 
 describe("the pennant palette", () => {
   it("offers fourteen flag colors in the spec's order, and never Cream", () => {
@@ -44,7 +49,7 @@ describe("pennantSvg", () => {
   it("draws today's 64-unit shell: an 18% disc, then pole, flag and pattern at 125%", () => {
     const svg = pennantSvg(PLUM_STAR);
     expect(svg).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="0 0 64 64"/);
-    expect(svg).toContain('<circle cx="32" cy="32" r="32" fill="#4A2B45" opacity=".18"/>');
+    expect(svg).toContain('<circle cx="32" cy="32" r="32" fill="#4A2B45" opacity="0.18"/>');
     expect(svg).toContain('<g transform="translate(32 32) scale(1.25) translate(-33.5 -31)">');
     expect(svg).toContain('<rect x="11" y="9" width="5" height="46" rx="2" fill="#241F1A"/>');
     expect(svg).toContain('<path d="M16 13 L56 28 L16 43 Z" fill="#4A2B45"/>');
@@ -53,7 +58,7 @@ describe("pennantSvg", () => {
 
   it("tints the disc with the background color when one is chosen", () => {
     const svg = pennantSvg({ ...PLUM_STAR, bg: "gold" });
-    expect(svg).toContain('fill="#B08D2E" opacity=".18"');
+    expect(svg).toContain('fill="#B08D2E" opacity="0.18"');
     expect(pennantTint({ ...PLUM_STAR, bg: "gold" })).toBe("#B08D2E");
     expect(pennantTint(PLUM_STAR)).toBe("#4A2B45");
   });

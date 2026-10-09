@@ -340,7 +340,7 @@ function OwnFlagTile({
   );
 }
 
-const NOTHING_BACK ="No photo came back from the camera. If your phone won’t let Chrome use it, choose a photo instead.";
+const NOTHING_BACK = "No photo came back from the camera. If your phone won’t let Chrome use it, choose a photo instead.";
 const NOT_A_PHOTO = "That file isn’t a photo. Choose another.";
 
 /**
