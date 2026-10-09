@@ -214,9 +214,15 @@ const PRESETS = [
   ['sky-star', 'Sky Star', 'sky', 'star', 'cream'], ['moss-trim', 'Moss Trim', 'moss', 'trim', 'pine', 'stone'],
   ['ink-bands', 'Ink Twin Bands', 'ink', 'bands', 'gold']
 ].map(([id, name, flag, pattern, mark, pole]) => ({ id, name, design: { flag, pattern, mark, pole: pole || 'ink', bg: 'auto' } }));
-// Presets run in the colour picker's order (greens, blues, purples and reds,
-// oranges, neutrals): with no names on the grid, colour is what people scan by.
-PRESETS.sort((a, b) => FLAGS.findIndex((c) => c.id === a.design.flag) - FLAGS.findIndex((c) => c.id === b.design.flag));
+// Presets run by likely use: Jonah's top three, then bold "school colours"
+// flags, then the quieter and busier ones. No colour sits next to itself.
+const PRESET_ORDER = [
+  'moss-dot', 'slate-cross', 'ink-block',
+  'pine-sash', 'maroon-chevrons', 'copper-tip', 'sky-star',
+  'teal-rails', 'gold-diamond', 'pink-bars', 'ink-bands',
+  'sage-bands', 'plum-chevron', 'stone-pips', 'moss-trim'
+];
+PRESETS.sort((a, b) => PRESET_ORDER.indexOf(a.id) - PRESET_ORDER.indexOf(b.id));
 const BLANK = { flag: 'pine', pattern: 'plain', mark: 'cream', pole: 'ink', bg: 'auto' };
 const SEL = '0 0 0 2px #F7F1E3, 0 0 0 4px #1F4034';
 const UNSEL = 'inset 0 0 0 1px rgba(36,31,26,0.22)';
