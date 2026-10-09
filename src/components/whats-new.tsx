@@ -18,7 +18,7 @@ const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: stri
     {
       icon: Flag,
       title: "Make your own Pennant",
-      body: "On the welcome page, Flags now has a Make your own maker: pick colours, a pattern and a pole for a flag of your own.",
+      body: "On the welcome page, Flags now has a Make your own maker: pick colors, a pattern and a pole for a flag of your own.",
     },
     {
       icon: Lock,

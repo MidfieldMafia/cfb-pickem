@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-10-09T22:49:20.020Z",
+  "generatedAt": "2026-10-09T23:02:13.430Z",
   "entries": [
     {
       "from": "2026-10-04",
       "to": "2026-10-10",
       "items": [
-        "On the welcome page, Flags now offers 15 Pennants and a Make your own maker, for a flag of your own from colours, a pattern and a pole.",
+        "On the welcome page, Flags now offers 15 Pennants and a Make your own maker, for a flag of your own from colors, a pattern and a pole.",
         "After your last pick, you go straight to whichever of your Lock of the Week and Tiebreaker Guess you still owe. Skip for now leaves it for later.",
         "The Tiebreaker Guess page shows the game's over/under as a starting point when a line is out.",
         "Every week's Reveal shows the Tiebreaker Guesses card, closest guess first, not just weeks with a tie for first. Members tied for first get a Tied 1st chip.",
         "A Live Board game sheet's Tiebreaker card now matches the Reveal. On the Leaderboard's week view, members tied for first show their Guess.",
         "The Live Board checks for scores every 30 seconds from kickoff, so a game's first score shows up sooner.",
         "After a score, the On the field card keeps the drive's yards and shows Kickoff, and the end zone stays lit through a timeout or the quarter's end.",
-        "The Live Board shows the right spread when one team's name starts with another's, like Texas and Texas Tech. Your picks now use the Live Board's team colours.",
+        "The Live Board shows the right spread when one team's name starts with another's, like Texas and Texas Tech. Your picks now use the Live Board's team colors.",
         "Commissioners can filter the Slate builder by Big Ten, ACC and Big 12, as well as SEC."
       ]
     },
@@ -21,7 +21,7 @@
       "to": "2026-10-03",
       "items": [
         "Live games on the Live Board show the down and distance, the last play and how long ago it was, and a football beside the team with the ball.",
-        "Once picks are revealed, each game's split bar is drawn in the two schools' colours.",
+        "Once picks are revealed, each game's split bar is drawn in the two schools' colors.",
         "In Chat, press and hold a reaction to see who left it. Tap one to add yours.",
         "How to play is shorter: points, your Lock, the Tiebreaker Guess, the Deadline and how the Leaderboard is ordered, all on one page."
       ]
