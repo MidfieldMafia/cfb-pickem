@@ -78,7 +78,7 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
   const pathname = usePathname();
   const unread = useChatUnread(chatUnread, pathname === CHAT || pathname.startsWith(`${CHAT}/`));
 
-  const tabs = TABS.map(({ href, label, Icon, tour }): BottomNavTab => {
+  const tile = ({ href, label, Icon }: (typeof TABS)[number]): BottomNavTab => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
     if (href === "/picks") {
       // Once the week locks there is nothing to enter, so the Picks tab goes
@@ -87,7 +87,7 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
       // doesn't relabel mid-week, but the icon becomes a lock to say a tap now
       // lands somewhere other than pick entry. See #116, #170.
       if (locked) {
-        return { href: "/picks/review", label, icon: <Lock size={18} />, active, srNote: " — picks are locked, tap to review", tour };
+        return { href: "/picks/review", label, icon: <Lock size={18} />, active, srNote: " — picks are locked, tap to review" };
       }
       // The dot means something is still to do: it shows while picks are open and
       // the member has not finished them, and clears once they have.
@@ -98,7 +98,6 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
         active,
         dot: picksOpen,
         srNote: picksOpen ? " — picks still to finish" : undefined,
-        tour,
       };
     }
     if (href === CHAT && unread > 0) {
@@ -109,11 +108,11 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
         active,
         count: unread,
         srNote: `, ${unread === 1 ? "1 new message" : `${unread} new messages`}`,
-        tour,
       };
     }
-    return { href, label, icon: <Icon size={18} />, active, tour };
-  });
+    return { href, label, icon: <Icon size={18} />, active };
+  };
+  const tabs = TABS.map((tab) => ({ ...tile(tab), tour: tab.tour }));
 
   return <BottomNavBar tabs={tabs} />;
 }
