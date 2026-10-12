@@ -17,7 +17,7 @@ export const MENU_ROW = "flex min-h-tap items-center gap-2 rounded-sm px-2 text-
  * it opens without JavaScript and is safe to render inside a `"use client"`
  * tree. Presentational: the caller resolves the avatar, the group slot and
  * the Manage href. `children` are the caller's own rows, set before the You
- * link.
+ * link. The summary is the Welcome Tour's `pennant` target.
  */
 export function MemberMenu({
   avatar,
@@ -42,6 +42,7 @@ export function MemberMenu({
       <summary
         className="flex min-h-tap min-w-tap cursor-pointer list-none items-center justify-center [&::-webkit-details-marker]:hidden"
         aria-label={`Menu for ${displayName}`}
+        data-tour="pennant"
       >
         <Pennant avatar={avatar} name={displayName} size={44} />
       </summary>

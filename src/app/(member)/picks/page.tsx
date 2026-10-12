@@ -22,7 +22,7 @@ export default async function Picks({
 }) {
   const member = await requireMember();
   const week = await currentWeek(db(), member);
-  if (!week) return <NoSlate />;
+  if (!week) return <NoSlate tour="picks-screen" />;
   if (week.sheet.locked) redirect("/picks/review");
   const { game, step } = await searchParams;
   if (step === "lock" && !week.sheet.progress.lockApplies) redirect("/picks/review");

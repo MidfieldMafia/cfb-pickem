@@ -21,7 +21,7 @@ export default async function Live() {
   const choice = await currentGroupChoice();
   if (choice === null) return <NoGroup member={member} />;
   const week = await scoredWeek(db(), member, choice.current.id, new Date(), { cfbd });
-  if (!week) return <NoSlate />;
+  if (!week) return <NoSlate tour="live-screen" />;
   return (
     <LiveBoard
       initial={toWeekStateJson(week)}

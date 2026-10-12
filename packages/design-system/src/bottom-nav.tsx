@@ -12,6 +12,8 @@ export type BottomNavTab = {
   count?: number;
   /** Read after the label by a screen reader, e.g. " — picks still to finish". */
   srNote?: string;
+  /** A Tour target id, rendered as `data-tour` on the visible bar's link only. */
+  tour?: string;
 };
 
 /**
@@ -33,10 +35,12 @@ export type BottomNavTab = {
  * space correct without hand-computing a height that content or font metrics
  * could drift out of sync with; `visibility: hidden` also drops the spacer's
  * copy out of the tab order and the accessibility tree, so only one `nav`
- * landmark is exposed.
+ * landmark is exposed. A tab's `tour` id goes on the fixed copy alone, so
+ * each id is on screen once and a Tour never spotlights the hidden spacer.
  */
 export function BottomNav({ tabs, label = "App" }: { tabs: readonly BottomNavTab[]; label?: string }) {
   const cols = { gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` };
+  const spacer = tabs.map(({ tour: _, ...tab }) => <BottomNavTile key={tab.href} {...tab} />);
   const tiles = tabs.map((tab) => <BottomNavTile key={tab.href} {...tab} />);
   return (
     <>
@@ -45,7 +49,7 @@ export function BottomNav({ tabs, label = "App" }: { tabs: readonly BottomNavTab
         style={cols}
         className="invisible grid border-t border-border pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
       >
-        {tiles}
+        {spacer}
       </div>
       <nav
         aria-label={label}
@@ -58,12 +62,13 @@ export function BottomNav({ tabs, label = "App" }: { tabs: readonly BottomNavTab
   );
 }
 
-function BottomNavTile({ href, label, icon, active, dot, count, srNote }: BottomNavTab) {
+function BottomNavTile({ href, label, icon, active, dot, count, srNote, tour }: BottomNavTab) {
   const badge = count !== undefined && count > 0 ? count : null;
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      data-tour={tour}
       className="flex min-h-14 flex-col items-center justify-center gap-1 p-1.5 text-[11px] font-bold no-underline"
     >
       <span

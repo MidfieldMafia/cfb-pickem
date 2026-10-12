@@ -102,6 +102,8 @@ Having the highest Weekly Score in a group for a week. Ties break by Tiebreaker 
 A group's season standings: total points, win percentage (correct over graded picks; a Void is neither), weekly wins, and average Tiebreaker Guess miss across Played Weeks actually guessed, ordered by the season tiebreak rules. The miss average is display-only, reads lower-is-better, and does not itself decide a tie — the season tiebreak's own closeness figure is a sum over completed Played Weeks, not this average, and the two can rank members differently.
 _Avoid_: Standings, rankings, table
 
+### The app
+
 **Live Board**:
 The Saturday view of the slate with live scores and the picks of every member of a group, colored by whether they are currently winning.
 _Avoid_: Scoreboard, dashboard
@@ -109,3 +111,15 @@ _Avoid_: Scoreboard, dashboard
 **Feedback**:
 A Member's bug report or idea, sent from the app to the Commissioners: either a Bug or an Idea, in the member's words, with an optional screenshot. Only commissioners read it, and the member hears nothing back beyond the thanks on sending.
 _Avoid_: Ticket, request, issue
+
+**Tour**:
+A short sequence of Stops that shows a member where things are in the app. It runs over the screen, and once the member finishes, skips or closes it, it never shows to them again. The app has one, the Welcome Tour.
+_Avoid_: Tutorial, walkthrough, coach marks, onboarding
+
+**Stop**:
+One step of a Tour: the screen dims, one thing is spotlighted, and a card beside it says what it is in a sentence, with Back, Next and Skip.
+_Avoid_: Step, tip, coach mark
+
+**Welcome Tour**:
+The Tour a new member gets once, on their first landing after setup: the four tabs, the Pennant menu and How to play. Members who joined before it existed never get it.
+_Avoid_: Onboarding tour, intro
