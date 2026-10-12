@@ -6,13 +6,14 @@ import { BottomNav as BottomNavBar, type BottomNavTab } from "@saturday-slate/de
 import { ClipboardCheck, Lock, MessageCircle, Radio, Trophy } from "lucide-react";
 import type { ChatUnreadJson } from "@/lib/chat/json";
 import { BADGE_POLL_MS } from "@/lib/chat/poll";
+import type { TourTarget } from "@/tours/tours";
 
 const TABS = [
-  { href: "/picks", label: "Picks", Icon: ClipboardCheck },
-  { href: "/live", label: "Live Board", Icon: Radio },
-  { href: "/leaderboard", label: "Leaderboard", Icon: Trophy },
-  { href: "/chat", label: "Chat", Icon: MessageCircle },
-] as const;
+  { href: "/picks", label: "Picks", Icon: ClipboardCheck, tour: "tab-picks" },
+  { href: "/live", label: "Live Board", Icon: Radio, tour: "tab-live" },
+  { href: "/leaderboard", label: "Leaderboard", Icon: Trophy, tour: "tab-leaderboard" },
+  { href: "/chat", label: "Chat", Icon: MessageCircle, tour: "tab-chat" },
+] as const satisfies readonly { tour: TourTarget; [key: string]: unknown }[];
 
 const CHAT = "/chat";
 
@@ -70,13 +71,14 @@ function useChatUnread(initial: number, onChat: boolean): number {
  * lives behind a header icon (`HeaderLinks`) rather than a tab now, since it is
  * only ever relevant to a commissioner. The tab bar itself — tiles, dot, count,
  * the fixed bar and its spacer — is the design system's `BottomNav`; this
- * decides where each tab goes and what it says.
+ * decides where each tab goes and what it says. Each tab is a Welcome Tour
+ * target, under its `tour` id.
  */
 export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; picksOpen: boolean; chatUnread: number }) {
   const pathname = usePathname();
   const unread = useChatUnread(chatUnread, pathname === CHAT || pathname.startsWith(`${CHAT}/`));
 
-  const tabs = TABS.map(({ href, label, Icon }): BottomNavTab => {
+  const tabs = TABS.map(({ href, label, Icon, tour }): BottomNavTab => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
     if (href === "/picks") {
       // Once the week locks there is nothing to enter, so the Picks tab goes
@@ -85,7 +87,7 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
       // doesn't relabel mid-week, but the icon becomes a lock to say a tap now
       // lands somewhere other than pick entry. See #116, #170.
       if (locked) {
-        return { href: "/picks/review", label, icon: <Lock size={18} />, active, srNote: " — picks are locked, tap to review" };
+        return { href: "/picks/review", label, icon: <Lock size={18} />, active, srNote: " — picks are locked, tap to review", tour };
       }
       // The dot means something is still to do: it shows while picks are open and
       // the member has not finished them, and clears once they have.
@@ -96,6 +98,7 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
         active,
         dot: picksOpen,
         srNote: picksOpen ? " — picks still to finish" : undefined,
+        tour,
       };
     }
     if (href === CHAT && unread > 0) {
@@ -106,9 +109,10 @@ export function BottomNav({ locked, picksOpen, chatUnread }: { locked: boolean; 
         active,
         count: unread,
         srNote: `, ${unread === 1 ? "1 new message" : `${unread} new messages`}`,
+        tour,
       };
     }
-    return { href, label, icon: <Icon size={18} />, active };
+    return { href, label, icon: <Icon size={18} />, active, tour };
   });
 
   return <BottomNavBar tabs={tabs} />;

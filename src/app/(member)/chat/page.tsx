@@ -40,8 +40,11 @@ export default async function Chat() {
           right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
         />
       </div>
-      {/* Keyed on the Group, so switching boards starts the thread, its poll and its draft afresh. */}
-      <ChatThread key={group.id} initial={toChatStateJson(thread, now)} viewer={toMemberJson(member)} groupId={group.id} groupName={group.name} />
+      {/* The thread and its composer: the Welcome Tour's `chat-screen` target. `min-h-0` keeps the thread scrolling inside its own box. */}
+      <div data-tour="chat-screen" className="flex min-h-0 flex-1 flex-col">
+        {/* Keyed on the Group, so switching boards starts the thread, its poll and its draft afresh. */}
+        <ChatThread key={group.id} initial={toChatStateJson(thread, now)} viewer={toMemberJson(member)} groupId={group.id} groupName={group.name} />
+      </div>
     </main>
   );
 }

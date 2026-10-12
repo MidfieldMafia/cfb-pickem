@@ -215,125 +215,128 @@ export function Review({ initial }: { initial: SheetJson }) {
         </p>
       </header>
 
-      <Progress
-        value={nothingToPick ? 100 : (progress.picksMade / progress.countingGames) * 100}
-        aria-label="Picks made"
-      />
-
-      {locked ? (
-        <div role="status" className="flex items-center gap-2 rounded-md bg-locked p-3 text-sm text-locked-foreground">
-          <Lock size={16} />
-          <span>Picks are locked. What is here is what counts this week.</span>
-        </div>
-      ) : null}
-
-      <section
-        className={`grid gap-1.5 rounded-xl border p-2.5 ${
-          progress.remaining && !locked ? "border-secondary bg-accent" : "border-border bg-card"
-        }`}
-      >
-        <div className="flex min-h-5 items-center gap-2">
-          <span className={`flex-1 ${LABEL} ${progress.remaining && !locked ? "" : "text-muted-foreground"}`}>
-            {remainingLabel(progress, sheet.weekNumber, locked)}
-          </span>
-          {!progress.remaining && !locked ? <Check size={16} strokeWidth={3} className="text-win-foreground" /> : null}
-        </div>
-        <StepRow
-          done={picksComplete(progress)}
-          label="Make every pick"
-          detail={
-            nothingToPick
-              ? "Every game is void"
-              : open
-                ? `${plural(open, "game")} still open`
-                : `All ${progress.countingGames} picked`
-          }
-          action={open ? "Set" : "Change"}
-          disabled={locked || nothingToPick}
-          onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.game.id}` : "/picks")}
+      {/* The content under the header: the Welcome Tour's `picks-screen` target. */}
+      <div data-tour="picks-screen" className="flex flex-1 flex-col gap-3">
+        <Progress
+          value={nothingToPick ? 100 : (progress.picksMade / progress.countingGames) * 100}
+          aria-label="Picks made"
         />
-        {progress.lockApplies ? (
-          <StepRow
-            done={progress.lockSet}
-            label="Lock of the Week"
-            detail={
-              lockGame && lockPick
-                ? lockDropped
-                  ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
-                  : `${teamName(lockGame, lockPick.teamId)} counts ${sheet.lockMultiplier}×`
-                : `One pick counts ${sheet.lockMultiplier}×`
-            }
-            action={progress.lockSet ? "Change" : "Set"}
-            disabled={locked}
-            onClick={() => router.push(LOCK_PAGE)}
-          />
-        ) : null}
-        <StepRow
-          done={progress.guessSet}
-          label="Tiebreaker Guess"
-          detail={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : tiebreakerLine}
-          action={progress.guessSet ? "Change" : "Set"}
-          disabled={locked}
-          onClick={() => router.push(GUESS_PAGE)}
-        />
-      </section>
 
-      {groups.map((group) => (
-        <section key={group.kickoff}>
-          <div className="flex items-baseline gap-2 pb-1 pt-2">
-            <h2 className={LABEL}>{windowLabel(group.kickoff)}</h2>
-            <span className="text-xs text-muted-foreground">
-              <LocalTime at={group.kickoff} />
-            </span>
+        {locked ? (
+          <div role="status" className="flex items-center gap-2 rounded-md bg-locked p-3 text-sm text-locked-foreground">
+            <Lock size={16} />
+            <span>Picks are locked. What is here is what counts this week.</span>
           </div>
-          <Card asChild className="gap-0 overflow-hidden p-0">
-            <ul className="divide-y divide-border">{group.games.map(pickRow)}</ul>
-          </Card>
-        </section>
-      ))}
+        ) : null}
 
-      {progress.lockApplies ? (
-        <section>
-          <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
-          <SummaryCard
-            set={!!(lockGame && lockPick)}
-            locked={locked}
-            icon={<Lock size={18} />}
-            title={lockGame && lockPick ? teamName(lockGame, lockPick.teamId) : locked ? "No Lock this week" : "Choose your Lock"}
+        <section
+          className={`grid gap-1.5 rounded-xl border p-2.5 ${
+            progress.remaining && !locked ? "border-secondary bg-accent" : "border-border bg-card"
+          }`}
+        >
+          <div className="flex min-h-5 items-center gap-2">
+            <span className={`flex-1 ${LABEL} ${progress.remaining && !locked ? "" : "text-muted-foreground"}`}>
+              {remainingLabel(progress, sheet.weekNumber, locked)}
+            </span>
+            {!progress.remaining && !locked ? <Check size={16} strokeWidth={3} className="text-win-foreground" /> : null}
+          </div>
+          <StepRow
+            done={picksComplete(progress)}
+            label="Make every pick"
             detail={
-              lockGame && lockPick
-                ? `${
-                    lockDropped
-                      ? locked
-                        ? "That game is void, so no Lock counts this week"
-                        : "That game is void and scores zero; choose another Lock"
-                      : `${sheet.lockMultiplier}× points if they win`
-                  } · ${lockGame.awayTeam} at ${lockGame.homeTeam}`
-                : `One pick counts ${sheet.lockMultiplier}× this week.`
+              nothingToPick
+                ? "Every game is void"
+                : open
+                  ? `${plural(open, "game")} still open`
+                  : `All ${progress.countingGames} picked`
             }
-            onClick={() => router.push(LOCK_PAGE)}
+            action={open ? "Set" : "Change"}
+            disabled={locked || nothingToPick}
+            onClick={() => router.push(firstOpen ? `/picks?game=${firstOpen.game.id}` : "/picks")}
           />
-          <Link href="/rules" className={LINK}>
-            See how to play
-          </Link>
+          {progress.lockApplies ? (
+            <StepRow
+              done={progress.lockSet}
+              label="Lock of the Week"
+              detail={
+                lockGame && lockPick
+                  ? lockDropped
+                    ? `${teamName(lockGame, lockPick.teamId)} is void; ${locked ? "no Lock counts this week" : "choose another"}`
+                    : `${teamName(lockGame, lockPick.teamId)} counts ${sheet.lockMultiplier}×`
+                  : `One pick counts ${sheet.lockMultiplier}×`
+              }
+              action={progress.lockSet ? "Change" : "Set"}
+              disabled={locked}
+              onClick={() => router.push(LOCK_PAGE)}
+            />
+          ) : null}
+          <StepRow
+            done={progress.guessSet}
+            label="Tiebreaker Guess"
+            detail={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : tiebreakerLine}
+            action={progress.guessSet ? "Change" : "Set"}
+            disabled={locked}
+            onClick={() => router.push(GUESS_PAGE)}
+          />
         </section>
-      ) : null}
 
-      <section>
-        <h2 className={`pb-1 pt-2 ${LABEL}`}>Tiebreaker Guess</h2>
-        <SummaryCard
-          set={progress.guessSet}
-          locked={locked}
-          icon={<Scale size={18} />}
-          title={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : locked ? "No guess this week" : "Enter your guess"}
-          detail={`${tiebreakerLine}. Closest guess wins ties.`}
-          onClick={() => router.push(GUESS_PAGE)}
-        />
-      </section>
+        {groups.map((group) => (
+          <section key={group.kickoff}>
+            <div className="flex items-baseline gap-2 pb-1 pt-2">
+              <h2 className={LABEL}>{windowLabel(group.kickoff)}</h2>
+              <span className="text-xs text-muted-foreground">
+                <LocalTime at={group.kickoff} />
+              </span>
+            </div>
+            <Card asChild className="gap-0 overflow-hidden p-0">
+              <ul className="divide-y divide-border">{group.games.map(pickRow)}</ul>
+            </Card>
+          </section>
+        ))}
 
-      <Link href="/" className={LINK}>
-        Back to this week
-      </Link>
+        {progress.lockApplies ? (
+          <section>
+            <h2 className={`pb-1 pt-2 ${LABEL}`}>Lock of the Week</h2>
+            <SummaryCard
+              set={!!(lockGame && lockPick)}
+              locked={locked}
+              icon={<Lock size={18} />}
+              title={lockGame && lockPick ? teamName(lockGame, lockPick.teamId) : locked ? "No Lock this week" : "Choose your Lock"}
+              detail={
+                lockGame && lockPick
+                  ? `${
+                      lockDropped
+                        ? locked
+                          ? "That game is void, so no Lock counts this week"
+                          : "That game is void and scores zero; choose another Lock"
+                        : `${sheet.lockMultiplier}× points if they win`
+                    } · ${lockGame.awayTeam} at ${lockGame.homeTeam}`
+                  : `One pick counts ${sheet.lockMultiplier}× this week.`
+              }
+              onClick={() => router.push(LOCK_PAGE)}
+            />
+            <Link href="/rules" className={LINK}>
+              See how to play
+            </Link>
+          </section>
+        ) : null}
+
+        <section>
+          <h2 className={`pb-1 pt-2 ${LABEL}`}>Tiebreaker Guess</h2>
+          <SummaryCard
+            set={progress.guessSet}
+            locked={locked}
+            icon={<Scale size={18} />}
+            title={progress.guessSet ? `${sheet.tiebreakerGuess} points combined` : locked ? "No guess this week" : "Enter your guess"}
+            detail={`${tiebreakerLine}. Closest guess wins ties.`}
+            onClick={() => router.push(GUESS_PAGE)}
+          />
+        </section>
+
+        <Link href="/" className={LINK}>
+          Back to this week
+        </Link>
+      </div>
 
     </main>
   );

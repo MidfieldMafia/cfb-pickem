@@ -9,11 +9,12 @@ const ICON_LINK = "grid size-8 shrink-0 place-items-center rounded-full text-mut
  * Manage lives in the avatar menu, not here.
  *
  * A fragment, so the icons sit in whatever flex row the header already lays out.
+ * The How to play link is the Welcome Tour's `rules` target.
  */
 export function HeaderLinks() {
   return (
     <>
-      <Link href="/rules" aria-label="How to play" className={ICON_LINK}>
+      <Link href="/rules" aria-label="How to play" data-tour="rules" className={ICON_LINK}>
         <CircleHelp size={20} />
       </Link>
     </>

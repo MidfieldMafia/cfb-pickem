@@ -512,24 +512,27 @@ export function LiveBoard({
         />
       </div>
 
-      {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 space-y-3 border-b border-border bg-background px-4 pb-3">
-        {state.complete ? null : <FreshnessLine serverNow={state.serverNow} nextPollAt={nextPollAt} />}
-        <YourRank state={state} viewer={viewer} />
-      </div>
+      {/* The content under the header, sticky block included: the Welcome Tour's `live-screen` target. */}
+      <div data-tour="live-screen" className="flex flex-1 flex-col gap-3">
+        {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
+        <div className="sticky top-[env(safe-area-inset-top)] z-10 space-y-3 border-b border-border bg-background px-4 pb-3">
+          {state.complete ? null : <FreshnessLine serverNow={state.serverNow} nextPollAt={nextPollAt} />}
+          <YourRank state={state} viewer={viewer} />
+        </div>
 
-      <ul className="space-y-3 px-4">
-        {ordered.map((row) => (
-          <GameRow
-            key={row.game.id}
-            row={row}
-            viewerId={viewer.id}
-            serverNow={state.serverNow}
-            locked={state.locked}
-            onOpen={() => setOpenGameId(row.game.id)}
-          />
-        ))}
-      </ul>
+        <ul className="space-y-3 px-4">
+          {ordered.map((row) => (
+            <GameRow
+              key={row.game.id}
+              row={row}
+              viewerId={viewer.id}
+              serverNow={state.serverNow}
+              locked={state.locked}
+              onOpen={() => setOpenGameId(row.game.id)}
+            />
+          ))}
+        </ul>
+      </div>
 
       <GameSheet
         game={openGame}

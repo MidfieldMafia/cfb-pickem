@@ -322,180 +322,183 @@ export function PickFlow({
         {page ? null : <StatusChip pick={pick} />}
       </header>
 
-      <ProgressStrip
-        games={games}
-        picks={picks}
-        current={page ?? index}
-        set={{ lock: progress.lockSet, guess: progress.guessSet }}
-        lockApplies={progress.lockApplies}
-        onJump={goTo}
-        // Within a walk a marker moves between its pages and keeps the rest owed;
-        // anywhere else it opens that page on its own, which goes back to Review.
-        onOpen={(p) => openPage(p, page && walk.includes(p) ? walk : [p])}
-      />
-
-      {page && locked ? (
-        <div className="px-4 pt-2">
-          <LockedNote deadline={held.deadline} />
-        </div>
-      ) : null}
-
-      {page === "lock" ? (
-        <LockStep
-          sheet={held}
-          pick={picks}
-          locked={locked}
-          saving={status.lock.state === "saving"}
-          chosen={lockChosen}
-          error={status.lock.state === "failed" ? status.lock.error : null}
-          hint={flash ?? "Tap a pick to lock it."}
-          onLock={chooseLock}
-          onOpenGame={(gameId) => goTo(games.findIndex((g) => idOf(g) === gameId))}
-          onSkip={() => leave("lock")}
+      {/* The content under the header, on every page of the flow: the Welcome Tour's `picks-screen` target. */}
+      <div data-tour="picks-screen" className="flex flex-1 flex-col">
+        <ProgressStrip
+          games={games}
+          picks={picks}
+          current={page ?? index}
+          set={{ lock: progress.lockSet, guess: progress.guessSet }}
+          lockApplies={progress.lockApplies}
+          onJump={goTo}
+          // Within a walk a marker moves between its pages and keeps the rest owed;
+          // anywhere else it opens that page on its own, which goes back to Review.
+          onOpen={(p) => openPage(p, page && walk.includes(p) ? walk : [p])}
         />
-      ) : page === "guess" ? (
-        <GuessStep
-          sheet={held}
-          pick={picks}
-          locked={locked}
-          saving={status.guess.state === "saving"}
-          error={status.guess.state === "failed" ? status.guess.error : null}
-          onSave={saveGuess}
-          onSkip={() => leave("guess")}
-        />
-      ) : (
-        <div className="flex flex-1 flex-col gap-2 px-4 pb-3 pt-2">
-          {locked ? <LockedNote deadline={held.deadline} /> : null}
 
-          <div className="flex min-h-6 items-center gap-2">
-            <span className="grid min-w-0 flex-1 text-sm leading-[18px] text-muted-foreground">
-              <span>
-                <LocalTime at={game.kickoff} />
-                {detail?.tv ? ` · ${detail.tv}` : ""}
-              </span>
-              {detail?.venue ? (
-                <span className="truncate text-xs">
-                  {detail.venue}
-                  {detail.city ? ` · ${detail.city}` : ""}
-                </span>
-              ) : null}
-            </span>
-            {tiebreaker ? (
-              <Badge variant="secondary">
-                <Scale size={12} aria-hidden />
-                Tiebreaker
-              </Badge>
-            ) : null}
-            {voided ? <Badge variant="void">Void{why ? `: ${why}` : ""}</Badge> : null}
-            {detail?.weather ? <WeatherPill weather={detail.weather} /> : null}
+        {page && locked ? (
+          <div className="px-4 pt-2">
+            <LockedNote deadline={held.deadline} />
           </div>
+        ) : null}
 
-          {/* An outline, not a border: it sets the Tiebreaker Game apart without moving the tiles. */}
-          <div
-            className={`flex flex-1 flex-col gap-2 rounded-lg ${tiebreaker ? "outline-2 outline-offset-4 outline-secondary" : ""}`}
-          >
-          <MatchupPanel
-            awayTeam={game.awayTeam}
-            homeTeam={game.homeTeam}
-            colors={[awayColor, homeColor]}
-            spread={detail?.spread ?? game.spread}
-            detail={detail}
+        {page === "lock" ? (
+          <LockStep
+            sheet={held}
+            pick={picks}
+            locked={locked}
+            saving={status.lock.state === "saving"}
+            chosen={lockChosen}
+            error={status.lock.state === "failed" ? status.lock.error : null}
+            hint={flash ?? "Tap a pick to lock it."}
+            onLock={chooseLock}
+            onOpenGame={(gameId) => goTo(games.findIndex((g) => idOf(g) === gameId))}
+            onSkip={() => leave("lock")}
           />
+        ) : page === "guess" ? (
+          <GuessStep
+            sheet={held}
+            pick={picks}
+            locked={locked}
+            saving={status.guess.state === "saving"}
+            error={status.guess.state === "failed" ? status.guess.error : null}
+            onSave={saveGuess}
+            onSkip={() => leave("guess")}
+          />
+        ) : (
+          <div className="flex flex-1 flex-col gap-2 px-4 pb-3 pt-2">
+            {locked ? <LockedNote deadline={held.deadline} /> : null}
 
-          <div className="flex flex-1 items-stretch gap-1.5">
-            <TeamTile
-              name={game.awayTeam}
-              color={awayColor}
-              rank={game.awayRank}
-              record={detail?.away.record ?? null}
-              side="away"
-              picked={pick?.teamId === game.awayTeamId}
-              dimmed={!!pick && pick.teamId !== game.awayTeamId}
-              disabled={locked || voided}
-              onPick={() => choose(game.awayTeamId)}
-            />
-            <div className="w-6 shrink-0 self-center text-center text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-              at
+            <div className="flex min-h-6 items-center gap-2">
+              <span className="grid min-w-0 flex-1 text-sm leading-[18px] text-muted-foreground">
+                <span>
+                  <LocalTime at={game.kickoff} />
+                  {detail?.tv ? ` · ${detail.tv}` : ""}
+                </span>
+                {detail?.venue ? (
+                  <span className="truncate text-xs">
+                    {detail.venue}
+                    {detail.city ? ` · ${detail.city}` : ""}
+                  </span>
+                ) : null}
+              </span>
+              {tiebreaker ? (
+                <Badge variant="secondary">
+                  <Scale size={12} aria-hidden />
+                  Tiebreaker
+                </Badge>
+              ) : null}
+              {voided ? <Badge variant="void">Void{why ? `: ${why}` : ""}</Badge> : null}
+              {detail?.weather ? <WeatherPill weather={detail.weather} /> : null}
             </div>
-            <TeamTile
-              name={game.homeTeam}
-              color={homeColor}
-              rank={game.homeRank}
-              record={detail?.home.record ?? null}
-              side="home"
-              picked={pick?.teamId === game.homeTeamId}
-              dimmed={!!pick && pick.teamId !== game.homeTeamId}
-              disabled={locked || voided}
-              onPick={() => choose(game.homeTeamId)}
+
+            {/* An outline, not a border: it sets the Tiebreaker Game apart without moving the tiles. */}
+            <div
+              className={`flex flex-1 flex-col gap-2 rounded-lg ${tiebreaker ? "outline-2 outline-offset-4 outline-secondary" : ""}`}
+            >
+            <MatchupPanel
+              awayTeam={game.awayTeam}
+              homeTeam={game.homeTeam}
+              colors={[awayColor, homeColor]}
+              spread={detail?.spread ?? game.spread}
+              detail={detail}
             />
-          </div>
-          </div>
 
-          {lateError ? (
-            <p role="alert" className="rounded-md border border-destructive p-2 text-sm font-semibold text-destructive">
-              {lateError}
-            </p>
-          ) : null}
+            <div className="flex flex-1 items-stretch gap-1.5">
+              <TeamTile
+                name={game.awayTeam}
+                color={awayColor}
+                rank={game.awayRank}
+                record={detail?.away.record ?? null}
+                side="away"
+                picked={pick?.teamId === game.awayTeamId}
+                dimmed={!!pick && pick.teamId !== game.awayTeamId}
+                disabled={locked || voided}
+                onPick={() => choose(game.awayTeamId)}
+              />
+              <div className="w-6 shrink-0 self-center text-center text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                at
+              </div>
+              <TeamTile
+                name={game.homeTeam}
+                color={homeColor}
+                rank={game.homeRank}
+                record={detail?.home.record ?? null}
+                side="home"
+                picked={pick?.teamId === game.homeTeamId}
+                dimmed={!!pick && pick.teamId !== game.homeTeamId}
+                disabled={locked || voided}
+                onPick={() => choose(game.homeTeamId)}
+              />
+            </div>
+            </div>
 
-          {pick?.state === "failed" ? (
-            <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive p-2 text-sm">
-              <span className="flex-1 font-semibold text-destructive">{pick.error}</span>
-              {locked ? null : (
-                <Button type="button" variant="outline" size="sm" onClick={() => choose(pick.teamId)}>
-                  Retry
+            {lateError ? (
+              <p role="alert" className="rounded-md border border-destructive p-2 text-sm font-semibold text-destructive">
+                {lateError}
+              </p>
+            ) : null}
+
+            {pick?.state === "failed" ? (
+              <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive p-2 text-sm">
+                <span className="flex-1 font-semibold text-destructive">{pick.error}</span>
+                {locked ? null : (
+                  <Button type="button" variant="outline" size="sm" onClick={() => choose(pick.teamId)}>
+                    Retry
+                  </Button>
+                )}
+              </div>
+            ) : null}
+
+            <div className="flex min-h-tap items-center gap-2 pt-1">
+              <span className="flex-1 text-sm text-muted-foreground">
+                {flash
+                  ? flash
+                  : locked
+                    ? "Nothing more to enter this week."
+                    : voided
+                      ? "This game is void: it scores zero for everyone."
+                      : // Shorter than it was: with Review beside it, the old wording ran to a
+                        // third line at 375px whichever way the forward button read.
+                        "Tap a team — it saves as you go, no submit step."}
+              </span>
+              {/*
+                Review is reachable from every game, not only the last one: it is
+                where the Lock of the Week and the Tiebreaker Guess sit beside every
+                pick, and the flow walks the slate in order, so a member part-way
+                down it had no way to that screen but to pick out the rest first.
+
+                Mid-slate it is the underlined text link the Leaderboard and You
+                screens use for a secondary destination, not a second button —
+                `Next` stays the one obvious move, and an aside that reads as a link
+                beats a ghost button that reads as label text. `tap` because
+                `tokens/base.css` holds `button` to the 44px floor but leaves
+                anchors to opt in; the last game's Button-as-Link needs it for the
+                same reason, and had measured 32px since it was written.
+              */}
+              {last ? (
+                <Button asChild variant="outline" size="sm" className="tap">
+                  <Link href="/picks/review">
+                    {isSaved(pick) ? "Review picks" : "Skip for now"} <ChevronRight />
+                  </Link>
                 </Button>
+              ) : (
+                <>
+                  <Link
+                    href="/picks/review"
+                    className={LINK}
+                  >
+                    Review
+                  </Link>
+                  <Button type="button" variant="outline" size="sm" onClick={() => goTo(index + 1)}>
+                    {isSaved(pick) ? "Next" : "Skip for now"} <ChevronRight />
+                  </Button>
+                </>
               )}
             </div>
-          ) : null}
-
-          <div className="flex min-h-tap items-center gap-2 pt-1">
-            <span className="flex-1 text-sm text-muted-foreground">
-              {flash
-                ? flash
-                : locked
-                  ? "Nothing more to enter this week."
-                  : voided
-                    ? "This game is void: it scores zero for everyone."
-                    : // Shorter than it was: with Review beside it, the old wording ran to a
-                      // third line at 375px whichever way the forward button read.
-                      "Tap a team — it saves as you go, no submit step."}
-            </span>
-            {/*
-              Review is reachable from every game, not only the last one: it is
-              where the Lock of the Week and the Tiebreaker Guess sit beside every
-              pick, and the flow walks the slate in order, so a member part-way
-              down it had no way to that screen but to pick out the rest first.
-
-              Mid-slate it is the underlined text link the Leaderboard and You
-              screens use for a secondary destination, not a second button —
-              `Next` stays the one obvious move, and an aside that reads as a link
-              beats a ghost button that reads as label text. `tap` because
-              `tokens/base.css` holds `button` to the 44px floor but leaves
-              anchors to opt in; the last game's Button-as-Link needs it for the
-              same reason, and had measured 32px since it was written.
-            */}
-            {last ? (
-              <Button asChild variant="outline" size="sm" className="tap">
-                <Link href="/picks/review">
-                  {isSaved(pick) ? "Review picks" : "Skip for now"} <ChevronRight />
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Link
-                  href="/picks/review"
-                  className={LINK}
-                >
-                  Review
-                </Link>
-                <Button type="button" variant="outline" size="sm" onClick={() => goTo(index + 1)}>
-                  {isSaved(pick) ? "Next" : "Skip for now"} <ChevronRight />
-                </Button>
-              </>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </main>
   );
 }

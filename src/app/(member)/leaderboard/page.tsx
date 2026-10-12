@@ -76,55 +76,58 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
         right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
       />
 
-      {played.length > 0 ? (
-        <WeekStrip
-          tiles={stripTiles({
-            year: season.season.year,
-            played,
-            leaderboard: season.leaderboard,
-            viewerId: member.id,
-            shown,
-          })}
-        />
-      ) : null}
+      {/* The content under the header: the Welcome Tour's `leaderboard-screen` target. */}
+      <div data-tour="leaderboard-screen" className="flex flex-1 flex-col gap-4">
+        {played.length > 0 ? (
+          <WeekStrip
+            tiles={stripTiles({
+              year: season.season.year,
+              played,
+              leaderboard: season.leaderboard,
+              viewerId: member.id,
+              shown,
+            })}
+          />
+        ) : null}
 
-      {left ? (
-        <div className="px-4">
-          <LiveWeekCard left={left} />
+        {left ? (
+          <div className="px-4">
+            <LiveWeekCard left={left} />
+          </div>
+        ) : null}
+
+        <section className="px-4">
+          {shown ? (
+            <>
+              <WeeklyScoreList
+                scores={shown.scores}
+                winners={weeklyWinners(shown.weeklyWin, shown.complete)}
+                viewerId={member.id}
+                guessers={weeklyContenders(shown.weeklyWin)}
+              />
+              {won ? <p className="pt-3 text-sm text-muted-foreground">{won}.</p> : null}
+            </>
+          ) : (
+            <>
+              <LeaderboardTable rows={season.leaderboard} viewerId={member.id} championId={championId} />
+              {movedSince ? (
+                <p className="pt-3 text-sm text-muted-foreground">Arrows are places moved since Week {movedSince}.</p>
+              ) : null}
+            </>
+          )}
+        </section>
+
+        {shown && reveal ? (
+          <div className="px-4">
+            <RevealCard href={reveal} weekNumber={shown.week.weekNumber} />
+          </div>
+        ) : null}
+
+        <div className="flex flex-col px-4">
+          <Link href="/rules" className={LINK}>
+            How scoring and ties work
+          </Link>
         </div>
-      ) : null}
-
-      <section className="px-4">
-        {shown ? (
-          <>
-            <WeeklyScoreList
-              scores={shown.scores}
-              winners={weeklyWinners(shown.weeklyWin, shown.complete)}
-              viewerId={member.id}
-              guessers={weeklyContenders(shown.weeklyWin)}
-            />
-            {won ? <p className="pt-3 text-sm text-muted-foreground">{won}.</p> : null}
-          </>
-        ) : (
-          <>
-            <LeaderboardTable rows={season.leaderboard} viewerId={member.id} championId={championId} />
-            {movedSince ? (
-              <p className="pt-3 text-sm text-muted-foreground">Arrows are places moved since Week {movedSince}.</p>
-            ) : null}
-          </>
-        )}
-      </section>
-
-      {shown && reveal ? (
-        <div className="px-4">
-          <RevealCard href={reveal} weekNumber={shown.week.weekNumber} />
-        </div>
-      ) : null}
-
-      <div className="flex flex-col px-4">
-        <Link href="/rules" className={LINK}>
-          How scoring and ties work
-        </Link>
       </div>
     </main>
   );

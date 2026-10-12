@@ -9,6 +9,6 @@ import { Review } from "./review";
 export default async function ReviewPage() {
   const member = await requireMember();
   const week = await currentWeek(db(), member);
-  if (!week) return <NoSlate />;
+  if (!week) return <NoSlate tour="picks-screen" />;
   return <Review initial={toSheetJson(week.sheet)} />;
 }
