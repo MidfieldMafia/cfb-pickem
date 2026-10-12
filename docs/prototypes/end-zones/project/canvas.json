@@ -1,0 +1,17 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-12T15:00:00Z" },
+  "title": "End zones and play labels",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 1840, "title": "A · Names face the field, label at the spot" },
+    "B.dc.html": { "x": 470, "y": 0, "w": 390, "h": 1840, "title": "B · Names read up, label as a banner" },
+    "C.dc.html": { "x": 940, "y": 0, "w": 390, "h": 1840, "title": "C · Names read down, label in the team's end zone" },
+    "Colors.dc.html": { "x": 1410, "y": 0, "w": 1200, "h": 1240, "title": "End zone colours · three rules" },
+    "Field.dc.html": { "x": 1410, "y": 1360, "w": 336, "h": 150, "title": "Field (shared drawing)" }
+  },
+  "order": ["Main.dc.html", "B.dc.html", "C.dc.html", "Colors.dc.html", "Field.dc.html"],
+  "notes": {},
+  "designSystems": []
+}

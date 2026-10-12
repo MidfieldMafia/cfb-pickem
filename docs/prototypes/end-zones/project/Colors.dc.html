@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>End zone colours</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1200px; min-height: 1240px; box-sizing: border-box; padding: 32px 40px; background: #F7F1E3; font-family: Manrope, sans-serif; color: #241F1A; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 26px; line-height: 32px">End zone colours · three rules</h1>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 40px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 16px; line-height: 20px">Bar pair</h2>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #6F6152">barColors as the split bar uses it. Only colours that read on the cream card count, so a gold or bright orange gives way to gray.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 16px; line-height: 20px">Not like the turf</h2>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #6F6152">Any school colour that reads apart from the pine. The name turns cream or ink to suit. Two alike colours: the away side gives way to chalk.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 16px; line-height: 20px">Primary always</h2>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #6F6152">Each school’s primary, no pairing. The end zones are a field apart and named, so two oranges never touch.</p>
+</div>
+<sc-for list="{{cells}}" as="c" hint-placeholder-count="21">
+<div style="background: #FBF6EC; border: 1px solid #D26A12; border-radius: 10px; padding: 10px; justify-self: start">
+<dc-import name="Field" scenario="{{c.id}}" variant="A" rule="{{c.rule}}" name-size="12" flash="orange" hint-size="336px,134px"></dc-import>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ids = ['m-iowa', 'm-texas', 'm-oregon', 'm-msst', 'm-purdue', 'm-msu', 'm-nd'];
+    const cells = [];
+    for (const id of ids) for (const rule of ['bar', 'turf', 'primary']) cells.push({ id, rule });
+    return { cells };
+  }
+}
+</script>
+</body>
+</html>

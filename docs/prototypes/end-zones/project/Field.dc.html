@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Field</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 336px; display: flex; flex-direction: column; gap: 6px; font-family: Manrope, sans-serif; color: #241F1A">
+<div style="font-size: 12px; line-height: 16px; font-weight: 600; color: #6F6152">{{s.caption}}</div>
+<div role="img" aria-label="{{s.aria}}" style="position: relative; width: 336px; height: 112px; overflow: hidden; border-radius: 6px; background: #1F4034">
+<sc-for list="{{lines}}" as="ln" hint-placeholder-count="19">
+<div style="{{ln.style}}"></div>
+</sc-for>
+<sc-for list="{{numbers}}" as="nm" hint-placeholder-count="9">
+<div style="{{nm.style}}">{{nm.label}}</div>
+</sc-for>
+<sc-for list="{{zones}}" as="z" hint-placeholder-count="2">
+<div style="{{z.box}}"><div style="{{z.text}}">{{z.label}}</div></div>
+</sc-for>
+<div style="position: absolute; left: 27px; top: 0; width: 1.5px; height: 112px; background: #FBF6EC"></div>
+<div style="position: absolute; left: 307px; top: 0; width: 1.5px; height: 112px; background: #FBF6EC"></div>
+<sc-if value="{{hasBall}}" hint-placeholder-val="{{ true }}">
+<div style="{{gainStyle}}"></div>
+<div style="{{scrimStyle}}"></div>
+</sc-if>
+<svg width="336" height="112" aria-hidden="true" style="position: absolute; left: 0; top: 0; overflow: visible">
+<path d="{{trail}}" style="fill: none; stroke: #FBF6EC; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round"></path>
+<path d="{{miss}}" style="fill: none; stroke: #F08A6E; stroke-width: 3; stroke-linecap: round"></path>
+<circle cx="{{startX}}" cy="74" r="{{startR}}" style="fill: #FBF6EC"></circle>
+</svg>
+<sc-if value="{{hasPin}}" hint-placeholder-val="{{ true }}">
+<div style="{{pinStyle}}"><img src="{{pinLogo}}" alt="" style="width: 20px; height: 20px; display: block"></div>
+<div style="{{pinTipStyle}}"></div>
+</sc-if>
+<sc-if value="{{hasBall}}" hint-placeholder-val="{{ true }}">
+<svg width="20" height="20" aria-hidden="true" style="{{ballStyle}}">
+<ellipse cx="10" cy="10" rx="8.75" ry="5.2" style="fill: #A94B17; stroke: #FBF6EC; stroke-width: 1"></ellipse>
+<path d="M6.7 10H13.3M7.9 8.8v2.4M10 8.8v2.4M12.1 8.8v2.4" style="fill: none; stroke: #FBF6EC; stroke-width: 1.2; stroke-linecap: round"></path>
+</svg>
+</sc-if>
+<sc-if value="{{hasCallout}}" hint-placeholder-val="{{ false }}">
+<div style="{{calloutTip}}"></div>
+<div style="{{calloutStyle}}">{{labelText}}</div>
+</sc-if>
+<sc-if value="{{hasBanner}}" hint-placeholder-val="{{ false }}">
+<div style="{{bannerStyle}}">{{bannerText}}</div>
+</sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scenario":{"editor":"enum","options":["rest-1","rest-2","rest-3","rest-4","int","fum","downs","block","td","pick6"],"default":"int"},"variant":{"editor":"enum","options":["A","B","C"],"default":"A"},"rule":{"editor":"enum","options":["bar","turf","primary"],"default":"bar"},"nameSize":{"editor":"int","min":9,"max":16,"default":12},"flash":{"editor":"enum","options":["orange","chalk"],"default":"orange"},"$preview":{"width":336,"height":150}}'>
+const CREAM = '#FBF6EC', INK = '#241F1A', ORANGE = '#D26A12', GAIN = '#D26A12';
+const TEAMS = {
+  iowa: { name: 'IOWA', ab: 'IOWA', p: '#FFCD00', logo: '/_blob/4dc525b73c1a65afbf9d83aa9561e471' },
+  michigan: { name: 'MICHIGAN', ab: 'MICH', p: '#00274C', logo: '/_blob/6d3492ee2b356b6af7fad3cee97af79f' },
+  texas: { name: 'TEXAS', ab: 'TEX', p: '#BF5700', logo: '/_blob/3395c7d0b6265033c8ca58ca5ef71ed5' },
+  tennessee: { name: 'TENNESSEE', ab: 'TENN', p: '#FF8200', logo: '/_blob/37b94c27e1a742994487407da11438a3' },
+  oregon: { name: 'OREGON', ab: 'ORE', p: '#154733', logo: '/_blob/61dcc8f989f2b350210a5b919c259ff1' },
+  ohiostate: { name: 'OHIO STATE', ab: 'OSU', p: '#BB0000', logo: '/_blob/2e6a334e4deb88c747731352d76ebfec' },
+  msst: { name: 'MISSISSIPPI STATE', short: 'MISS. STATE', ab: 'MSST', p: '#660000', logo: '/_blob/211db9a4042d48089ca636fe431db915' },
+  ncst: { name: 'NC STATE', ab: 'NCST', p: '#CC0000', logo: '/_blob/61c2d0287b1c06d2f00f45143282a8b2' },
+  purdue: { name: 'PURDUE', ab: 'PUR', p: '#CEB888' },
+  army: { name: 'ARMY', ab: 'ARMY', p: '#D4BF91' },
+  msu: { name: 'MICHIGAN STATE', ab: 'MSU', p: '#18453B' },
+  baylor: { name: 'BAYLOR', ab: 'BAY', p: '#154734' },
+  nd: { name: 'NOTRE DAME', ab: 'ND', p: '#0C2340' },
+  navy: { name: 'NAVY', ab: 'NAVY', p: '#00205B' }
+};
+/* barColors() as it is today, and a rule that only rejects colours too like the turf (CIEDE2000 under 26), run on logos.ts. */
+const PAIRS = {
+  bar: {
+    'iowa-michigan': ['#B8B4AD', '#00274C'], 'texas-tennessee': ['#BF5700', '#58595B'], 'oregon-ohiostate': ['#154733', '#BB0000'],
+    'msst-ncst': ['#660000', '#000000'], 'purdue-army': ['#000000', '#B8B4AD'], 'msu-baylor': ['#B8B4AD', '#154734'], 'nd-navy': ['#B8B4AD', '#00205B']
+  },
+  turf: {
+    'iowa-michigan': ['#E9DFC9', '#FFCB05'], 'texas-tennessee': ['#E9DFC9', '#FF8200'], 'oregon-ohiostate': ['#FEE123', '#BB0000'],
+    'msst-ncst': ['#FFFFFF', '#CC0000'], 'purdue-army': ['#E9DFC9', '#D4BF91'], 'msu-baylor': ['#FFFFFF', '#FFB81C'], 'nd-navy': ['#C99700', '#00205B']
+  }
+};
+const SC = {
+  'rest-1': { caption: 'Iowa at Michigan · dark logos today', a: 'iowa', h: 'michigan', ball: 65, side: 'home', gain: 55 },
+  'rest-2': { caption: 'Texas at Tennessee · two oranges', a: 'texas', h: 'tennessee', ball: 60, side: 'away', gain: 70 },
+  'rest-3': { caption: 'Oregon at Ohio State · green on green', a: 'oregon', h: 'ohiostate', ball: 80, side: 'home', gain: 70 },
+  'rest-4': { caption: 'Mississippi State at NC State · a long name', a: 'msst', h: 'ncst', ball: 50, side: 'away', gain: 60 },
+  'int': { caption: 'Interception · picked at the MICH 28, back to the 40', a: 'iowa', h: 'michigan', ball: 60, side: 'home', gain: 50, start: 45,
+    trail: [['arc', 45, 72], ['ground', 72, 60]], label: { text: 'Interception', at: 72, by: 'home' } },
+  'fum': { caption: 'Fumble lost · Texas recovers at the TENN 38', a: 'texas', h: 'tennessee', ball: 62, side: 'away', gain: 72, start: 70,
+    trail: [['ground', 70, 62]], label: { text: 'Fumble', at: 62, by: 'away' } },
+  'downs': { caption: 'Turnover on downs · stopped at the OSU 29', a: 'oregon', h: 'ohiostate', ball: 71, side: 'home', gain: 61, start: 70,
+    trail: [['ground', 70, 71]], label: { text: 'Turnover on downs', at: 71, by: 'home' } },
+  'block': { caption: 'Blocked kick · NC State falls on it at its 34', a: 'msst', h: 'ncst', ball: 66, side: 'home', gain: 56, start: 68,
+    trail: [['arc', 68, 71], ['ground', 71, 66]], miss: 71, label: { text: 'Blocked kick', at: 71, by: 'home' } },
+  'td': { caption: 'Touchdown · today’s flash, for comparison', a: 'iowa', h: 'michigan', ball: null, side: 'home', start: 12,
+    trail: [['ground', 12, -4]], score: { text: 'Touchdown', end: 'left' } },
+  'pick6': { caption: 'Pick six · the turnover and the score together', a: 'texas', h: 'tennessee', ball: null, side: 'away', start: 40,
+    trail: [['arc', 40, 30], ['ground', 30, 104]], label: { text: 'Interception', at: 30, by: 'away' }, score: { text: 'Touchdown', end: 'right' } },
+  'm-iowa': { caption: 'Iowa at Michigan', a: 'iowa', h: 'michigan', ball: 50, side: null },
+  'm-texas': { caption: 'Texas at Tennessee', a: 'texas', h: 'tennessee', ball: 50, side: null },
+  'm-oregon': { caption: 'Oregon at Ohio State', a: 'oregon', h: 'ohiostate', ball: 50, side: null },
+  'm-msst': { caption: 'Mississippi State at NC State', a: 'msst', h: 'ncst', ball: 50, side: null },
+  'm-purdue': { caption: 'Purdue at Army', a: 'purdue', h: 'army', ball: 50, side: null },
+  'm-msu': { caption: 'Michigan State at Baylor', a: 'msu', h: 'baylor', ball: 50, side: null },
+  'm-nd': { caption: 'Notre Dame at Navy', a: 'nd', h: 'navy', ball: 50, side: null }
+};
+const fx = (y) => Math.round((y + 10) * 28) / 10;
+function lum(hex) {
+  const n = hex.replace('#', '');
+  const c = [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+function contrast(a, b) { const x = [lum(a), lum(b)].sort((p, q) => q - p); return (x[0] + 0.05) / (x[1] + 0.05); }
+const textOn = (bg) => (contrast(bg, CREAM) >= contrast(bg, INK) ? CREAM : INK);
+/* Rough Chivo Black caps width, so a name too long for the strip falls back. The build measures instead. */
+const fits = (s, size, ls) => s.length * size * 0.72 + (s.length - 1) * ls <= 100;
+function nameFor(t, size, ls) {
+  if (fits(t.name, size, ls)) return t.name;
+  if (t.short && fits(t.short, size, ls)) return t.short;
+  return t.ab;
+}
+class Component extends DCLogic {
+  renderVals() {
+    const id = this.props.scenario ?? 'int';
+    const v = this.props.variant ?? 'A';
+    const rule = this.props.rule ?? 'bar';
+    const size = this.props.nameSize ?? 12;
+    const flashFill = (this.props.flash ?? 'orange') === 'chalk' ? CREAM : ORANGE;
+    const s = SC[id] ?? SC['int'];
+    const A = TEAMS[s.a], H = TEAMS[s.h];
+    const key = s.a + '-' + s.h;
+    const pair = rule === 'primary' || !PAIRS[rule][key] ? [A.p, H.p] : PAIRS[rule][key];
+    const fill = { away: pair[0], home: pair[1] };
+    const ls = size >= 13 ? 1 : 1.5;
+    // Which way each end zone's name reads: -90 is bottom to top, 90 top to bottom.
+    const rot = v === 'A' ? { left: -90, right: 90 } : v === 'B' ? { left: -90, right: -90 } : { left: 90, right: 90 };
+    const label = s.label;
+    const zoneOf = (side) => (side === 'away' ? 'left' : 'right');
+
+    const zones = ['left', 'right'].map((end) => {
+      const side = end === 'left' ? 'away' : 'home';
+      const team = side === 'away' ? A : H;
+      let bg = fill[side], fg = textOn(bg), text = nameFor(team, size, ls), ring = '', fsize = size, fls = ls;
+      if (v === 'C' && label && zoneOf(label.by) === end) {
+        text = label.text.toUpperCase();
+        fsize = 10; fls = 0.5;
+        ring = 'box-shadow: inset 0 0 0 2px ' + CREAM + ';';
+      }
+      if (s.score && s.score.end === end) {
+        bg = flashFill; fg = INK; text = s.score.text.toUpperCase(); fsize = 13; fls = 2; ring = '';
+      }
+      const left = end === 'left' ? 0 : 308;
+      return {
+        label: text,
+        box: 'position: absolute; top: 0; left: ' + left + 'px; width: 28px; height: 112px; background: ' + bg + ';' + ring,
+        text: 'position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(' + rot[end] + 'deg); white-space: nowrap; font-family: Chivo, sans-serif; font-weight: 900; font-size: ' + fsize + 'px; line-height: 1; letter-spacing: ' + fls + 'px; color: ' + fg + ';'
+      };
+    });
+
+    const lines = [];
+    for (let y = 5; y <= 95; y += 5)
+      lines.push({ style: 'position: absolute; top: 4px; left: ' + (fx(y) - 0.5) + 'px; width: 1px; height: 104px; background: rgba(251,246,236,' + (y % 10 === 0 ? 0.45 : 0.2) + ')' });
+    const bannerUp = v === 'B' && label;
+    const numbers = [];
+    for (let y = 10; y <= 90; y += 10)
+      numbers.push({ label: String(y <= 50 ? y : 100 - y), style: 'position: absolute; top: 6px; left: ' + (fx(y) - 10) + 'px; width: 20px; text-align: center; font-size: 10px; line-height: 12px; font-weight: 700; color: rgba(251,246,236,0.7);' + (bannerUp ? 'visibility: hidden;' : '') });
+
+    // The play's drawing at rest.
+    let trail = '';
+    for (const [k, f, t] of s.trail ?? []) {
+      const x0 = fx(f), x1 = fx(t);
+      if (!trail) trail = 'M' + x0 + ' 74';
+      if (k === 'ground') trail += ' L' + x1 + ' 74';
+      else {
+        const h = Math.min(66, 14 + 0.85 * Math.abs(x1 - x0));
+        trail += ' Q' + (x0 + x1) / 2 + ' ' + (74 - 2 * h) + ' ' + x1 + ' 74';
+      }
+    }
+    const mx = s.miss != null ? fx(s.miss) : null;
+    const miss = mx == null ? '' : 'M' + (mx - 5) + ' 69 L' + (mx + 5) + ' 79 M' + (mx + 5) + ' 69 L' + (mx - 5) + ' 79';
+
+    const hasBall = s.ball != null;
+    const bx = hasBall ? fx(s.ball) : 0;
+    const hasPin = hasBall && s.side != null;
+    const pinTeam = s.side === 'away' ? A : H;
+
+    // A: a callout under the spot where the ball changed hands, in the colours of the team that got it.
+    let calloutStyle = '', calloutTip = '';
+    const hasCallout = v === 'A' && !!label;
+    if (hasCallout) {
+      const w = Math.round(label.text.length * 6.4 + 18);
+      const sx = fx(label.at);
+      const left = Math.max(32, Math.min(304 - w, sx - w / 2));
+      const bg = fill[label.by], fg = textOn(bg);
+      calloutStyle = 'position: absolute; top: 90px; left: ' + left + 'px; width: ' + w + 'px; height: 18px; box-sizing: border-box; border-radius: 9px; background: ' + bg + '; border: 1.5px solid ' + CREAM + '; color: ' + fg + '; font-family: Chivo, sans-serif; font-weight: 900; font-size: 9.5px; letter-spacing: 1px; line-height: 15px; text-align: center; white-space: nowrap; text-transform: uppercase';
+      calloutTip = 'position: absolute; top: 83px; left: ' + (sx - 5) + 'px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid ' + CREAM;
+    }
+    // B: a banner across the top of the field, over the yard numbers.
+    let bannerStyle = '', bannerText = '';
+    if (bannerUp) {
+      const bg = fill[label.by], fg = textOn(bg);
+      const team = label.by === 'away' ? A : H;
+      bannerText = (label.text + ' · ' + team.ab).toUpperCase();
+      bannerStyle = 'position: absolute; top: 0; left: 28px; width: 280px; height: 20px; background: ' + bg + '; border-bottom: 1.5px solid ' + CREAM + '; box-sizing: border-box; color: ' + fg + '; font-family: Chivo, sans-serif; font-weight: 900; font-size: 10px; letter-spacing: 1.5px; line-height: 19px; text-align: center; white-space: nowrap';
+    }
+    const gainX = s.gain != null ? fx(s.gain) : -10;
+    return {
+      s: { caption: s.caption, aria: s.caption },
+      zones, lines, numbers, trail, miss,
+      startX: s.start != null ? fx(s.start) : -10, startR: s.start != null ? 3 : 0,
+      hasBall, hasPin, pinLogo: pinTeam && pinTeam.logo ? pinTeam.logo : '',
+      pinStyle: 'position: absolute; left: ' + (bx - 14) + 'px; top: 20px; width: 28px; height: 28px; border-radius: 14px; background: rgba(251,246,236,0.55); display: flex; align-items: center; justify-content: center',
+      pinTipStyle: 'position: absolute; left: ' + (bx - 6) + 'px; top: 47px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid rgba(251,246,236,0.55)',
+      ballStyle: 'position: absolute; left: ' + (bx - 10) + 'px; top: 64px',
+      scrimStyle: 'position: absolute; left: ' + (bx - 1) + 'px; top: 4px; width: 2px; height: 104px; background: ' + CREAM,
+      gainStyle: 'position: absolute; left: ' + (gainX - 1.5) + 'px; top: 4px; width: 3px; height: 104px; background: ' + GAIN,
+      hasCallout, calloutStyle, calloutTip, labelText: label ? label.text : '',
+      hasBanner: !!bannerUp, bannerStyle, bannerText
+    };
+  }
+}
+</script>
+</body>
+</html>

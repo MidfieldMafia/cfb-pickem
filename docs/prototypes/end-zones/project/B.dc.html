@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>B · Names read up</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1840px; box-sizing: border-box; padding: 24px 16px; background: #F7F1E3; font-family: Manrope, sans-serif; color: #241F1A; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-family: Chivo, sans-serif; font-weight: 900; font-size: 22px; line-height: 28px">B · Names read up</h1>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #6F6152">Both names read bottom to top, one tilt of the head for both. A turnover gets a banner across the top of the field, over the yard numbers, in the colours of the team that got the ball.</p>
+</div>
+<sc-for list="{{scenarios}}" as="it" hint-placeholder-count="10">
+<div style="background: #FBF6EC; border: 1px solid #D26A12; border-radius: 10px; padding: 10px">
+<dc-import name="Field" scenario="{{it.id}}" variant="B" rule="{{rule}}" name-size="{{nameSize}}" flash="{{flash}}" hint-size="336px,134px"></dc-import>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"rule":{"editor":"enum","options":["bar","turf","primary"],"default":"bar"},"nameSize":{"editor":"int","min":9,"max":16,"default":11},"flash":{"editor":"enum","options":["orange","chalk"],"default":"orange"},"$preview":{"width":390,"height":1840}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rule: this.props.rule ?? 'bar',
+      nameSize: this.props.nameSize ?? 11,
+      flash: this.props.flash ?? 'orange',
+      scenarios: ['rest-1', 'rest-2', 'rest-3', 'rest-4', 'int', 'fum', 'downs', 'block', 'td', 'pick6'].map((id) => ({ id }))
+    };
+  }
+}
+</script>
+</body>
+</html>
