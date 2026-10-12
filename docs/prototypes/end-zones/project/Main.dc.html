@@ -26,12 +26,12 @@ body{margin:0}
 </sc-for>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"rule":{"editor":"enum","options":["bar","turf","primary"],"default":"bar"},"nameSize":{"editor":"int","min":9,"max":16,"default":12},"flash":{"editor":"enum","options":["orange","chalk"],"default":"orange"},"$preview":{"width":390,"height":1840}}'>
+<script type="text/x-dc" data-dc-script data-props="{&quot;rule&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;bar&quot;,&quot;turf&quot;,&quot;primary&quot;],&quot;default&quot;:&quot;primary&quot;},&quot;nameSize&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:9,&quot;max&quot;:16,&quot;default&quot;:14},&quot;flash&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;orange&quot;,&quot;chalk&quot;],&quot;default&quot;:&quot;orange&quot;},&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:1840}}">
 class Component extends DCLogic {
   renderVals() {
     return {
-      rule: this.props.rule ?? 'bar',
-      nameSize: this.props.nameSize ?? 12,
+      rule: this.props.rule ?? 'primary',
+      nameSize: this.props.nameSize ?? 14,
       flash: this.props.flash ?? 'orange',
       scenarios: ['rest-1', 'rest-2', 'rest-3', 'rest-4', 'int', 'fum', 'downs', 'block', 'td', 'pick6'].map((id) => ({ id }))
     };
