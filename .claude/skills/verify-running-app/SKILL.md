@@ -94,8 +94,8 @@ send it to your own `$BASE`:
 curl -s -i "$BASE/m/<token>" | head -6
 ```
 
-A good token answers `307` toward `/week` (or `/welcome` on a member's first
-sign-in) and sets the cookie:
+A good token answers `307` toward wherever the Week's state lands the member
+(`landingRoute`), or `/welcome` on their first sign-in, and sets the cookie:
 
 ```
 set-cookie: slate_session=<value>; Path=/; HttpOnly; SameSite=lax
@@ -125,12 +125,13 @@ prompt) as `$SCRATCH`. On Windows, use it exactly as given, Windows-style:
 ```bash
 SCRATCH="<the scratchpad path from your system prompt>"
 
-curl -s -b "$S" "$BASE/week" \
-  -o "$SCRATCH/week.html" -w "status=%{http_code} bytes=%{size_download}\n"
-grep -oE "<h1[^>]*>[^<]*</h1>" "$SCRATCH/week.html"
+curl -s -b "$S" "$BASE/picks" \
+  -o "$SCRATCH/picks.html" -w "status=%{http_code} bytes=%{size_download}\n"
+grep -oE "<h1[^>]*>[^<]*</h1>" "$SCRATCH/picks.html"
 ```
 
-- **Member:** `/week`, `/picks`, `/picks/review`, `/welcome`.
+- **Member** (`src/app/(member)/`): `/picks`, `/picks/review`, `/live`,
+  `/leaderboard`, `/chat`, `/you`; and `/welcome`, which sits outside that folder.
 - **Commissioner** (the member needs `isCommissioner`): `/console`,
   `/console/slate`, `/console/members`, `/console/picks`,
   `/console/picks/<memberId>`, `/console/results`.

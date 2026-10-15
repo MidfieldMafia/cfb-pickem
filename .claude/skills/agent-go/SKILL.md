@@ -90,8 +90,17 @@ the check needs with SQL against the branch: it is yours and is deleted after.
 
 Then follow `verify-running-app` from step 4 with `$S` as the cookie. For step
 5's browser, Chromium is at `/opt/pw-browsers/chromium`; downloading another is
-blocked. Look at a 390px screenshot of every screen the diff touched, and the
-design it was built from when the ticket links one.
+blocked. Wait for `load` and a few seconds, never `networkidle0`: Chromium's
+own calls to Google are refused by the proxy and keep the network busy until
+the navigation times out. Look at a 390px screenshot of every screen the diff
+touched, and the design it was built from when the ticket links one.
+
+What the cloud cannot show:
+
+- `/console/slate` calls CollegeFootballData as it renders and there is no key
+  here, so it errors. Member screens do not: their feed refresh is caught.
+- A session cookie skips the Magic Link landing, which is what sends an
+  unwelcomed member to `/welcome`, so check Drew's state at `/welcome` itself.
 
 **Always** run `npm run agent-db -- down` when the check ends, failed or not.
 In the PR, list what you checked and what each screen showed under **Checked
