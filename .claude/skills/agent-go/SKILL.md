@@ -23,8 +23,15 @@ order, and stop at the first failure:
 4. Every issue it is blocked by (native dependencies, `docs/agents/issue-tracker.md`)
    is closed.
 
-On a failure after 1, comment which check failed and why, remove `agent:go`,
-and stop. A blocked ticket's comment names its open blockers.
+On a failure of 2 or 3, comment which check failed and why, remove `agent:go`,
+and stop.
+
+A failure of 4 **queues** the ticket instead: leave `agent:go` on, comment
+`Queued behind #<n>, #<m>` naming the open blockers, and stop. When a blocker's
+PR merges, the `agent-go-queue` routine re-applies the label and this one fires
+again. A queued ticket also re-fires on every other label change, so if the
+last `Queued behind` comment already names the same open blockers, stop
+without commenting.
 
 **Done when** all four pass, or the issue carries a comment saying why not.
 
@@ -50,8 +57,11 @@ worktree, and follow it, including its `/code-review` pass. CLAUDE.md's checks
 apply as written: `npx next build` when the diff touches a `"use server"` file,
 a route handler or the client/server boundary; never `npm run build`.
 
-There is no database here, so `verify-running-app` cannot run. List whatever
-renders under **Not verified** in the PR instead.
+The cloud has a browser: Playwright's Chromium at
+`/opt/pw-browsers/chromium-*/chrome-linux/chrome`, which `puppeteer-core` drives
+(`verify-running-app/browser.md`); downloading another Chrome is blocked. It has
+no database yet, so only screens that need no session (`/expired`) can be read.
+List every signed-in screen the diff touched under **Not verified** in the PR.
 
 ## 5. Ship
 

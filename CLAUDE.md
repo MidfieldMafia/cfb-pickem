@@ -31,7 +31,9 @@ Nothing in the test suite covers rendering, and every screen needs a Magic Link 
 ### Building a ticket unattended
 
 Labelling an issue `agent:go` fires a cloud routine that builds it and opens a
-PR; `ready-for-agent` alone starts nothing. See `.claude/skills/agent-go/SKILL.md`.
+PR; `ready-for-agent` alone starts nothing. A blocked ticket keeps the label and
+waits; a second routine re-fires it when its last blocker's PR merges. See
+`.claude/skills/agent-go/SKILL.md` and `.claude/skills/agent-go-queue/SKILL.md`.
 
 ### Changelog
 
