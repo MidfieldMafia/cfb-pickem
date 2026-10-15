@@ -101,7 +101,7 @@ describe("other spellings of a spot", () => {
       playText: "(8:02) Shotgun #1 B.Pyburn pass intercepted by #4 T.Greco at Mizzou45",
     };
     const described = describePlays([...plays.slice(0, i), pick], TEAMS)[i];
-    expect(described.segments.map((s) => s.kind)).toEqual(["arc", "possession"]);
+    expect(described.segments.map((s) => s.kind)).toEqual(["arc", "possession", "turnover"]);
   });
 });
 
@@ -236,6 +236,7 @@ describe("each shape", () => {
       segments: [
         { kind: "arc", from: 39, to: 20 },
         { kind: "possession", side: "away" },
+        { kind: "turnover", label: "Interception", at: 20, side: "away" },
       ],
       rest: { spot: 20, side: "away" },
     });
@@ -248,6 +249,8 @@ describe("each shape", () => {
       segments: [
         { kind: "ground", from: 89, to: 89 },
         { kind: "possession", side: "home" },
+        // "recovered by CCU #19 S.McDowell at #19 S.McDowell": no spot, so the callout points where the ball came out.
+        { kind: "turnover", label: "Fumble", at: 89, side: "home" },
         { kind: "ground", from: 89, to: 73 },
       ],
       rest: { spot: 73, side: "home" },
@@ -257,6 +260,7 @@ describe("each shape", () => {
       { kind: "ground", from: 54, to: 60 },
       { kind: "possession", side: "home" },
       { kind: "ground", from: 60, to: 59 },
+      { kind: "turnover", label: "Fumble", at: 59, side: "home" },
     ]);
   });
 
@@ -269,6 +273,7 @@ describe("each shape", () => {
       segments: [
         { kind: "ground", from: 46, to: 55 },
         { kind: "possession", side: "away" },
+        { kind: "turnover", label: "Turnover on downs", at: 55, side: "away" },
       ],
       rest: { spot: 55, side: "away", down: 1, distance: 10 },
     });
@@ -299,6 +304,170 @@ describe("each shape", () => {
     const i = DESCRIBED.findIndex((d) => d.id === `401869941${suffix}`);
     expect(DESCRIBED[i].segments).toEqual([]);
     expect(DESCRIBED[i].rest).toEqual(DESCRIBED[i - 1].rest);
+  });
+});
+
+describe("turnover callouts (#435)", () => {
+  // Each play is CFBD's own words from a 2026 game (/plays, weeks 4 to 6), respelled for Liberty (LIB, away) and Coastal (CCU, home).
+  /** The play ending in `suffix` swapped for another, everything before it kept: its description. */
+  const swapped = (suffix: string, changes: Partial<CfbdLivePlay>) => {
+    const plays = upTo(suffix);
+    return describePlays([...plays.slice(0, -1), { ...plays.at(-1)!, ...changes }], TEAMS).at(-1)!;
+  };
+  /** Liberty's field goal unit, play …60 before it scored, snapping from `yardsToGoal` out. */
+  const libertyKicks = (yardsToGoal: number, playText: string) =>
+    swapped("60", { yardsToGoal, homeScore: 0, awayScore: 0, playText });
+  const turnovers = (description: PlayDescription) => description.segments.filter((s) => s.kind === "turnover");
+
+  test("a blocked field goal hops to the block, marks the X there, and the callout is the blocking team's", () => {
+    // William & Mary at Duke: "NO GOOD blocked by … recovered by DUKE Duke at DUKE36".
+    const blocked = libertyKicks(
+      36,
+      "(06:52) #43 M.Lipinski field goal attempt from 53 yards NO GOOD blocked by #34 L.Mergott (H: #16 P.Blee, LS: #50 M.Kabban), clock 06:41 recovered by CCU Coastal at CCU36, End Of Play",
+    );
+    expect(blocked).toMatchObject({
+      start: 64,
+      segments: [
+        { kind: "arc", from: 64, to: 67 },
+        { kind: "miss", at: 67 },
+        { kind: "possession", side: "home" },
+        { kind: "turnover", label: "Blocked kick", at: 67, side: "home" },
+        { kind: "ground", from: 67, to: 64 },
+      ],
+      rest: { spot: 64, side: "home" },
+    });
+  });
+
+  test("a blocked field goal returned runs on to the recovery and the return's end", () => {
+    // Texas Southern at Alcorn State: "recovered by ASU #25 E.Ruffin at ASU17 #25 E.Ruffin return 13 yards to the ASU30".
+    const returned = libertyKicks(
+      13,
+      "#10 M.Arana field goal attempt from 30 yards NO GOOD blocked by #40 L.Carson (H: #50 B.Mays Jr, LS: #51 I.Mbagwu), clock 04:28 recovered by CCU #25 E.Ruffin at CCU17 #25 E.Ruffin return 13 yards to the CCU30 (#51 I.Mbagwu)",
+    );
+    expect(returned.segments.slice(-2)).toEqual([
+      { kind: "ground", from: 90, to: 83 },
+      { kind: "ground", from: 83, to: 70 },
+    ]);
+    expect(returned.rest).toMatchObject({ spot: 70, side: "home" });
+  });
+
+  test("a blocked field goal that went out of bounds at the block stays there", () => {
+    // Campbell at Hampton: "NO GOOD blocked by #90 C.Jackson …, clock 09:38, out of bounds at HAM15".
+    const out = libertyKicks(
+      18,
+      "#29 K.Robison field goal attempt from 35 yards NO GOOD blocked by #90 C.Jackson (H: #86 A.McIntosh, LS: #35 L.Wilson II), clock 09:38, out of bounds at CCU15",
+    );
+    expect(out.segments).toEqual([
+      { kind: "arc", from: 82, to: 85 },
+      { kind: "miss", at: 85 },
+      { kind: "possession", side: "home" },
+      { kind: "turnover", label: "Blocked kick", at: 85, side: "home" },
+    ]);
+    expect(out.rest.spot).toBe(85);
+  });
+
+  test("a missed field goal keeps only its X", () => {
+    const missed = libertyKicks(
+      20,
+      "#25 B.Janki field goal attempt from 37 yards NO GOOD (H: #12 J.Alley, LS: #57 M.Thompson), clock 08:04",
+    );
+    expect(missed.segments).toEqual([
+      { kind: "arc", from: 80, to: 100 },
+      { kind: "miss", at: 100 },
+      { kind: "possession", side: "home" },
+    ]);
+  });
+
+  test("a pick six shows the callout at the catch and the Touchdown flash at the goal line", () => {
+    // South Carolina at Alabama: "pass intercepted by #6 R.Morgan at USC23 #6 R.Morgan return 23 yards to the USC00 TOUCHDOWN".
+    const pickSix = swapped("21", {
+      yardsToGoal: 85,
+      homeScore: 0,
+      awayScore: 7,
+      playType: "Interception Return Touchdown",
+      playText:
+        "(02:25) Shotgun #16 L.Sellers pass intercepted by #6 R.Morgan at CCU23 #6 R.Morgan return 23 yards to the CCU00 TOUCHDOWN, clock 02:20 #31 C.Talty kick attempt good (H: #32 A.Asparuhov, LS: #55 A.Rozier)",
+    });
+    expect(pickSix.segments.slice(0, 5)).toEqual([
+      { kind: "arc", from: 85, to: 77 },
+      { kind: "possession", side: "away" },
+      { kind: "turnover", label: "Interception", at: 77, side: "away" },
+      { kind: "ground", from: 77, to: 100 },
+      { kind: "flash", label: "Touchdown" },
+    ]);
+  });
+
+  test("a blocked punt is a Blocked kick where it fell, then the return", () => {
+    // Marist at Presbyterian: "punt 0 yards to the PRESBY42 blocked by … recovered by MAR … return 24 yards to the PRESBY00 TOUCHDOWN".
+    const blocked = swapped("60", {
+      yardsToGoal: 58,
+      homeScore: 7,
+      awayScore: 0,
+      playType: "Punt Return Touchdown",
+      playText:
+        "#27 T.Hutton punt 0 yards to the LIB42 blocked by #24 J.Bernabei recovered by CCU #14 J.Taylor at LIB24 #14 J.Taylor return 24 yards to the LIB00 TOUCHDOWN, clock 01:41 #46 L.Stenson kick attempt good (H: #10 M.Lainez III, LS: #49 B.Ganny)",
+    });
+    expect(blocked.segments.slice(0, 6)).toEqual([
+      { kind: "arc", from: 42, to: 42 },
+      { kind: "possession", side: "home" },
+      { kind: "miss", at: 42 },
+      { kind: "turnover", label: "Blocked kick", at: 42, side: "home" },
+      { kind: "ground", from: 42, to: 0 },
+      { kind: "flash", label: "Touchdown" },
+    ]);
+  });
+
+  test("a blocked punt the kicking team falls on is still called in the blocking team's colours", () => {
+    // Presbyterian's own: "punt 0 yards to the PRESBY27 blocked by #19 N.Riding recovered by PRESBY #57 L.Cook at PRESBY25".
+    const ownBlock = libertyKicks(
+      73,
+      "#27 T.Hutton punt 0 yards to the LIB27 blocked by #19 N.Riding recovered by LIB #57 L.Cook at LIB25",
+    );
+    expect(turnovers(ownBlock)).toEqual([{ kind: "turnover", label: "Blocked kick", at: 27, side: "home" }]);
+  });
+
+  test("a muffed punt the kicking team recovers is a Fumble at the recovery", () => {
+    // Harvard at Brown: "punt 37 yards to the BROWN49 muffed by #27 C.Davis at BROWN49 recovered by HARV #15 X.Benson at BROWN48".
+    const muffed = libertyKicks(
+      86,
+      "#95 B.Checkley punt 37 yards to the CCU49 muffed by #27 C.Davis at CCU49 recovered by LIB #15 X.Benson at CCU48, End Of Play",
+    );
+    expect(muffed).toMatchObject({
+      segments: [
+        { kind: "arc", from: 14, to: 51 },
+        { kind: "ground", from: 51, to: 52 },
+        { kind: "turnover", label: "Fumble", at: 52, side: "away" },
+      ],
+      rest: { spot: 52, side: "away" },
+    });
+  });
+
+  test("a muff the receiving team falls on and a blocked extra point get no callout", () => {
+    // Northwestern at Indiana: "muffed by #29 L.Beebe Jr. at IND06 recovered by IND #29 L.Beebe Jr. at IND06".
+    const ownMuff = libertyKicks(
+      65,
+      "(06:34) #98 N.Sur kickoff 59 yards to the CCU06 muffed by #29 L.Beebe Jr. at CCU06 recovered by CCU #29 L.Beebe Jr. at CCU06, End Of Play",
+    );
+    // Eastern Washington at Cal Poly: "kick attempt failed ( blocked by #94 J.Njelita)".
+    const blockedTry = swapped("21", {
+      yardsToGoal: 35,
+      homeScore: 6,
+      awayScore: 0,
+      playType: "Passing Touchdown",
+      playText:
+        "No Huddle-Shotgun #2 N.Bell pass complete deep middle to #14 D.Cabrera caught at LIB00, for 35 yards to the LIB00 TOUCHDOWN, clock 01:32, 1ST DOWN #16 S.McKee kick attempt failed ( blocked by #94 J.Njelita) (H: #2 N.Bell, LS: #52 B.Nield)",
+    });
+    expect(turnovers(ownMuff)).toEqual([]);
+    expect(turnovers(blockedTry)).toEqual([]);
+    expect(blockedTry.segments).toContainEqual({ kind: "flash", label: "Touchdown" });
+  });
+
+  test("the whole final game calls out its interceptions, lost fumbles and turnovers on downs, and no block", () => {
+    const called = DESCRIBED.flatMap((d) =>
+      d.segments.flatMap((s) => (s.kind === "turnover" ? [`${d.id.slice(9)} ${s.label}`] : [])),
+    );
+    expect(called).toEqual(expect.arrayContaining(["29 Interception", "262 Fumble", "552 Turnover on downs", "662 Fumble"]));
+    expect(called.filter((c) => c.endsWith("Blocked kick"))).toEqual([]);
   });
 });
 
