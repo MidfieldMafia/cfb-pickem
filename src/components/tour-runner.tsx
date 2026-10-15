@@ -35,11 +35,15 @@ function measure(element: HTMLElement, stop: Stop): Hole {
     const side = Math.max(box.width, box.height) + PAD * 2;
     return { x: box.left + box.width / 2 - side / 2, y: box.top + box.height / 2 - side / 2, w: side, h: side, round: true, vh };
   }
-  // A screen target runs past the viewport; the hole stops at its edges so the ring stays visible.
+  // A screen target runs past the viewport and under the fixed nav; the hole
+  // stops at the screen's edges and the nav's top, so the ring stays visible
+  // and frames only the screen.
+  const nav = findTarget("tab-picks")?.closest("nav");
+  const floor = nav && !nav.contains(element) ? nav.getBoundingClientRect().top : vh;
   const left = Math.max(EDGE, box.left - PAD);
   const top = Math.max(EDGE, box.top - PAD);
   const right = Math.min(vw - EDGE, box.right + PAD);
-  const bottom = Math.min(vh - EDGE, box.bottom + PAD);
+  const bottom = Math.min(floor - EDGE, box.bottom + PAD);
   return { x: left, y: top, w: Math.max(0, right - left), h: Math.max(0, bottom - top), round: false, vh };
 }
 
@@ -115,7 +119,11 @@ export function TourRunner({ tour, dismiss }: { tour: Tour; dismiss: (tourId: To
     let run = start;
     let wait = moved;
     let last: Stop | undefined;
-    for (let stop = current(run); stop; stop = current(run)) {
+    // Not a `for (let stop = current(run); …)`: in the dev bundle, its update
+    // clause lost the `current` import after an `await` and threw.
+    while (true) {
+      const stop = current(run);
+      if (!stop) break;
       last = stop;
       const href = tabHref(stop.target);
       if (stop.kind === "tap" && href && onTab(window.location.pathname, href)) {
@@ -243,7 +251,7 @@ export function TourRunner({ tour, dismiss }: { tour: Tour; dismiss: (tourId: To
       <div
         ref={card}
         style={cardPlace(hole)}
-        className={`absolute right-[max(16px,env(safe-area-inset-right))] left-[max(16px,env(safe-area-inset-left))] rounded-[14px] border border-border bg-card text-card-foreground shadow-[0_8px_24px_rgb(0_0_0/0.25)] [transition:opacity_160ms_ease,top_260ms_ease,bottom_260ms_ease] motion-reduce:[transition:none] ${shut ? "pointer-events-none opacity-0" : "opacity-100"} ${motion}`}
+        className={`absolute z-10 right-[max(16px,env(safe-area-inset-right))] left-[max(16px,env(safe-area-inset-left))] rounded-[14px] border border-border bg-card text-card-foreground shadow-[0_8px_24px_rgb(0_0_0/0.25)] [transition:opacity_160ms_ease,top_260ms_ease,bottom_260ms_ease] motion-reduce:[transition:none] ${shut ? "pointer-events-none opacity-0" : "opacity-100"} ${motion}`}
       >
         <div className="flex items-center justify-between pt-1 pr-1 pl-4">
           <p className={SECTION_LABEL}>
@@ -292,6 +300,7 @@ export function TourRunner({ tour, dismiss }: { tour: Tour; dismiss: (tourId: To
           borderRadius: hole.round ? 9999 : 12,
           boxShadow: "0 0 0 3px var(--secondary), 0 0 0 200vmax color-mix(in srgb, var(--foreground) 60%, transparent)",
         }}
+        // The dim is this button's shadow, so the card sits above it (z-10).
         className={`absolute min-h-0 cursor-pointer bg-transparent outline-none [transition:left_260ms_ease,top_260ms_ease,width_260ms_ease,height_260ms_ease,border-radius_260ms_ease] motion-reduce:[transition:none] ${motion}`}
       />
     </dialog>

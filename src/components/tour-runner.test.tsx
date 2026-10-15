@@ -170,6 +170,30 @@ describe("moving on", () => {
     expect(count()).toBe("2 of 10");
   });
 
+  test("a tab whose screen never comes drops its screen Stop and goes on", async () => {
+    landOn("/leaderboard");
+    render(
+      <>
+        <Page screen="leaderboard-screen" />
+        <TourRunner tour={tours.welcome} dismiss={vi.fn(async () => {})} />
+      </>,
+    );
+    await waitFor(() => expect(card()).toBe("Picks"));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "Go to Picks" }));
+      landOn("/picks");
+      // The Picks screen never renders its anchor: after 3s its Stop goes.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3500);
+      });
+      await waitFor(() => expect(card()).toBe("Live Board"));
+      expect(count()).toBe("2 of 9");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("Next and Back walk Stops on the same screen", async () => {
     landOn("/chat");
     render(
