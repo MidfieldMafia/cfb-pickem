@@ -1,0 +1,253 @@
+<title>Signature Fields</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@900&family=Manrope:wght@400;600;700&display=swap">
+<style>
+/* Layout: a column of 360px phone cards, one per field, under a sticky bar of switches. PROTOTYPE for #397, throw away after the decision. */
+:root {
+  --bg: #F7F1E3; --card: #FBF6EC; --fg: #241F1A; --muted: #6F6152; --rule: #EAE0CC; --live: #D26A12; --warn: #A3361B; --ok: #3E6B3A;
+  --display: "Chivo", "Arial Black", system-ui, sans-serif; --body: "Manrope", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1C1714; --card: #241E19; --fg: #F2E9D8; --muted: #B3A38B; --rule: #2E2720; --live: #E8862A; --warn: #F08A6E; --ok: #8FBF7F; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #1C1714; --card: #241E19; --fg: #F2E9D8; --muted: #B3A38B; --rule: #2E2720; --live: #E8862A; --warn: #F08A6E; --ok: #8FBF7F; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); padding: 0 16px 96px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; padding-block: 20px; }
+h1 { font-family: var(--display); font-weight: 900; font-size: 24px; line-height: 30px; margin: 0; text-wrap: balance; }
+.lede { margin: 6px 0 0; max-width: 68ch; color: var(--muted); font-size: 14px; line-height: 21px; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.ctl { display: flex; flex-direction: column; gap: 4px; }
+.ctl > span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--muted); border-radius: 8px; overflow: hidden; }
+.seg button { font: 600 13px/1 var(--body); color: var(--fg); background: transparent; border: 0; padding: 9px 11px; cursor: pointer; min-height: 36px; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.seg button:focus-visible { outline: 2px solid var(--live); outline-offset: -2px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 360px)); gap: 20px; justify-content: center; }
+@media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+.phone { width: 100%; max-width: 360px; background: var(--bg); display: flex; flex-direction: column; gap: 8px; }
+.phone h2 { margin: 0; font: 900 15px/20px var(--display); }
+.phone h2 small { font: 600 12px/16px var(--body); color: var(--muted); margin-left: 6px; }
+.card { background: var(--card); border: 1px solid var(--live); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.card .hd { display: flex; align-items: baseline; gap: 8px; }
+.card .hd b { flex: 1; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #A94B17; }
+:root[data-theme="dark"] .card .hd b { color: #D2712E; }
+.card .hd i { font-style: normal; font-size: 12px; color: var(--muted); }
+.card svg.field { display: block; width: 100%; height: auto; border-radius: 6px; }
+.card p { margin: 0; font-size: 13px; line-height: 18px; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+td { padding: 3px 0; border-top: 1px solid var(--rule); }
+td:last-child { text-align: right; font-weight: 700; }
+td .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--rule); }
+.lo { color: var(--warn); } .hi { color: var(--ok); }
+.state { font: 12px/18px ui-monospace, Menlo, monospace; color: var(--muted); background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; overflow-x: auto; white-space: pre; }
+.notes { max-width: 72ch; font-size: 14px; line-height: 21px; }
+.notes h3 { font: 900 16px/22px var(--display); margin: 0 0 4px; }
+.notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Signature fields on the live field card</h1>
+    <p class="lede">Prototype for “Signature fields: coloured turf and LSU's numbers”. Each card is a 360px phone with the field drawn as <code>field-card.tsx</code> draws it today, plus the end zones from design A of “End zones and play labels”. The field paints the same in both themes; only the card around it changes. No source gives a turf hex, so each turf has three shades picked by eye from photos.</p>
+  </header>
+
+  <div class="bar" role="toolbar" aria-label="Prototype switches">
+    <div class="ctl"><span>Theme</span><div class="seg" data-k="theme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+    <div class="ctl"><span>Play</span><div class="seg" data-k="play"><button data-v="rest">At rest</button><button data-v="pass">Incomplete pass</button><button data-v="int">Interception</button><button data-v="td">Touchdown</button><button data-v="loss">Sack</button></div></div>
+    <div class="ctl"><span>Turf shade</span><div class="seg" data-k="shade"><button data-v="deep">Deep</button><button data-v="mid">Middle</button><button data-v="bright">Bright</button></div></div>
+    <div class="ctl"><span>LSU numbers</span><div class="seg" data-k="lsu"><button data-v="all10">All 10px</button><button data-v="small5">5s at 8px</button><button data-v="all8">All 8px</button></div></div>
+    <div class="ctl"><span>Markings</span><div class="seg" data-k="marks"><button data-v="today">As today</button><button data-v="tuned">Tuned per turf</button></div></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="state" id="state" aria-live="polite"></div>
+
+  <section class="notes">
+    <h3>What to decide</h3>
+    <ul>
+      <li>The turf shade for each of Boise State, Coastal Carolina and Eastern Michigan.</li>
+      <li>Whether any marking or overlay changes colour on a coloured turf. “Tuned per turf” is one answer: it lifts the chalk on gray and turns Coastal's teal end zone to black, as the real field has since 2025.</li>
+      <li>Whether LSU's numbers every 5 yards stay readable at this width, or need a smaller face.</li>
+    </ul>
+    <p>The table under each card gives the contrast of every mark against that turf. Under 3:1 is shown in red. Pine is the bar to meet, not 3:1. On pine the line to gain is 3.2:1 and the end zones sit near 1:1, held apart by the chalk goal line.</p>
+  </section>
+</div>
+
+<script>
+const LOGOS = __LOGOS__;
+const CHALK = '#FBF6EC', INK = '#241F1A', GAIN = '#D26A12', LOSS = '#F08A6E', FLAG = '#F2C94C', PINE = '#1F4034';
+const TEAMS = {
+  utahst: { name: 'UTAH STATE', ab: 'USU', p: '#00263A', logo: 'utahst' },
+  boise: { name: 'BOISE STATE', short: 'BOISE ST', ab: 'BSU', p: '#D64309', logo: 'boise' },
+  app: { name: 'APP STATE', ab: 'APP', p: '#222222', logo: 'app' },
+  coastal: { name: 'COASTAL', ab: 'CCU', p: '#006F71', logo: 'coastal' },
+  toledo: { name: 'TOLEDO', ab: 'TOL', p: '#15397F', logo: 'toledo' },
+  emu: { name: 'E MICHIGAN', ab: 'EMU', p: '#006633', logo: 'emu' },
+  bama: { name: 'ALABAMA', ab: 'ALA', p: '#9E1B32', logo: 'bama' },
+  lsu: { name: 'LSU', ab: 'LSU', p: '#461D7C', logo: 'lsu' }
+};
+/* Turf shades by eye. Pine is today's TURF; each "deep" shade sits near pine's lightness, "bright" is closer to the photos. */
+const FIELDS = [
+  { id: 'default', title: 'Default field', sub: 'Pine, every field today', a: 'bama', h: 'lsu', turf: { deep: PINE, mid: PINE, bright: PINE }, fives: false, game: 'Alabama at LSU, on the default field' },
+  { id: 'boise', title: 'Boise State', sub: 'Blue, “The Blue”', a: 'utahst', h: 'boise', turf: { deep: '#1A3F86', mid: '#2150A6', bright: '#2C66C8' }, fives: false, game: 'Utah State at Boise State' },
+  { id: 'coastal', title: 'Coastal Carolina', sub: 'Teal, “Surf Turf”', a: 'app', h: 'coastal', turf: { deep: '#0C4A4C', mid: '#0F5F62', bright: '#137A7C' }, fives: false, game: 'App State at Coastal Carolina', tunedZone: { home: '#16120F' } },
+  { id: 'emu', title: 'Eastern Michigan', sub: 'Gray', a: 'toledo', h: 'emu', turf: { deep: '#363C3E', mid: '#4B5255', bright: '#666D70' }, fives: false, game: 'Toledo at Eastern Michigan' },
+  { id: 'lsu', title: 'LSU', sub: 'Numbers every 5 yards', a: 'bama', h: 'lsu', turf: { deep: PINE, mid: PINE, bright: PINE }, fives: true, game: 'Alabama at LSU' }
+];
+/* Plays, in yards from the away goal line (0) to the home goal line (100). */
+const PLAYS = {
+  rest: { cap: 'Ball on the 35, line to gain at the 25, drive from the 40', side: 'home', ball: 65, gain: 75, driveFrom: 40 },
+  pass: { cap: 'Pass incomplete, intended at the opponent 30', side: 'home', ball: 55, gain: 65, driveFrom: 30, start: 55, trail: [['arc', 55, 70]], miss: 70 },
+  int: { cap: 'Interception at the 28, returned to the 40', side: 'away', ball: 60, gain: 50, start: 45, trail: [['arc', 45, 72], ['ground', 72, 60]], label: { text: 'Interception', at: 72, by: 'away' } },
+  td: { cap: 'Touchdown, the end zone flashes', side: null, ball: null, start: 88, trail: [['ground', 88, 104]], score: 'right' },
+  loss: { cap: 'Sack for a loss of 8, drawn in coral', side: 'home', ball: 42, gain: 60, driveFrom: 25, start: 50, trail: [['ground', 50, 42]], loss: true }
+};
+const fx = (y) => Math.round((y + 10) * 28) / 10;
+function lum(hex) {
+  const n = hex.replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+}
+function contrast(a, b) { const x = [lum(a), lum(b)].sort((p, q) => q - p); return (x[0] + 0.05) / (x[1] + 0.05); }
+/* Chalk at an opacity, flattened onto the turf, so contrast is measured on what the eye sees. */
+function mix(fg, bg, a) {
+  const p = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+  return '#' + [0, 1, 2].map((i) => Math.round(p(fg, i) * a + p(bg, i) * (1 - a)).toString(16).padStart(2, '0')).join('');
+}
+const textOn = (bg) => (contrast(bg, CREAMSAFE) >= contrast(bg, INK) ? CHALK : INK);
+const CREAMSAFE = CHALK;
+const fits = (s, size, ls) => s.length * size * 0.72 + (s.length - 1) * ls <= 100;
+const nameFor = (t, size, ls) => (fits(t.name, size, ls) ? t.name : t.short && fits(t.short, size, ls) ? t.short : t.ab);
+
+/* "Tuned" lifts chalk where pine's numbers would read worse than they do on pine. */
+function chalkFor(turf, tuned) {
+  const target = contrast(mix(CHALK, PINE, 0.7), PINE);
+  let a = { num: 0.7, ten: 0.45, five: 0.2 };
+  if (!tuned) return a;
+  for (const k of ['num', 'ten', 'five']) {
+    const want = contrast(mix(CHALK, PINE, a[k]), PINE);
+    let v = a[k];
+    while (v < 1 && contrast(mix(CHALK, turf, v), turf) < want) v = Math.round((v + 0.05) * 100) / 100;
+    a[k] = v;
+  }
+  return a;
+}
+
+function fieldSvg(F, S) {
+  const turf = F.turf[S.shade];
+  const tuned = S.marks === 'tuned';
+  const A = TEAMS[F.a], H = TEAMS[F.h];
+  const P = PLAYS[S.play];
+  const ch = chalkFor(turf, tuned);
+  const zoneFill = { away: A.p, home: tuned && F.tunedZone && F.tunedZone.home ? F.tunedZone.home : H.p };
+  const out = [];
+  out.push(`<rect width="336" height="112" fill="${turf}"/>`);
+  for (const end of ['left', 'right']) {
+    const side = end === 'left' ? 'away' : 'home';
+    const team = side === 'away' ? A : H;
+    const x = end === 'left' ? 0 : 308;
+    const flash = P.score === end;
+    const bg = flash ? GAIN : zoneFill[side];
+    const fg = flash ? INK : textOn(bg);
+    const label = flash ? 'TOUCHDOWN' : nameFor(team, 14, 1);
+    const rot = end === 'left' ? -90 : 90;
+    out.push(`<rect x="${x}" width="28" height="112" fill="${bg}"/>`);
+    out.push(`<text transform="translate(${x + 14} 56) rotate(${rot})" text-anchor="middle" dominant-baseline="central" font-family="Chivo, Arial Black, sans-serif" font-weight="900" font-size="${flash ? 13 : 14}" letter-spacing="${flash ? 2 : 1}" fill="${fg}">${label}</text>`);
+  }
+  out.push(`<line x1="28" x2="28" y2="112" stroke="${CHALK}" stroke-width="1.5"/><line x1="308" x2="308" y2="112" stroke="${CHALK}" stroke-width="1.5"/>`);
+  for (let y = 5; y <= 95; y += 5)
+    out.push(`<line x1="${fx(y)}" x2="${fx(y)}" y1="4" y2="108" stroke="${CHALK}" stroke-opacity="${y % 10 === 0 ? ch.ten : ch.five}"/>`);
+  for (let y = F.fives ? 5 : 10; y <= 95; y += F.fives ? 5 : 10) {
+    const isFive = y % 10 !== 0;
+    let size = 10;
+    if (F.fives && S.lsu === 'all8') size = 8;
+    if (F.fives && S.lsu === 'small5' && isFive) size = 8;
+    out.push(`<text x="${fx(y)}" y="16" text-anchor="middle" font-family="Manrope, sans-serif" font-size="${size}" font-weight="700" fill="${CHALK}" fill-opacity="${ch.num}">${y <= 50 ? y : 100 - y}</text>`);
+  }
+  if (P.driveFrom != null && P.ball != null) {
+    const a = fx(P.driveFrom), b = fx(P.ball);
+    out.push(`<rect x="${Math.min(a, b)}" y="88" width="${Math.abs(b - a)}" height="10" rx="2" fill="${CHALK}" fill-opacity="0.3"/>`);
+    out.push(`<line x1="${a}" x2="${a}" y1="84" y2="102" stroke="${CHALK}" stroke-width="2"/>`);
+  }
+  if (P.ball != null) {
+    if (P.gain != null) out.push(`<line x1="${fx(P.gain)}" x2="${fx(P.gain)}" y1="4" y2="108" stroke="${GAIN}" stroke-width="3"/>`);
+    out.push(`<line x1="${fx(P.ball)}" x2="${fx(P.ball)}" y1="4" y2="108" stroke="${CHALK}" stroke-width="2"/>`);
+  }
+  if (P.ball != null && P.side) {
+    const bx = fx(P.ball), team = P.side === 'away' ? A : H;
+    out.push(`<g transform="translate(${bx} 0)"><path d="M-6 46 L6 46 L0 57 Z" fill="${CHALK}" fill-opacity="0.55"/><circle cy="34" r="14" fill="${CHALK}" fill-opacity="0.55"/><image href="${LOGOS[team.logo]}" x="-10" y="24" width="20" height="20"/></g>`);
+  }
+  const BY = 74;
+  if (P.trail) {
+    let d = '';
+    for (const [k, f, t] of P.trail) {
+      const x0 = fx(f), x1 = fx(t);
+      if (!d) d = `M${x0} ${BY}`;
+      if (k === 'ground') d += ` L${x1} ${BY}`;
+      else { const h = Math.min(66, 14 + 0.85 * Math.abs(x1 - x0)); d += ` Q${(x0 + x1) / 2} ${BY - 2 * h} ${x1} ${BY}`; }
+    }
+    const c = P.loss ? LOSS : CHALK;
+    out.push(`<circle cx="${fx(P.start)}" cy="${BY}" r="3" fill="${c}"/><path d="${d}" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`);
+  }
+  if (P.miss != null) out.push(`<path transform="translate(${fx(P.miss)} ${BY})" d="M-5 -5 L5 5 M5 -5 L-5 5" stroke="${LOSS}" stroke-width="3" stroke-linecap="round"/>`);
+  if (P.label) {
+    const L = P.label, w = Math.round(L.text.length * 6.4 + 18), sx = fx(L.at);
+    const left = Math.max(32, Math.min(304 - w, sx - w / 2)), bg = zoneFill[L.by];
+    out.push(`<path d="M${sx - 5} 90 L${sx + 5} 90 L${sx} 83 Z" fill="${CHALK}"/><rect x="${left + 0.75}" y="90.75" width="${w - 1.5}" height="16.5" rx="8.25" fill="${bg}" stroke="${CHALK}" stroke-width="1.5"/><text x="${left + w / 2}" y="99" text-anchor="middle" dominant-baseline="central" font-family="Chivo, Arial Black, sans-serif" font-weight="900" font-size="9.5" letter-spacing="1" fill="${textOn(bg)}">${L.text.toUpperCase()}</text>`);
+  }
+  if (P.ball != null) {
+    out.push(`<g transform="translate(${fx(P.ball)} ${BY})"><ellipse rx="10.5" ry="6.2" fill="#A94B17" stroke="${CHALK}" stroke-width="1.2"/><path d="M-4 0H4M-2.5 -1.4v2.8M0 -1.4v2.8M2.5 -1.4v2.8" stroke="${CHALK}" stroke-width="1.4" stroke-linecap="round" fill="none"/></g>`);
+  }
+  return { svg: `<svg class="field" viewBox="0 0 336 112" role="img" aria-label="${F.game}: ${P.cap}">${out.join('')}</svg>`, turf, ch, zoneFill, A, H };
+}
+
+function row(name, color, bg, ratio) {
+  const r = ratio ?? contrast(color, bg);
+  const cls = r < 3 ? 'lo' : 'hi';
+  return `<tr><td><span class="sw" style="background:${color}"></span>${name}</td><td class="${cls}">${r.toFixed(1)}:1</td></tr>`;
+}
+
+const S = { theme: 'light', play: 'rest', shade: 'mid', lsu: 'small5', marks: 'today' };
+try { const s = JSON.parse(localStorage.getItem('sf397') || '{}'); Object.assign(S, s); } catch (e) {}
+if (!localStorage) {}
+(function initTheme() {
+  const t = document.documentElement.getAttribute('data-theme');
+  if (!t) S.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+})();
+
+function render() {
+  document.documentElement.setAttribute('data-theme', S.theme);
+  document.querySelectorAll('.seg').forEach((seg) => seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(S[seg.dataset.k] === b.dataset.v))));
+  const P = PLAYS[S.play];
+  const state = [];
+  document.getElementById('grid').innerHTML = FIELDS.map((F) => {
+    const r = fieldSvg(F, S);
+    const t = r.turf;
+    state.push(`${F.id.padEnd(8)} turf ${t}  chalk num/10s/5s ${r.ch.num}/${r.ch.ten}/${r.ch.five}  away zone ${r.zoneFill.away}  home zone ${r.zoneFill.home}`);
+    return `<article class="phone">
+      <h2>${F.title}<small>${F.sub}</small></h2>
+      <div class="card">
+        <div class="hd"><b>On the field</b><i>${S.play === 'rest' ? '1 min ago' : 'Just now'}</i></div>
+        ${r.svg}
+        <p>${P.cap}. ${F.game}.</p>
+      </div>
+      <table aria-label="Contrast against the ${F.title} turf">
+        ${row('Yard numbers', mix(CHALK, t, r.ch.num), t)}
+        ${row('10-yard lines', mix(CHALK, t, r.ch.ten), t)}
+        ${row('Line of scrimmage, trail', CHALK, t)}
+        ${row('Line to gain', GAIN, t)}
+        ${row('Loss trail, incomplete X', LOSS, t)}
+        ${row(r.A.ab + ' end zone', r.zoneFill.away, t)}
+        ${row(r.H.ab + ' end zone', r.zoneFill.home, t)}
+      </table>
+    </article>`;
+  }).join('');
+  document.getElementById('state').textContent = `theme ${S.theme} · play ${S.play} · shade ${S.shade} · lsu ${S.lsu} · markings ${S.marks}\n` + state.join('\n');
+  try { localStorage.setItem('sf397', JSON.stringify(S)); } catch (e) {}
+}
+document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  S[seg.dataset.k] = b.dataset.v; render();
+}));
+render();
+</script>
