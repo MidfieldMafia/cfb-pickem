@@ -12,7 +12,16 @@
  * Pure and free of database imports: it runs in the browser.
  */
 import type { CfbdLivePlay } from "@/lib/cfbd/types";
-import { isMarker, sideOf, type FieldTeams, type PlayDescription, type Segment, type Side, type Yard } from "./field";
+import {
+  isMarker,
+  sideOf,
+  type FieldTeams,
+  type PlayDescription,
+  type Segment,
+  type Side,
+  type TurnoverLabel,
+  type Yard,
+} from "./field";
 import type { GamePlaysJson } from "./live-feed";
 import { clockLabel } from "./result";
 
@@ -135,6 +144,8 @@ export interface Frame {
   /** Where the penalty flag lies, once thrown. */
   flag: number | null;
   flash: Extract<Segment, { kind: "flash" }>["label"] | null;
+  /** The turnover callout, once the ball has reached the spot where it changed hands: `x` is that spot on the drawing. */
+  turnover: { label: TurnoverLabel; x: number; side: Side } | null;
   /** Whose logo rides the marker: the snapping team, until a possession step swaps it. */
   side: Side | null;
   /** The ball has moved from the spot along the ground or through the air: the drive band follows it. */
@@ -153,6 +164,7 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
     miss: null,
     flag: null,
     flash: null,
+    turnover: null,
     side: description.side,
     moved: false,
     score: null,
@@ -200,6 +212,9 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
         break;
       case "flash":
         out.flash = step.label;
+        break;
+      case "turnover":
+        out.turnover = { label: step.label, x: fieldX(step.at), side: step.side };
         break;
       case "score":
         out.score = { home: step.home, away: step.away };
@@ -266,6 +281,8 @@ export interface Readout {
   unmoved: boolean;
   /** The end zone lit by the landed play's score, at the yard the ball reached. It stays lit until the next play. */
   flash: { label: Extract<Segment, { kind: "flash" }>["label"]; yard: Yard } | null;
+  /** The landed play's turnover callout, at the yard the ball changed hands. It stays until the next drawn play. */
+  turnover: { label: TurnoverLabel; yard: Yard; side: Side } | null;
   /** The landed play's words. */
   text: string;
   score: { home: number; away: number };
@@ -331,6 +348,7 @@ function readPlay(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Re
   const landed = descriptions.get(id);
   const rest = landed?.rest ?? { spot: null, side: null, down: null, distance: null };
   const flash = landed?.segments.find((segment) => segment.kind === "flash");
+  const turnover = landed?.segments.find((segment) => segment.kind === "turnover");
   const forwards = (side: Side) => (side === "away" ? 1 : -1);
 
   // The down: the next snap's, or what comes after a score.
@@ -385,6 +403,7 @@ function readPlay(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Re
     side: rest.side,
     unmoved: rest.down !== null && rest.spot !== null && driveStart !== null && rest.spot === driveStart,
     flash: flash?.kind === "flash" && landed ? { label: flash.label, yard: flashYard(landed) } : null,
+    turnover: turnover?.kind === "turnover" ? { label: turnover.label, yard: turnover.at, side: turnover.side } : null,
     text: play?.playText ?? "",
     score: { home: play?.homeScore ?? 0, away: play?.awayScore ?? 0 },
     clock: play ? clockLabel({ period: play.period, clock: play.clock }) : null,

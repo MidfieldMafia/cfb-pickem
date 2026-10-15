@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Card } from "@saturday-slate/design-system";
 
-import type { PlayDescription } from "@/lib/results/field";
+import { CREAM, INK, endZone, fitName, teamFill, textOn } from "@/lib/results/end-zones";
+import type { PlayDescription, Side, TurnoverLabel } from "@/lib/results/field";
 import {
   BALL_Y,
   FIELD_HEIGHT,
@@ -24,8 +25,7 @@ import { logoSrc } from "@/lib/logos";
 
 /** The field is its own scene, the same in light and dark: the canvas's greens and cream (#265). */
 const TURF = "#1F4034";
-const END_ZONE = "#173027";
-const CHALK = "#FBF6EC";
+const CHALK = CREAM;
 const GAIN = "#D26A12";
 const LOSS = "#F08A6E";
 const FLAG = "#F2C94C";
@@ -48,6 +48,8 @@ export interface FieldPlayer {
   shown: GamePlaysJson | null;
   /** The field's readouts and the header's score and clock, as of the last play that landed. */
   readout: Readout | null;
+  /** Each side's abbreviation as the feed writes it: the end zone's last fallback for a long name. */
+  labels: Record<Side, string> | null;
   /** The score while a play is in the air: each score step as the ball reaches it. */
   score: { home: number; away: number } | null;
   playing: Playing | null;
@@ -126,12 +128,14 @@ export function useFieldPlayer(feed: GamePlaysJson | null, teams: RecentTeams, l
   );
 
   if (!live || feed === null || feed.fetchedAt === null)
-    return { shown: feed, readout: null, score: null, playing: null, rested: null, holdsHeader: false };
+    return { shown: feed, readout: null, labels: null, score: null, playing: null, rested: null, holdsHeader: false };
   const shown = playing ? feedBefore(feed, playing.description.id) : feed;
   const newest = shown.drives.flatMap((drive) => drive.plays).at(-1);
+  const labels = feedLabels(feed, teams);
   return {
     shown,
-    readout: newest ? readout(feed, newest.id, teams, feedLabels(feed, teams)) : null,
+    readout: newest ? readout(feed, newest.id, teams, labels) : null,
+    labels,
     score,
     playing,
     // Only while it is still the newest thing drawn.
@@ -190,6 +194,116 @@ function Readout({ label, value, first }: { label: string; value: string; first?
   );
 }
 
+/** True once the page's fonts have loaded, so a measure taken in the fallback font is taken again in Chivo. */
+function useFontsReady(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return ready;
+}
+
+/** Whether SVG text can be measured here: not in jsdom, which keeps the first guess. */
+const canMeasure = (el: SVGTextElement | null): el is SVGTextElement => typeof el?.getComputedTextLength === "function";
+
+/** The type of an end zone's name and its score flash: Chivo 900, caps (#395). */
+const ZONE_TYPE = { className: "font-display", fontWeight: 900, textAnchor: "middle", dominantBaseline: "central" } as const;
+const NAME_SIZE = 14;
+const NAME_SPACING = 1;
+
+/** Where an end zone's words sit, facing midfield: the away (left) end reads bottom to top, the home end top to bottom. */
+const zoneTransform = (left: boolean) =>
+  `translate(${left ? 14 : FIELD_WIDTH - 14} ${FIELD_HEIGHT / 2}) rotate(${left ? -90 : 90})`;
+
+/**
+ * One end zone, in its school's primary, with the longest of the school's
+ * names that fits: measured in the drawing's own units, not estimated.
+ */
+function EndZone({ school, abbr, left }: { school: string; abbr: string; left: boolean }) {
+  const zone = endZone(school, abbr);
+  const probe = useRef<SVGTextElement>(null);
+  const fonts = useFontsReady();
+  const [name, setName] = useState(zone.names[0] ?? "");
+  useLayoutEffect(() => {
+    const el = probe.current;
+    if (!canMeasure(el)) return;
+    const width = (text: string) => {
+      el.textContent = text;
+      return el.getComputedTextLength();
+    };
+    setName(fitName(endZone(school, abbr).names, width));
+  }, [school, abbr, fonts]);
+  return (
+    <g>
+      <rect x={left ? 0 : FIELD_WIDTH - 28} width="28" height={FIELD_HEIGHT} fill={zone.fill} />
+      <text ref={probe} {...ZONE_TYPE} fontSize={NAME_SIZE} letterSpacing={NAME_SPACING} visibility="hidden" aria-hidden />
+      <text transform={zoneTransform(left)} {...ZONE_TYPE} fontSize={NAME_SIZE} letterSpacing={NAME_SPACING} fill={zone.ink}>
+        {name}
+      </text>
+    </g>
+  );
+}
+
+/** The callout pill: 18 tall under the field, kept inside the goal lines, with room either side of its label. */
+const CALLOUT_Y = 90;
+const CALLOUT_HEIGHT = 18;
+const CALLOUT_PADDING = 9;
+const CALLOUT_INSET = 4;
+
+/**
+ * A turnover's callout (#395): a pill under the field in the colours of the
+ * team that got the ball, with a chalk ring, and a chalk pointer up at the
+ * spot where it changed hands.
+ */
+function Callout({ label, x, school }: { label: TurnoverLabel; x: number; school: string }) {
+  const text = label.toUpperCase();
+  const probe = useRef<SVGTextElement>(null);
+  const fonts = useFontsReady();
+  // The canvas's estimate until the browser has measured.
+  const [textWidth, setTextWidth] = useState(text.length * 6.4);
+  useLayoutEffect(() => {
+    if (canMeasure(probe.current)) setTextWidth(probe.current.getComputedTextLength());
+  }, [text, fonts]);
+  const fill = teamFill(school);
+  const width = Math.round(textWidth + 2 * CALLOUT_PADDING);
+  const left = Math.max(28 + CALLOUT_INSET, Math.min(FIELD_WIDTH - 28 - CALLOUT_INSET - width, x - width / 2));
+  const type = { className: "font-display", fontWeight: 900, fontSize: 9.5, letterSpacing: 1 } as const;
+  return (
+    <g className="animate-in fade-in duration-500">
+      <path d={`M${x} ${CALLOUT_Y - 7} L${x + 5} ${CALLOUT_Y} L${x - 5} ${CALLOUT_Y} Z`} fill={CHALK} />
+      <rect
+        x={left + 0.75}
+        y={CALLOUT_Y + 0.75}
+        width={width - 1.5}
+        height={CALLOUT_HEIGHT - 1.5}
+        rx={(CALLOUT_HEIGHT - 1.5) / 2}
+        fill={fill}
+        stroke={CHALK}
+        strokeWidth="1.5"
+      />
+      <text ref={probe} {...type} visibility="hidden" aria-hidden>
+        {text}
+      </text>
+      <text
+        x={left + width / 2}
+        y={CALLOUT_Y + CALLOUT_HEIGHT / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        {...type}
+        fill={textOn(fill)}
+      >
+        {text}
+      </text>
+    </g>
+  );
+}
+
 /** The yard lines every five yards, and the numbers along the top every ten. */
 const YARD_LINES = Array.from({ length: 19 }, (_, i) => (i + 1) * 5);
 
@@ -230,11 +344,15 @@ export function FieldCard({
   const showBand = bandFrom !== null && bandTo !== null && Math.abs(bandTo - bandFrom) > 0.5;
   // The scoring end zone lights as the ball reaches it and stays lit until the next play.
   const flash = f ? (f.flash ? { label: f.flash, x: f.ball.x } : null) : at.flash ? { label: at.flash.label, x: fieldX(at.flash.yard) } : null;
-  const flashX = flash ? (flash.x < FIELD_WIDTH / 2 ? 0 : FIELD_WIDTH - 28) : null;
+  const flashLeft = flash ? flash.x < FIELD_WIDTH / 2 : null;
+  // A turnover's callout appears as the ball reaches the spot and rests until the next drawn play, like the flash.
+  const callout = f ? f.turnover : at.turnover ? { ...at.turnover, x: fieldX(at.turnover.yard) } : null;
+  const schoolOf = (s: Side) => (s === "away" ? awayTeam : homeTeam);
+  const labels = player.labels ?? { away: awayTeam, home: homeTeam };
   const pinLogo = side === "away" ? logoSrc(awayTeam) : side === "home" ? logoSrc(homeTeam) : undefined;
   const chevron = playing === null && at.unmoved && side !== null;
   const who = at.side === "away" ? awayTeam : at.side === "home" ? homeTeam : null;
-  const aria = [who ? `${who} has the ball` : null, `${at.down.replace("&", "and")}`, at.spot === "–" ? null : `ball on ${at.spot}`, `this drive: ${at.drive}`]
+  const aria = [callout?.label ?? null, who ? `${who} has the ball` : null, `${at.down.replace("&", "and")}`, at.spot === "–" ? null : `ball on ${at.spot}`, `this drive: ${at.drive}`]
     .filter(Boolean)
     .join(", ");
 
@@ -260,22 +378,12 @@ export function FieldCard({
         className="block w-full overflow-hidden rounded-md"
       >
         <rect width={FIELD_WIDTH} height={FIELD_HEIGHT} fill={TURF} />
-        <rect width="28" height={FIELD_HEIGHT} fill={END_ZONE} />
-        <rect x={FIELD_WIDTH - 28} width="28" height={FIELD_HEIGHT} fill={END_ZONE} />
-        <image href={logoSrc(awayTeam)} x="3" y="45" width="22" height="22" />
-        <image href={logoSrc(homeTeam)} x={FIELD_WIDTH - 25} y="45" width="22" height="22" />
-        {flashX !== null ? (
+        <EndZone school={awayTeam} abbr={labels.away} left />
+        <EndZone school={homeTeam} abbr={labels.home} left={false} />
+        {flashLeft !== null ? (
           <g className="animate-in fade-in duration-500">
-            <rect x={flashX} width="28" height={FIELD_HEIGHT} fill={GAIN} />
-            <text
-              transform={`translate(${flashX + 18} ${FIELD_HEIGHT / 2}) rotate(90)`}
-              textAnchor="middle"
-              className="font-display"
-              fontWeight="900"
-              fontSize="13"
-              letterSpacing="2"
-              fill="#241F1A"
-            >
+            <rect x={flashLeft ? 0 : FIELD_WIDTH - 28} width="28" height={FIELD_HEIGHT} fill={GAIN} />
+            <text transform={zoneTransform(flashLeft)} {...ZONE_TYPE} fontSize="13" letterSpacing="2" fill={INK}>
               {flash?.label.toUpperCase()}
             </text>
           </g>
@@ -371,6 +479,9 @@ export function FieldCard({
               />
             ) : null}
           </>
+        ) : null}
+        {callout ? (
+          <Callout key={`${callout.label} ${callout.x}`} label={callout.label} x={callout.x} school={schoolOf(callout.side)} />
         ) : null}
         {ballX !== null ? (
           <g transform={`translate(${ballX} ${f ? f.ball.y : BALL_Y}) rotate(${f ? f.ball.angle : 0})`}>

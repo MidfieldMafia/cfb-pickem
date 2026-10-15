@@ -46,8 +46,17 @@ export type Segment =
   /** The team with the ball changes here: the logo swaps. */
   | { kind: "possession"; side: Side }
   | { kind: "flash"; label: "Touchdown" | "Field goal" | "Safety" }
+  /**
+   * The ball changed hands at `at` without a score or a kick that was meant to
+   * hand it over: the callout under the field (#435), in the colours of
+   * `side`, the team that got the ball. It follows the possession step where
+   * there is one.
+   */
+  | { kind: "turnover"; label: TurnoverLabel; at: Yard; side: Side }
   /** The score counts up to this. The last score step of a play is always the feed's own score after it. */
   | { kind: "score"; home: number; away: number };
+
+export type TurnoverLabel = "Interception" | "Fumble" | "Turnover on downs" | "Blocked kick";
 
 /** Where the ball rests once a play is over. */
 export interface Rest {
@@ -110,6 +119,8 @@ const TOUCHBACK_DEPTH = 5;
 const SAFETY_DEPTH = 2;
 /** Where an extra point or a two-point try is snapped from, in yards from the goal line. */
 const TRY_DISTANCE = 3;
+/** How far past the line a blocked field goal is drawn going down, as the words never say: the canvas's three yards. */
+const BLOCK_DEPTH = 3;
 
 const other = (side: Side): Side => (side === "home" ? "away" : "home");
 /** +1 when `side` attacks towards 100. */
@@ -358,6 +369,10 @@ function describe(ctx: Context): PlayDescription {
   if (/TURNOVER ON DOWNS/i.test(text)) {
     holder = other(side);
     segments.push({ kind: "possession", side: holder });
+    // Where the play ended, after any penalty on it.
+    const at = end ?? start;
+    if (at !== null && !segments.some((s) => s.kind === "turnover"))
+      segments.push({ kind: "turnover", label: "Turnover on downs", at, side: holder });
   }
 
   // An older play's holder is confirmed by who snaps next; a turnover the words missed is still a swap.
@@ -401,6 +416,14 @@ function spotIn(text: string, pattern: string, ctx: Context): Yard | null {
   return match ? ctx.spot(match[1] + match[2]) : null;
 }
 
+/** Every spot the words take the ball to or leave it at, in order: "recovered by CCU … at CCU17 … return 13 yards to the CCU30". */
+function spotsIn(text: string, ctx: Context): Yard[] {
+  return [...text.matchAll(re(String.raw`\b(?:to the|at) SPOT`, "g"))].flatMap((match) => {
+    const spot = ctx.spot(match[1] + match[2]);
+    return spot === null ? [] : [spot];
+  });
+}
+
 /** The snap itself, before any penalty on it: its flights, its swaps, and where the ball stopped. */
 function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
   const { side } = ctx;
@@ -423,11 +446,20 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
     const recovered = snap.match(new RegExp(String.raw`recovered by (${ABBR})\b`));
     const holder = recovered && ctx.sideOfAbbr(recovered[1]) === side ? side : receiver;
     if (holder !== side) segments.push({ kind: "possession", side: holder });
-    const back = spotIn(snap.slice(kick.index! + kick[0].length), String.raw`return -?\d+ yards? to the SPOT`, ctx);
-    if (back !== null) {
-      segments.push({ kind: "ground", from: landing, to: back });
-      return done(back, holder);
+    // A blocked punt: "punt 0 yards to the PRESBY42 blocked by …". The callout goes where the feed says it fell.
+    if (/\bblocked by\b/i.test(snap)) segments.push({ kind: "turnover", label: "Blocked kick", at: landing, side: holder });
+    const after = snap.slice(kick.index! + kick[0].length);
+    const back = spotIn(after, String.raw`return -?\d+ yards? to the SPOT`, ctx);
+    if (back !== null) segments.push({ kind: "ground", from: landing, to: back });
+    // A muff or a fumbled return the kicking team fell on: the receiving team lost it where it was recovered.
+    if (holder === side && /\b(muffed|fumbled?)\b/i.test(after)) {
+      const from = back ?? landing;
+      const lost = spotIn(after, String.raw`recovered by [^,]*? at SPOT`, ctx) ?? from;
+      if (lost !== from) segments.push({ kind: "ground", from, to: lost });
+      segments.push({ kind: "turnover", label: "Fumble", at: lost, side });
+      return done(lost, side);
     }
+    if (back !== null) return done(back, holder);
     return done(landing, holder, true);
   }
 
@@ -437,7 +469,24 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
       segments.push({ kind: "arc", from: start, to: posts });
       return done(posts);
     }
-    // A miss or a block, unseen so far: short of the posts, with the X.
+    // A block, "NO GOOD blocked by …": up and down just past the line with the X, then wherever the words take the ball.
+    if (/\bblocked by\b/i.test(snap)) {
+      const block = start + direction(side) * BLOCK_DEPTH;
+      segments.push(
+        { kind: "arc", from: start, to: block },
+        { kind: "miss", at: block },
+        { kind: "possession", side: other(side) },
+        { kind: "turnover", label: "Blocked kick", at: block, side: other(side) },
+      );
+      let at = block;
+      let end: Yard | null = null;
+      for (const spot of spotsIn(snap.slice(snap.search(/\bblocked by\b/i)), ctx)) {
+        if (spot !== at) segments.push({ kind: "ground", from: at, to: spot });
+        at = end = spot;
+      }
+      return done(end, other(side));
+    }
+    // A miss: short of the posts, with the X.
     const short = goalAttacked(side);
     segments.push(
       { kind: "arc", from: start, to: short },
@@ -452,7 +501,11 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
     const back = spotIn(snap, String.raw`return -?\d+ yards? to the SPOT`, ctx);
     const caught = at ?? back;
     if (caught === null) return { segments, end: null, holder: other(side), placed: false, recognised: false };
-    segments.push({ kind: "arc", from: start, to: caught }, { kind: "possession", side: other(side) });
+    segments.push(
+      { kind: "arc", from: start, to: caught },
+      { kind: "possession", side: other(side) },
+      { kind: "turnover", label: "Interception", at: caught, side: other(side) },
+    );
     if (back !== null && back !== caught) segments.push({ kind: "ground", from: caught, to: back });
     return done(back ?? caught, other(side));
   }
@@ -494,11 +547,13 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
   const recovered = snap.match(new RegExp(String.raw`recovered by (${ABBR})\b`));
   const holder = recovered ? (ctx.sideOfAbbr(recovered[1]) ?? side) : side;
   if (holder === side) return done(end);
-  segments.push({ kind: "possession", side: holder });
   const after = snap.slice(snap.search(/recovered by/));
-  const back =
-    spotIn(after, String.raw`return -?\d+ yards? to the SPOT`, ctx) ??
-    spotIn(after, String.raw`recovered by [^,]*? at SPOT`, ctx);
+  const recoveredAt = spotIn(after, String.raw`recovered by [^,]*? at SPOT`, ctx);
+  segments.push(
+    { kind: "possession", side: holder },
+    { kind: "turnover", label: "Fumble", at: recoveredAt ?? loose, side: holder },
+  );
+  const back = spotIn(after, String.raw`return -?\d+ yards? to the SPOT`, ctx) ?? recoveredAt;
   if (back !== null && back !== loose) segments.push({ kind: "ground", from: loose, to: back });
   return done(back ?? loose, holder);
 }

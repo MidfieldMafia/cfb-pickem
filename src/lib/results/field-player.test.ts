@@ -132,6 +132,17 @@ describe("frame", () => {
     expect(frame(play, line, line.ms).score).toEqual({ home: 3, away: 10 });
   });
 
+  test("a turnover's callout appears as the ball reaches the spot, and stays", () => {
+    // "pass intercepted by #13 J.Vessel at LIB20": Liberty's ball at its own 20.
+    const play = described("29");
+    const line = timeline(play);
+    const swap = line.steps.find((s) => s.kind === "turnover")!;
+    expect(frame(play, line, swap.t0 - 1).turnover).toBeNull();
+    expect(frame(play, line, swap.t0).turnover).toEqual({ label: "Interception", x: fieldX(20), side: "away" });
+    expect(frame(play, line, Infinity).turnover).toEqual({ label: "Interception", x: fieldX(20), side: "away" });
+    expect(frame(described("21"), timeline(described("21")), Infinity).turnover).toBeNull();
+  });
+
   test("the extra point starts a trail of its own", () => {
     const play = described("153");
     const trail = frame(play, timeline(play), Infinity).trail;
@@ -227,6 +238,21 @@ describe("readout", () => {
     expect(readout(WHOLE, id("21"), TEAMS, LABELS).flash).toBeNull();
   });
 
+  test("a turnover keeps its callout at rest, until the next drawn play", () => {
+    const final = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
+    expect(readout(WHOLE, id("29"), TEAMS, LABELS).turnover).toEqual({ label: "Interception", yard: 20, side: "away" });
+    expect(readout(final, id("552"), TEAMS, LABELS).turnover).toEqual({
+      label: "Turnover on downs",
+      yard: 55,
+      side: "away",
+    });
+    expect(readout(final, id("662"), TEAMS, LABELS).turnover).toEqual({ label: "Fumble", yard: 59, side: "home" });
+    const plays = WHOLE.drives.flatMap((drive) => drive.plays);
+    const next = plays[plays.findIndex((play) => play.id === id("29")) + 1];
+    expect(readout(WHOLE, next.id, TEAMS, LABELS).turnover).toBeNull();
+    expect(readout(WHOLE, id("153"), TEAMS, LABELS).turnover).toBeNull();
+  });
+
   test("goal to go", () => {
     // Liberty on the CCU8, 1st & 8.
     const game = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
@@ -298,6 +324,11 @@ describe("readout", () => {
       const scored = readout(WHOLE, id("122"), TEAMS, LABELS);
       const game = feedThrough("1221", withMarker("122", { suffix: "1221", playType: "End Period", playText: "End of 1st Quarter" }));
       expect(readout(game, id("1221"), TEAMS, LABELS)).toMatchObject({ drive: scored.drive, text: "End of 1st Quarter" });
+    });
+
+    test("an interception then a timeout keeps the callout", () => {
+      const game = feedThrough("291", withMarker("29", { suffix: "291", playType: "Timeout", playText: "Timeout Coastal Carolina, clock 13:05" }));
+      expect(readout(game, id("291"), TEAMS, LABELS).turnover).toEqual({ label: "Interception", yard: 20, side: "away" });
     });
 
     test("a timeout mid-drive still reads the drive so far", () => {
