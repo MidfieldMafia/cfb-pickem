@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage",
     "migrate": "drizzle-kit migrate",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
+    "agent-db": "tsx scripts/agent-db.ts",
     "start-season": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/start-season.ts",
     "check-field": "tsx --env-file-if-exists=.env.local scripts/check-field.ts",
     "changelog": "tsx scripts/changelog.ts",
