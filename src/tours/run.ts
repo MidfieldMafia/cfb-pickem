@@ -1,4 +1,4 @@
-import type { Stop, Tour, TourTarget } from "./tours";
+import type { Stop, Tour } from "./tours";
 
 /**
  * Where a running Tour is (#431, spec #426): the Stops still in it and which
@@ -33,25 +33,6 @@ export function drop(run: Run): Run {
 /** "n of N", after dropped Stops. */
 export function position(run: Run): { position: number; of: number } {
   return { position: run.at + 1, of: run.stops.length };
-}
-
-const TAB_HREFS: Partial<Record<TourTarget, string>> = {
-  "tab-picks": "/picks",
-  "tab-live": "/live",
-  "tab-leaderboard": "/leaderboard",
-  "tab-chat": "/chat",
-};
-
-/**
- * The tab a tap Stop's target opens, matched the way the nav marks a tab
- * active: the Picks tab covers `/picks/review` too.
- */
-export function tabHref(target: TourTarget): string | undefined {
-  return TAB_HREFS[target];
-}
-
-export function onTab(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /**

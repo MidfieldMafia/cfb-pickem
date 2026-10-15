@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, SECTION_LABEL } from "@saturday-slate/design-system";
 import { track } from "@/lib/analytics/analytics";
 import type { TourId } from "@/tours/ids";
-import { back, controls, current, drop, next, onTab, position, startRun, tabHref, type Run } from "@/tours/run";
+import { back, controls, current, drop, next, position, startRun, type Run } from "@/tours/run";
 import { findTarget, sheetOpen, waitForTarget } from "@/tours/targets";
 import type { Stop, Tour, TourTarget } from "@/tours/tours";
 
@@ -109,15 +109,17 @@ export function TourRunner({ tour, dismiss }: { tour: Tour; dismiss: (tourId: To
   };
 
   /**
-   * Finds the Stop to show from `start` on: drops a tap Stop for the tab the
-   * member is on, and any Stop whose target isn't there — after a tab move
-   * waiting up to 3s for it, otherwise looking once. Nothing left ends the
-   * Tour as done. `moved` opens the hole from shut on the new target.
+   * Finds the Stop to show from `start` on: drops any Stop whose target isn't
+   * there, and a tap Stop for the tab the member is on (the nav marks it
+   * `aria-current`). With `wait` — a landing, whose screen may still be
+   * streaming in behind `loading.tsx`, or a tab move — it waits up to
+   * `TARGET_WAIT_MS` for the first target; otherwise it looks once. Nothing
+   * left ends the Tour as done. `moved` opens the hole from shut on the new
+   * target.
    */
-  const settle = async (start: Run, moved: boolean) => {
+  const settle = async (start: Run, moved: boolean, wait = moved) => {
     const turn = ++generation.current;
     let run = start;
-    let wait = moved;
     let last: Stop | undefined;
     // Not a `for (let stop = current(run); …)`: in the dev bundle, its update
     // clause lost the `current` import after an `await` and threw.
@@ -125,13 +127,12 @@ export function TourRunner({ tour, dismiss }: { tour: Tour; dismiss: (tourId: To
       const stop = current(run);
       if (!stop) break;
       last = stop;
-      const href = tabHref(stop.target);
-      if (stop.kind === "tap" && href && onTab(window.location.pathname, href)) {
+      const element = wait ? await waitForTarget(stop.target, TARGET_WAIT_MS) : findTarget(stop.target);
+      if (turn !== generation.current) return;
+      if (stop.kind === "tap" && element?.getAttribute("aria-current") === "page") {
         run = drop(run);
         continue;
       }
-      const element = wait ? await waitForTarget(stop.target, TARGET_WAIT_MS) : findTarget(stop.target);
-      if (turn !== generation.current) return;
       if (!element) {
         run = drop(run);
         wait = false;
@@ -162,7 +163,7 @@ export function TourRunner({ tour, dismiss }: { tour: Tour; dismiss: (tourId: To
     // A tick after mount, so the page under it has committed. An open sheet
     // means the member is busy; the Tour waits for a later landing.
     later(0, () => {
-      if (!sheetOpen()) void settle(startRun(tour), false);
+      if (!sheetOpen()) void settle(startRun(tour), false, true);
     });
     return cancel;
     // Starts once per mount; the Tour doesn't restart when its props change.
@@ -211,7 +212,8 @@ export function TourRunner({ tour, dismiss }: { tour: Tour; dismiss: (tourId: To
 
   const tapTarget = () => {
     if (stop.kind !== "tap") return goNext();
-    const href = target.current?.getAttribute("href") ?? tabHref(stop.target);
+    // The tab link's own href: the Picks tab's is `/picks/review` once the Week locks.
+    const href = target.current?.getAttribute("href");
     if (!href) return;
     setView({ ...view, shut: true });
     later(reducedMotion() ? 0 : SHUT_MS, () => {

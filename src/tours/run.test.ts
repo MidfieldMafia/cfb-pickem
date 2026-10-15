@@ -4,7 +4,7 @@
  * shows. The DOM side — finding targets, waiting for them — is the runner's.
  */
 import { describe, expect, test } from "vitest";
-import { back, controls, current, drop, next, position, startRun, tabHref } from "./run";
+import { back, controls, current, drop, next, position, startRun } from "./run";
 import { tours } from "./tours";
 
 const welcome = tours.welcome;
@@ -46,22 +46,6 @@ describe("dropping a Stop", () => {
     let run = startRun(welcome);
     while (current(run)?.id !== "rules") run = next(run);
     expect(current(drop(run))).toBeUndefined();
-  });
-});
-
-describe("a tap Stop's tab", () => {
-  test.each([
-    ["tab-picks", "/picks"],
-    ["tab-live", "/live"],
-    ["tab-leaderboard", "/leaderboard"],
-    ["tab-chat", "/chat"],
-  ] as const)("%s belongs to %s", (target, href) => {
-    expect(tabHref(target)).toBe(href);
-  });
-
-  test("a screen or point target belongs to no tab", () => {
-    expect(tabHref("picks-screen")).toBeUndefined();
-    expect(tabHref("pennant")).toBeUndefined();
   });
 });
 

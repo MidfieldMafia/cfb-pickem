@@ -36,8 +36,12 @@ const TABS: [TourTarget, string][] = [
   ["tab-chat", "/chat"],
 ];
 
-/** The nav, the header icons and one screen's content area. */
+/**
+ * The nav, the header icons and one screen's content area. The nav marks the
+ * tab the URL is on, as the real one does with `aria-current`.
+ */
 function Page({ screen: content }: { screen?: TourTarget }) {
+  const here = window.location.pathname;
   return (
     <div>
       <a data-tour="pennant" href="#menu">
@@ -49,7 +53,12 @@ function Page({ screen: content }: { screen?: TourTarget }) {
       {content && <main data-tour={content}>Screen</main>}
       <nav>
         {TABS.map(([tour, href]) => (
-          <a key={tour} data-tour={tour} href={href}>
+          <a
+            key={tour}
+            data-tour={tour}
+            href={href}
+            aria-current={here === href || here.startsWith(`${href}/`) ? "page" : undefined}
+          >
             {tour}
           </a>
         ))}
@@ -110,15 +119,45 @@ describe("the first Stop", () => {
 
   test("a missing target is dropped and n of N recounts", async () => {
     // On Picks, with no Picks screen anchor: both Picks Stops go.
-    landOn("/picks/review");
-    render(
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      landOn("/picks/review");
+      render(
+        <>
+          <Page />
+          <TourRunner tour={tours.welcome} dismiss={vi.fn(async () => {})} />
+        </>,
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3500);
+      });
+      await waitFor(() => expect(card()).toBe("Live Board"));
+      expect(count()).toBe("1 of 8");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a landing waits for a screen still streaming in", async () => {
+    // `loading.tsx` shows first; the Picks screen's anchor arrives after.
+    landOn("/picks");
+    const view = render(
       <>
         <Page />
         <TourRunner tour={tours.welcome} dismiss={vi.fn(async () => {})} />
       </>,
     );
-    await waitFor(() => expect(card()).toBe("Live Board"));
-    expect(count()).toBe("1 of 8");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    view.rerender(
+      <>
+        <Page screen="picks-screen" />
+        <TourRunner tour={tours.welcome} dismiss={vi.fn(async () => {})} />
+      </>,
+    );
+    await waitFor(() => expect(card()).toBe("Pick every game"));
+    expect(count()).toBe("1 of 9");
   });
 
   test("it doesn't start over an open sheet", async () => {
@@ -266,10 +305,18 @@ describe("ending the Tour", () => {
 
   test("a Tour with no target left ends as done", async () => {
     const dismiss = vi.fn(async () => {});
-    landOn("/chat");
-    render(<TourRunner tour={tail} dismiss={dismiss} />);
-    await waitFor(() => expect(dismiss).toHaveBeenCalledTimes(1));
-    expect(track).toHaveBeenCalledWith("tour_ended", expect.objectContaining({ how: "done" }));
-    expect(document.querySelector("dialog")).toBeNull();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      landOn("/chat");
+      render(<TourRunner tour={tail} dismiss={dismiss} />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3500);
+      });
+      await waitFor(() => expect(dismiss).toHaveBeenCalledTimes(1));
+      expect(track).toHaveBeenCalledWith("tour_ended", expect.objectContaining({ how: "done" }));
+      expect(document.querySelector("dialog")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
