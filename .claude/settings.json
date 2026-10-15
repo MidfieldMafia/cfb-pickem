@@ -31,7 +31,13 @@
     ]
   },
   "enabledPlugins": {
-    "fallow@fallow-skills": true
+    "fallow@fallow-skills": true,
+    "mattpocock-skills@mattpocock": true
+  },
+  "extraKnownMarketplaces": {
+    "mattpocock": {
+      "source": { "source": "github", "repo": "mattpocock/skills" }
+    }
   },
   "sandbox": {
     "network": {

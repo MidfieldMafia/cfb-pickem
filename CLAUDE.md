@@ -28,6 +28,11 @@ Fetching a page from `next dev` does not substitute. Every console and member sc
 
 Nothing in the test suite covers rendering, and every screen needs a Magic Link to reach. See `.claude/skills/verify-running-app/SKILL.md`.
 
+### Building a ticket unattended
+
+Labelling an issue `agent:go` fires a cloud routine that builds it and opens a
+PR; `ready-for-agent` alone starts nothing. See `.claude/skills/agent-go/SKILL.md`.
+
 ### Changelog
 
 `CHANGELOG.md` is half generated and half written. `npm run changelog` rebuilds

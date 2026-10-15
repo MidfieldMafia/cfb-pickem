@@ -33,7 +33,10 @@ step() {
 step install npm ci --no-audit --no-fund --loglevel=error
 
 common=$(git rev-parse --path-format=absolute --git-common-dir)
-step env cp "$common/../.env.local" .env.local
+# A cloud clone has no .env.local to copy; build and tests run without one.
+if [ -f "$common/../.env.local" ]; then
+  step env cp "$common/../.env.local" .env.local
+fi
 
 step build npx next build
 
