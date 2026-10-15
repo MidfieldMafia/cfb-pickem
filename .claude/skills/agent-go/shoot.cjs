@@ -6,7 +6,9 @@
 //   node .claude/skills/agent-go/shoot.cjs --label after --out /tmp/shots field-card=/live?game=3
 //
 // A path may carry its own key as `<key>=<path>` when the URL alone would not
-// name the state well. Reads BASE (default http://localhost:3200) and S, the
+// name the state well. The What's new modal is marked seen so it covers
+// nothing; pass --show-whats-new for a ticket about the modal. Run it from the
+// worktree root. Reads BASE (default http://localhost:3200) and S, the
 // `slate_session=<id>` line `npm run agent-db -- session <name>` prints.
 // puppeteer-core loads from ~/.cache/slate-browser (verify-running-app/browser.md).
 const fs = require("fs");
@@ -21,6 +23,8 @@ const flag = (name, fallback) => {
 };
 const label = flag("label");
 const out = flag("out", "/tmp/shots");
+const showWhatsNew = args.includes("--show-whats-new");
+if (showWhatsNew) args.splice(args.indexOf("--show-whats-new"), 1);
 const targets = args;
 if (!label || targets.length === 0) {
   console.error("Usage: shoot.cjs --label before|after [--out dir] <path | key=path>...");
@@ -55,6 +59,17 @@ const keyOf = (target) => {
   const page = await browser.newPage();
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
   await page.setCookie({ name: "slate_session", value: session, domain: new URL(BASE).hostname, path: "/" });
+  // The What's new modal opens over every member screen in a browser that has
+  // not seen this week's entry, which a fresh Chromium never has. Mark it seen
+  // (src/lib/whats-new.ts) unless the ticket is about the modal itself.
+  const entry = fs.readFileSync("src/components/whats-new.tsx", "utf8").match(/\bid: "([^"]+)"/);
+  if (!showWhatsNew && entry) {
+    await page.evaluateOnNewDocument((id) => {
+      try {
+        localStorage.setItem("whats-new-seen", id);
+      } catch {}
+    }, entry[1]);
+  }
   let failed = 0;
   for (const target of targets) {
     const [key, urlPath] = keyOf(target);

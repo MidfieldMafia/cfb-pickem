@@ -82,6 +82,11 @@ PPT="$HOME/.cache/slate-browser"
 node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 ```
 
+Read every before shot. Anything covering the screen is the state to fix
+before going on, not the screen. `shoot.cjs` marks the What's new modal seen
+(pass `--show-whats-new` when the ticket is about the modal), and the fake
+members have dismissed the Welcome Tour.
+
 A path takes its own key as `<key>=<path>` (`field-card=/live?week=7`) when
 the URL alone would not say which state it shows; the after shot must use the
 same key. A screen the ticket creates has no before. Write down the keys,
