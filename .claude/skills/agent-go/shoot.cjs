@@ -77,6 +77,8 @@ const keyOf = (target) => {
       const response = await page.goto(new URL(urlPath, BASE).href, { waitUntil: "domcontentloaded", timeout: 60000 });
       // Client components settle after the first paint; networkidle never fires against next dev.
       await new Promise((resolve) => setTimeout(resolve, 3000));
+      // next dev's own badge sits over the bottom nav; it is not part of the app.
+      await page.evaluate(() => document.querySelectorAll("nextjs-portal").forEach((el) => el.remove()));
       const file = path.join(out, `${label}--${key}.png`);
       await page.screenshot({ path: file, fullPage: true });
       console.log(`${response ? response.status() : "???"} ${urlPath} -> ${file}`);
