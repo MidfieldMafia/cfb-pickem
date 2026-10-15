@@ -1,6 +1,6 @@
 "use client";
 
-import { Flag, Lock, Megaphone, Target, X, type LucideIcon } from "lucide-react";
+import { Megaphone, Repeat, Shirt, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -12,23 +12,18 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-10-04",
-  label: "What's new · Oct 4–10",
+  id: "2026-10-11",
+  label: "What's new · Oct 11–17",
   items: [
     {
-      icon: Flag,
-      title: "Make your own Pennant",
-      body: "On the welcome page, Flags now has a Make your own maker: pick colors, a pattern and a pole for a flag of your own.",
+      icon: Shirt,
+      title: "End zones in team colors",
+      body: "Tap a game on the Live Board: each end zone on the field is painted in its school's colors, with the school's name.",
     },
     {
-      icon: Lock,
-      title: "Lock and Guess after your picks",
-      body: "After your last pick, you go straight to your Lock of the Week and Tiebreaker Guess. Skip for now leaves them for later.",
-    },
-    {
-      icon: Target,
-      title: "The over/under on your Guess",
-      body: "When a line is out, the Tiebreaker Guess page shows the game's over/under as a starting point.",
+      icon: Repeat,
+      title: "Turnover callouts",
+      body: "Interceptions, fumbles, turnovers on downs and blocked kicks now get a callout under the field, in the colors of the team that got the ball.",
     },
   ],
 };

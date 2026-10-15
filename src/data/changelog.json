@@ -1,6 +1,15 @@
 {
-  "generatedAt": "2026-10-09T23:02:13.430Z",
+  "generatedAt": "2026-10-15T13:18:17.306Z",
   "entries": [
+    {
+      "from": "2026-10-11",
+      "to": "2026-10-17",
+      "items": [
+        "On a Live Board game sheet, each end zone on the field is painted in its school's colors, with the school's name.",
+        "Interceptions, fumbles, turnovers on downs and blocked kicks get a callout under the field, in the colors of the team that got the ball."
+      ],
+      "through": "2026-10-15T13:17:58Z"
+    },
     {
       "from": "2026-10-04",
       "to": "2026-10-10",
@@ -14,7 +23,8 @@
         "After a score, the On the field card keeps the drive's yards and shows Kickoff, and the end zone stays lit through a timeout or the quarter's end.",
         "The Live Board shows the right spread when one team's name starts with another's, like Texas and Texas Tech. Your picks now use the Live Board's team colors.",
         "Commissioners can filter the Slate builder by Big Ten, ACC and Big 12, as well as SEC."
-      ]
+      ],
+      "through": "2026-10-09T22:49:01Z"
     },
     {
       "from": "2026-09-28",
