@@ -36,12 +36,21 @@ interface State {
   branchName: string;
 }
 
-function api(path: string, init: RequestInit = {}): Promise<Response> {
+async function api(path: string, init: RequestInit = {}): Promise<Response> {
   const project = process.env.NEON_PROJECT_ID;
   if (!project) throw new Error("NEON_PROJECT_ID is not set.");
   const headers: Record<string, string> = { accept: "application/json", "content-type": "application/json" };
   if (process.env.NEON_API_KEY) headers.authorization = `Bearer ${process.env.NEON_API_KEY}`;
-  return fetch(`https://console.neon.tech/api/v2/projects/${project}/${path}`, { ...init, headers });
+  try {
+    return await fetch(`https://console.neon.tech/api/v2/projects/${project}/${path}`, { ...init, headers });
+  } catch (error) {
+    // Node's own fetch ignores HTTPS_PROXY unless told otherwise, and the cloud
+    // reaches the internet only through that proxy.
+    if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) {
+      throw new Error("fetch failed behind HTTPS_PROXY: run with NODE_USE_ENV_PROXY=1.", { cause: error });
+    }
+    throw error;
+  }
 }
 
 function ownsEnvFile(): boolean {

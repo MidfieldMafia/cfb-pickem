@@ -51,19 +51,56 @@ worktree.
 
 ## 4. Build
 
-Read the ticket, its parent map, and any spec, design or research it links.
-Then invoke `/mattpocock-skills:implement` with the issue URL, inside the
-worktree, and follow it, including its `/code-review` pass. CLAUDE.md's checks
-apply as written: `npx next build` when the diff touches a `"use server"` file,
-a route handler or the client/server boundary; never `npm run build`.
+The routine's prompt starts with `/mattpocock-skills:implement`, so its
+instructions are already in your context: that skill cannot be invoked by the
+model, only typed, which is why the prompt carries it. Follow them inside the
+worktree, after steps 1–3, including the `tdd` and `code-review` passes. Read
+the ticket, its parent map, and any spec, design or research it links first.
+Where implement says to ask, there is nobody to answer: make the call the
+ticket and docs support and record it under **Judgment calls** in the PR, or,
+when nothing supports either way, stop and ship a draft (step 6).
 
-The cloud has a browser: Playwright's Chromium at
-`/opt/pw-browsers/chromium-*/chrome-linux/chrome`, which `puppeteer-core` drives
-(`verify-running-app/browser.md`); downloading another Chrome is blocked. It has
-no database yet, so only screens that need no session (`/expired`) can be read.
-List every signed-in screen the diff touched under **Not verified** in the PR.
+CLAUDE.md's checks apply as written: `npx next build` when the diff touches a
+`"use server"` file, a route handler or the client/server boundary; never
+`npm run build`.
 
-## 5. Ship
+## 5. Check it on a screen
+
+Any diff that renders gets read on a served screen, signed in, before it ships.
+`scripts/agent-db.ts` gives the run its own database: a branch of the
+`slate-agents` Neon project with a fake league, which `verify-running-app`
+then reads like any other.
+
+The cloud reaches the internet only through `HTTPS_PROXY`, which Node's own
+`fetch` ignores unless told, and both `agent-db` and the app's database driver
+use it. Export the switch first, in the same shell as everything after:
+
+```bash
+export NODE_USE_ENV_PROXY=1
+npm run agent-db -- up <issue number>   # branch, .env.local, migrate, seed
+npm run dev -- -p 3200                  # in the background
+S=$(npm run -s agent-db -- session Casey)
+```
+
+`up` prints the fake members and the state each is in: Casey is the
+commissioner and organizer, Jordan and Riley have every Week 7 pick in, Morgan
+some, Taylor and Sam none, and Drew has not finished `/welcome`. Week 6 is
+final; Week 7 is open with its Deadline three days out. Set up any other state
+the check needs with SQL against the branch: it is yours and is deleted after.
+
+Then follow `verify-running-app` from step 4 with `$S` as the cookie. For step
+5's browser, Chromium is at `/opt/pw-browsers/chromium`; downloading another is
+blocked. Look at a 390px screenshot of every screen the diff touched, and the
+design it was built from when the ticket links one.
+
+**Always** run `npm run agent-db -- down` when the check ends, failed or not.
+In the PR, list what you checked and what each screen showed under **Checked
+on screen**, and anything you could not reach under **Not verified**.
+
+**Done when** every screen the diff touched has been read signed in, and the
+branch is deleted.
+
+## 6. Ship
 
 Commit, run `npm run preflight`, push the branch, and open a PR that closes the
 issue, written with `/mattpocock-skills:pr`, with its `Members see:` line. Never merge.
