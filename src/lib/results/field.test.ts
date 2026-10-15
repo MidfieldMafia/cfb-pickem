@@ -259,8 +259,8 @@ describe("each shape", () => {
     expect(play("662").segments).toEqual([
       { kind: "ground", from: 54, to: 60 },
       { kind: "possession", side: "home" },
-      { kind: "turnover", label: "Fumble", at: 59, side: "home" },
       { kind: "ground", from: 60, to: 59 },
+      { kind: "turnover", label: "Fumble", at: 59, side: "home" },
     ]);
   });
 
@@ -407,13 +407,23 @@ describe("turnover callouts (#435)", () => {
       playText:
         "#27 T.Hutton punt 0 yards to the LIB42 blocked by #24 J.Bernabei recovered by CCU #14 J.Taylor at LIB24 #14 J.Taylor return 24 yards to the LIB00 TOUCHDOWN, clock 01:41 #46 L.Stenson kick attempt good (H: #10 M.Lainez III, LS: #49 B.Ganny)",
     });
-    expect(blocked.segments.slice(0, 5)).toEqual([
+    expect(blocked.segments.slice(0, 6)).toEqual([
       { kind: "arc", from: 42, to: 42 },
       { kind: "possession", side: "home" },
+      { kind: "miss", at: 42 },
       { kind: "turnover", label: "Blocked kick", at: 42, side: "home" },
       { kind: "ground", from: 42, to: 0 },
       { kind: "flash", label: "Touchdown" },
     ]);
+  });
+
+  test("a blocked punt the kicking team falls on is still called in the blocking team's colours", () => {
+    // Presbyterian's own: "punt 0 yards to the PRESBY27 blocked by #19 N.Riding recovered by PRESBY #57 L.Cook at PRESBY25".
+    const ownBlock = libertyKicks(
+      73,
+      "#27 T.Hutton punt 0 yards to the LIB27 blocked by #19 N.Riding recovered by LIB #57 L.Cook at LIB25",
+    );
+    expect(turnovers(ownBlock)).toEqual([{ kind: "turnover", label: "Blocked kick", at: 27, side: "home" }]);
   });
 
   test("a muffed punt the kicking team recovers is a Fumble at the recovery", () => {

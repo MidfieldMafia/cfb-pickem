@@ -24,6 +24,8 @@ import { feedLabels, type RecentTeams } from "@/lib/results/recent-plays";
 import { logoSrc } from "@/lib/logos";
 
 /** The field is its own scene, the same in light and dark: the canvas's greens and cream (#265). */
+/** Each end zone on the drawing: ten yards at 2.8. */
+const ZONE_DEPTH = 28;
 const TURF = "#1F4034";
 const CHALK = CREAM;
 const GAIN = "#D26A12";
@@ -219,7 +221,7 @@ const NAME_SPACING = 1;
 
 /** Where an end zone's words sit, facing midfield: the away (left) end reads bottom to top, the home end top to bottom. */
 const zoneTransform = (left: boolean) =>
-  `translate(${left ? 14 : FIELD_WIDTH - 14} ${FIELD_HEIGHT / 2}) rotate(${left ? -90 : 90})`;
+  `translate(${left ? ZONE_DEPTH / 2 : FIELD_WIDTH - ZONE_DEPTH / 2} ${FIELD_HEIGHT / 2}) rotate(${left ? -90 : 90})`;
 
 /**
  * One end zone, in its school's primary, with the longest of the school's
@@ -241,7 +243,7 @@ function EndZone({ school, abbr, left }: { school: string; abbr: string; left: b
   }, [school, abbr, fonts]);
   return (
     <g>
-      <rect x={left ? 0 : FIELD_WIDTH - 28} width="28" height={FIELD_HEIGHT} fill={zone.fill} />
+      <rect x={left ? 0 : FIELD_WIDTH - ZONE_DEPTH} width={ZONE_DEPTH} height={FIELD_HEIGHT} fill={zone.fill} />
       <text ref={probe} {...ZONE_TYPE} fontSize={NAME_SIZE} letterSpacing={NAME_SPACING} visibility="hidden" aria-hidden />
       <text transform={zoneTransform(left)} {...ZONE_TYPE} fontSize={NAME_SIZE} letterSpacing={NAME_SPACING} fill={zone.ink}>
         {name}
@@ -272,7 +274,7 @@ function Callout({ label, x, school }: { label: TurnoverLabel; x: number; school
   }, [text, fonts]);
   const fill = teamFill(school);
   const width = Math.round(textWidth + 2 * CALLOUT_PADDING);
-  const left = Math.max(28 + CALLOUT_INSET, Math.min(FIELD_WIDTH - 28 - CALLOUT_INSET - width, x - width / 2));
+  const left = Math.max(ZONE_DEPTH + CALLOUT_INSET, Math.min(FIELD_WIDTH - ZONE_DEPTH - CALLOUT_INSET - width, x - width / 2));
   const type = { className: "font-display", fontWeight: 900, fontSize: 9.5, letterSpacing: 1 } as const;
   return (
     <g className="animate-in fade-in duration-500">
@@ -382,14 +384,14 @@ export function FieldCard({
         <EndZone school={homeTeam} abbr={labels.home} left={false} />
         {flashLeft !== null ? (
           <g className="animate-in fade-in duration-500">
-            <rect x={flashLeft ? 0 : FIELD_WIDTH - 28} width="28" height={FIELD_HEIGHT} fill={GAIN} />
+            <rect x={flashLeft ? 0 : FIELD_WIDTH - ZONE_DEPTH} width={ZONE_DEPTH} height={FIELD_HEIGHT} fill={GAIN} />
             <text transform={zoneTransform(flashLeft)} {...ZONE_TYPE} fontSize="13" letterSpacing="2" fill={INK}>
               {flash?.label.toUpperCase()}
             </text>
           </g>
         ) : null}
-        <line x1="28" x2="28" y2={FIELD_HEIGHT} stroke={CHALK} strokeWidth="1.5" />
-        <line x1={FIELD_WIDTH - 28} x2={FIELD_WIDTH - 28} y2={FIELD_HEIGHT} stroke={CHALK} strokeWidth="1.5" />
+        <line x1={ZONE_DEPTH} x2={ZONE_DEPTH} y2={FIELD_HEIGHT} stroke={CHALK} strokeWidth="1.5" />
+        <line x1={FIELD_WIDTH - ZONE_DEPTH} x2={FIELD_WIDTH - ZONE_DEPTH} y2={FIELD_HEIGHT} stroke={CHALK} strokeWidth="1.5" />
         {YARD_LINES.map((yard) => (
           <line
             key={yard}

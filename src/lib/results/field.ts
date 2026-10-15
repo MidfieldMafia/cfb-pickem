@@ -446,13 +446,19 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
     const recovered = snap.match(new RegExp(String.raw`recovered by (${ABBR})\b`));
     const holder = recovered && ctx.sideOfAbbr(recovered[1]) === side ? side : receiver;
     if (holder !== side) segments.push({ kind: "possession", side: holder });
-    // A blocked punt: "punt 0 yards to the PRESBY42 blocked by …". The callout goes where the feed says it fell.
-    if (/\bblocked by\b/i.test(snap)) segments.push({ kind: "turnover", label: "Blocked kick", at: landing, side: holder });
+    // A blocked punt: "punt 0 yards to the PRESBY42 blocked by …". The X and the callout go where the feed says it
+    // fell, in the blocking team's colours: the kicking team falling on it short of the line still gives it up on downs.
+    const blocked = /\bblocked by\b/i.test(snap);
+    if (blocked)
+      segments.push(
+        { kind: "miss", at: landing },
+        { kind: "turnover", label: "Blocked kick", at: landing, side: receiver },
+      );
     const after = snap.slice(kick.index! + kick[0].length);
     const back = spotIn(after, String.raw`return -?\d+ yards? to the SPOT`, ctx);
     if (back !== null) segments.push({ kind: "ground", from: landing, to: back });
     // A muff or a fumbled return the kicking team fell on: the receiving team lost it where it was recovered.
-    if (holder === side && /\b(muffed|fumbled?)\b/i.test(after)) {
+    if (!blocked && holder === side && /\b(muffed|fumbled?)\b/i.test(after)) {
       const from = back ?? landing;
       const lost = spotIn(after, String.raw`recovered by [^,]*? at SPOT`, ctx) ?? from;
       if (lost !== from) segments.push({ kind: "ground", from, to: lost });
@@ -549,11 +555,12 @@ function drawSnap(snap: string, ctx: Context, start: Yard): Drawn {
   if (holder === side) return done(end);
   const after = snap.slice(snap.search(/recovered by/));
   const recoveredAt = spotIn(after, String.raw`recovered by [^,]*? at SPOT`, ctx);
-  segments.push(
-    { kind: "possession", side: holder },
-    { kind: "turnover", label: "Fumble", at: recoveredAt ?? loose, side: holder },
-  );
   const back = spotIn(after, String.raw`return -?\d+ yards? to the SPOT`, ctx) ?? recoveredAt;
-  if (back !== null && back !== loose) segments.push({ kind: "ground", from: loose, to: back });
-  return done(back ?? loose, holder);
+  // The callout waits for the ball to reach the recovery, then any return runs on from there.
+  const at = recoveredAt ?? loose;
+  segments.push({ kind: "possession", side: holder });
+  if (at !== loose) segments.push({ kind: "ground", from: loose, to: at });
+  segments.push({ kind: "turnover", label: "Fumble", at, side: holder });
+  if (back !== null && back !== at) segments.push({ kind: "ground", from: at, to: back });
+  return done(back ?? at, holder);
 }

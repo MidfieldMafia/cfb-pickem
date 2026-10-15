@@ -143,6 +143,40 @@ describe("frame", () => {
     expect(frame(described("21"), timeline(described("21")), Infinity).turnover).toBeNull();
   });
 
+  test("a lost fumble's callout waits for the ball to reach the recovery", () => {
+    // "fumbled by #7 P.Jones at CCU40 … recovered by CCU #19 S.McDowell at CCU41".
+    const final = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
+    const play = final.descriptions.find((d) => d.id === id("662"))!;
+    const line = timeline(play);
+    const swap = line.steps.find((s) => s.kind === "turnover")!;
+    expect(frame(play, line, swap.t0 - 1).turnover).toBeNull();
+    expect(frame(play, line, swap.t0)).toMatchObject({
+      ball: { x: fieldX(59) },
+      turnover: { label: "Fumble", x: fieldX(59), side: "home" },
+    });
+  });
+
+  test("a blocked field goal's callout goes up with the X, at the block", () => {
+    // William & Mary at Duke, respelled: "NO GOOD blocked by … recovered by CCU Coastal at CCU36".
+    const plays = DRIVES.flatMap((drive) => drive.plays);
+    const at = plays.findIndex((play) => play.id === id("60"));
+    const blocked = {
+      ...plays[at],
+      yardsToGoal: 36,
+      homeScore: 0,
+      awayScore: 0,
+      playText:
+        "(06:52) #43 M.Lipinski field goal attempt from 53 yards NO GOOD blocked by #34 L.Mergott (H: #16 P.Blee, LS: #50 M.Kabban), clock 06:41 recovered by CCU Coastal at CCU36, End Of Play",
+    };
+    const play = describePlays([...plays.slice(0, at), blocked], TEAMS).at(-1)!;
+    const line = timeline(play);
+    const landed = frame(play, line, Infinity);
+    expect(landed).toMatchObject({ miss: fieldX(67), turnover: { label: "Blocked kick", x: fieldX(67), side: "home" } });
+    expect(landed.ball.x).toBe(fieldX(64));
+    const x = line.steps.find((s) => s.kind === "miss")!;
+    expect(frame(play, line, x.t0 - 1)).toMatchObject({ miss: null, turnover: null });
+  });
+
   test("the extra point starts a trail of its own", () => {
     const play = described("153");
     const trail = frame(play, timeline(play), Infinity).trail;
