@@ -1,7 +1,8 @@
 // Renders the Artifact's component previews the way its page does (tokens.css, bundle.css, React 18
 // from components/lib, bundle.js, then the preview), twice: "old" with the Artifact's own copies,
 // "new" with what .design-artifact/out stages over them. Prints one line per render and writes
-// <shots>/<Component>.old.png and .new.png.
+// <shots>/<Component>.old.png and .new.png. Fails on a render error, a missing export, a type-style
+// collision, or display text in Wordmark, TeamName or StandingCard that is not Chivo Black.
 //
 //   node .design-artifact/render.mjs --artifact <dir> --shots <dir> --puppeteer <dir>
 //
@@ -13,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { afterSave, staleTypeRules, typeStyles } from "./served.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -52,21 +54,24 @@ for (const need of ["tokens.css", "components/lib/react.production.min.js", "com
 // utilities sit in `@layer utilities`: an unlayered rule wins whatever the order. A style named
 // like a class the bundle uses (`text-xs`, `text-2xl`) strips `font-bold` / `font-display` off
 // every element that carries both, silently. So a collision fails the run.
-const typeStyles = (file) =>
-  fs.existsSync(file) ? (JSON.parse(txt(file)).type?.groups ?? []).flatMap((g) => (g.styles ?? []).map((s) => s.name)) : [];
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const definesClass = (css, name) => new RegExp(`\\.${escapeRe(name)}(?![A-Za-z0-9_\\\\-])`).test(css);
 const newStyles = typeStyles(pick("tokens.json", true));
 const collisions = newStyles.filter((n) => definesClass(txt(pick("components/bundle.css", true)), n));
 for (const n of collisions) console.log(`COLLISION: tokens.json type style "${n}" is also a class in bundle.css; rename the style`);
 
-// tokens.css is regenerated only by a save in the page, so the served copy lags a staged
-// tokens.json. For "new", drop the type-style rules the staged tokens.json no longer has, which
-// is what that save will do.
+// tokens.css is regenerated only by a save in the page, so the served copy can lag tokens.json,
+// staged or not: a sync that skipped the save left `.text-xs`…`.text-4xl` live for three weeks.
+// "old" renders the served copy as it is and names any rule it still has; "new" renders it as the
+// save in step 5.4 of the skill leaves it.
 const carriedTokens = txt(path.join(carried, "tokens.css"));
-const stagedTokens = fs.existsSync(path.join(staged, "tokens.json"))
-  ? carriedTokens.replace(/\n\.([A-Za-z0-9_-]+) \{[^}]*\}/g, (rule, n) => (newStyles.includes(n) ? rule : ""))
-  : carriedTokens;
+const stale = staleTypeRules(carriedTokens, typeStyles(path.join(carried, "tokens.json")));
+if (stale.length) console.log(`STALE: the served tokens.css still has ${stale.map((n) => `.${n}`).join(" ")}; step 5.4's save drops them`);
+const stagedTokens = afterSave(carriedTokens, newStyles);
+
+// A wrong face renders without an error, so these previews' display text is asserted, not eyeballed:
+// every `.font-display` in them must compute to Chivo at 700 or heavier.
+const DISPLAY_TELLS = ["Wordmark", "TeamName", "StandingCard"];
 
 const names = new Set();
 for (const root of [carried, staged]) {
@@ -109,6 +114,15 @@ for (const name of [...names].sort()) {
     await page.setContent(html, { waitUntil: "load", timeout: 20000 });
     await new Promise((r) => setTimeout(r, 500));
     const text = await page.evaluate(() => document.body.innerText.slice(0, 80).replace(/\s+/g, " "));
+    if (DISPLAY_TELLS.includes(name)) {
+      const wrong = await page.evaluate(() =>
+        [...document.querySelectorAll(".font-display")]
+          .map((el) => ({ el, cs: getComputedStyle(el) }))
+          .filter(({ cs }) => !/^"?Chivo/.test(cs.fontFamily) || Number(cs.fontWeight) < 700)
+          .map(({ el, cs }) => `"${el.textContent.trim().slice(0, 20)}" in ${cs.fontFamily.split(",")[0]} ${cs.fontWeight}`),
+      );
+      if (wrong.length) errors.push(`display text not Chivo Black: ${wrong.join("; ")}`);
+    }
     // fullPage: the page grows a card to fit its content, so a viewport-sized shot crops what it shows.
     await page.screenshot({ path: path.join(shots, `${name}.${side}.png`), fullPage: true });
     await page.close();
