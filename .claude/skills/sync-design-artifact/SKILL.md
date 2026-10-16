@@ -143,10 +143,12 @@ and nothing else.
    The `via` sha is the anchor the next sync diffs from, so it names the commit you built.
 4. Save in the page, so it writes what only a save writes (Known quirks): in Claude in Chrome,
    open the Artifact, go to Colors, click the orange note icon at the end of the `background` row,
-   click at the end of its Usage notes text, type a space, wait 3 seconds, delete it, wait 3
-   seconds, close the popup. Clicking a colour value opens a colour picker instead. Take a
-   screenshot after each click: the window resizes between calls, so coordinates go stale, and a
-   tab that stops answering clicks (seen 2026-10-16) needs a human. Then `read` into a fresh
+   click at the end of its Usage notes text, type a `.`, close the popup, and wait 8 seconds; then
+   reopen it, delete that `.`, close it, and wait again. That is two saves, and the note ends as it
+   began. A save needs a real change: a space is trimmed and saves nothing. Clicking a colour
+   value opens a colour picker instead. Take a screenshot after each click: the window resizes
+   between calls, so coordinates go stale, and a tab that stops answering clicks (seen
+   2026-10-16) needs a human. Then `read` into a fresh
    folder `project/tokens.css`, `project/tokens.json` and `project/api/components/<Name>.md` for
    every component README step 5.2 sent, and run
    `node .design-artifact/check-served.mjs --artifact <that folder>`.
