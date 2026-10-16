@@ -39,18 +39,23 @@ const storage = () => window.localStorage;
  * The What's new modal: opens by itself the first time this browser sees the
  * entry, and again whenever the Profile menu's row asks. Closing it any way —
  * Got it, the X, Escape — marks the entry seen.
+ *
+ * `quiet` is a landing where the Welcome Tour starts: the modal stays shut and
+ * the entry counts as seen in this browser, since someone who just joined has
+ * no last week to catch up on (#426). The Profile menu's row still opens it.
  */
-export function WhatsNew() {
+export function WhatsNew({ quiet = false }: { quiet?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     const open = () => {
       if (!dialog.current?.open) dialog.current?.showModal();
     };
-    if (!hasSeen(storage, ENTRY.id)) open();
+    if (quiet) markSeen(storage, ENTRY.id);
+    else if (!hasSeen(storage, ENTRY.id)) open();
     window.addEventListener(WHATS_NEW_OPEN, open);
     return () => window.removeEventListener(WHATS_NEW_OPEN, open);
-  }, []);
+  }, [quiet]);
 
   const close = () => dialog.current?.close();
 
