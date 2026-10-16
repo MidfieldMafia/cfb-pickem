@@ -9,6 +9,8 @@ Jonah applies `agent:go` to a ticket that should be built now; `ready-for-agent`
 means the ticket is fully written. A cloud routine fires on GitHub's "Issue:
 Labeled" event, filtered on `agent:go`, and runs this skill unattended. Nobody
 is watching, so every refusal is a comment on the issue, never a question.
+What the cloud can and cannot do, and the reason behind each workaround below,
+is in `docs/agents/cloud-environment.md`: read it when a command fails there.
 
 ## 1. Gate
 
@@ -70,8 +72,12 @@ export S=$(npm run -s agent-db -- session Casey)
 `up` prints the fake members and the state each is in: Casey is the
 commissioner and organizer, Jordan and Riley have every Week 7 pick in, Morgan
 some, Taylor and Sam none, and Drew has not finished `/welcome`. Week 6 is
-final; Week 7 is open with its Deadline three days out. Set up any other state
-the screens need with SQL against the branch: it is yours and is deleted after.
+final; Week 7 is open with its Deadline three days out. For a screen that
+shows a game under way (the Live Board, the Game sheet, the field card), run
+`up <issue number> --live` instead: Week 7's Deadline has passed and Liberty at
+Coastal Carolina is in progress, Q2 10:27, from a real recorded CFBD feed.
+Set up any other state the screens need with SQL against the branch: it is
+yours and is deleted after.
 
 Before writing any code, screenshot every existing screen the ticket will
 change, in the state that shows the change, as the member who would see it:

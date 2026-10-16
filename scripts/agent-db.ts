@@ -6,6 +6,7 @@
  * reach a signed-in screen without a Magic Link.
  *
  *   npm run agent-db -- up <name>         # branch, .env.local, migrate, seed
+ *   npm run agent-db -- up <name> --live  # the same, with a game under way
  *   npm run agent-db -- session <member>  # prints slate_session=<id>
  *   npm run agent-db -- down              # deletes the branch and .env.local
  *
@@ -24,9 +25,12 @@ import { neon } from "@neondatabase/serverless";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "../src/db/schema";
+import type { CfbdLiveGame } from "../src/lib/cfbd/types";
+import { newestPlay, toLiveFeed } from "../src/lib/results/live-feed";
 
 const ENV_FILE = ".env.local";
 const STATE_FILE = ".agent-db.json";
+const LIVE_FIXTURE = "src/lib/cfbd/fixtures/live-plays/401869941-q2.json";
 const MARKER = "# Written by scripts/agent-db.ts: a throwaway slate-agents branch.";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
@@ -61,7 +65,7 @@ function connect(url: string) {
   return drizzle({ client: neon(url), schema });
 }
 
-async function up(name: string) {
+async function up(name: string, live: boolean) {
   if (existsSync(ENV_FILE) && !ownsEnvFile()) {
     throw new Error(`${ENV_FILE} already exists and agent-db did not write it. Run this in a checkout without one.`);
   }
@@ -89,7 +93,7 @@ async function up(name: string) {
     env: { ...process.env, DATABASE_URL: url, DATABASE_URL_UNPOOLED: url },
   });
   console.log("Migrated.");
-  await seed(connect(url));
+  await seed(connect(url), live);
 }
 
 async function waitForDatabase(url: string) {
@@ -152,7 +156,7 @@ const MEMBERS = [
   { displayName: "Drew", commissioner: false, avatar: null, picks: "none" },
 ] as const;
 
-async function seed(db: ReturnType<typeof connect>) {
+async function seed(db: ReturnType<typeof connect>, live: boolean) {
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.members);
   if (count > 0) throw new Error(`Refusing to seed: this database already has ${count} members.`);
 
@@ -200,9 +204,11 @@ async function seed(db: ReturnType<typeof connect>) {
     .values(members.filter((m) => m.welcomedAt).map((m) => ({ memberId: m.id, tourId: "welcome" as const })));
 
   const lastDeadline = new Date(now - 6 * DAY);
-  const thisDeadline = new Date(now + 3 * DAY);
+  // --live: the Deadline has passed and one game is under way; the rest kick off later today.
+  const thisDeadline = new Date(live ? now - 90 * 60 * 1000 : now + 3 * DAY);
   const last = await addWeek(db, season.id, 6, lastDeadline, LAST_WEEK, LAST_SCORES);
-  const current = await addWeek(db, season.id, 7, thisDeadline, THIS_WEEK, null);
+  const current = await addWeek(db, season.id, 7, thisDeadline, THIS_WEEK, null, live ? new Date(now + 2 * HOUR) : thisDeadline);
+  if (live) current.games.unshift(await addLiveGame(db, current.weekId, thisDeadline));
 
   for (const [index, member] of members.entries()) {
     const plan = MEMBERS[index];
@@ -216,7 +222,11 @@ async function seed(db: ReturnType<typeof connect>) {
     }
   }
 
-  console.log(`Seeded the ${season.year} season, Week 6 final and Week 7 open (Deadline ${thisDeadline.toISOString()}).`);
+  console.log(
+    live
+      ? `Seeded the ${season.year} season, Week 6 final and Week 7 locked with Liberty at Coastal Carolina under way (Q2 10:27, 10–3).`
+      : `Seeded the ${season.year} season, Week 6 final and Week 7 open (Deadline ${thisDeadline.toISOString()}).`,
+  );
   console.log("Members (sign in with `npm run agent-db -- session <name>`):");
   for (const [index, member] of members.entries()) {
     const plan = MEMBERS[index];
@@ -238,6 +248,7 @@ async function addWeek(
   deadline: Date,
   matchups: [Team, Team, string][],
   scores: [number, number][] | null,
+  kickoffFrom: Date = deadline,
 ): Promise<SeededWeek> {
   const [week] = await db
     .insert(schema.weeks)
@@ -255,7 +266,7 @@ async function addWeek(
         homeTeamId: home.id,
         homeTeam: home.school,
         homeConference: home.conference,
-        kickoff: new Date(deadline.getTime() + Math.floor(index / 2) * 3 * HOUR),
+        kickoff: new Date(kickoffFrom.getTime() + Math.floor(index / 2) * 3 * HOUR),
         spread,
         ...(scores ? { status: "final" as const, awayScore: scores[index][0], homeScore: scores[index][1] } : {}),
       })),
@@ -299,6 +310,46 @@ async function addPicks(
   }
 }
 
+/**
+ * A real game under way, from CFBD's recorded play-by-play (Liberty at Coastal
+ * Carolina, Q2 10:27): the row's live columns as the scoreboard would leave
+ * them, its `live_feed` slice through the app's own `toLiveFeed`, and the
+ * whole feed in `live_feeds` for the Game sheet.
+ */
+async function addLiveGame(db: ReturnType<typeof connect>, weekId: number, kickoff: Date) {
+  // The app never reads the feed's `teams`, so its type leaves them unknown; the fixture has them.
+  type FeedTeam = { teamId: number; team: string; homeAway: "home" | "away"; points: number };
+  const feed = JSON.parse(readFileSync(LIVE_FIXTURE, "utf8")) as Omit<CfbdLiveGame, "teams"> & { teams: FeedTeam[] };
+  const home = feed.teams.find((t) => t.homeAway === "home")!;
+  const away = feed.teams.find((t) => t.homeAway === "away")!;
+  const teams = { homeTeamId: home.teamId, awayTeamId: away.teamId };
+  const [game] = await db
+    .insert(schema.games)
+    .values({
+      weekId,
+      cfbdGameId: feed.id,
+      homeTeamId: home.teamId,
+      homeTeam: home.team,
+      homeConference: "Sun Belt",
+      awayTeamId: away.teamId,
+      awayTeam: away.team,
+      awayConference: "Conference USA",
+      kickoff,
+      spread: "Liberty -3.5",
+      status: "in_progress",
+      homeScore: home.points,
+      awayScore: away.points,
+      period: feed.period,
+      clock: feed.clock,
+      possession: feed.possession === home.team ? "home" : "away",
+      lastPlay: newestPlay(feed.drives)?.playText ?? null,
+      liveFeed: toLiveFeed(feed, teams),
+    })
+    .returning();
+  await db.insert(schema.liveFeeds).values({ gameId: game.id, drives: feed.drives, fetchedAt: new Date() });
+  return game;
+}
+
 async function session(name: string) {
   if (!ownsEnvFile()) throw new Error(`No agent-db ${ENV_FILE} here: run \`npm run agent-db -- up <name>\` first.`);
   process.loadEnvFile(ENV_FILE);
@@ -325,7 +376,7 @@ async function down() {
 
 async function main() {
   const [command, arg] = process.argv.slice(2);
-  if (command === "up") return up(arg ?? "check");
+  if (command === "up") return up(arg && arg !== "--live" ? arg : "check", process.argv.includes("--live"));
   if (command === "session" && arg) return session(arg);
   if (command === "down") return down();
   throw new Error("Usage: npm run agent-db -- up <name> | session <member> | down");
