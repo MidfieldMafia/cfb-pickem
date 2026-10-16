@@ -6,8 +6,11 @@ prompt names this file and the checks to run, so the prompt stays one line and
 the checks are versioned here:
 
 ```
-Run the cloud probe in docs/agents/cloud-probe.md. Checks: all.
+Run the cloud probe in docs/agents/cloud-probe.md. Checks: all. <authorization line>
 ```
+
+Checks 3–6 need the authorization line from `cloud-environment.md` in the
+prompt itself; without it the permission classifier refuses check 3.
 
 Firing it with the `RemoteTrigger` tool: `update` the prompt, wait for the
 result, then `run`. Sent together, the run can start on the old prompt.
@@ -30,11 +33,13 @@ one fails, and run `npm run agent-db -- down` at the end whatever happened.
 3. **Neon.** With `NODE_USE_ENV_PROXY=1`: `npm run agent-db -- up probe --live`
    exits 0 and prints the members.
 4. **Signed in.** `npm run dev -- -p 3200` in the background;
-   `S=$(npm run -s agent-db -- session Casey)`; `/picks`, `/live` and
-   `/leaderboard` answer 200 with that cookie.
+   `export S=$(npm run -s agent-db -- session Casey)`; `/picks/review`,
+   `/live` and `/leaderboard` answer 200 with that cookie.
 5. **Browser.** `node .claude/skills/agent-go/shoot.cjs --label after --out
-   /tmp/shots /picks /live` exits 0; read both PNGs and say in one sentence
-   each what they show, and whether anything covers the screen.
+   /tmp/shots /picks /live` exits 0 (it installs puppeteer-core if missing),
+   and prints `/picks (landed on /picks/review)`, since `--live` locks Week 7.
+   Read both PNGs and say in one sentence each what they show, whether
+   anything covers the screen, and whether the bottom nav sits at the bottom.
 6. **Publish.** `npm run agent-shots -- 9999 /tmp/shots` exits 0 and each
    printed image URL answers `200 image/png`.
 

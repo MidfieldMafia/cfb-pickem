@@ -83,8 +83,6 @@ Before writing any code, screenshot every existing screen the ticket will
 change, in the state that shows the change, as the member who would see it:
 
 ```bash
-PPT="$HOME/.cache/slate-browser"
-[ -f "$PPT/.installed" ] || { npm i puppeteer-core --prefix "$PPT" --no-audit --no-fund && touch "$PPT/.installed"; }
 node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 ```
 

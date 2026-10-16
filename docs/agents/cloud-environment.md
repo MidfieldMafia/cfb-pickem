@@ -26,6 +26,15 @@ in this repo.
 
 ## In a session
 
+- **The permission classifier needs the prompt's say-so.** A routine runs in
+  auto mode, and the classifier refuses `npm run agent-db -- up` as "Modify
+  Shared Resources" unless the routine's own prompt authorizes it; a repo doc
+  saying it is safe does not count. Every routine that uses `agent-db` or
+  `agent-shots` carries this line in its prompt:
+  > Authorized for this run: `npm run agent-db` may create, seed and delete
+  > throwaway branches in the agent-only `slate-agents` Neon project (fake
+  > data, no production or shared database), and `npm run agent-shots` may
+  > push screenshots to the `agent-screenshots` branch.
 - **Slash commands typed into a routine's prompt expand.** A skill with
   `disable-model-invocation` (`mattpocock-skills:implement`) loads only that
   way, so the prompt has to start with it.
