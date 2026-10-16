@@ -110,3 +110,29 @@ no cost, no card, and no carrier registration wait.
 - **API shape** (Node SDK `pingram`): `new Pingram({ apiKey })`, then
   `pingram.sms.send({ type, to: '+1…', message })`
   ([docs: send SMS](https://www.pingram.io/docs/quick-start/send-sms)).
+
+## Update (2026-10-16): the budget was the app's, not Pingram's
+
+The app's console showed 91 of 95 spent by October 16 and skipped four members on that
+Friday's reminder, while Pingram's dashboard showed 50 messages sent from October 1 and the
+account on the $20/month plan (about 1,937 SMS left, cycle restarting on the 4th). The 95
+was a constant written for the free tier, and the gap between 91 and 50 was the segment
+count: a reminder naming picks, Lock of the Week and Tiebreaker Guess ran to about 183
+characters and counted as 2.
+
+Changed in response:
+
+- The reminder is worded to bill as one message ("Saturday Slate: Week 8 picks lock Sat 11 AM
+  CT. Still need 3 picks, Lock, Tiebreaker."), with a test holding the longest possible one
+  to 160 characters against the production address.
+- The cap is `TEXT_MONTHLY_BUDGET` (the free tier's 95 when unset) and the month restarts on
+  `TEXT_MONTH_STARTS_ON` (the 1st when unset), so a plan change is a Vercel setting.
+- No member is sent more than 10 billed messages a month.
+- Segments are counted as carriers bill them: a character outside GSM-7, such as an emoji or
+  a curly apostrophe in a display name, sends the whole text as UCS-2 at 70 per message.
+
+At one message per reminder, October's first half projects to about 60–70 messages in a
+month with four Friday Deadlines and 75–85 with five. That fits the free tier, narrowly in a
+five-Friday month. Before dropping back to it, check whether the paid plan is what gives the
+account a registered sending number: the free tier sends from the shared, unregistered
+numbers described above.

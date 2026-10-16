@@ -95,7 +95,7 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
   // the people it cannot reach are named here before anyone presses it.
   const sender = senderFromEnv();
   const budget = await textBudget(database, sender, new Date());
-  const plan = report ? planReminders(report, appUrl(), budget.remaining) : null;
+  const plan = report ? planReminders(report, appUrl(), budget) : null;
   const gameName = new Map(slate.games.map((g) => [g.id, `${g.awayTeam} at ${g.homeTeam}`]));
 
   return (

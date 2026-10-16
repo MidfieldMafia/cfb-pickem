@@ -13,10 +13,14 @@ import { guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from
 import { toE164 } from "./phone";
 import { noopSender, type SmsSender } from "./sender";
 import {
-  MONTHLY_BUDGET,
+  FREE_TIER_BUDGET,
+  MEMBER_MONTHLY_TEXTS,
+  monthlyBudget,
   monthStart,
+  monthStartDay,
   OPT_OUT_LINE,
   planReminders,
+  reminderBody,
   recentTexts,
   remindEveryone,
   reminderSummary,
@@ -103,9 +107,9 @@ describe("reminding everyone who hasn't picked", () => {
     expect(sender.sent[1].to).toBe(em.phone!.replace(/^\+?/, "+"));
     // Thu 2026-09-11 00:00Z is 7:00 PM Central on the 10th. The plain app link, no shortener, and the opt-out.
     expect(sender.sent[1].body).toBe(
-      `Saturday Slate Week 2 picks lock Thu, Sep 10 at 7:00 PM Central. You still need 3 picks, Lock of the Week, Tiebreaker Guess. ${APP} ${OPT_OUT_LINE}`,
+      `Saturday Slate: Week 2 picks lock Thu 7 PM CT. Still need 3 picks, Lock, Tiebreaker. ${APP} ${OPT_OUT_LINE}`,
     );
-    expect(sender.sent[0].body).toContain("You still need 2 picks, Lock of the Week, Tiebreaker Guess.");
+    expect(sender.sent[0].body).toContain("Still need 2 picks, Lock, Tiebreaker.");
   });
 
   test("skips the opted out, the numberless, and the number that will not convert, and says why", async () => {
@@ -147,7 +151,21 @@ describe("reminding everyone who hasn't picked", () => {
       ["Grandma", "reminder", "pingram", false, "carrier rejected"],
     ]);
     const [row] = await db.select().from(textMessages).where(eq(textMessages.memberId, em.id));
-    expect(row).toMatchObject({ weekId: week.id, phone: toE164(em.phone!), segments: 2 });
+    expect(row).toMatchObject({ weekId: week.id, phone: toE164(em.phone!), segments: 1 });
+  });
+
+  test("bills as one message even for the longest reminder the app can write", () => {
+    // Two-digit week and picks, a half-hour Deadline, everything owed, the production address.
+    const report = { week: { weekNumber: 16 }, deadline: new Date("2026-12-05T18:30:00Z") } as Parameters<typeof reminderBody>[0];
+    const row = { progress: { countingGames: 25, picksMade: 0, lockOpen: true, guessSet: false } } as Parameters<typeof reminderBody>[1];
+
+    const body = reminderBody(report, row, "https://slate.midfield-mafia.com/");
+
+    expect(body).toBe(
+      `Saturday Slate: Week 16 picks lock Sat 12:30 PM CT. Still need 25 picks, Lock, Tiebreaker. https://slate.midfield-mafia.com ${OPT_OUT_LINE}`,
+    );
+    expect(body.length).toBeLessThanOrEqual(160);
+    expect(segmentsOf(body)).toBe(1);
   });
 });
 
@@ -155,24 +173,51 @@ describe("the monthly budget", () => {
   test("stops before the cap and names who was left for the commissioner to text by hand", async () => {
     const { db, jonah, grandma, week } = await setup();
     const sender = recorder();
-    // A reminder that names all three things owed runs past 160 characters: two billed parts each.
-    await spend(db, jonah.id, MONTHLY_BUDGET - 3, THURSDAY);
+    await spend(db, jonah.id, FREE_TIER_BUDGET - 1, THURSDAY);
 
     const before = await textBudget(db, sender, THURSDAY);
-    expect(before).toEqual({ used: MONTHLY_BUDGET - 3, budget: MONTHLY_BUDGET, remaining: 3 });
+    expect(before).toMatchObject({ used: FREE_TIER_BUDGET - 1, budget: FREE_TIER_BUDGET, remaining: 1 });
 
     const result = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
 
     expect(result.texted.map((t) => t.member.displayName)).toEqual(["Grandma"]);
     expect(result.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Cousin Em", "over_budget"]]);
     expect(sender.sent.map((s) => s.to)).toEqual([toE164(grandma.phone!)]);
-    expect((await textBudget(db, sender, THURSDAY)).remaining).toBe(1);
+    expect((await textBudget(db, sender, THURSDAY)).remaining).toBe(0);
 
-    // One part is not enough for either reminder, so the plan the console reads names everyone.
+    // Nothing left, so the plan the console reads names everyone.
     const report = await pickReport(db, week.id, THURSDAY);
-    const plan = planReminders(report, APP, 1);
+    const plan = planReminders(report, APP, { remaining: 0, byMember: new Map() });
     expect(plan.send).toEqual([]);
     expect(plan.skip.map((s) => s.why)).toEqual(["over_budget", "over_budget"]);
+  });
+
+  test("a paid plan raises the cap from the environment, and the free tier's stop holds when it is unset or nonsense", async () => {
+    const { db, jonah } = await setup();
+    await spend(db, jonah.id, 200, THURSDAY);
+
+    expect(await textBudget(db, recorder(), THURSDAY, { TEXT_MONTHLY_BUDGET: "1000" })).toMatchObject({ budget: 1000, remaining: 800 });
+    expect(monthlyBudget({})).toBe(FREE_TIER_BUDGET);
+    expect(monthlyBudget({ TEXT_MONTHLY_BUDGET: "" })).toBe(FREE_TIER_BUDGET);
+    expect(monthlyBudget({ TEXT_MONTHLY_BUDGET: "lots" })).toBe(FREE_TIER_BUDGET);
+    expect(monthlyBudget({ TEXT_MONTHLY_BUDGET: "0" })).toBe(0);
+  });
+
+  test("no member is sent more than their month's share, and the rest are still texted", async () => {
+    const { db, jonah, grandma, em, week } = await setup();
+    const sender = recorder();
+    await spend(db, grandma.id, MEMBER_MONTHLY_TEXTS, THURSDAY);
+    await spend(db, em.id, MEMBER_MONTHLY_TEXTS - 1, THURSDAY);
+
+    const result = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
+
+    expect(result.texted.map((t) => t.member.displayName)).toEqual(["Cousin Em"]);
+    expect(result.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Grandma", "member_cap"]]);
+    expect(reminderSummary(result)).toBe(`Texted Cousin Em. Not texted: Grandma (already sent ${MEMBER_MONTHLY_TEXTS} texts this month).`);
+    await expect(textMagicLink(db, sender, jonah, em.id, APP, THURSDAY)).rejects.toThrow("Cousin Em has already sent");
+    // The signed-out form answers as it would for a stranger's number.
+    expect(await textOwnLink(db, sender, grandma.phone!, APP, THURSDAY)).toBe("check_your_texts");
+    expect(sender.sent).toHaveLength(1);
   });
 
   test("counts the calendar month only, delivered texts only, and a long text as its parts", async () => {
@@ -189,6 +234,28 @@ describe("the monthly budget", () => {
     expect(segmentsOf("a".repeat(160))).toBe(1);
     expect(segmentsOf("a".repeat(161))).toBe(2);
     expect(segmentsOf("a".repeat(307))).toBe(3);
+  });
+
+  test("the month can restart on the day Pingram's billing cycle does", async () => {
+    const { db, jonah } = await setup();
+    // THURSDAY is 2026-09-10: a cycle that restarts on the 4th began on 2026-09-04.
+    await spend(db, jonah.id, 7, new Date("2026-09-03T12:00:00Z"));
+    await spend(db, jonah.id, 2, new Date("2026-09-05T12:00:00Z"));
+
+    expect((await textBudget(db, recorder(), THURSDAY, { TEXT_MONTH_STARTS_ON: "4" })).used).toBe(2);
+    expect((await textBudget(db, recorder(), THURSDAY, {})).used).toBe(9);
+    expect(monthStart(THURSDAY, 4)).toEqual(new Date("2026-09-04T00:00:00Z"));
+    expect(monthStart(new Date("2026-10-02T12:00:00Z"), 4)).toEqual(new Date("2026-09-04T00:00:00Z"));
+    expect(monthStart(new Date("2026-01-02T12:00:00Z"), 4)).toEqual(new Date("2025-12-04T00:00:00Z"));
+    expect([monthStartDay({}), monthStartDay({ TEXT_MONTH_STARTS_ON: "31" }), monthStartDay({ TEXT_MONTH_STARTS_ON: "4" })]).toEqual([1, 1, 4]);
+  });
+
+  test("an extended character takes two places, and one outside GSM-7 sends the text as UCS-2", () => {
+    expect(segmentsOf("€".repeat(80))).toBe(1);
+    expect(segmentsOf("€".repeat(81))).toBe(2);
+    expect(segmentsOf("a".repeat(69) + "’")).toBe(1);
+    expect(segmentsOf("a".repeat(70) + "’")).toBe(2);
+    expect(segmentsOf("🏈" + "a".repeat(69))).toBe(2);
   });
 
   test("the no-op sender has no budget and its rows spend none", async () => {
@@ -237,7 +304,7 @@ describe("texting a Magic Link", () => {
 
   test("refuses rather than overspend, so the link can go by hand", async () => {
     const { db, jonah, grandma } = await setup();
-    await spend(db, jonah.id, MONTHLY_BUDGET, THURSDAY);
+    await spend(db, jonah.id, FREE_TIER_BUDGET, THURSDAY);
     await expect(textMagicLink(db, recorder(), jonah, grandma.id, APP, THURSDAY)).rejects.toThrow("send it by hand");
   });
 });
@@ -354,7 +421,7 @@ describe("text me my link", () => {
   test("says the budget is spent, for every number alike, and sends nothing", async () => {
     const { db, jonah, grandma } = await setup();
     const sender = recorder();
-    await spend(db, jonah.id, MONTHLY_BUDGET, THURSDAY);
+    await spend(db, jonah.id, FREE_TIER_BUDGET, THURSDAY);
 
     expect(await textOwnLink(db, sender, grandma.phone!, APP, THURSDAY)).toBe("budget_spent");
     expect(await textOwnLink(db, sender, "(256) 555-9999", APP, THURSDAY)).toBe("budget_spent");
