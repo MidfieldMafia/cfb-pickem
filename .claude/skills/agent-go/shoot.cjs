@@ -32,7 +32,15 @@ if (!label || targets.length === 0) {
 }
 
 const BASE = process.env.BASE || "http://localhost:3200";
-const session = (process.env.S || "").replace(/^slate_session=/, "").trim();
+// S, or the cookie `agent-db session` last minted, kept in its state file.
+const saved = () => {
+  try {
+    return JSON.parse(fs.readFileSync(".agent-db.json", "utf8")).session || "";
+  } catch {
+    return "";
+  }
+};
+const session = (process.env.S || saved()).replace(/^slate_session=/, "").trim();
 if (!session) {
   console.error("Set S to the slate_session=<id> line from `npm run agent-db -- session <name>`.");
   process.exit(2);
@@ -43,7 +51,15 @@ const CHROME =
   ["/opt/pw-browsers/chromium", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"].find((p) =>
     fs.existsSync(p),
   );
-const puppeteer = require(path.join(os.homedir(), ".cache/slate-browser/node_modules/puppeteer-core"));
+// Installed once per machine outside the repo (verify-running-app/browser.md), here if missing.
+const PPT = path.join(os.homedir(), ".cache/slate-browser");
+if (!fs.existsSync(path.join(PPT, ".installed"))) {
+  require("child_process").execFileSync("npm", ["i", "puppeteer-core", "--prefix", PPT, "--no-audit", "--no-fund"], {
+    stdio: ["ignore", "ignore", "inherit"],
+  });
+  fs.writeFileSync(path.join(PPT, ".installed"), "");
+}
+const puppeteer = require(path.join(PPT, "node_modules/puppeteer-core"));
 
 /** "/picks/review?week=6" → "picks-review-week-6"; "/" → "home". */
 const keyOf = (target) => {
@@ -75,13 +91,24 @@ const keyOf = (target) => {
     const [key, urlPath] = keyOf(target);
     try {
       const response = await page.goto(new URL(urlPath, BASE).href, { waitUntil: "domcontentloaded", timeout: 60000 });
-      // Client components settle after the first paint; networkidle never fires against next dev.
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Client components settle after the first paint, and a streamed redirect
+      // (a locked Week's /picks → /picks/review) lands only after next dev compiles
+      // its target. Wait for the page's own requests to go quiet, but not for the
+      // network to: Chromium's refused calls to Google keep that busy forever.
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await page.waitForNetworkIdle({ idleTime: 1500, timeout: 30000 }).catch(() => {});
       // next dev's own badge sits over the bottom nav; it is not part of the app.
       await page.evaluate(() => document.querySelectorAll("nextjs-portal").forEach((el) => el.remove()));
+      // A full-page screenshot draws fixed elements where the first screen ended, so
+      // grow the viewport to the page instead: the bottom nav stays at the bottom.
+      const height = await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewport({ width: 390, height: Math.max(844, height), deviceScaleFactor: 2 });
       const file = path.join(out, `${label}--${key}.png`);
-      await page.screenshot({ path: file, fullPage: true });
-      console.log(`${response ? response.status() : "???"} ${urlPath} -> ${file}`);
+      await page.screenshot({ path: file });
+      await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+      const landed = new URL(page.url()).pathname;
+      const moved = landed === new URL(urlPath, BASE).pathname ? "" : ` (landed on ${landed})`;
+      console.log(`${response ? response.status() : "???"} ${urlPath}${moved} -> ${file}`);
     } catch (error) {
       failed++;
       console.error(`FAILED ${urlPath}: ${error.message}`);

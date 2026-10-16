@@ -6,6 +6,8 @@ Verify with `npm run typecheck`, `npm run test`, and `npx eslint src`.
 
 Before a push, run `npm run preflight` once the work is committed: it runs `npx next build` and all three, prints one line, and stamps the clean tree it passed. The push gate in `.claude/hooks/preflight.sh` runs the same script, so it lets a stamped tree through without running anything, and runs the checks itself on anything else. Checking by hand as well only repeats the work.
 
+No formatter is configured: match the surrounding file's line width and style, and leave `prettier` unrun, since it rewrites whole files to 80 columns.
+
 When an `/implement` run, or any build of a numbered ticket, ends with its checks and review done, push and open the PR without asking first. Merging stays with the human.
 
 A fresh worktree needs `npm ci` before any of them: `node_modules` is not shared, and `vitest.config.ts` resolves its `server-only` alias relative to itself, so without a local install every server-seam suite fails to import. `typecheck` also reports `Cannot find name 'LayoutProps'` in `src/app/layout.tsx` until `next dev` has run there once and written `.next/types`.
@@ -34,6 +36,10 @@ Labelling an issue `agent:go` fires a cloud routine that builds it and opens a
 PR; `ready-for-agent` alone starts nothing. A blocked ticket keeps the label and
 waits; a second routine re-fires it when its last blocker's PR merges. See
 `.claude/skills/agent-go/SKILL.md` and `.claude/skills/agent-go-queue/SKILL.md`.
+
+Running in a cloud session (any routine): what that environment can and cannot
+do is in `docs/agents/cloud-environment.md`, and `docs/agents/cloud-probe.md`
+re-checks it.
 
 ### Changelog
 

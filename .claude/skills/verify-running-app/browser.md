@@ -52,7 +52,7 @@ const page = await browser.newPage();
 await page.setViewport({ width: 1440, height: 900 });
 // The cookie from step 3. `domain` is the host with no port.
 await page.setCookie({ name: "slate_session", value: SESSION, domain: "localhost", path: "/" });
-await page.goto(`${BASE}/week`, { waitUntil: "domcontentloaded" });
+await page.goto(`${BASE}/picks`, { waitUntil: "domcontentloaded" });
 ```
 
 **End the script cleanly.** It hangs against `next dev` otherwise, and each hung

@@ -9,6 +9,8 @@ Jonah applies `agent:go` to a ticket that should be built now; `ready-for-agent`
 means the ticket is fully written. A cloud routine fires on GitHub's "Issue:
 Labeled" event, filtered on `agent:go`, and runs this skill unattended. Nobody
 is watching, so every refusal is a comment on the issue, never a question.
+What the cloud can and cannot do, and the reason behind each workaround below,
+is in `docs/agents/cloud-environment.md`: read it when a command fails there.
 
 ## 1. Gate
 
@@ -56,29 +58,31 @@ after the change. `scripts/agent-db.ts` gives the run its own database for the
 whole build: a branch of the `slate-agents` Neon project with a fake league,
 which `verify-running-app` then reads like any other.
 
-The cloud reaches the internet only through `HTTPS_PROXY`, which Node's own
-`fetch` ignores unless told, and both `agent-db` and the app's database driver
-use it. Export the switch first, in the same shell as everything after:
+Each command runs in a fresh shell, so nothing exported carries over: the
+scripts keep their own state. `agent-db` sets up the cloud's proxy itself, and
+`session` saves the cookie where `shoot.cjs` finds it. The dev server is the
+one command that needs the proxy switch on its own line:
 
 ```bash
-export NODE_USE_ENV_PROXY=1
-npm run agent-db -- up <issue number>   # branch, .env.local, migrate, seed
-npm run dev -- -p 3200                  # in the background
-export S=$(npm run -s agent-db -- session Casey)
+npm run agent-db -- up <issue number>                 # branch, .env.local, migrate, seed
+NODE_USE_ENV_PROXY=1 npm run dev -- -p 3200           # in the background
+npm run -s agent-db -- session Casey                  # prints and saves the cookie
 ```
 
 `up` prints the fake members and the state each is in: Casey is the
 commissioner and organizer, Jordan and Riley have every Week 7 pick in, Morgan
 some, Taylor and Sam none, and Drew has not finished `/welcome`. Week 6 is
-final; Week 7 is open with its Deadline three days out. Set up any other state
-the screens need with SQL against the branch: it is yours and is deleted after.
+final; Week 7 is open with its Deadline three days out. For a screen that
+shows a game under way (the Live Board, the Game sheet, the field card), run
+`up <issue number> --live` instead: Week 7's Deadline has passed and Liberty at
+Coastal Carolina is in progress, Q2 10:27, from a real recorded CFBD feed.
+Set up any other state the screens need with SQL against the branch: it is
+yours and is deleted after.
 
 Before writing any code, screenshot every existing screen the ticket will
 change, in the state that shows the change, as the member who would see it:
 
 ```bash
-PPT="$HOME/.cache/slate-browser"
-[ -f "$PPT/.installed" ] || { npm i puppeteer-core --prefix "$PPT" --no-audit --no-fund && touch "$PPT/.installed"; }
 node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 ```
 
