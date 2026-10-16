@@ -135,7 +135,7 @@ export function deadlineInCentral(deadline: Date): string {
   return `${date.format(deadline)} at ${time.format(deadline)} Central`;
 }
 
-/** What one member still owes, for the reminder: "2 picks, Lock of the Week, Tiebreaker Guess". */
+/** What one member still owes, for the console: "2 picks, Lock of the Week, Tiebreaker Guess". The text says it shorter. */
 export function owed(row: Pick<MemberProgress<unknown>, "progress">): string[] {
   const missing: string[] = [];
   const picksLeft = row.progress.countingGames - row.progress.picksMade;

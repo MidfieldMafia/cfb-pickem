@@ -16,9 +16,11 @@ import "server-only";
 import { and, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
 import { members, textMessages, type Member, type TextKind } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { formatterFor } from "@/lib/intl-time";
 import type { Commissioner } from "@/lib/members/authority";
 import { InvalidMember, magicLinkFor } from "@/lib/members/members";
-import { deadlineInCentral, owed, pickReport, type MemberProgress, type PickReport } from "@/lib/picks/console";
+import { pickReport, type MemberProgress, type PickReport } from "@/lib/picks/console";
+import { plural } from "@/lib/plural";
 import { Refusal } from "@/lib/refusal";
 import { publishedSlate } from "@/lib/slate/slate";
 import { toE164 } from "./phone";
@@ -30,9 +32,31 @@ export const OPT_OUT_LINE = "Reply STOP to opt out.";
 /**
  * Pingram's free tier is 100 US SMS a month. The app stops five short of it, so
  * a text that segments differently than we count, or a send made by hand from
- * the dashboard, does not tip the account over.
+ * the dashboard, does not tip the account over. A paid plan raises the cap
+ * with `TEXT_MONTHLY_BUDGET`, and no code changes.
  */
-export const MONTHLY_BUDGET = 95;
+export const FREE_TIER_BUDGET = 95;
+
+/**
+ * No member is sent more than this in a month, whatever the budget: a month of
+ * Friday reminders is four or five, so the rest is room for Magic Links, and a
+ * button pressed over and over cannot spend the month on one person.
+ */
+export const MEMBER_MONTHLY_TEXTS = 10;
+
+type Env = Record<string, string | undefined>;
+
+/** `TEXT_MONTHLY_BUDGET`, the billed messages a month may spend; the free tier's stop when unset. */
+export function monthlyBudget(env: Env = process.env): number {
+  const set = Number(env.TEXT_MONTHLY_BUDGET);
+  return env.TEXT_MONTHLY_BUDGET && Number.isInteger(set) && set >= 0 ? set : FREE_TIER_BUDGET;
+}
+
+/** `TEXT_MONTH_STARTS_ON`, the day of the month Pingram's billing cycle restarts on (1–28); the 1st when unset. */
+export function monthStartDay(env: Env = process.env): number {
+  const set = Number(env.TEXT_MONTH_STARTS_ON);
+  return Number.isInteger(set) && set >= 1 && set <= 28 ? set : 1;
+}
 
 /** How far ahead of the Deadline the scheduled reminder looks. The cron runs once a day. */
 export const REMINDER_WINDOW_MS = 24 * 3600_000;
@@ -40,19 +64,36 @@ export const REMINDER_WINDOW_MS = 24 * 3600_000;
 export class TextRefused extends Refusal {}
 
 /** Why the app did not text someone. */
-export type Unreached = "deactivated" | "opted_out" | "no_phone" | "bad_phone" | "over_budget";
+export type Unreached = "deactivated" | "opted_out" | "no_phone" | "bad_phone" | "member_cap" | "over_budget";
 
 export const UNREACHED: Record<Unreached, string> = {
   deactivated: "deactivated",
   opted_out: "opted out",
   no_phone: "no phone number",
   bad_phone: "phone number is not one we can text",
+  member_cap: `already sent ${MEMBER_MONTHLY_TEXTS} texts this month`,
   over_budget: "month's text budget is used up",
 };
 
-/** Billed messages in a body: one up to 160 characters, then 153 to a part. */
+/** The GSM-7 alphabet a plain text is sent in, and the characters that take two of its slots. */
+const GSM_BASIC =
+  "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+const GSM_EXTENDED = "^{}\\[~]|€\f";
+
+/**
+ * Billed messages in a body. In GSM-7 that is one up to 160 characters, then
+ * 153 to a part, with an extended character such as `€` taking two. One
+ * character outside it, an emoji or a curly apostrophe in a name, sends the
+ * whole text as UCS-2: one up to 70 code units, then 67 to a part.
+ */
 export function segmentsOf(body: string): number {
-  return body.length <= 160 ? 1 : Math.ceil(body.length / 153);
+  let septets = 0;
+  for (const char of body) {
+    if (GSM_BASIC.includes(char)) septets += 1;
+    else if (GSM_EXTENDED.includes(char)) septets += 2;
+    else return body.length <= 70 ? 1 : Math.ceil(body.length / 67);
+  }
+  return septets <= 160 ? 1 : Math.ceil(septets / 153);
 }
 
 const withOptOut = (body: string) => `${body} ${OPT_OUT_LINE}`;
@@ -61,11 +102,32 @@ export function magicLinkBody(member: Member, appUrl: string): string {
   return withOptOut(`Hi ${member.displayName}, your Saturday Slate sign-in link: ${magicLinkFor(member, appUrl)}`);
 }
 
-export function reminderBody(report: PickReport, row: MemberProgress, appUrl: string): string {
+/** "Sat 11 AM CT": a reminder goes out in its Deadline's own week, so the weekday is enough. */
+export function deadlineBriefly(deadline: Date): string {
+  const at = formatterFor({ weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" });
+  return `${at.format(deadline).replace(":00", "")} CT`;
+}
+
+/** What one member still owes, as short as stays clear: "2 picks, Lock, Tiebreaker". */
+function owedBriefly(row: Pick<MemberProgress, "progress">): string {
+  const missing: string[] = [];
+  const picksLeft = row.progress.countingGames - row.progress.picksMade;
+  if (picksLeft > 0) missing.push(plural(picksLeft, "pick"));
+  if (row.progress.lockOpen) missing.push("Lock");
+  if (!row.progress.guessSet) missing.push("Tiebreaker");
+  return missing.join(", ");
+}
+
+/** Worded to bill as one message whatever the member owes; a test holds the longest one to 160 characters. */
+export function reminderBody(
+  report: Pick<PickReport, "week" | "deadline">,
+  row: Pick<MemberProgress, "progress">,
+  appUrl: string,
+): string {
   const link = appUrl.replace(/\/+$/, "");
   return withOptOut(
-    `Saturday Slate Week ${report.week.weekNumber} picks lock ${deadlineInCentral(report.deadline)}. ` +
-      `You still need ${owed(row).join(", ")}. ${link}`,
+    `Saturday Slate: Week ${report.week.weekNumber} picks lock ${deadlineBriefly(report.deadline)}. ` +
+      `Still need ${owedBriefly(row)}. ${link}`,
   );
 }
 
@@ -78,27 +140,50 @@ function reach(member: Member): { to: string } | { why: Unreached } {
   return to ? { to } : { why: "bad_phone" };
 }
 
-/** The first instant of `now`'s calendar month, in UTC: the month Pingram bills. */
-export function monthStart(now: Date): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+/**
+ * The first instant of the billing month `now` is in, in UTC: the month Pingram
+ * bills, which restarts on `startDay` rather than always on the 1st.
+ */
+export function monthStart(now: Date, startDay = 1): Date {
+  const thisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), startDay));
+  return thisMonth <= now ? thisMonth : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, startDay));
 }
 
 export interface TextBudget {
   used: number;
   budget: number;
   remaining: number;
+  /** Billed messages each member has been sent this month; a member sent none is absent. */
+  byMember: ReadonlyMap<number, number>;
 }
 
-/** What this month's delivered texts have spent. A failed try and a no-op row spend nothing. */
-export async function textBudget(db: Db, sender: SmsSender, now: Date): Promise<TextBudget> {
-  const [row] = await db
-    .select({ used: sql<number>`coalesce(sum(${textMessages.segments}), 0)::int` })
+/**
+ * What this month's delivered texts have spent, in all and per member. A failed
+ * try and a no-op row spend nothing. `env` holds the budget and the day the
+ * month restarts.
+ */
+export async function textBudget(db: Db, sender: SmsSender, now: Date, env: Env = process.env): Promise<TextBudget> {
+  const rows = await db
+    .select({ memberId: textMessages.memberId, used: sql<number>`sum(${textMessages.segments})::int` })
     .from(textMessages)
-    .where(and(eq(textMessages.status, "sent"), ne(textMessages.provider, NOOP), gte(textMessages.createdAt, monthStart(now))));
-  const used = row.used;
+    .where(
+      and(
+        eq(textMessages.status, "sent"),
+        ne(textMessages.provider, NOOP),
+        gte(textMessages.createdAt, monthStart(now, monthStartDay(env))),
+      ),
+    )
+    .groupBy(textMessages.memberId);
+  const byMember = new Map(rows.map((r) => [r.memberId, r.used]));
+  const used = rows.reduce((sum, r) => sum + r.used, 0);
   // Nothing delivered, so nothing to run out of.
-  const budget = sender.name === NOOP ? Number.POSITIVE_INFINITY : MONTHLY_BUDGET;
-  return { used, budget, remaining: Math.max(0, budget - used) };
+  const budget = sender.name === NOOP ? Number.POSITIVE_INFINITY : monthlyBudget(env);
+  return { used, budget, remaining: Math.max(0, budget - used), byMember };
+}
+
+/** Whether `segments` more would take a member past their month. */
+function overMemberCap(budget: Pick<TextBudget, "byMember">, memberId: number, segments: number): boolean {
+  return (budget.byMember.get(memberId) ?? 0) + segments > MEMBER_MONTHLY_TEXTS;
 }
 
 export interface PlannedText {
@@ -121,11 +206,11 @@ export interface ReminderPlan {
 export function planReminders(
   report: PickReport,
   appUrl: string,
-  remaining: number,
+  budget: Pick<TextBudget, "remaining" | "byMember">,
   already: ReadonlySet<number> = new Set(),
 ): ReminderPlan {
   const plan: ReminderPlan = { send: [], skip: [] };
-  let left = remaining;
+  let left = budget.remaining;
   for (const row of report.members) {
     if (row.complete || already.has(row.member.id)) continue;
     const target = reach(row.member);
@@ -135,6 +220,10 @@ export function planReminders(
     }
     const body = reminderBody(report, row, appUrl);
     const segments = segmentsOf(body);
+    if (overMemberCap(budget, row.member.id, segments)) {
+      plan.skip.push({ row, why: "member_cap" });
+      continue;
+    }
     if (segments > left) {
       plan.skip.push({ row, why: "over_budget" });
       continue;
@@ -188,7 +277,11 @@ export async function textMagicLink(
   if ("why" in target) throw new TextRefused(`${member.displayName} was not texted: ${UNREACHED[target.why]}.`);
   const body = magicLinkBody(member, appUrl);
   const segments = segmentsOf(body);
-  if (segments > (await textBudget(db, sender, now)).remaining) {
+  const budget = await textBudget(db, sender, now);
+  if (overMemberCap(budget, member.id, segments)) {
+    throw new TextRefused(`${member.displayName} has ${UNREACHED.member_cap}; copy their link and send it by hand.`);
+  }
+  if (segments > budget.remaining) {
     throw new TextRefused(`${UNREACHED.over_budget}; copy ${member.displayName}'s link and send it by hand.`);
   }
   const outcome = await deliver(db, sender, "magic_link", null, { member, to: target.to, body, segments });
@@ -238,7 +331,10 @@ export async function textOwnLink(
   if (recent) return "check_your_texts";
   const body = magicLinkBody(member, appUrl);
   const segments = segmentsOf(body);
-  if (segments > (await textBudget(db, sender, now)).remaining) return "budget_spent";
+  const budget = await textBudget(db, sender, now);
+  // Answered as for a number nobody holds, so the cap tells nobody who plays.
+  if (overMemberCap(budget, member.id, segments)) return "check_your_texts";
+  if (segments > budget.remaining) return "budget_spent";
   await deliver(db, sender, "magic_link", null, { member, to: asked, body, segments });
   return "check_your_texts";
 }
@@ -269,8 +365,7 @@ async function sendReminders(
   now: Date,
   already?: ReadonlySet<number>,
 ): Promise<ReminderResult> {
-  const { remaining } = await textBudget(db, sender, now);
-  const plan = planReminders(report, appUrl, remaining, already);
+  const plan = planReminders(report, appUrl, await textBudget(db, sender, now), already);
   const texted: TextOutcome[] = [];
   // One at a time: a shared sender number is rate limited, and the order stays the roster's.
   for (const text of plan.send) texted.push(await deliver(db, sender, kind, report.week.id, text));
