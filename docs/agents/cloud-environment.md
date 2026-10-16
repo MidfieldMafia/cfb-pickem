@@ -29,12 +29,22 @@ in this repo.
 - **The permission classifier needs the prompt's say-so.** A routine runs in
   auto mode, and the classifier refuses `npm run agent-db -- up` as "Modify
   Shared Resources" unless the routine's own prompt authorizes it; a repo doc
-  saying it is safe does not count. Every routine that uses `agent-db` or
-  `agent-shots` carries this line in its prompt:
-  > Authorized for this run: `npm run agent-db` may create, seed and delete
-  > throwaway branches in the agent-only `slate-agents` Neon project (fake
-  > data, no production or shared database), and `npm run agent-shots` may
-  > push screenshots to the `agent-screenshots` branch.
+  saying it is safe does not count. Each routine's prompt ends with what it
+  is authorized to change. `agent:go: build the ticket`:
+  > Authorized for this run: removing the `agent:go` label from, assigning,
+  > and commenting on the issue that started it; pushing a branch and opening
+  > a PR; `npm run agent-db` may create, seed and delete throwaway branches in
+  > the agent-only `slate-agents` Neon project (fake data, no production or
+  > shared database); and `npm run agent-shots` may push screenshots to the
+  > `agent-screenshots` branch.
+
+  `agent:go: release queued tickets`:
+  > Authorized for this run: removing and re-adding the `agent:go` label on
+  > open issues whose blockers are all closed (this is what starts their
+  > build), and commenting on those issues.
+
+  The label and comment lines are precautionary: no run has been refused one
+  yet. The `agent-db` line is not: a probe was refused without it.
 - **Slash commands typed into a routine's prompt expand.** A skill with
   `disable-model-invocation` (`mattpocock-skills:implement`) loads only that
   way, so the prompt has to start with it.
