@@ -68,6 +68,8 @@ in this repo.
 
 ## Testing a routine
 
-The disabled routine "agent:go smoke test (one-off)"
-(`trig_01Jeu99ndzunY2cXy7tQbEr7`) is a probe: point its prompt at
-`docs/agents/cloud-probe.md` and run it with the `RemoteTrigger` tool.
+No probe routine is kept. To check the environment, create a disabled routine
+with the `RemoteTrigger` tool, in this environment and on this repository,
+whose prompt is the one `docs/agents/cloud-probe.md` gives; `run` it, read it
+with `get_run_log`, and ask the user to delete it afterwards, since the tool
+cannot.
