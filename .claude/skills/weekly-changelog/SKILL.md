@@ -7,9 +7,10 @@ description: Write the week's What's new entry in CHANGELOG.md and the What's ne
 
 `CHANGELOG.md` has two halves. `npm run changelog` owns the generated one and
 needs nothing from you. This skill is the other half: the handful of bullets a
-member of the league would notice, in their words. It also writes the What's new
-modal, which is how members actually see them: it opens by itself once for each
-new entry, and the Profile menu's What's new row reopens it.
+member of the league would notice, in their words. In a week with something
+new, it also writes the What's new modal, which is how members actually see
+them: it opens by itself once in each browser whenever its entry changes, and
+the Profile menu's What's new row reopens it.
 
 Run it on a Thursday morning, and understand why it is that day rather than the
 start of the week. Most of a week's shipping happens Monday to Wednesday, aimed
@@ -108,10 +109,28 @@ That rewrites the generated half and derives `src/data/changelog.json` from the
 prose you just wrote. Both files belong in the commit. Check the JSON picked up
 your entry; if `entries` did not grow, the heading is malformed.
 
-## 5. Write the modal's entry
+## 5. Decide whether the modal changes
+
+The CHANGELOG gets every week's entry. The modal does not: it interrupts every
+member once, so it only changes in a week that gives them something new to do
+or see — a new screen, a new feature, a change to how they play. A week of small
+changes doesn't qualify: polish to something that already exists, fixes and
+background work. That holds even when the polish is visible, like a restyled
+card or new colours on the field. Its bullets go in the CHANGELOG and `ENTRY` is
+left alone.
+
+Leaving `ENTRY` alone keeps its `id`, so members who already closed the modal
+don't see it again. The next week that does qualify brings it back. When you
+can't tell, leave it alone: a modal that opens for nothing teaches members to
+close it unread, and the CHANGELOG still has the bullets.
+
+Such a week changes only `CHANGELOG.md` and `src/data/changelog.json`; skip to
+step 6, and the PR's `Members see:` line is `no`.
+
+## 5a. Write the modal's entry
 
 The modal does not read `CHANGELOG.md`. Its copy is the `ENTRY` constant in
-`src/components/whats-new.tsx`, and you replace it each week:
+`src/components/whats-new.tsx`, and in a week that qualifies you replace it:
 
 - **`id`**: the first date of the heading's range (`2026-10-04` for
   `### 2026-10-04 to 2026-10-10`). A new `id` is what opens the modal again for
@@ -127,13 +146,9 @@ The modal does not read `CHANGELOG.md`. Its copy is the `ENTRY` constant in
   games, `SmilePlus` for reactions). Add it to the import and drop any the old
   entry used that the new one does not — ESLint fails on an unused import.
 
-If every bullet this week is a fix or a background change, leave `ENTRY` alone
-and say so in the PR: a modal that opens for nothing teaches members to close it
-unread.
-
 ## 6. Check it
 
-A normal week now changes `CHANGELOG.md`, `src/data/changelog.json` and
+A week with a modal entry changes `CHANGELOG.md`, `src/data/changelog.json` and
 `src/components/whats-new.tsx`. The last is a client component, so commit, then
 run `npm run preflight`: it builds first, which also writes the `.next/types`
 that `typecheck` needs on a cold checkout, then runs typecheck, test and eslint.
