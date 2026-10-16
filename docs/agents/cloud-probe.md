@@ -30,14 +30,16 @@ one fails, and run `npm run agent-db -- down` at the end whatever happened.
    `agent-go` and `agent-go-queue` are in your skills list.
 2. **Install and build.** `npm ci`, then `npx next build`: exit codes and
    seconds.
-3. **Neon.** With `NODE_USE_ENV_PROXY=1`: `npm run agent-db -- up probe --live`
-   exits 0 and prints the members.
-4. **Signed in.** `npm run dev -- -p 3200` in the background;
-   `export S=$(npm run -s agent-db -- session Casey)`; `/picks/review`,
-   `/live` and `/leaderboard` answer 200 with that cookie.
+3. **Neon.** `npm run agent-db -- up probe --live`, with no proxy variable set
+   by you, exits 0 and prints the members.
+4. **Signed in.** `NODE_USE_ENV_PROXY=1 npm run dev -- -p 3200` in the
+   background; `npm run -s agent-db -- session Casey` prints a cookie;
+   `/picks/review`, `/live` and `/leaderboard` answer 200 with it.
 5. **Browser.** `node .claude/skills/agent-go/shoot.cjs --label after --out
    /tmp/shots /picks /live` exits 0 (it installs puppeteer-core if missing),
    and prints `/picks (landed on /picks/review)`, since `--live` locks Week 7.
+   Run it in a new command without setting `S`: it reads the saved cookie. On
+   `/live`, the Liberty game's newest play reads seconds or minutes ago.
    Read both PNGs and say in one sentence each what they show, whether
    anything covers the screen, and whether the bottom nav sits at the bottom.
 6. **Publish.** `npm run agent-shots -- 9999 /tmp/shots` exits 0 and each

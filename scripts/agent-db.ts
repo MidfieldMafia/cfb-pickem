@@ -18,7 +18,7 @@
  * write, and to seed a database that already has members, so it cannot land on
  * the shared Development database or production.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { neon } from "@neondatabase/serverless";
@@ -38,6 +38,8 @@ const HOUR = 60 * 60 * 1000;
 interface State {
   branchId: string;
   branchName: string;
+  /** The newest `session` cookie line, for shoot.cjs. */
+  session?: string;
 }
 
 async function api(path: string, init: RequestInit = {}): Promise<Response> {
@@ -320,6 +322,13 @@ async function addLiveGame(db: ReturnType<typeof connect>, weekId: number, kicko
   // The app never reads the feed's `teams`, so its type leaves them unknown; the fixture has them.
   type FeedTeam = { teamId: number; team: string; homeAway: "home" | "away"; points: number };
   const feed = JSON.parse(readFileSync(LIVE_FIXTURE, "utf8")) as Omit<CfbdLiveGame, "teams"> & { teams: FeedTeam[] };
+  // The recording is weeks old, and the Live Board says how long ago the newest
+  // play was: move every play forward so the newest one was logged just now.
+  const newest = newestPlay(feed.drives);
+  const shift = newest ? Date.now() - 30_000 - Date.parse(newest.wallClock) : 0;
+  for (const drive of feed.drives) {
+    for (const play of drive.plays) play.wallClock = new Date(Date.parse(play.wallClock) + shift).toISOString();
+  }
   const home = feed.teams.find((t) => t.homeAway === "home")!;
   const away = feed.teams.find((t) => t.homeAway === "away")!;
   const teams = { homeTeamId: home.teamId, awayTeamId: away.teamId };
@@ -358,7 +367,11 @@ async function session(name: string) {
   if (!member) throw new Error(`No fixture member named ${name}.`);
   const id = secret();
   await db.insert(schema.sessions).values({ id, memberId: member.id });
-  // A throwaway branch's session: printing it is how the caller gets it.
+  // A throwaway branch's session: printing it is how the caller gets it, and
+  // the state file keeps it for shoot.cjs, since an agent's shell variables do
+  // not outlive one command.
+  const state = JSON.parse(readFileSync(STATE_FILE, "utf8")) as State;
+  writeFileSync(STATE_FILE, JSON.stringify({ ...state, session: `slate_session=${id}` } satisfies State));
   console.log(`slate_session=${id}`);
 }
 
@@ -382,10 +395,22 @@ async function main() {
   throw new Error("Usage: npm run agent-db -- up <name> | session <member> | down");
 }
 
-main().then(
-  () => process.exit(0),
-  (error) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exit(1);
-  },
-);
+// Node's own fetch ignores HTTPS_PROXY unless NODE_USE_ENV_PROXY was set when
+// it started, and the cloud reaches the internet only through that proxy. An
+// agent's environment does not carry between commands, so set it here: rerun
+// this same process with it.
+if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) {
+  const child = spawnSync(process.execPath, [...process.execArgv, ...process.argv.slice(1)], {
+    stdio: "inherit",
+    env: { ...process.env, NODE_USE_ENV_PROXY: "1" },
+  });
+  process.exit(child.status ?? 1);
+} else {
+  main().then(
+    () => process.exit(0),
+    (error) => {
+      console.error(error instanceof Error ? error.message : error);
+      process.exit(1);
+    },
+  );
+}

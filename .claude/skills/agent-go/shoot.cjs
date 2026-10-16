@@ -32,7 +32,15 @@ if (!label || targets.length === 0) {
 }
 
 const BASE = process.env.BASE || "http://localhost:3200";
-const session = (process.env.S || "").replace(/^slate_session=/, "").trim();
+// S, or the cookie `agent-db session` last minted, kept in its state file.
+const saved = () => {
+  try {
+    return JSON.parse(fs.readFileSync(".agent-db.json", "utf8")).session || "";
+  } catch {
+    return "";
+  }
+};
+const session = (process.env.S || saved()).replace(/^slate_session=/, "").trim();
 if (!session) {
   console.error("Set S to the slate_session=<id> line from `npm run agent-db -- session <name>`.");
   process.exit(2);

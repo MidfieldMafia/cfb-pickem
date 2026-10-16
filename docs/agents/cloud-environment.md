@@ -39,8 +39,10 @@ in this repo.
   `disable-model-invocation` (`mattpocock-skills:implement`) loads only that
   way, so the prompt has to start with it.
 - **Node's `fetch` ignores `HTTPS_PROXY`**, and the cloud reaches the internet
-  only through it: `export NODE_USE_ENV_PROXY=1` before `agent-db`, `next dev`,
-  or any script that calls out. `curl`, `git` and `gh` need nothing.
+  only through it: `agent-db` restarts itself with `NODE_USE_ENV_PROXY=1`, and
+  `next dev` or any other Node script that calls out needs it on its own
+  command line. Each command runs in a fresh shell, so an `export` never
+  reaches the next one. `curl`, `git` and `gh` need nothing.
 - **`gh api` works**; `gh auth status` reports an invalid token regardless.
 - **The database** is a throwaway `slate-agents` branch from
   `npm run agent-db` (`scripts/agent-db.ts`). There is no `.env.local`

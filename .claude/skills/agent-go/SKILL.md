@@ -58,15 +58,15 @@ after the change. `scripts/agent-db.ts` gives the run its own database for the
 whole build: a branch of the `slate-agents` Neon project with a fake league,
 which `verify-running-app` then reads like any other.
 
-The cloud reaches the internet only through `HTTPS_PROXY`, which Node's own
-`fetch` ignores unless told, and both `agent-db` and the app's database driver
-use it. Export the switch first, in the same shell as everything after:
+Each command runs in a fresh shell, so nothing exported carries over: the
+scripts keep their own state. `agent-db` sets up the cloud's proxy itself, and
+`session` saves the cookie where `shoot.cjs` finds it. The dev server is the
+one command that needs the proxy switch on its own line:
 
 ```bash
-export NODE_USE_ENV_PROXY=1
-npm run agent-db -- up <issue number>   # branch, .env.local, migrate, seed
-npm run dev -- -p 3200                  # in the background
-export S=$(npm run -s agent-db -- session Casey)
+npm run agent-db -- up <issue number>                 # branch, .env.local, migrate, seed
+NODE_USE_ENV_PROXY=1 npm run dev -- -p 3200           # in the background
+npm run -s agent-db -- session Casey                  # prints and saves the cookie
 ```
 
 `up` prints the fake members and the state each is in: Casey is the
