@@ -17,7 +17,13 @@ export type AnalyticsEvent =
   /** A Tiebreaker Guess saved. */
   | "tiebreaker_saved"
   /** Feedback sent to the commissioners. */
-  | "feedback_sent";
+  | "feedback_sent"
+  /**
+   * A Tour ended: `how` is `done`, `skip` or `close` (Escape, or Android's
+   * back), with the Stop's id and its `position` `of` the Stops left after
+   * dropped ones.
+   */
+  | "tour_ended";
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>): void {
   if (!posthog.__loaded) return;
