@@ -19,6 +19,7 @@ describe("game detail for the pick screen", () => {
       kickoff: "2026-09-12T16:00:00.000Z",
       venue: "Michigan Stadium",
       city: "Ann Arbor, MI",
+      neutralSite: false,
       tv: "FOX",
       homeWp: 0.568,
       spread: "Oklahoma -1.5",

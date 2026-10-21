@@ -21,12 +21,12 @@ import {
 } from "@/lib/results/field-player";
 import type { GamePlaysJson } from "@/lib/results/live-feed";
 import { feedLabels, type RecentTeams } from "@/lib/results/recent-plays";
+import { PINE_FIELD, fieldFor, numberedYards, type FieldStyle } from "@/lib/results/fields";
 import { logoSrc } from "@/lib/logos";
 
 /** The field is its own scene, the same in light and dark: the canvas's greens and cream (#265). */
 /** Each end zone on the drawing: ten yards at 2.8. */
 const ZONE_DEPTH = 28;
-const TURF = "#1F4034";
 const CHALK = CREAM;
 const GAIN = "#D26A12";
 const LOSS = "#F08A6E";
@@ -227,8 +227,8 @@ const zoneTransform = (left: boolean) =>
  * One end zone, in its school's primary, with the longest of the school's
  * names that fits: measured in the drawing's own units, not estimated.
  */
-function EndZone({ school, abbr, left }: { school: string; abbr: string; left: boolean }) {
-  const zone = endZone(school, abbr);
+function EndZone({ school, abbr, left, paint }: { school: string; abbr: string; left: boolean; paint?: FieldStyle["homeZone"] }) {
+  const zone = { ...endZone(school, abbr), ...paint };
   const probe = useRef<SVGTextElement>(null);
   const fonts = useFontsReady();
   const [name, setName] = useState(zone.names[0] ?? "");
@@ -318,12 +318,15 @@ export function FieldCard({
   player,
   awayTeam,
   homeTeam,
+  neutralSite,
 }: {
   player: FieldPlayer;
   awayTeam: string;
   homeTeam: string;
+  neutralSite?: boolean;
 }) {
   const { playing, shown } = player;
+  const field = fieldFor(homeTeam, neutralSite);
   const now = useFrameClock(playing !== null);
   const newestShown = shown?.drives.flatMap((drive) => drive.plays).at(-1) ?? null;
   const ago = useAgo(newestShown?.wallClock ?? null);
@@ -379,9 +382,9 @@ export function FieldCard({
         viewBox={`0 0 ${FIELD_WIDTH} ${FIELD_HEIGHT}`}
         className="block w-full overflow-hidden rounded-md"
       >
-        <rect width={FIELD_WIDTH} height={FIELD_HEIGHT} fill={TURF} />
+        <rect width={FIELD_WIDTH} height={FIELD_HEIGHT} fill={field.turf} />
         <EndZone school={awayTeam} abbr={labels.away} left />
-        <EndZone school={homeTeam} abbr={labels.home} left={false} />
+        <EndZone school={homeTeam} abbr={labels.home} left={false} paint={field.homeZone} />
         {flashLeft !== null ? (
           <g className="animate-in fade-in duration-500">
             <rect x={flashLeft ? 0 : FIELD_WIDTH - ZONE_DEPTH} width={ZONE_DEPTH} height={FIELD_HEIGHT} fill={GAIN} />
@@ -400,21 +403,21 @@ export function FieldCard({
             y1="4"
             y2="108"
             stroke={CHALK}
-            strokeOpacity={yard % 10 === 0 ? 0.45 : 0.2}
+            strokeOpacity={yard % 10 === 0 ? field.tens : field.fives}
           />
         ))}
-        {YARD_LINES.filter((yard) => yard % 10 === 0).map((yard) => (
+        {numberedYards(field.numberStep).map(({ yard, label }) => (
           <text
             key={yard}
             x={fieldX(yard)}
             y="16"
             textAnchor="middle"
-            fontSize="10"
+            fontSize={field.numberSize}
             fontWeight="700"
             fill={CHALK}
-            fillOpacity="0.7"
+            fillOpacity={field.numbers}
           >
-            {yard <= 50 ? yard : 100 - yard}
+            {label}
           </text>
         ))}
 
@@ -494,7 +497,7 @@ export function FieldCard({
       <p className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <svg aria-hidden width="28" height="18" viewBox="0 0 28 18" className="shrink-0 rounded-[3px]">
-            <rect width="28" height="18" fill={TURF} />
+            <rect width="28" height="18" fill={PINE_FIELD.turf} />
             <line x1="14" y1="1" x2="14" y2="17" stroke={CHALK} strokeWidth="2" />
             <g transform="translate(14 9) scale(0.54)">
               <BallGlyph />
@@ -504,14 +507,14 @@ export function FieldCard({
         </span>
         <span className="inline-flex items-center gap-1.5">
           <svg aria-hidden width="28" height="18" viewBox="0 0 28 18" className="shrink-0 rounded-[3px]">
-            <rect width="28" height="18" fill={TURF} />
+            <rect width="28" height="18" fill={PINE_FIELD.turf} />
             <line x1="14" y1="1" x2="14" y2="17" stroke={GAIN} strokeWidth="3" />
           </svg>
           Line to gain
         </span>
         <span className="inline-flex items-center gap-1.5">
           <svg aria-hidden width="28" height="18" viewBox="0 0 28 18" className="shrink-0 rounded-[3px]">
-            <rect width="28" height="18" fill={TURF} />
+            <rect width="28" height="18" fill={PINE_FIELD.turf} />
             <rect x="6" y="6" width="18" height="6" rx="1.5" fill={CHALK} fillOpacity="0.3" />
             <line x1="6" y1="3" x2="6" y2="15" stroke={CHALK} strokeWidth="2" />
           </svg>
