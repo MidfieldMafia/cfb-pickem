@@ -19,6 +19,7 @@ describe("game detail for the pick screen", () => {
       kickoff: "2026-09-12T16:00:00.000Z",
       venue: "Michigan Stadium",
       city: "Ann Arbor, MI",
+      neutralSite: false,
       tv: "FOX",
       homeWp: 0.568,
       spread: "Oklahoma -1.5",
@@ -27,6 +28,14 @@ describe("game detail for the pick screen", () => {
       home: { rank: 16, record: "1–0", pointsFor: 13, pointsAgainst: 12, yardsFor: 276, yardsAgainst: 221 },
       away: { rank: 10, record: "1–0", pointsFor: 51, pointsAgainst: 0, yardsFor: 401, yardsAgainst: 198 },
     });
+  });
+
+  test("neutralSite follows the feed's flag, true as well as false", async () => {
+    const base = recordedCfbd("2026-week-2");
+    const games = (await base.games(WEEK_2)).map((g) => (g.id === OKLAHOMA_AT_MICHIGAN ? { ...g, neutralSite: true } : g));
+    const { details } = await weekDetails(recordedCfbd("2026-week-2", { games }), recordedOpenMeteo("2026-week-2"), WEEK_2);
+    expect(details.get(OKLAHOMA_AT_MICHIGAN)!.neutralSite).toBe(true);
+    expect(details.get(FAMU_AT_MIAMI)!.neutralSite).toBe(false);
   });
 
   test("an FCS opponent with no FBS stats or games still gets its record; the averages are null", async () => {

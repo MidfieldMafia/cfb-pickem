@@ -250,6 +250,7 @@ export async function weekDetails(
       kickoff: kickoff.toISOString(),
       venue: game.venue ?? venue?.name ?? "",
       city: venue?.city ? (venue.state ? `${venue.city}, ${venue.state}` : venue.city) : "",
+      neutralSite: game.neutralSite,
       tv: tvByGame.get(game.id) ?? null,
       homeWp: wp?.homeWinProbability ?? null,
       spread: spreadText(game, bookSpreads, wp?.spread),

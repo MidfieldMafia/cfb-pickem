@@ -679,7 +679,7 @@ function SheetBody({
     <>
       <SheetHeader game={game} serverNow={serverNow} landed={landed} />
       <div className="grid gap-2.5 overflow-y-auto px-4 pb-2" style={{ maxHeight: "calc(100dvh - 300px)" }}>
-        {player.readout ? <FieldCard player={player} awayTeam={g.awayTeam} homeTeam={g.homeTeam} /> : null}
+        {player.readout ? <FieldCard player={player} awayTeam={g.awayTeam} homeTeam={g.homeTeam} neutralSite={game.detail?.neutralSite} /> : null}
         {locked ? (
           <>
             <SidePanel

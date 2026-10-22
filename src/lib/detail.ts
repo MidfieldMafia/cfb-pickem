@@ -63,6 +63,11 @@ export interface GameDetail {
   kickoff: string;
   venue: string;
   city: string;
+  /**
+   * Whether the game is at a neutral site, from /games. Absent from snapshots
+   * taken before it existed, so a reader treats a missing value as false.
+   */
+  neutralSite?: boolean;
   /** Broadcaster, null when unannounced. From /games/media. */
   tv: string | null;
   /** Pregame win probability for the home team, 0–1. From /metrics/wp/pregame. */
