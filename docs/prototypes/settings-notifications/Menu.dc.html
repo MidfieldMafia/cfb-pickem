@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Member menu with Settings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 560px; overflow: hidden; background: var(--background); font-family: var(--font-sans); color: var(--foreground);">
+  <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Week 8" sub="Picks lock Sat 11 AM CT"></x-import>
+
+  <div style="position: absolute; top: 14px; right: 16px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.Pennant" name="Cousin Em" size="{{size}}"></x-import>
+  </div>
+
+  <nav aria-label="Member menu" style="position: absolute; top: 62px; right: 16px; width: 224px; box-sizing: border-box; display: grid; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--card);">
+    <div style="display: grid; gap: 2px; padding: 4px 8px 0;">
+      <p style="margin: 0; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Group</p>
+      <p style="margin: 0; font: 600 14px/20px var(--font-sans);">Midfield Mafia</p>
+    </div>
+    <a href="#" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 4px; font: 600 14px/20px var(--font-sans); text-decoration: none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="m3 11 18-5v12L3 14v-3z"></path><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path></svg>
+      What&#8217;s new
+    </a>
+    <a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 4px; background: var(--accent); font: 600 14px/20px var(--font-sans); text-decoration: none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      Settings
+    </a>
+    <a href="#" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 4px; font: 600 14px/20px var(--font-sans); text-decoration: none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      Send feedback
+    </a>
+    <a href="#" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 4px; font: 600 14px/20px var(--font-sans); text-decoration: none;">
+      Cousin Em
+      <span style="font-weight: 400; color: var(--muted-foreground);">Your profile</span>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { size: 44 };
+  }
+}
+</script>
+</body>
+</html>

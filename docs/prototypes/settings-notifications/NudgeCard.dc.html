@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Re-nudge card on Picks</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--background); font-family: var(--font-sans); color: var(--foreground); display: flex; flex-direction: column; gap: 12px;">
+  <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Week 8" sub="Picks lock Sat 11 AM CT"></x-import>
+
+  <sc-if value="{{showCard}}" hint-placeholder-val="{{true}}">
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.Card" style="margin: 0 16px;">
+      <section style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0; margin-top: 4px;"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <p style="margin: 0; font: 900 20px/26px var(--font-display);">Get your reminder as a notification</p>
+            <p style="margin: 0; font: 400 14px/20px var(--font-sans); color: var(--muted-foreground);">Put Saturday Slate on your Home Screen and your Pick reminder can come as a notification instead of a text.</p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; padding-left: 32px;">
+          <a href="/install" style="display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; border-radius: 6px; background: var(--primary); color: var(--primary-foreground); font: 600 14px/20px var(--font-sans); text-decoration: none;">Add to Home Screen</a>
+          <button type="button" onClick="{{dismiss}}" style="height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--foreground); font: 600 14px/20px var(--font-sans); text-decoration: underline; text-underline-offset: 3px;">Not now</button>
+        </div>
+      </section>
+    </x-import>
+  </sc-if>
+
+  <sc-for list="{{games}}" as="g" hint-placeholder-count="4">
+    <div style="margin: 0 16px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); display: flex; flex-direction: column; gap: 8px;">
+      <p style="margin: 0; font: 400 14px/20px var(--font-sans); color: var(--muted-foreground);">{{g.when}}</p>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <div style="height: 56px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; padding: 0 12px; font: 900 16px/20px var(--font-display);">{{g.away}}</div>
+        <div style="height: 56px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; padding: 0 12px; font: 900 16px/20px var(--font-display);">{{g.home}}</div>
+      </div>
+    </div>
+  </sc-for>
+
+  <sc-if value="{{dismissed}}" hint-placeholder-val="{{false}}">
+    <button type="button" onClick="{{reset}}" style="position: absolute; left: 16px; right: 16px; bottom: 16px; height: 44px; border: 1px dashed #5c5246; border-radius: 6px; background: #e8e3d6; color: #3d362e; font: 600 13px/18px var(--font-sans);">Prototype: hidden until next Week. Tap to show again</button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { dismissed: false };
+  }
+  renderVals() {
+    return {
+      showCard: !this.state.dismissed,
+      dismissed: this.state.dismissed,
+      dismiss: () => this.setState({ dismissed: true }),
+      reset: () => this.setState({ dismissed: false }),
+      games: [
+        { when: 'Sat 11:00 AM', away: 'Iowa', home: 'Wisconsin' },
+        { when: 'Sat 2:30 PM', away: 'Texas', home: 'Oklahoma' },
+        { when: 'Sat 6:00 PM', away: 'Clemson', home: 'Duke' },
+        { when: 'Sat 6:30 PM', away: 'Ole Miss', home: 'LSU' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

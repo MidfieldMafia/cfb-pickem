@@ -1,0 +1,25 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-22T03:19:26Z" },
+  "title": "Settings and push reminder (#452)",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 1000, "title": "A · Segmented Push / Text / Off", "is_interactive": true },
+    "Rows.dc.html": { "x": 470, "y": 0, "w": 390, "h": 1000, "title": "B · One row per channel", "is_interactive": true },
+    "Menu.dc.html": { "x": 940, "y": 0, "w": 390, "h": 560, "title": "The Settings row in the member menu" },
+    "NudgeCard.dc.html": { "x": 0, "y": 1400, "w": 390, "h": 844, "title": "Re-nudge 1 · A card on Picks, in Safari only", "is_interactive": true },
+    "NudgeText.dc.html": { "x": 470, "y": 1400, "w": 390, "h": 640, "title": "Re-nudge 2 · In the reminder text itself" },
+    "Push.dc.html": { "x": 940, "y": 1400, "w": 390, "h": 640, "title": "The push: title, body, where a tap lands" }
+  },
+  "order": ["Main.dc.html", "Rows.dc.html", "Menu.dc.html", "NudgeCard.dc.html", "NudgeText.dc.html", "Push.dc.html"],
+  "notes": {
+    "row1": { "x": 0, "y": -260, "text": "Settings: the Notifications card", "kind": "title1", "maxW": 1330 },
+    "row2": { "x": 0, "y": 1140, "text": "Getting Safari members onto push, and the push itself", "kind": "title1", "maxW": 1330 },
+    "how": { "x": 1410, "y": 0, "w": 300, "maxH": 420, "fill": "orange", "size": "s", "text": "A and B are the same screen and the same rules, drawn two ways. Press Play, then use the Scenario picker above the phone to switch device and account state. In the Home Screen app scenarios, tap Push to walk the iPhone permission prompt: Allow, or Don't Allow." },
+    "count": { "x": 1410, "y": 1400, "w": 300, "maxH": 420, "fill": "blue", "size": "s", "text": "Sized from the Home Screen count (#451): 17 of 24 active members already use the Home Screen app, 6 are iPhone-in-Safari (all on iOS 16.4+), 1 is desktop-only, none on Android. The re-nudge is for those 6." }
+  },
+  "designSystems": [
+    { "title": "Saturday Slate Design System", "namespace": "saturdayslatedesignsystem", "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU", "version": "1792623042-fd26", "copiedAt": "2026-10-22T03:19:26Z" }
+  ]
+}

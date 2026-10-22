@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings, option rows</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; display: flex; flex-direction: column; background: #e8e3d6; font-family: var(--font-sans); color: var(--foreground);">
+
+  <div style="height: 156px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+    <label for="scenario-b" style="font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: #5c5246;">Prototype · Scenario</label>
+    <select id="scenario-b" value="{{sc}}" onChange="{{pickScenario}}" style="height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font: 500 14px/20px var(--font-sans); padding: 0 8px;">
+      <sc-for list="{{scenarios}}" as="o" hint-placeholder-count="7">
+        <option value="{{o.id}}">{{o.label}}</option>
+      </sc-for>
+    </select>
+    <p style="margin: 0; font: 400 12px/16px var(--font-sans); color: #5c5246;">{{readout}}</p>
+  </div>
+
+  <div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--background); display: flex; flex-direction: column; gap: 16px;">
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Settings"></x-import>
+
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.Card" style="margin: 0 16px;">
+      <section style="display: flex; flex-direction: column; gap: 8px;">
+        <p style="margin: 0; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Notifications</p>
+
+        <sc-if value="{{fellNote}}" hint-placeholder-val="{{false}}">
+          <p style="margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--background); font: 400 14px/20px var(--font-sans);">Push stopped reaching your phone, so your Week 8 reminder came by text and this switched back to Text.</p>
+        </sc-if>
+
+        <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column;">
+          <legend style="padding: 0; display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px;">
+            <span style="font: 700 16px/24px var(--font-sans);">Pick reminder</span>
+            <span style="font: 400 14px/20px var(--font-sans); color: var(--muted-foreground);">The day before picks lock, if your picks, Lock or Tiebreaker Guess aren&#8217;t done.</span>
+          </legend>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+            <div style="display: flex; gap: 12px; align-items: flex-start; min-height: 56px; padding: 10px 0; border-top: 1px solid var(--border); box-sizing: border-box;">
+              <input type="radio" name="pick-reminder" id="{{r.id}}" checked="{{r.checked}}" disabled="{{r.dim}}" onChange="{{r.pick}}" style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--primary); flex-shrink: 0;">
+              <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto;">
+                <sc-if value="{{r.open}}" hint-placeholder-val="{{true}}">
+                  <label for="{{r.id}}" style="font: 600 16px/24px var(--font-sans);">{{r.label}}</label>
+                </sc-if>
+                <sc-if value="{{r.dim}}" hint-placeholder-val="{{false}}">
+                  <label for="{{r.id}}" style="font: 600 16px/24px var(--font-sans); color: var(--muted-foreground);">{{r.label}}</label>
+                </sc-if>
+                <span style="font: 400 14px/20px var(--font-sans); color: var(--muted-foreground);">{{r.detail}}</span>
+                <sc-if value="{{r.href}}" hint-placeholder-val="{{false}}">
+                  <a href="{{r.href}}" style="display: inline-flex; align-items: center; min-height: 44px; font: 600 14px/20px var(--font-sans); text-decoration: underline; text-underline-offset: 3px;">{{r.link}}</a>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </fieldset>
+      </section>
+    </x-import>
+
+    <sc-if value="{{prompt}}" hint-placeholder-val="{{false}}">
+      <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center;">
+        <div role="alertdialog" aria-label="iPhone permission prompt" style="width: 270px; border-radius: 14px; background: rgba(242, 242, 247, 0.98); font-family: -apple-system, system-ui, sans-serif; color: #000; text-align: center; overflow: hidden;">
+          <div style="padding: 20px 16px 16px; display: flex; flex-direction: column; gap: 4px;">
+            <p style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 600;">&#8220;Saturday Slate&#8221; Would Like to Send You Notifications</p>
+            <p style="margin: 0; font-size: 13px; line-height: 18px;">Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.</p>
+          </div>
+          <div style="display: flex; border-top: 0.5px solid rgba(60, 60, 67, 0.36);">
+            <button type="button" onClick="{{dontAllow}}" style="flex: 1 1 0; height: 44px; border: 0; border-right: 0.5px solid rgba(60, 60, 67, 0.36); background: transparent; color: #007aff; font-size: 17px; font-family: inherit;">Don&#8217;t Allow</button>
+            <button type="button" onClick="{{allow}}" style="flex: 1 1 0; height: 44px; border: 0; background: transparent; color: #007aff; font-size: 17px; font-weight: 600; font-family: inherit;">Allow</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = this.fresh('app');
+  }
+  scenarioList() {
+    return [
+      { id: 'app', label: 'Home Screen app on iPhone', device: 'app', phone: true, choice: 'text', perm: 'not asked' },
+      { id: 'appPush', label: 'Home Screen app, Push already on', device: 'app', phone: true, choice: 'push', perm: 'allowed' },
+      { id: 'safari', label: 'Safari on iPhone (not installed)', device: 'safari', phone: true, choice: 'text', perm: 'n/a' },
+      { id: 'computer', label: 'On a computer', device: 'computer', phone: true, choice: 'text', perm: 'n/a' },
+      { id: 'stop', label: 'Replied STOP to a text', device: 'app', phone: true, stop: true, choice: 'text', perm: 'not asked' },
+      { id: 'nophone', label: 'No phone number on file', device: 'app', phone: false, choice: 'text', perm: 'not asked' },
+      { id: 'fell', label: 'Push failed, switched back to Text', device: 'app', phone: true, fell: true, choice: 'text', perm: 'allowed' }
+    ];
+  }
+  fresh(id) {
+    const s = this.scenarioList().find((x) => x.id === id);
+    return { sc: id, choice: s.choice, perm: s.perm, prompt: false, fell: !!s.fell };
+  }
+  renderVals() {
+    const st = this.state;
+    const s = this.scenarioList().find((x) => x.id === st.sc);
+    const textOk = s.phone && !s.stop;
+    const pushOk = s.device === 'app';
+    const subs = st.choice === 'push' && st.perm === 'allowed' ? 1 : 0;
+
+    const pick = (id) => () => {
+      if (id === 'push') {
+        if (st.perm === 'allowed') this.setState({ choice: 'push', fell: false });
+        else if (st.perm === 'denied') this.forceUpdate();
+        else this.setState({ prompt: true });
+      } else {
+        this.setState({ choice: id, fell: false });
+      }
+    };
+
+    let push = { detail: 'A notification on this iPhone.' };
+    if (s.device === 'safari') push = { detail: 'Needs Saturday Slate on your Home Screen.', link: 'Add it to your Home Screen', href: '/install' };
+    if (s.device === 'computer') push = { detail: 'Comes to Saturday Slate on your phone’s Home Screen. Choose it there.' };
+    if (pushOk && st.perm === 'denied') push = { detail: 'Blocked in iPhone Settings. Turn on Notifications › Saturday Slate › Allow Notifications, then choose Push again.' };
+
+    let text = { detail: 'To the number ending 4821.' };
+    if (s.stop) text = { detail: 'Off because you replied STOP. Reply START to [THE APP’S NUMBER] to get texts again.' };
+    if (!s.phone) text = { detail: 'No phone number on file, so no texts. Ask the commissioners to add one.' };
+
+    const avail = { push: pushOk, text: textOk, off: true };
+    const rows = [
+      Object.assign({ key: 'push', label: 'Push' }, push),
+      Object.assign({ key: 'text', label: 'Text' }, text),
+      { key: 'off', label: 'Off', detail: 'No reminder. Your Magic Link still comes by text when you ask.' }
+    ].map((r) => Object.assign(r, {
+      id: 'b-' + r.key,
+      pick: pick(r.key),
+      checked: avail[r.key] && st.choice === r.key,
+      open: avail[r.key],
+      dim: !avail[r.key]
+    }));
+
+    const name = { push: 'Push', text: 'Text', off: 'Off' }[st.choice];
+    return {
+      sc: st.sc,
+      scenarios: this.scenarioList(),
+      pickScenario: (e) => this.setState(this.fresh(e.target.value)),
+      rows,
+      fellNote: st.fell && st.choice === 'text',
+      prompt: st.prompt,
+      allow: () => this.setState({ prompt: false, perm: 'allowed', choice: 'push', fell: false }),
+      dontAllow: () => this.setState({ prompt: false, perm: 'denied' }),
+      readout: 'Saved: Pick reminder = ' + name + ' · This device’s permission: ' + st.perm + ' · Push subscriptions: ' + subs
+    };
+  }
+}
+</script>
+</body>
+</html>
