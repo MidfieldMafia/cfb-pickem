@@ -25,6 +25,12 @@
 #      retry passes those; a test that fails twice is still a failure.
 #   4. npx eslint src
 #
+#
+# Before those four, a fifth check runs only on an agent:go build (the
+# `.agent-run` file `npm run agent-db -- up` leaves, which `down` keeps): a diff
+# that touches a screen needs its before and after shots in /tmp/shots. See
+# shots_check below.
+#
 # Each step's output goes to a log; success prints one line, a failure prints the
 # step and its log's tail. Exit 0 green, 1 a failed check.
 
@@ -80,6 +86,25 @@ build() {
   return 1
 }
 
+# An agent:go run that changed a screen must have shot it (agent-go, steps 4 and 6).
+# `/tmp/shots/skipped.txt` holds the reason when there is nothing to shoot or no
+# before: the ticket created the screen, or the diff changes no rendered output.
+shots_check() {
+  [ -f .agent-run ] || return 0
+  git diff --name-only origin/main...HEAD 2>/dev/null | grep -qE '^src/(app|components)/' || return 0
+  local dir=/tmp/shots
+  [ -s "$dir/skipped.txt" ] && return 0
+  ls "$dir"/after--*.png >/dev/null 2>&1 || {
+    echo "no after shots in $dir: run shoot.cjs --label after for each screen the diff touched (agent-go step 6), or write the reason to $dir/skipped.txt"
+    return 1
+  }
+  ls "$dir"/before--*.png >/dev/null 2>&1 || {
+    echo "no before shots in $dir: they are taken before any code (agent-go step 4); if the ticket only creates screens, write that to $dir/skipped.txt"
+    return 1
+  }
+}
+
+step shots shots_check
 step build build
 step typecheck npm run typecheck
 step test npx vitest run --retry=1
