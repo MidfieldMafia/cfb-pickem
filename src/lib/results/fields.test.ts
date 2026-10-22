@@ -22,6 +22,17 @@ describe("fieldFor", () => {
   });
 });
 
+describe("a stored game's detail", () => {
+  // The sheet passes `detail?.neutralSite`: a snapshot from before the field, or a game with no detail at all, is undefined.
+  const field = (detail: { neutralSite?: boolean } | null, home: string) => fieldFor(home, detail?.neutralSite);
+  it("draws the school's field unless the stored flag says neutral", () => {
+    expect(field({ neutralSite: true }, "Coastal Carolina")).toBe(PINE_FIELD);
+    expect(field({ neutralSite: false }, "Coastal Carolina").turf).toBe("#0F5F62");
+    expect(field({}, "Coastal Carolina").turf).toBe("#0F5F62");
+    expect(field(null, "LSU").numberStep).toBe(5);
+  });
+});
+
 describe("numberedYards", () => {
   it("runs 5, 10 … 50 … 10, 5 every 5 yards", () => {
     const labels = numberedYards(5).map((n) => n.label);

@@ -30,6 +30,14 @@ describe("game detail for the pick screen", () => {
     });
   });
 
+  test("neutralSite follows the feed's flag, true as well as false", async () => {
+    const base = recordedCfbd("2026-week-2");
+    const games = (await base.games(WEEK_2)).map((g) => (g.id === OKLAHOMA_AT_MICHIGAN ? { ...g, neutralSite: true } : g));
+    const { details } = await weekDetails(recordedCfbd("2026-week-2", { games }), recordedOpenMeteo("2026-week-2"), WEEK_2);
+    expect(details.get(OKLAHOMA_AT_MICHIGAN)!.neutralSite).toBe(true);
+    expect(details.get(FAMU_AT_MIAMI)!.neutralSite).toBe(false);
+  });
+
   test("an FCS opponent with no FBS stats or games still gets its record; the averages are null", async () => {
     const { details } = await weekDetails(recordedCfbd("2026-week-2"), recordedOpenMeteo("2026-week-2"), WEEK_2);
     const famu = details.get(FAMU_AT_MIAMI)!;
