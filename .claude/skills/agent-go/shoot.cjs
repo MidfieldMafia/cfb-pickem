@@ -5,6 +5,13 @@
 //   node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 //   node .claude/skills/agent-go/shoot.cjs --label after --out /tmp/shots field-card=/live?game=3
 //
+// Options, applied to every path in the call:
+//   --width 360              viewport width in CSS px (default 390)
+//   --open "Coastal Carolina"  click the first button or link whose text contains this,
+//                            before the shot: a Live Board row opens its Game sheet
+//   --scroll "On the field"  scroll the first heading containing this into view; with
+//                            --open or --scroll the shot is the viewport, not the page
+//
 // A path may carry its own key as `<key>=<path>` when the URL alone would not
 // name the state well. The What's new modal is marked seen so it covers
 // nothing; pass --show-whats-new for a ticket about the modal. Run it from the
@@ -23,6 +30,9 @@ const flag = (name, fallback) => {
 };
 const label = flag("label");
 const out = flag("out", "/tmp/shots");
+const width = Number(flag("width", "390"));
+const openText = flag("open", "");
+const scrollText = flag("scroll", "");
 const showWhatsNew = args.includes("--show-whats-new");
 if (showWhatsNew) args.splice(args.indexOf("--show-whats-new"), 1);
 const targets = args;
@@ -73,7 +83,7 @@ const keyOf = (target) => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
-  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+  await page.setViewport({ width, height: 844, deviceScaleFactor: 2 });
   await page.setCookie({ name: "slate_session", value: session, domain: new URL(BASE).hostname, path: "/" });
   // The What's new modal opens over every member screen in a browser that has
   // not seen this week's entry, which a fresh Chromium never has. Mark it seen
@@ -99,13 +109,33 @@ const keyOf = (target) => {
       await page.waitForNetworkIdle({ idleTime: 1500, timeout: 30000 }).catch(() => {});
       // next dev's own badge sits over the bottom nav; it is not part of the app.
       await page.evaluate(() => document.querySelectorAll("nextjs-portal").forEach((el) => el.remove()));
+      const staged = openText !== "" || scrollText !== "";
+      if (openText) {
+        const opened = await page.evaluate((text) => {
+          const el = [...document.querySelectorAll("button, a, [role=button]")].find((e) => e.textContent.includes(text));
+          el?.click();
+          return Boolean(el);
+        }, openText);
+        if (!opened) throw new Error(`nothing to open that says "${openText}"`);
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+      if (scrollText) {
+        const found = await page.evaluate((text) => {
+          const el = [...document.querySelectorAll("h1, h2, h3")].find((e) => e.textContent.includes(text));
+          el?.scrollIntoView();
+          return Boolean(el);
+        }, scrollText);
+        if (!found) throw new Error(`no heading that says "${scrollText}"`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
       // A full-page screenshot draws fixed elements where the first screen ended, so
       // grow the viewport to the page instead: the bottom nav stays at the bottom.
-      const height = await page.evaluate(() => document.documentElement.scrollHeight);
-      await page.setViewport({ width: 390, height: Math.max(844, height), deviceScaleFactor: 2 });
+      // A sheet is a fixed overlay: growing the viewport would only stretch it.
+      const height = staged ? 844 : await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewport({ width, height: Math.max(844, height), deviceScaleFactor: 2 });
       const file = path.join(out, `${label}--${key}.png`);
       await page.screenshot({ path: file });
-      await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+      await page.setViewport({ width, height: 844, deviceScaleFactor: 2 });
       const landed = new URL(page.url()).pathname;
       const moved = landed === new URL(urlPath, BASE).pathname ? "" : ` (landed on ${landed})`;
       console.log(`${response ? response.status() : "???"} ${urlPath}${moved} -> ${file}`);

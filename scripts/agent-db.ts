@@ -8,7 +8,10 @@
  *   npm run agent-db -- up <name>         # branch, .env.local, migrate, seed
  *   npm run agent-db -- up <name> --live  # the same, with a game under way
  *   npm run agent-db -- session <member>  # prints slate_session=<id>
- *   npm run agent-db -- down              # deletes the branch and .env.local
+ *   npm run agent-db -- sql "<statement>" # runs one statement on the branch
+ *   npm run agent-db -- dev               # starts next dev on :3200, waits until it answers
+ *   npm run agent-db -- dev stop          # stops it
+ *   npm run agent-db -- down              # stops the dev server, deletes the branch and .env.local
  *
  * Needs NEON_PROJECT_ID. In the cloud, the environment's network secret adds
  * the API key to every console.neon.tech request, so no key is in the VM; run
@@ -18,9 +21,9 @@
  * write, and to seed a database that already has members, so it cannot land on
  * the shared Development database or production.
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { neon } from "@neondatabase/serverless";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -31,6 +34,10 @@ import { newestPlay, toLiveFeed } from "../src/lib/results/live-feed";
 const ENV_FILE = ".env.local";
 const STATE_FILE = ".agent-db.json";
 const LIVE_FIXTURE = "src/lib/cfbd/fixtures/live-plays/401869941-q2.json";
+/** Left behind by `up` and kept by `down`: preflight reads it to ask for screenshots. */
+const RUN_FILE = ".agent-run";
+const DEV_PORT = 3200;
+const DEV_LOG = "/tmp/agent-dev.log";
 const MARKER = "# Written by scripts/agent-db.ts: a throwaway slate-agents branch.";
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
@@ -40,6 +47,8 @@ interface State {
   branchName: string;
   /** The newest `session` cookie line, for shoot.cjs. */
   session?: string;
+  /** The `dev` server's process group, so `dev stop` and `down` end it. */
+  devPid?: number;
 }
 
 async function api(path: string, init: RequestInit = {}): Promise<Response> {
@@ -87,6 +96,7 @@ async function up(name: string, live: boolean) {
   if (!url) throw new Error("Neon returned no connection string for the new branch.");
   writeFileSync(STATE_FILE, JSON.stringify({ branchId: created.branch.id, branchName } satisfies State));
   writeFileSync(ENV_FILE, `${MARKER}\nDATABASE_URL=${url}\nDATABASE_URL_UNPOOLED=${url}\n`);
+  writeFileSync(RUN_FILE, `${branchName}\n`);
   console.log(`Created branch ${branchName}.`);
 
   await waitForDatabase(url);
@@ -375,9 +385,59 @@ async function session(name: string) {
   console.log(`slate_session=${id}`);
 }
 
+/** The only statement path onto the branch: it needs the env file `up` wrote, so it cannot reach another database. */
+async function runSql(statement: string) {
+  if (!ownsEnvFile()) throw new Error(`No agent-db ${ENV_FILE} here: run \`npm run agent-db -- up <name>\` first.`);
+  process.loadEnvFile(ENV_FILE);
+  const rows = await neon(process.env.DATABASE_URL ?? "").query(statement);
+  console.log(rows.length ? JSON.stringify(rows, null, 2) : "ok");
+}
+
+const readState = () => JSON.parse(readFileSync(STATE_FILE, "utf8")) as State;
+
+async function devAnswers(): Promise<boolean> {
+  try {
+    await fetch(`http://localhost:${DEV_PORT}/api/health`, { signal: AbortSignal.timeout(3000) });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function devStart() {
+  if (!ownsEnvFile()) throw new Error(`No agent-db ${ENV_FILE} here: run \`npm run agent-db -- up <name>\` first.`);
+  if (await devAnswers()) throw new Error(`Something already answers on :${DEV_PORT}: \`dev stop\` first.`);
+  const log = openSync(DEV_LOG, "w");
+  const child = spawn("npx", ["next", "dev", "-p", String(DEV_PORT)], {
+    detached: true,
+    stdio: ["ignore", log, log],
+    env: { ...process.env, NODE_USE_ENV_PROXY: "1" },
+  });
+  child.unref();
+  writeFileSync(STATE_FILE, JSON.stringify({ ...readState(), devPid: child.pid } satisfies State));
+  for (let attempt = 0; attempt < 90; attempt++) {
+    if (await devAnswers()) return console.log(`next dev answers on http://localhost:${DEV_PORT} (log: ${DEV_LOG}).`);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`next dev did not answer in 90s; read ${DEV_LOG}.`);
+}
+
+/** Ends the dev server's whole process group; a server that is already gone is fine. */
+function devStop() {
+  if (!existsSync(STATE_FILE)) return;
+  const state = readState();
+  if (state.devPid === undefined) return;
+  try {
+    process.kill(-state.devPid, "SIGTERM");
+  } catch {}
+  writeFileSync(STATE_FILE, JSON.stringify({ ...state, devPid: undefined } satisfies State));
+  console.log("Stopped next dev.");
+}
+
 async function down() {
   if (!existsSync(STATE_FILE)) throw new Error(`No ${STATE_FILE}: nothing to delete.`);
-  const state = JSON.parse(readFileSync(STATE_FILE, "utf8")) as State;
+  devStop();
+  const state = readState();
   const response = await api(`branches/${state.branchId}`, { method: "DELETE" });
   if (!response.ok && response.status !== 404) {
     throw new Error(`Deleting ${state.branchName} failed: ${response.status} ${await response.text()}`);
@@ -391,8 +451,10 @@ async function main() {
   const [command, arg] = process.argv.slice(2);
   if (command === "up") return up(arg && arg !== "--live" ? arg : "check", process.argv.includes("--live"));
   if (command === "session" && arg) return session(arg);
+  if (command === "sql" && arg) return runSql(arg);
+  if (command === "dev") return arg === "stop" ? devStop() : devStart();
   if (command === "down") return down();
-  throw new Error("Usage: npm run agent-db -- up <name> | session <member> | down");
+  throw new Error('Usage: npm run agent-db -- up <name> | session <member> | sql "<statement>" | dev [stop] | down');
 }
 
 // Node's own fetch ignores HTTPS_PROXY unless NODE_USE_ENV_PROXY was set when

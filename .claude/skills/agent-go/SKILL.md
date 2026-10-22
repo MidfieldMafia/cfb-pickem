@@ -14,6 +14,10 @@ is in `docs/agents/cloud-environment.md`: read it when a command fails there.
 
 ## 1. Gate
 
+Which issue: the one the trigger context names. A run with no trigger context
+lists the open issues labelled `agent:go`; exactly one is yours, and with
+several, comment on each that the run could not tell which it was for and stop.
+
 The routine's label filter matches the labels an issue _has_, so any label
 change on an issue that still carries `agent:go` fires it again. Check, in
 order, and stop at the first failure:
@@ -65,7 +69,7 @@ one command that needs the proxy switch on its own line:
 
 ```bash
 npm run agent-db -- up <issue number>                 # branch, .env.local, migrate, seed
-NODE_USE_ENV_PROXY=1 npm run dev -- -p 3200           # in the background
+npm run agent-db -- dev                               # next dev on :3200, returns once it answers
 npm run -s agent-db -- session Casey                  # prints and saves the cookie
 ```
 
@@ -76,8 +80,11 @@ final; Week 7 is open with its Deadline three days out. For a screen that
 shows a game under way (the Live Board, the Game sheet, the field card), run
 `up <issue number> --live` instead: Week 7's Deadline has passed and Liberty at
 Coastal Carolina is in progress, Q2 10:27, from a real recorded CFBD feed.
-Set up any other state the screens need with SQL against the branch: it is
-yours and is deleted after.
+Set up any other state the screens need with
+`npm run agent-db -- sql "<statement>"`, the one way to change the branch's
+data: it runs only against this run's branch, so it is covered by the same
+authorization as `up` and `down`. The seeded Week 7 has Coastal Carolina at
+home; `update games set home_team = 'LSU' ...` turns it into another school's.
 
 Before writing any code, screenshot every existing screen the ticket will
 change, in the state that shows the change, as the member who would see it:
@@ -85,6 +92,12 @@ change, in the state that shows the change, as the member who would see it:
 ```bash
 node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 ```
+
+`/tmp/shots` is where `npm run preflight` looks. Add `--width 360` for the
+phone width a ticket names, and `--open "<text>"` to click a Live Board row so
+its Game sheet is on screen (`--scroll "<heading>"` brings a card into view).
+The app has one theme, light: a ticket that asks for dark gets one note in the
+PR, "no dark mode", and no screenshot.
 
 Read every before shot. Anything covering the screen is the state to fix
 before going on, not the screen. `shoot.cjs` marks the What's new modal seen
@@ -94,8 +107,12 @@ members have dismissed the Welcome Tour.
 A path takes its own key as `<key>=<path>` (`field-card=/live?week=7`) when
 the URL alone would not say which state it shows; the after shot must use the
 same key. A screen the ticket creates has no before. Write down the keys,
-member and state: step 6 repeats them exactly. Stop the dev server, and keep
-the database: it lives until step 6.
+member and state: step 6 repeats them exactly. Run `npm run agent-db -- dev stop`,
+and keep the database: it lives until step 6.
+
+A ticket whose diff changes no rendered output, or only creates screens, has no
+before: write the reason to `/tmp/shots/skipped.txt`, which is what
+`npm run preflight` accepts in place of shots.
 
 **Done when** `/tmp/shots` holds a `before--<key>.png` for every existing
 screen the ticket changes, or the ticket changes none.
@@ -117,7 +134,7 @@ CLAUDE.md's checks apply as written: `npx next build` when the diff touches a
 
 ## 6. Check it on a screen
 
-Start the dev server again and follow `verify-running-app` from step 4 with
+Run `npm run agent-db -- dev` again and follow `verify-running-app` from step 4 with
 `$S` as the cookie. For step 5's browser, Chromium is at
 `/opt/pw-browsers/chromium`; downloading another is blocked. Wait for
 `domcontentloaded` and a few seconds, never `networkidle0`: Chromium's own
@@ -149,8 +166,10 @@ What the cloud cannot show:
 - A session cookie skips the Magic Link landing, which is what sends an
   unwelcomed member to `/welcome`, so check Drew's state at `/welcome` itself.
 
-Stop the dev server, then **always** run `npm run agent-db -- down`, failed or
-not. In the PR, put the Screenshots section, list what you checked and what
+Then **always** run `npm run agent-db -- down`, failed or not: it stops the dev
+server and deletes the branch. If it is refused, delete the branch with the
+Neon API (`curl -X DELETE https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/<branchId>`,
+the id is in `.agent-db.json`) and say in the issue comment which way it went. In the PR, put the Screenshots section, list what you checked and what
 each screen showed under **Checked on screen**, and anything you could not
 reach under **Not verified**.
 
@@ -159,7 +178,8 @@ before and after are in the PR, and the branch is deleted.
 
 ## 7. Ship
 
-Commit, run `npm run preflight`, push the branch, and open a PR that closes the
+Commit, run `npm run preflight` (it fails an agent build whose diff touches
+`src/app` or `src/components` and has no before and after shots), push the branch, and open a PR that closes the
 issue, written with `/mattpocock-skills:pr`, with its `Members see:` line and
 the Screenshots section from step 6. Never merge.
 
@@ -167,5 +187,6 @@ If the build cannot finish, push what exists as a draft PR, run `agent-db down`
 if it is still up, and comment on the issue with what stopped it and what
 decision it needs from Jonah.
 
-**Done when** the issue links an open PR, ready or draft, and its last comment
-says which.
+**Done when** the issue links an open PR, ready or draft, whose body has a
+`## Screenshots` section (or `Screenshots: none, <reason>` when
+`/tmp/shots/skipped.txt` says why), and whose last issue comment says which.

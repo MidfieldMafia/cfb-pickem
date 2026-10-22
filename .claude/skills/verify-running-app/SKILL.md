@@ -13,6 +13,9 @@ reacts, a layout that resolves, a target big enough to hit) needs step 5.
 Every screen except `/expired` needs a session, and the only way in is a Magic
 Link minted from the database by a commissioner. You ask for one.
 
+The app has one theme, light, so there is no dark screen to check. A ticket
+that asks for light and dark is checked in light, and says so.
+
 Alex works on Windows and Jonah on macOS. Steps that differ say which is which.
 
 ## 1. Claim your port
