@@ -104,6 +104,10 @@ _Avoid_: Standings, rankings, table
 
 ### The app
 
+**Theme**:
+The app has one, light. There is no dark mode: the `dark:` classes in the design system's shadcn-derived components never fire, because nothing sets a dark theme. A ticket that asks for "light and dark" is built and checked in light.
+_Avoid_: Dark mode, color scheme
+
 **Live Board**:
 The Saturday view of the slate with live scores and the picks of every member of a group, colored by whether they are currently winning.
 _Avoid_: Scoreboard, dashboard

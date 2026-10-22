@@ -55,3 +55,5 @@ next-env.d.ts
 
 # scripts/agent-db.ts state for its throwaway Neon branch
 .agent-db.json
+# the run marker agent-db keeps after `down`, which preflight reads
+.agent-run
