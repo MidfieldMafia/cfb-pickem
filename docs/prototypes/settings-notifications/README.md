@@ -19,4 +19,4 @@ members use the Home Screen app, 6 use Safari on iPhone, 1 is desktop-only, and 
 The artboards load the Saturday Slate Design System from `ds/saturdayslatedesignsystem/`. Those files
 aren't copied here; they're in `packages/design-system`.
 
-The verdict is recorded on #452.
+Verdict (2026-10-21): design A, both re-nudges, push wording 1, Text that can't be delivered stays selected and shows as paused, no test button. The spec is the resolution comment on #452.

@@ -125,15 +125,15 @@ class Component extends DCLogic {
     };
     const avail = { push: pushOk, text: textOk, off: true };
     const segments = [['push', 'Push'], ['text', 'Text'], ['off', 'Off']].map(([id, label]) => {
-      const on = avail[id] && st.choice === id;
-      return { label, pick: pick(id), on, open: avail[id] && !on, dim: !avail[id] };
+      const on = st.choice === id && (avail[id] || id === 'text');
+      return { label, pick: pick(id), on, open: avail[id] && !on, dim: !avail[id] && !on };
     });
 
     let status;
     if (st.choice === 'push') status = 'A notification on this iPhone, and on any other phone you turn Push on.';
     else if (st.choice === 'off') status = 'No reminder. Your Magic Link still comes by text when you ask for one.';
     else if (textOk) status = 'A text to the number ending 4821.';
-    else status = 'You won’t get a reminder right now.';
+    else status = 'Paused: you won’t get a reminder until texts reach you again.';
 
     const callouts = [];
     if (st.fell && st.choice === 'text') callouts.push({ text: 'Push stopped reaching your phone, so your Week 8 reminder came by text and this switched back to Text. Tap Push to turn it on again.' });
