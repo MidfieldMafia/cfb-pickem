@@ -26,7 +26,11 @@ import { publishedSlate } from "@/lib/slate/slate";
 import { toE164 } from "./phone";
 import { NOOP, type SmsSender } from "./sender";
 
-/** Every text ends with this. The provider honors the reply itself; the app only learns of it from a commissioner. */
+/**
+ * A member's first text from the app, the Magic Link, ends with this; the Pick
+ * reminder does not repeat it (docs/research/pingram-opt-out.md). Pingram honors
+ * the reply itself and tells the app by webhook (`opt-outs.ts`).
+ */
 export const OPT_OUT_LINE = "Reply STOP to opt out.";
 
 /**
@@ -129,9 +133,9 @@ export function reminderBody(
   row: Pick<MemberProgress, "progress">,
   _appUrl: string,
 ): string {
-  return withOptOut(
+  return (
     `Saturday Slate: Week ${report.week.weekNumber} picks lock ${deadlineBriefly(report.deadline)}. ` +
-      `Still need ${owedBriefly(row)}.`,
+    `Still need ${owedBriefly(row)}.`
   );
 }
 
@@ -252,7 +256,7 @@ async function deliver(
   weekId: number | null,
   text: PlannedText,
 ): Promise<TextOutcome> {
-  const result = await sender.send(text.to, text.body);
+  const result = await sender.send(text.to, text.body, text.member.id);
   await db.insert(textMessages).values({
     memberId: text.member.id,
     kind,

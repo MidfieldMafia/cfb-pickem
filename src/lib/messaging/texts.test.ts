@@ -35,14 +35,14 @@ import {
 const APP = "https://slate.example";
 
 /** A sender that records what it was asked to send; `failFor` numbers get a provider error. */
-function recorder(failFor: string[] = []): SmsSender & { sent: { to: string; body: string }[] } {
-  const sent: { to: string; body: string }[] = [];
+function recorder(failFor: string[] = []): SmsSender & { sent: { to: string; body: string; memberId: number }[] } {
+  const sent: { to: string; body: string; memberId: number }[] = [];
   return {
     name: "pingram",
     sent,
-    async send(to, body) {
+    async send(to, body, memberId) {
       if (failFor.includes(to)) return { ok: false, detail: "carrier rejected" };
-      sent.push({ to, body });
+      sent.push({ to, body, memberId });
       return { ok: true, detail: `track-${sent.length}` };
     },
   };
@@ -105,10 +105,12 @@ describe("reminding everyone who hasn't picked", () => {
     expect(result.skipped).toEqual([]);
     expect(sender.sent).toHaveLength(2);
     expect(sender.sent[1].to).toBe(em.phone!.replace(/^\+?/, "+"));
-    // Thu 2026-09-11 00:00Z is 7:00 PM Central on the 10th. No link, which carriers filter on unregistered numbers, and the opt-out.
-    expect(sender.sent[1].body).toBe(
-      `Saturday Slate: Week 2 picks lock Thu 7 PM CT. Still need 3 picks, Lock, Tiebreaker. ${OPT_OUT_LINE}`,
-    );
+    // Filed under the member, so Pingram's STOP event for this number names them.
+    expect(sender.sent[1].memberId).toBe(em.id);
+    // Thu 2026-09-11 00:00Z is 7:00 PM Central on the 10th. No link, which carriers filter on unregistered
+    // numbers, and no STOP line, which the member's first text, the Magic Link, already carried.
+    expect(sender.sent[1].body).toBe("Saturday Slate: Week 2 picks lock Thu 7 PM CT. Still need 3 picks, Lock, Tiebreaker.");
+    expect(sender.sent[1].body).not.toContain(OPT_OUT_LINE);
     expect(sender.sent[0].body).toContain("Still need 2 picks, Lock, Tiebreaker.");
   });
 
@@ -161,9 +163,7 @@ describe("reminding everyone who hasn't picked", () => {
 
     const body = reminderBody(report, row, "https://slate.midfield-mafia.com/");
 
-    expect(body).toBe(
-      `Saturday Slate: Week 16 picks lock Sat 12:30 PM CT. Still need 25 picks, Lock, Tiebreaker. ${OPT_OUT_LINE}`,
-    );
+    expect(body).toBe("Saturday Slate: Week 16 picks lock Sat 12:30 PM CT. Still need 25 picks, Lock, Tiebreaker.");
     expect(body.length).toBeLessThanOrEqual(160);
     expect(segmentsOf(body)).toBe(1);
   });
@@ -282,6 +282,7 @@ describe("texting a Magic Link", () => {
       {
         to: toE164(grandma.phone!),
         body: `Hi Grandma, your Saturday Slate sign-in link: ${APP}/m/${grandma.token} ${OPT_OUT_LINE}`,
+        memberId: grandma.id,
       },
     ]);
     expect(await recentTexts(db, jonah)).toMatchObject([{ memberName: "Grandma", kind: "magic_link", ok: true }]);
@@ -388,6 +389,7 @@ describe("text me my link", () => {
       {
         to: "+12565550002",
         body: `Hi Grandma, your Saturday Slate sign-in link: ${APP}/m/${grandma.token} ${OPT_OUT_LINE}`,
+        memberId: grandma.id,
       },
     ]);
   });

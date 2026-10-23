@@ -188,9 +188,11 @@ export async function renewToken(db: Db, memberId: number, keep?: string): Promi
 }
 
 /**
- * Flags a member who replied STOP, or clears the flag when they ask to hear
- * from the app again. The app hears no replies, so this is the commissioner
- * recording what a member told them.
+ * Flags a member who asked not to be texted, or clears the flag when they ask
+ * to hear from the app again: the commissioner recording what a member told
+ * them. A STOP or START texted to Pingram sets the flag by itself
+ * (`messaging/opt-outs.ts`); clearing it here does not undo a STOP, which only
+ * the member's START does.
  */
 export async function setSmsOptedOut(db: Db, actor: Commissioner, memberId: number, optedOut: boolean): Promise<Member> {
   return updateMember(db, memberId, { smsOptedOut: optedOut });

@@ -7,7 +7,7 @@
  * changes (docs/research/sms-provider-and-reminders.md, 2026-09-05 addendum).
  */
 import "server-only";
-import { Pingram } from "pingram";
+import { ChannelsEnum, Pingram } from "pingram";
 
 export type SendResult =
   /** `detail` is the provider's tracking id. */
@@ -18,8 +18,12 @@ export type SendResult =
 export interface SmsSender {
   /** Stored on each log row. `noop` rows deliver nothing and spend no budget. */
   readonly name: string;
-  /** `to` is E.164. Never throws: a provider fault comes back as `ok: false`. */
-  send(to: string, body: string): Promise<SendResult>;
+  /**
+   * `to` is E.164. `memberId` is who it is for: Pingram files the text under
+   * that user, so a STOP reply comes back naming the member (`opt-outs.ts`).
+   * Never throws: a provider fault comes back as `ok: false`.
+   */
+  send(to: string, body: string, memberId: number): Promise<SendResult>;
 }
 
 export const NOOP = "noop";
@@ -35,17 +39,32 @@ export const noopSender: SmsSender = {
 /** The Pingram notification type every text is filed under in its dashboard. */
 const PINGRAM_TYPE = "saturday_slate";
 
+/** Pingram's own reason when it answered with an error status, else what went wrong in reaching it. */
+async function refusal(error: unknown): Promise<string> {
+  // The SDK throws a `ResponseError` carrying the response, but does not export the class.
+  const response = (error as { response?: unknown })?.response;
+  if (response instanceof Response) {
+    const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+    return typeof body?.message === "string" ? body.message : `Pingram refused the text (${response.status}).`;
+  }
+  return error instanceof Error ? error.message : "Pingram could not be reached.";
+}
+
 export function pingramSender(apiKey: string): SmsSender {
   const client = new Pingram({ apiKey });
   return {
     name: "pingram",
-    async send(to, body) {
+    async send(to, body, memberId) {
       try {
-        const response = await client.sms.send({ type: PINGRAM_TYPE, to, message: body });
-        if (response.error) return { ok: false, detail: String(response.error.message ?? "Pingram refused the text.") };
+        const response = await client.send({
+          type: PINGRAM_TYPE,
+          to: { id: String(memberId), number: to },
+          forceChannels: [ChannelsEnum.SMS],
+          sms: { message: body },
+        });
         return { ok: true, detail: response.trackingId };
       } catch (error) {
-        return { ok: false, detail: error instanceof Error ? error.message : "Pingram could not be reached." };
+        return { ok: false, detail: await refusal(error) };
       }
     },
   };
