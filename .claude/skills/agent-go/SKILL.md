@@ -77,14 +77,15 @@ that default and say so.
 
 Then comment on the issue that the build has started, and on what:
 `Build started on opus / medium: Jev level 2, confidence 0.55, below 0.7 so level 4.`
-On a Jev error: `Build started on sonnet / medium, the routine's default: Jev failed (<error>).`
+On an error: `Build started on sonnet / medium, the routine's default: <error>.`
 
 ### Jev's question
 
 `npm run agent-route` reads the question, the five levels and the table from
 this section, and the tests in `src/lib/agent-go/route.test.ts` hold it to
-five of each. Retune the levels and the 0.7 floor here after about ten
-`Built on:` lines (#463 decision 10); `route.ts` holds the floor.
+five of each. Retune the levels here after about ten `Built on:` lines (#463
+decision 10). The 0.7 floor and its level 4 live in `src/lib/agent-go/route.ts`;
+change them there and in this section's wording together.
 
 Question: How much judgment and risk does building this ticket carry, for a coding agent working alone from the ticket to an open PR with nobody to ask?
 
@@ -165,21 +166,21 @@ session's own.
 - **A PR URL**: go to the `Built on:` line below.
 - **`FAILED`, or no PR URL**: escalate once. `npm run -s agent-route -- <issue
   number> --escalate` prints the next level's route and saves it, or
-  `no escalation: level 5`. Dispatch a second leg on it, with the extra
-  paragraph above. A run that has had two legs, or is at level 5, gets no
-  more: if the branch was pushed, open a draft PR from it that closes the
-  issue (with the `Members see:` and `Built on:` lines), then comment on the
-  issue with what stopped it and what decision it needs from Jonah.
+  `no escalation: level 5`; if the command fails, take the table's next row
+  by hand. Dispatch a second leg on it, with the extra paragraph above. A run
+  that has had two legs, or is at level 5, gets no more: comment on the issue
+  with what stopped it, the branch it pushed if any, and what decision it
+  needs from Jonah, and stop (#463 decision 7).
 
 Then rewrite the PR body's `Built on:` line, in place, to the full format in
-step 7, keeping the minutes the subagent wrote (a draft you open, you time
-yourself): `gh pr view <n> --json body`, replace only the line that starts
+step 7, keeping the minutes the subagent wrote: `gh pr view <n> --json body`, replace only the line that starts
 `Built on:`, and `gh pr edit <n> --body-file <file>`. Change nothing else in
 the body, `Members see:` least of all. Comment the PR's URL on the issue, and
 end with the issue number and the PR URL, or why there is none.
 
-**Done when** the subagent has returned, at most twice, the PR's `Built on:`
-line is the full format, and the issue's last comment says which PR or why none.
+**Done when** the subagent has returned, at most twice, and either the PR's
+`Built on:` line is the whole format and the issue's last comment links the
+PR, or that comment says why there is none.
 
 ## 3. Worktree
 
@@ -349,15 +350,15 @@ for example `Built on: claude-opus-5-5 / medium (Jev level 4, confidence 0.82, 1
 - **Minutes**: `($(date -u +%s) - $(cat /tmp/agent-go-claim-<issue number>)) / 60`,
   rounded, taken just before the PR is opened: never estimated.
 
-The build subagent opening the PR writes the parts it knows, its own leg and
-the minutes: `Built on: claude-opus-5-5 / medium · 26 min claim→PR`. The
-orchestrator rewrites that line in place to the full format (step 2b). The line
+The build subagent opening the PR writes the parts of that line it knows, its
+own leg and the minutes, leaving out the parenthesis and the build part. The
+orchestrator rewrites the line in place to the whole format (step 2b). The line
 sits on its own line, so `Members see:` stays exactly as `weekly-changelog`
 reads it.
 
 If the build cannot finish, commit and push what exists, run `agent-db down`
-if it is still up, and end with `FAILED: <why>`. Step 2b decides between a
-second leg and a draft PR, and comments on the issue.
+if it is still up, and end with `FAILED: <why>`. Step 2b decides whether a
+second leg follows, and comments on the issue.
 
 **Done when** the branch's PR is open, its body has a `## Screenshots` section
 (or `Screenshots: none, <reason>` when `/tmp/shots/skipped.txt` says why), and

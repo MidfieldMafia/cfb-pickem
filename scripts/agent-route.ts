@@ -14,7 +14,16 @@
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { escalate, jevRequest, jevState, readSkill, route, routeOnError, type Route } from "../src/lib/agent-go/route";
+import {
+  escalate,
+  jevRequest,
+  jevState,
+  readSkill,
+  route,
+  routeOnError,
+  type JevState,
+  type Route,
+} from "../src/lib/agent-go/route";
 
 const REPO = "MidfieldMafia/cfb-pickem";
 const SKILL = ".claude/skills/agent-go/SKILL.md";
@@ -35,6 +44,16 @@ function parentTitle(issue: number): string | null {
   }
 }
 
+/** Every comment body, a page of 100 at a time: a brief can come late in a long thread. */
+function comments(issue: number): string[] {
+  const bodies: string[] = [];
+  for (let page = 1; ; page++) {
+    const batch = gh(`repos/${REPO}/issues/${issue}/comments?per_page=100&page=${page}`) as { body: string | null }[];
+    bodies.push(...batch.map((c) => c.body ?? ""));
+    if (batch.length < 100) return bodies;
+  }
+}
+
 function lineCount(file: string): number | null {
   if (!existsSync(file) || !statSync(file).isFile()) return null;
   return readFileSync(file, "utf8").split("\n").length;
@@ -45,15 +64,21 @@ async function askJev(issue: number): Promise<Route> {
   const key = process.env.TYPESAFE_API_KEY;
   if (!key) return routeOnError("TYPESAFE_API_KEY is not set", tiers);
 
+  let state: JevState;
   try {
     const raw = gh(`repos/${REPO}/issues/${issue}`) as { title: string; body: string | null; labels: { name: string }[] };
-    const comments = gh(`repos/${REPO}/issues/${issue}/comments?per_page=100`) as { body: string | null }[];
-    const state = jevState({
+    state = jevState({
       issue: { title: raw.title, body: raw.body ?? "", labels: raw.labels.map((l) => l.name) },
-      comments: comments.map((c) => c.body ?? ""),
+      comments: comments(issue),
       parentMap: parentTitle(issue),
       lineCount,
     });
+  } catch (error) {
+    // Not Jev's fault, so the issue comment must not say it was.
+    return routeOnError(`could not read the issue: ${error instanceof Error ? error.message : String(error)}`, tiers);
+  }
+
+  try {
     const response = await fetch(JEV_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

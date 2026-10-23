@@ -119,7 +119,11 @@ export function route(response: unknown, tiers: readonly Tier[]): Route {
   return { ...tierAt(jev.level, tiers), reason: "jev", jev };
 }
 
-/** The one re-dispatch a failed build gets: a level up. Level 5 has none. */
+/**
+ * The one re-dispatch a failed build gets: a level up. Level 5 has none. The
+ * reason and Jev's verdict stay as they were, since they explain the first
+ * leg; the `Built on:` line marks the second as escalated.
+ */
 export function escalate(from: Route, tiers: readonly Tier[]): Route | null {
   if (from.level === 5) return null;
   return { ...from, ...tierAt((from.level + 1) as Level, tiers) };
