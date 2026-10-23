@@ -35,6 +35,15 @@ export interface LiveGameJson extends RevealGame {
    * state never carries another member's Pick before the Reveal.
    */
   ownPick: OwnPickJson | null;
+  /**
+   * The viewer's own Tiebreaker Guess, on the Week's Tiebreaker Game only and
+   * before the Deadline; null on every other game, when they have not guessed,
+   * and after the Deadline, where the Reveal carries everyone's.
+   *
+   * It is separate from `ownPick` because a guess can exist without a pick. It
+   * comes from the signed-in member's own sheet and nowhere else.
+   */
+  ownTiebreakerGuess: number | null;
 }
 
 /** One side of one Game, and whether the viewer's Lock of the Week sits on it, in `RevealPick.lock`'s words. */
@@ -90,6 +99,7 @@ export function toWeekStateJson(week: ScoredWeek): WeekStateJson {
       ...game,
       detail: detailOf.get(game.game.id) ?? null,
       ownPick: sheet.locked ? null : ownPickOn(sheet, game.game.id),
+      ownTiebreakerGuess: !sheet.locked && game.game.id === slate.week.tiebreakerGameId ? sheet.tiebreakerGuess : null,
     })),
     scores: result?.scores ?? null,
     weeklyWin: result?.weeklyWin ?? null,
