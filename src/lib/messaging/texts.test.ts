@@ -105,9 +105,9 @@ describe("reminding everyone who hasn't picked", () => {
     expect(result.skipped).toEqual([]);
     expect(sender.sent).toHaveLength(2);
     expect(sender.sent[1].to).toBe(em.phone!.replace(/^\+?/, "+"));
-    // Thu 2026-09-11 00:00Z is 7:00 PM Central on the 10th. The plain app link, no shortener, and the opt-out.
+    // Thu 2026-09-11 00:00Z is 7:00 PM Central on the 10th. No link, which carriers filter on unregistered numbers, and the opt-out.
     expect(sender.sent[1].body).toBe(
-      `Saturday Slate: Week 2 picks lock Thu 7 PM CT. Still need 3 picks, Lock, Tiebreaker. ${APP} ${OPT_OUT_LINE}`,
+      `Saturday Slate: Week 2 picks lock Thu 7 PM CT. Still need 3 picks, Lock, Tiebreaker. ${OPT_OUT_LINE}`,
     );
     expect(sender.sent[0].body).toContain("Still need 2 picks, Lock, Tiebreaker.");
   });
@@ -162,7 +162,7 @@ describe("reminding everyone who hasn't picked", () => {
     const body = reminderBody(report, row, "https://slate.midfield-mafia.com/");
 
     expect(body).toBe(
-      `Saturday Slate: Week 16 picks lock Sat 12:30 PM CT. Still need 25 picks, Lock, Tiebreaker. https://slate.midfield-mafia.com ${OPT_OUT_LINE}`,
+      `Saturday Slate: Week 16 picks lock Sat 12:30 PM CT. Still need 25 picks, Lock, Tiebreaker. ${OPT_OUT_LINE}`,
     );
     expect(body.length).toBeLessThanOrEqual(160);
     expect(segmentsOf(body)).toBe(1);
