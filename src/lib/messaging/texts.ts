@@ -118,16 +118,20 @@ function owedBriefly(row: Pick<MemberProgress, "progress">): string {
   return missing.join(", ");
 }
 
-/** Worded to bill as one message whatever the member owes; a test holds the longest one to 160 characters. */
+/**
+ * Worded to bill as one message whatever the member owes; a test holds the longest one to 160 characters.
+ * It carries no link: until the 10DLC campaign is approved, texts go out from Pingram's unregistered
+ * shared numbers, and carriers blocked 8 of 17 reminders with a link as spam on 2026-10-23. `_appUrl`
+ * stays so the link can come back once the number is registered.
+ */
 export function reminderBody(
   report: Pick<PickReport, "week" | "deadline">,
   row: Pick<MemberProgress, "progress">,
-  appUrl: string,
+  _appUrl: string,
 ): string {
-  const link = appUrl.replace(/\/+$/, "");
   return withOptOut(
     `Saturday Slate: Week ${report.week.weekNumber} picks lock ${deadlineBriefly(report.deadline)}. ` +
-      `Still need ${owedBriefly(row)}. ${link}`,
+      `Still need ${owedBriefly(row)}.`,
   );
 }
 
