@@ -46,6 +46,10 @@ without commenting.
 Remove `agent:go`, assign the issue to `jonahmabry`, and comment that a build
 has started. Removing the label first is what makes check 1 stop a duplicate run.
 
+Then record the claim time, which step 7 turns into minutes:
+`date -u +%s > /tmp/agent-go-claim-<issue number>`. Each command runs in a
+fresh shell, so the file is the only place it survives.
+
 ## 3. Worktree
 
 Follow `new-worktree`: a branch named for the issue (`<slug>-<number>`), cut
@@ -191,6 +195,18 @@ Commit, run `npm run preflight` (it fails an agent build whose diff touches
 `src/app` or `src/components` and has no before and after shots), push the branch, and open a PR that closes the
 issue, written with `/mattpocock-skills:pr`, with its `Members see:` line and
 the Screenshots section from step 6. Never merge.
+
+Directly under `Members see:` the body carries one evidence line, in this
+format and nowhere else in the skill:
+
+`Built on: <model id> / <effort> · <minutes> min claim→PR`
+
+for example `Built on: claude-sonnet-5-5 / medium · 26 min claim→PR`. The model
+id is the one the session reports for itself. The minutes are
+`($(date -u +%s) - $(cat /tmp/agent-go-claim-<issue number>)) / 60`, rounded,
+taken just before the PR is opened: never estimated. A run that cannot tell its
+effort writes `effort unknown`, never a guess. The line sits on its own line, so
+`Members see:` stays exactly as `weekly-changelog` reads it.
 
 If the build cannot finish, push what exists as a draft PR, run `agent-db down`
 if it is still up, and comment on the issue with what stopped it and what
