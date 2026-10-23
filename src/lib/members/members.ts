@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { inOneBatch } from "@/db/batch";
 import {
   chatMessages,
@@ -23,6 +23,7 @@ import {
 } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { joinFamily } from "@/lib/groups/memberships";
+import { toE164 } from "@/lib/messaging/phone";
 import { Refusal } from "@/lib/refusal";
 import type { Commissioner } from "./authority";
 import { cleanDisplayName, MAX_DISPLAY_NAME, MAX_PHONE } from "./limits";
@@ -188,12 +189,25 @@ export async function renewToken(db: Db, memberId: number, keep?: string): Promi
 }
 
 /**
- * Flags a member who replied STOP, or clears the flag when they ask to hear
- * from the app again. The app hears no replies, so this is the commissioner
- * recording what a member told them.
+ * Flags a member who asked not to be texted, or clears the flag when they ask
+ * to hear from the app again: the commissioner recording what a member told
+ * them. A STOP or START texted to Pingram sets the flag by itself
+ * (`messaging/opt-outs.ts`); clearing it here does not undo a STOP, which only
+ * the member's START does.
  */
 export async function setSmsOptedOut(db: Db, actor: Commissioner, memberId: number, optedOut: boolean): Promise<Member> {
+  return recordSmsOptOut(db, memberId, optedOut);
+}
+
+/** The flag write itself, with no check: the console's toggle above, and the member's own STOP or START. */
+export async function recordSmsOptOut(db: Db, memberId: number, optedOut: boolean): Promise<Member> {
   return updateMember(db, memberId, { smsOptedOut: optedOut });
+}
+
+/** Who holds a number, given in E.164; numbers are stored as typed, so each is converted to compare. */
+export async function memberByNumber(db: Db, e164: string): Promise<Member | undefined> {
+  const holders = await db.query.members.findMany({ where: isNotNull(members.phone) });
+  return holders.find((m) => m.phone !== null && toE164(m.phone) === e164);
 }
 
 /** Deactivating signs the member out everywhere and refuses their link until reactivated. */

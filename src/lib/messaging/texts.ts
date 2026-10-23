@@ -13,12 +13,12 @@
  * either side of the Deadline and either side of a month's end.
  */
 import "server-only";
-import { and, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ne, sql } from "drizzle-orm";
 import { members, textMessages, type Member, type TextKind } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
 import type { Commissioner } from "@/lib/members/authority";
-import { InvalidMember, magicLinkFor } from "@/lib/members/members";
+import { InvalidMember, magicLinkFor, memberByNumber } from "@/lib/members/members";
 import { pickReport, type MemberProgress, type PickReport } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
 import { Refusal } from "@/lib/refusal";
@@ -26,7 +26,11 @@ import { publishedSlate } from "@/lib/slate/slate";
 import { toE164 } from "./phone";
 import { NOOP, type SmsSender } from "./sender";
 
-/** Every text ends with this. The provider honors the reply itself; the app only learns of it from a commissioner. */
+/**
+ * A member's first text from the app, the Magic Link, ends with this; the Pick
+ * reminder does not repeat it (docs/research/pingram-opt-out.md). Pingram honors
+ * the reply itself and tells the app by webhook (`opt-outs.ts`).
+ */
 export const OPT_OUT_LINE = "Reply STOP to opt out.";
 
 /**
@@ -96,10 +100,8 @@ export function segmentsOf(body: string): number {
   return septets <= 160 ? 1 : Math.ceil(septets / 153);
 }
 
-const withOptOut = (body: string) => `${body} ${OPT_OUT_LINE}`;
-
 export function magicLinkBody(member: Member, appUrl: string): string {
-  return withOptOut(`Hi ${member.displayName}, your Saturday Slate sign-in link: ${magicLinkFor(member, appUrl)}`);
+  return `Hi ${member.displayName}, your Saturday Slate sign-in link: ${magicLinkFor(member, appUrl)} ${OPT_OUT_LINE}`;
 }
 
 /** "Sat 11 AM CT": a reminder goes out in its Deadline's own week, so the weekday is enough. */
@@ -129,9 +131,9 @@ export function reminderBody(
   row: Pick<MemberProgress, "progress">,
   _appUrl: string,
 ): string {
-  return withOptOut(
+  return (
     `Saturday Slate: Week ${report.week.weekNumber} picks lock ${deadlineBriefly(report.deadline)}. ` +
-      `Still need ${owedBriefly(row)}.`,
+    `Still need ${owedBriefly(row)}.`
   );
 }
 
@@ -252,7 +254,7 @@ async function deliver(
   weekId: number | null,
   text: PlannedText,
 ): Promise<TextOutcome> {
-  const result = await sender.send(text.to, text.body);
+  const result = await sender.send(text.to, text.body, text.member.id);
   await db.insert(textMessages).values({
     memberId: text.member.id,
     kind,
@@ -318,8 +320,7 @@ export async function textOwnLink(
   const asked = toE164(rawPhone);
   if (!asked) return "check_your_texts";
   if ((await textBudget(db, sender, now)).remaining === 0) return "budget_spent";
-  const holders = await db.query.members.findMany({ where: isNotNull(members.phone) });
-  const member = holders.find((m) => m.phone !== null && toE164(m.phone) === asked);
+  const member = await memberByNumber(db, asked);
   if (!member || !member.active || member.smsOptedOut) return "check_your_texts";
   const [recent] = await db
     .select({ id: textMessages.id })
