@@ -83,8 +83,15 @@ Coastal Carolina is in progress, Q2 10:27, from a real recorded CFBD feed.
 Set up any other state the screens need with
 `npm run agent-db -- sql "<statement>"`, the one way to change the branch's
 data: it runs only against this run's branch, so it is covered by the same
-authorization as `up` and `down`. The seeded Week 7 has Coastal Carolina at
-home; `update games set home_team = 'LSU' ...` turns it into another school's.
+authorization as `up` and `down`. It takes one statement per call. The seeded
+Week 7 has Coastal Carolina at home. Turning a game into another school's
+changes `games.home_team_id` and `home_team` together (`away_*` likewise), and
+the member's `picks.team_id` with them. A void is `games.void = true` with a
+`void_note`. A Lock is one `locks` row per member and week, so move it with
+`update locks set game_id = ...`. The Week's Tiebreaker Game is
+`weeks.tiebreaker_game_id`, and guesses are in `tiebreaker_guesses`. Team ids are
+CollegeFootballData's (Iowa 2294, Michigan State 127, Duke 150), and the
+logo follows the id.
 
 Before writing any code, screenshot every existing screen the ticket will
 change, in the state that shows the change, as the member who would see it:
@@ -122,7 +129,9 @@ screen the ticket changes, or the ticket changes none.
 The routine's prompt starts with `/mattpocock-skills:implement`, so its
 instructions are already in your context: that skill cannot be invoked by the
 model, only typed, which is why the prompt carries it. Follow them inside the
-worktree, after steps 1–4, including the `tdd` and `code-review` passes. Read
+worktree, after steps 1–4, including the `tdd` and `code-review` passes (call
+the `code-review` skill on the diff before step 6; **done when** every finding
+is fixed or listed in the PR). Read
 the ticket, its parent map, and any spec, design or research it links first.
 Where implement says to ask, there is nobody to answer: make the call the
 ticket and docs support and record it under **Judgment calls** in the PR, or,

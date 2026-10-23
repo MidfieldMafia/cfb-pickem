@@ -33,6 +33,10 @@ Start one background Bash call (`run_in_background: true`):
 cd .claude/worktrees/<name> && bash .claude/skills/new-worktree/warm.sh
 ```
 
+It takes about 10 minutes from a cold clone (`npm ci` and `next build`):
+wait for the completion notice, or watch it with Monitor and an until-loop on
+`pgrep -f warm.sh`. A foreground wait hits the 10-minute tool limit.
+
 The script keeps every step's output in a log and prints a single line, so the
 install log, route table and test list stay out of your context for the rest of
 the session. Spend the ~2 minutes reading the ticket or asking design questions.

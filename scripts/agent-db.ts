@@ -431,6 +431,8 @@ function devStop() {
     process.kill(-state.devPid, "SIGTERM");
   } catch {}
   writeFileSync(STATE_FILE, JSON.stringify({ ...state, devPid: undefined } satisfies State));
+  // A killed `next dev` can leave half-written `.next/dev/types`, which `tsc` and `next build` then fail on.
+  rmSync(".next/dev", { recursive: true, force: true });
   console.log("Stopped next dev.");
 }
 
