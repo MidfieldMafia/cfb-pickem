@@ -320,6 +320,34 @@ describe("the week state", () => {
     ]);
   });
 
+  test("before the Deadline the Tiebreaker Game carries the viewer's own guess, and no other game or member does", async () => {
+    const { asGrandma, route, slate, grandma, jonah, michigan, miami, texas, db } = await setup();
+    await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+    await putTiebreaker(request({ guess: 55 }), asGrandma());
+    await putTiebreaker(request({ guess: 71 }), route(jonah));
+
+    const guesses = (state: WeekStateJson) => state.games.map((g) => [g.game.id, g.ownTiebreakerGuess]);
+    const asGrandmaState = await json<WeekStateJson>(await getWeekState(poll(), asGrandma()));
+
+    // Texas is the Tiebreaker Game; a guess with no pick on it still shows, and Jonah's 71 is nowhere.
+    expect(guesses(asGrandmaState)).toEqual([
+      [miami.id, null],
+      [michigan.id, null],
+      [texas.id, 55],
+    ]);
+    expect(JSON.stringify(asGrandmaState)).not.toContain(`"ownTiebreakerGuess":71`);
+  });
+
+  test("after the Deadline the own guess is left to the Reveal", async () => {
+    const { asGrandma, route, jonah } = await setup();
+    await putTiebreaker(request({ guess: 55 }), asGrandma());
+    await putTiebreaker(request({ guess: 71 }), route(jonah));
+
+    const state = await json<WeekStateJson>(await getWeekState(poll(), asGrandma(SUNDAY)));
+
+    expect(state.games.every((g) => g.ownTiebreakerGuess === null)).toBe(true);
+  });
+
   test("after the Deadline the own pick is left to the Reveal", async () => {
     const { asGrandma, slate, grandma, michigan, db } = await setup();
     await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);

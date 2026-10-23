@@ -8,7 +8,7 @@ import { IDLE_POLL_MS, LIVE_POLL_MS, nextPollMs } from "./poll";
 const IN_PROGRESS = liveResult(7, 3, { period: 2, clock: "04:10" });
 const FINAL = finalResult(24, 27);
 
-const row = (result: GameResult): LiveGameJson => ({ game: MICHIGAN.game, result, picks: [], detail: null, ownPick: null });
+const row = (result: GameResult): LiveGameJson => ({ game: MICHIGAN.game, result, picks: [], detail: null, ownPick: null, ownTiebreakerGuess: null });
 
 describe("the Live Board's polling cadence", () => {
   test("polls every thirty seconds while a game is under way", () => {

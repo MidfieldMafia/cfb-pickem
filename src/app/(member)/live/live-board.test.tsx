@@ -53,6 +53,7 @@ function game(result: GameResult, picks: RevealPick[] = []): LiveGameJson {
   return {
     detail: null,
     ownPick: null,
+    ownTiebreakerGuess: null,
     game: {
       id: 1,
       awayTeamId: CLEMSON,
@@ -457,12 +458,60 @@ describe("the sheet a tap opens", () => {
 
     openGame();
     expect(screen.getByText("Your pick")).not.toBeNull();
-    expect(screen.getByLabelText("Lock of the Week")).not.toBeNull();
+    expect(screen.getByText("Lock of the Week")).not.toBeNull();
     expect(screen.getByText(/Everyone.s picks show at the deadline/)).not.toBeNull();
     expect(screen.getByRole("link", { name: "Change your pick" }).getAttribute("href")).toBe("/picks");
     expect(screen.queryByText(/Picks aren.t visible yet|of 0|Nobody picked/)).toBeNull();
     // The one padlock here is on your own pick, inside the card that replaced the note.
     expect(screen.queryByText(/A padlock marks/)).toBeNull();
+  });
+
+  test("before the Deadline a dropped Lock says so and links to move it", () => {
+    const mine = { ...game(PENDING), ownPick: { teamId: GEORGIA, lock: "dropped" as const } };
+    render(
+      <LiveBoard
+        initial={state({ locked: false, complete: false, games: [mine], scores: null, members: [] })}
+        viewer={VIEWER}
+      />,
+    );
+
+    openGame();
+    expect(screen.getByText("Lock dropped: game void")).not.toBeNull();
+    expect(screen.queryByText("Lock of the Week")).toBeNull();
+    expect(screen.getByRole("link", { name: "Move your Lock" }).getAttribute("href")).toBe("/picks?step=lock");
+  });
+
+  test("on the Tiebreaker Game the card holds your guess, even with no pick", () => {
+    const week = { ...state({ locked: false, complete: false, games: [], scores: null, members: [] }).week, tiebreakerGameId: 1 };
+    const guessed = { ...game(PENDING), ownTiebreakerGuess: 52 };
+    render(
+      <LiveBoard
+        initial={state({ week, locked: false, complete: false, games: [guessed], scores: null, members: [] })}
+        viewer={VIEWER}
+      />,
+    );
+
+    openGame();
+    expect(screen.getByText("Your Tiebreaker Guess")).not.toBeNull();
+    expect(screen.getByText("52")).not.toBeNull();
+    expect(screen.queryByText("Your pick")).toBeNull();
+    expect(screen.getByText(/Everyone.s picks and guesses show at the deadline/)).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Make your pick" })).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Change your guess" }).getAttribute("href")).toBe("/picks?step=guess");
+  });
+
+  test("on the Tiebreaker Game with no guess yet, the card asks for one", () => {
+    const week = { ...state({ locked: false, complete: false, games: [], scores: null, members: [] }).week, tiebreakerGameId: 1 };
+    render(
+      <LiveBoard
+        initial={state({ week, locked: false, complete: false, games: [game(PENDING)], scores: null, members: [] })}
+        viewer={VIEWER}
+      />,
+    );
+
+    openGame();
+    expect(screen.getByText("No guess yet")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Add your guess" }).getAttribute("href")).toBe("/picks?step=guess");
   });
 
   test("before the Deadline with no pick yet, the link asks for one", () => {
