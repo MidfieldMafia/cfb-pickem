@@ -13,12 +13,12 @@
  * either side of the Deadline and either side of a month's end.
  */
 import "server-only";
-import { and, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ne, sql } from "drizzle-orm";
 import { members, textMessages, type Member, type TextKind } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
 import type { Commissioner } from "@/lib/members/authority";
-import { InvalidMember, magicLinkFor } from "@/lib/members/members";
+import { InvalidMember, magicLinkFor, memberByNumber } from "@/lib/members/members";
 import { pickReport, type MemberProgress, type PickReport } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
 import { Refusal } from "@/lib/refusal";
@@ -100,10 +100,8 @@ export function segmentsOf(body: string): number {
   return septets <= 160 ? 1 : Math.ceil(septets / 153);
 }
 
-const withOptOut = (body: string) => `${body} ${OPT_OUT_LINE}`;
-
 export function magicLinkBody(member: Member, appUrl: string): string {
-  return withOptOut(`Hi ${member.displayName}, your Saturday Slate sign-in link: ${magicLinkFor(member, appUrl)}`);
+  return `Hi ${member.displayName}, your Saturday Slate sign-in link: ${magicLinkFor(member, appUrl)} ${OPT_OUT_LINE}`;
 }
 
 /** "Sat 11 AM CT": a reminder goes out in its Deadline's own week, so the weekday is enough. */
@@ -322,8 +320,7 @@ export async function textOwnLink(
   const asked = toE164(rawPhone);
   if (!asked) return "check_your_texts";
   if ((await textBudget(db, sender, now)).remaining === 0) return "budget_spent";
-  const holders = await db.query.members.findMany({ where: isNotNull(members.phone) });
-  const member = holders.find((m) => m.phone !== null && toE164(m.phone) === asked);
+  const member = await memberByNumber(db, asked);
   if (!member || !member.active || member.smsOptedOut) return "check_your_texts";
   const [recent] = await db
     .select({ id: textMessages.id })

@@ -14,10 +14,11 @@
  * texted, or what a commissioner recorded by hand.
  */
 import "server-only";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { verify } from "pingram/webhooks";
 import { members } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { memberByNumber, recordSmsOptOut } from "@/lib/members/members";
 import { toE164 } from "./phone";
 
 /** One webhook delivery: the raw body and Pingram's `X-Pingram-Id`, `-Timestamp` and `-Signature` headers. */
@@ -31,7 +32,8 @@ export interface PingramDelivery {
 /** What a delivery did; only `unsigned` is refused, so Pingram stops retrying everything else. */
 export type PingramEventOutcome = "unsigned" | "ignored" | "unknown_member" | "opted_out" | "opted_in";
 
-const OPT_EVENTS = { SMS_UNSUBSCRIBE: true, SMS_SUBSCRIBE: false } as const;
+/** The events that move the flag, and whether each leaves the member opted out. */
+const OPTED_OUT_BY_EVENT = { SMS_UNSUBSCRIBE: true, SMS_SUBSCRIBE: false } as const;
 
 /** The member an event's `userId` names: their id, or failing that the number they hold. */
 async function memberFor(db: Db, userId: string): Promise<number | null> {
@@ -40,9 +42,7 @@ async function memberFor(db: Db, userId: string): Promise<number | null> {
     if (row) return row.id;
   }
   const number = userId.startsWith("+") ? toE164(userId) : null;
-  if (!number) return null;
-  const holders = await db.select({ id: members.id, phone: members.phone }).from(members).where(isNotNull(members.phone));
-  return holders.find((m) => toE164(m.phone!) === number)?.id ?? null;
+  return number ? ((await memberByNumber(db, number))?.id ?? null) : null;
 }
 
 /**
@@ -59,14 +59,15 @@ export async function applyPingramEvent(
   if (!secret) return "unsigned";
   let event;
   try {
-    event = verify({ payload: delivery.payload, headers: delivery, secret });
+    const { payload, id, timestamp, signature } = delivery;
+    event = verify({ payload, headers: { id, timestamp, signature }, secret });
   } catch {
     return "unsigned";
   }
-  if (!(event.eventType in OPT_EVENTS)) return "ignored";
-  const optedOut = OPT_EVENTS[event.eventType as keyof typeof OPT_EVENTS];
+  if (!(event.eventType in OPTED_OUT_BY_EVENT)) return "ignored";
+  const optedOut = OPTED_OUT_BY_EVENT[event.eventType as keyof typeof OPTED_OUT_BY_EVENT];
   const memberId = await memberFor(db, String(event.userId ?? ""));
   if (memberId === null) return "unknown_member";
-  await db.update(members).set({ smsOptedOut: optedOut }).where(eq(members.id, memberId));
+  await recordSmsOptOut(db, memberId, optedOut);
   return optedOut ? "opted_out" : "opted_in";
 }

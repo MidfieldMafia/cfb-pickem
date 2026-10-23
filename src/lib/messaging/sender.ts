@@ -39,17 +39,6 @@ export const noopSender: SmsSender = {
 /** The Pingram notification type every text is filed under in its dashboard. */
 const PINGRAM_TYPE = "saturday_slate";
 
-/** Pingram's own reason when it answered with an error status, else what went wrong in reaching it. */
-async function refusal(error: unknown): Promise<string> {
-  // The SDK throws a `ResponseError` carrying the response, but does not export the class.
-  const response = (error as { response?: unknown })?.response;
-  if (response instanceof Response) {
-    const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
-    return typeof body?.message === "string" ? body.message : `Pingram refused the text (${response.status}).`;
-  }
-  return error instanceof Error ? error.message : "Pingram could not be reached.";
-}
-
 export function pingramSender(apiKey: string): SmsSender {
   const client = new Pingram({ apiKey });
   return {
@@ -64,7 +53,8 @@ export function pingramSender(apiKey: string): SmsSender {
         });
         return { ok: true, detail: response.trackingId };
       } catch (error) {
-        return { ok: false, detail: await refusal(error) };
+        // On an error status the SDK's message is already Pingram's own reason.
+        return { ok: false, detail: error instanceof Error ? error.message : "Pingram could not be reached." };
       }
     },
   };
