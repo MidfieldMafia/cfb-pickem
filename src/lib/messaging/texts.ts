@@ -12,10 +12,11 @@
  * and who is not, and why, from plain rows and a remaining budget; the console
  * reads the same plan to show the people the app cannot text, so what the page
  * promises and what the button does cannot drift apart. Delivery then walks the
- * plan and writes one `text_messages` row per try.
+ * plan and writes one `text_messages` row per try, and one `push_messages`
+ * row per member pushed.
  *
  * Vocabulary follows GLOSSARY.md. Every writer takes the database first and the
- * `SmsSender` second; `now` is the server clock, injected so tests can sit on
+ * `SmsSender`, or for a reminder the `ReminderSenders`, second; `now` is the server clock, injected so tests can sit on
  * either side of the Deadline and either side of a month's end.
  */
 import "server-only";
@@ -130,7 +131,7 @@ export function deadlineBriefly(deadline: Date): string {
 }
 
 /** What one member still owes, as short as stays clear: "2 picks, Lock, Tiebreaker". */
-export function owedBriefly(row: Pick<MemberProgress, "progress">): string {
+function owedBriefly(row: Pick<MemberProgress, "progress">): string {
   const missing: string[] = [];
   const picksLeft = row.progress.countingGames - row.progress.picksMade;
   if (picksLeft > 0) missing.push(plural(picksLeft, "pick"));
@@ -157,7 +158,7 @@ export function reminderBody(
 }
 
 /** Where a push tap opens: the first Picks step still owed. */
-export function reminderPath(row: Pick<MemberProgress, "progress">): string {
+function reminderPath(row: Pick<MemberProgress, "progress">): string {
   if (row.progress.countingGames > row.progress.picksMade) return "/picks";
   if (row.progress.lockOpen) return "/picks?step=lock";
   return "/picks?step=guess";
@@ -462,8 +463,9 @@ export async function reminderPlan(
 
 /**
  * Pushes one member's reminder to every device they have and logs it. Devices
- * the push service says are gone are deleted; when none is left, the member's
- * reminder turns off and Settings says push stopped reaching them.
+ * the push service says are gone are deleted; when none is left (or there were
+ * none to begin with), the member's reminder turns off and Settings says push
+ * stopped reaching them. A device that failed otherwise keeps its row.
  */
 async function pushTo(
   db: Db,
