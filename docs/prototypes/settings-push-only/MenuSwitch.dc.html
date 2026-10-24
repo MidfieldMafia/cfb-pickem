@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Member menu with the reminder switch</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="width: 390px; height: 716px; display: flex; flex-direction: column; background: #e8e3d6; font-family: var(--font-sans); color: var(--foreground);">
+
+  <div style="height: 156px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+    <label for="scenario" style="font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: #5c5246;">Prototype · Scenario</label>
+    <select id="scenario" value="{{sc}}" onChange="{{pickScenario}}" style="height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font: 500 14px/20px var(--font-sans); padding: 0 8px;">
+      <sc-for list="{{scenarios}}" as="o" hint-placeholder-count="6">
+        <option value="{{o.id}}">{{o.label}}</option>
+      </sc-for>
+    </select>
+    <p style="margin: 0; font: 400 12px/16px var(--font-sans); color: #5c5246;">{{readout}}</p>
+  </div>
+
+  <div style="position: relative; width: 390px; height: 560px; overflow: hidden; background: var(--background);">
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Week 8" sub="Picks lock Sat 11 AM CT"></x-import>
+
+    <div style="position: absolute; top: 14px; right: 16px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+      <x-import component-from-global-scope="SaturdaySlateDesignSystem.Pennant" name="Cousin Em" size="{{size}}"></x-import>
+    </div>
+
+    <nav aria-label="Member menu" style="position: absolute; top: 62px; right: 16px; width: 256px; box-sizing: border-box; display: grid; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--card);">
+      <div style="display: grid; gap: 2px; padding: 4px 8px 0;">
+        <p style="margin: 0; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Group</p>
+        <p style="margin: 0; font: 600 14px/20px var(--font-sans);">Midfield Mafia</p>
+      </div>
+      <a href="#" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 4px; font: 600 14px/20px var(--font-sans); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="m3 11 18-5v12L3 14v-3z"></path><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path></svg>
+        What&#8217;s new
+      </a>
+
+      <div style="display: grid; gap: 0; padding: 0 0 0 8px; border-radius: 4px; background: var(--accent);">
+        <div style="display: flex; align-items: center; gap: 8px; min-height: 44px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+          <p id="reminder-label" style="flex: 1 1 0; min-width: 0; margin: 0; font: 600 14px/20px var(--font-sans);">Pick reminder</p>
+
+          <sc-if value="{{swOn}}" hint-placeholder-val="{{false}}">
+            <button type="button" role="switch" aria-checked="true" aria-labelledby="reminder-label" onClick="{{toggle}}" style="flex-shrink: 0; width: 52px; height: 44px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: center;">
+              <span style="position: relative; display: block; width: 40px; height: 24px; box-sizing: border-box; border-radius: 999px; background: var(--primary);">
+                <span style="position: absolute; top: 3px; left: 19px; width: 18px; height: 18px; border-radius: 999px; background: var(--primary-foreground);"></span>
+              </span>
+            </button>
+          </sc-if>
+          <sc-if value="{{swOff}}" hint-placeholder-val="{{true}}">
+            <button type="button" role="switch" aria-checked="false" aria-labelledby="reminder-label" onClick="{{toggle}}" style="flex-shrink: 0; width: 52px; height: 44px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: center;">
+              <span style="position: relative; display: block; width: 40px; height: 24px; box-sizing: border-box; border: 2px solid var(--muted-foreground); border-radius: 999px; background: var(--muted);">
+                <span style="position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 999px; background: var(--muted-foreground);"></span>
+              </span>
+            </button>
+          </sc-if>
+          <sc-if value="{{swDim}}" hint-placeholder-val="{{false}}">
+            <button type="button" role="switch" aria-checked="false" aria-labelledby="reminder-label" disabled="{{yes}}" style="flex-shrink: 0; width: 52px; height: 44px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; opacity: 0.5;">
+              <span style="position: relative; display: block; width: 40px; height: 24px; box-sizing: border-box; border: 2px solid var(--muted-foreground); border-radius: 999px; background: var(--muted);">
+                <span style="position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 999px; background: var(--muted-foreground);"></span>
+              </span>
+            </button>
+          </sc-if>
+        </div>
+        <sc-if value="{{problem}}" hint-placeholder-val="{{false}}">
+          <p style="margin: -8px 8px 8px 24px; font: 400 12px/16px var(--font-sans); color: var(--muted-foreground);">{{problemText}}</p>
+        </sc-if>
+        <sc-if value="{{link}}" hint-placeholder-val="{{false}}">
+          <a href="/install" style="display: flex; align-items: center; min-height: 44px; margin: -12px 8px 0 24px; font: 600 12px/16px var(--font-sans); text-decoration: underline; text-underline-offset: 3px;">Add it to your Home Screen</a>
+        </sc-if>
+      </div>
+
+      <a href="#" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 4px; font: 600 14px/20px var(--font-sans); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Send feedback
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 4px; font: 600 14px/20px var(--font-sans); text-decoration: none;">
+        Cousin Em
+        <span style="font-weight: 400; color: var(--muted-foreground);">Your profile</span>
+      </a>
+    </nav>
+
+    <sc-if value="{{prompt}}" hint-placeholder-val="{{false}}">
+      <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center;">
+        <div role="alertdialog" aria-label="iPhone permission prompt" style="width: 270px; border-radius: 14px; background: rgba(242, 242, 247, 0.98); font-family: -apple-system, system-ui, sans-serif; color: #000; text-align: center; overflow: hidden;">
+          <div style="padding: 20px 16px 16px; display: flex; flex-direction: column; gap: 4px;">
+            <p style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 600;">&#8220;Saturday Slate&#8221; Would Like to Send You Notifications</p>
+            <p style="margin: 0; font-size: 13px; line-height: 18px;">Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.</p>
+          </div>
+          <div style="display: flex; border-top: 0.5px solid rgba(60, 60, 67, 0.36);">
+            <button type="button" onClick="{{dontAllow}}" style="flex: 1 1 0; height: 44px; border: 0; border-right: 0.5px solid rgba(60, 60, 67, 0.36); background: transparent; color: #007aff; font-size: 17px; font-family: inherit;">Don&#8217;t Allow</button>
+            <button type="button" onClick="{{allow}}" style="flex: 1 1 0; height: 44px; border: 0; background: transparent; color: #007aff; font-size: 17px; font-weight: 600; font-family: inherit;">Allow</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":716}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = this.fresh('app');
+  }
+  scenarioList() {
+    return [
+      { id: 'app', label: 'Home Screen app, reminder off', device: 'app', on: false, perm: 'not asked' },
+      { id: 'appOn', label: 'Home Screen app, reminder on', device: 'app', on: true, perm: 'allowed' },
+      { id: 'safari', label: 'Safari on iPhone (not on Home Screen)', device: 'safari', on: false, perm: 'n/a' },
+      { id: 'computer', label: 'On a computer', device: 'computer', on: false, perm: 'n/a' },
+      { id: 'denied', label: 'Notifications blocked in iPhone Settings', device: 'app', on: false, perm: 'denied' },
+      { id: 'fell', label: 'Push stopped reaching the phone', device: 'app', on: false, perm: 'allowed', fell: true }
+    ];
+  }
+  fresh(id) {
+    const s = this.scenarioList().find((x) => x.id === id);
+    return { sc: id, on: s.on, perm: s.perm, prompt: false, fell: !!s.fell };
+  }
+  renderVals() {
+    const st = this.state;
+    const s = this.scenarioList().find((x) => x.id === st.sc);
+    const can = s.device === 'app' && st.perm !== 'denied';
+    const toggle = () => {
+      if (st.on) this.setState({ on: false, fell: false });
+      else if (!can) this.forceUpdate();
+      else if (st.perm === 'allowed') this.setState({ on: true, fell: false });
+      else this.setState({ prompt: true });
+    };
+
+    let problemText = '';
+    if (s.device === 'safari') problemText = 'Works from the Home Screen app.';
+    else if (s.device === 'computer') problemText = 'Turn this on in the app on your phone.';
+    else if (st.perm === 'denied') problemText = 'Blocked in iPhone Settings › Notifications.';
+    else if (st.fell) problemText = 'Stopped reaching your phone, so it turned off.';
+
+    const subs = st.on ? 1 : 0;
+    return {
+      yes: true,
+      size: 44,
+      sc: st.sc,
+      scenarios: this.scenarioList(),
+      pickScenario: (e) => this.setState(this.fresh(e.target.value)),
+      toggle,
+      swOn: st.on,
+      swOff: !st.on && can,
+      swDim: !st.on && !can,
+      problem: !!problemText,
+      problemText,
+      link: s.device === 'safari',
+      prompt: st.prompt,
+      allow: () => this.setState({ prompt: false, perm: 'allowed', on: true, fell: false }),
+      dontAllow: () => this.setState({ prompt: false, perm: 'denied' }),
+      readout: 'Saved: Pick reminder = ' + (st.on ? 'Push' : 'Off') + ' · This device’s permission: ' + st.perm + ' · Push subscriptions: ' + subs
+    };
+  }
+}
+</script>
+</body>
+</html>

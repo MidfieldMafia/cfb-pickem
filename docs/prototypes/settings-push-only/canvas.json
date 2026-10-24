@@ -1,0 +1,22 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-24T01:44:27Z" },
+  "title": "Settings, simpler (#454)",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 1000, "title": "A · Row in a card", "is_interactive": true },
+    "OneLine.dc.html": { "x": 470, "y": 0, "w": 390, "h": 1000, "title": "B · One line, no card heading", "is_interactive": true },
+    "MenuSwitch.dc.html": { "x": 940, "y": 0, "w": 390, "h": 716, "title": "C · No Settings page: the switch is in the menu", "is_interactive": true },
+    "Before.dc.html": { "x": 1410, "y": 0, "w": 390, "h": 1000, "title": "Before · #452 design A (Push / Text / Off)", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "OneLine.dc.html", "MenuSwitch.dc.html", "Before.dc.html"],
+  "notes": {
+    "row1": { "x": 0, "y": -260, "text": "Pick reminder: push only, on or off", "kind": "title1", "maxW": 1800 },
+    "how": { "x": 1880, "y": 0, "w": 320, "fill": "orange", "size": "s", "text": "Texting is paused (PR #468), so Text is gone and the reminder is one switch: on = push to this phone, off = nothing. Press Play, then use the Scenario picker above each phone. In the Home Screen app, flip the switch to walk the iPhone prompt (Allow / Don't Allow). A problem replaces the one help line rather than adding a box." },
+    "open": { "x": 1880, "y": 480, "w": 320, "fill": "blue", "size": "s", "text": "Calls this needs from Jonah: (1) default is Off for everyone, since a saved Text reminder can no longer be delivered; (2) when push stops reaching a phone, the switch turns itself off (there is no text to fall back to); (3) the design system has no Switch, so the build adds one." }
+  },
+  "designSystems": [
+    { "title": "Saturday Slate Design System", "namespace": "saturdayslatedesignsystem", "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU", "version": "1792639070-43d8", "copiedAt": "2026-10-24T01:44:27Z" }
+  ]
+}
