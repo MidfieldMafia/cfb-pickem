@@ -1,0 +1,23 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-24T03:10:00Z" },
+  "title": "Home Screen nudge card (#455)",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 844, "title": "A · Centred pop-up, like What's new", "is_interactive": true },
+    "Sheet.dc.html": { "x": 470, "y": 0, "w": 390, "h": 844, "title": "B · Bottom sheet", "is_interactive": true },
+    "Banner.dc.html": { "x": 1100, "y": 0, "w": 390, "h": 844, "title": "Then, every later visit · Compact banner", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "Sheet.dc.html", "Banner.dc.html"],
+  "notes": {
+    "row1": { "x": 0, "y": -260, "text": "Home Screen nudge: pop-up first, banner after", "kind": "title1", "maxW": 1490 },
+    "first": { "x": 0, "y": -110, "w": 860, "fill": "gray", "size": "s", "text": "First time: one pop-up, A or B" },
+    "later": { "x": 1100, "y": -110, "w": 390, "fill": "gray", "size": "s", "text": "Every later visit, until it is on the Home Screen" },
+    "how": { "x": 1570, "y": 0, "w": 320, "fill": "orange", "size": "s", "text": "Only members in Safari on iPhone with picks open see either: never in the Home Screen app, on a computer, or after the Deadline. The first time Picks opens, the pop-up shows once; closing it in any way (Not now, the X, the backdrop) marks it seen in browser storage. From the next visit on, the banner sits at the top of Picks until the member adds the app; its X hides it for that visit only. Add / Add to Home Screen go to /install. Press Play; a dashed prototype button undoes each close." },
+    "open": { "x": 1570, "y": 480, "w": 320, "fill": "blue", "size": "s", "text": "Calls for Jonah: (1) pop-up A or B; (2) what counts as a new visit: the app opened fresh after 30 minutes away (proposed), or any reload; (3) does the banner's X hide it for the visit only (drawn) or for the rest of the Week; (4) the pop-up waits for the Welcome Tour and What's new, so a new member never gets two pop-ups at once." }
+  },
+  "designSystems": [
+    { "title": "Saturday Slate Design System", "namespace": "saturdayslatedesignsystem", "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU", "version": "1792807414-3f83", "copiedAt": "2026-10-24T03:10:00Z" }
+  ]
+}
