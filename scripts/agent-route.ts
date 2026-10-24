@@ -9,8 +9,11 @@
  *
  * Prints the route as one JSON line and saves it to
  * `/tmp/agent-go-route-<issue>.json`, where `--escalate` reads it. It never
- * fails the run over Jev: no key, a network error, a non-200 or an answer it
- * cannot read all route to the routine's default, with the error in the JSON.
+ * fails the run over Jev: a 401, a network error, another non-200 or an answer
+ * it cannot read all route to the routine's default, with the error in the JSON.
+ *
+ * The key: in the cloud, the TypeSafe network secret adds it on the way out;
+ * anywhere else, `TYPESAFE_API_KEY` in the environment.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -61,8 +64,10 @@ function lineCount(file: string): number | null {
 
 async function askJev(issue: number): Promise<Route> {
   const { question, levels, tiers } = readSkill(readFileSync(SKILL, "utf8"));
+  // In the cloud the key is a network secret: the proxy adds it, and it is
+  // never in the VM. Only a run elsewhere sends its own, from the environment.
   const key = process.env.TYPESAFE_API_KEY;
-  if (!key) return routeOnError("TYPESAFE_API_KEY is not set", tiers);
+  const auth: Record<string, string> = key ? { Authorization: `Bearer ${key}` } : {};
 
   let state: JevState;
   try {
@@ -81,10 +86,17 @@ async function askJev(issue: number): Promise<Route> {
   try {
     const response = await fetch(JEV_URL, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { ...auth, "Content-Type": "application/json" },
       body: JSON.stringify(jevRequest(state, question, levels)),
       signal: AbortSignal.timeout(JEV_TIMEOUT_MS),
     });
+    // Jev answers a request with no key 403, and a bad one 401.
+    if ((response.status === 401 || response.status === 403) && !key) {
+      return routeOnError(
+        `HTTP ${response.status} from Jev: no key reached it (the TypeSafe network secret, or TYPESAFE_API_KEY off the cloud)`,
+        tiers,
+      );
+    }
     if (!response.ok) return routeOnError(`HTTP ${response.status} from Jev`, tiers);
     return route(await response.json().catch(() => null), tiers);
   } catch (error) {
