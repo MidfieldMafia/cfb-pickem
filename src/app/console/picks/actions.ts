@@ -2,9 +2,8 @@
 
 import type { ActionState } from "@/lib/console/state";
 import { appUrl } from "@/lib/app-url";
-import { sendReminderTexts } from "@/lib/messaging/console-edits";
-import { TEXTING_PAUSED, TEXTING_PAUSED_REASON } from "@/lib/messaging/paused";
-import { senderFromEnv } from "@/lib/messaging/sender";
+import { sendReminders } from "@/lib/messaging/console-edits";
+import { reminderSendersFromEnv } from "@/lib/messaging/reminder-senders";
 import { editGuess, editLock, editPick } from "@/lib/picks/console-edits";
 import { consoleRoute } from "../context";
 
@@ -18,9 +17,9 @@ export async function overrideLockAction(_prev: ActionState, formData: FormData)
   return editLock(consoleRoute(), formData);
 }
 
-export async function textRemindersAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  if (TEXTING_PAUSED) return { error: TEXTING_PAUSED_REASON };
-  return sendReminderTexts(consoleRoute(), senderFromEnv(), appUrl(), formData);
+/** Reminds everyone behind, each by their channel; while texting is paused, only members on Push are reached. */
+export async function remindAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return sendReminders(consoleRoute(), reminderSendersFromEnv(), appUrl(), formData);
 }
 
 export async function overrideTiebreakerAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

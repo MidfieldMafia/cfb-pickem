@@ -113,6 +113,13 @@
       "when": 1791581904187,
       "tag": "0015_tour-dismissals",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792808186152,
+      "tag": "0016_push-reminders",
+      "breakpoints": true
     }
   ]
 }

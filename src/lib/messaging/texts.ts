@@ -1,20 +1,27 @@
 /**
- * Every text the app sends: what it says, who may get it, what it costs
- * against the month's budget, and the log that records each try.
+ * Every text the app sends, and the Pick reminder however it goes: what it
+ * says, who may get it, what a text costs against the month's budget, and the
+ * logs that record each try.
+ *
+ * A member's Pick reminder follows their channel (#454): Push goes to every
+ * device they subscribed and never also as a text, Text is texted, and Off is
+ * skipped. When every device answers that it is gone, the subscriptions are
+ * deleted and the reminder turns itself off; nothing falls back to a text.
  *
  * A send is planned before it is made. `planReminders` decides who is reached
  * and who is not, and why, from plain rows and a remaining budget; the console
  * reads the same plan to show the people the app cannot text, so what the page
  * promises and what the button does cannot drift apart. Delivery then walks the
- * plan and writes one `text_messages` row per try.
+ * plan and writes one `text_messages` row per try, and one `push_messages`
+ * row per member pushed.
  *
  * Vocabulary follows GLOSSARY.md. Every writer takes the database first and the
- * `SmsSender` second; `now` is the server clock, injected so tests can sit on
+ * `SmsSender`, or for a reminder the `ReminderSenders`, second; `now` is the server clock, injected so tests can sit on
  * either side of the Deadline and either side of a month's end.
  */
 import "server-only";
-import { and, desc, eq, gte, ne, sql } from "drizzle-orm";
-import { members, textMessages, type Member, type TextKind } from "@/db/schema";
+import { and, desc, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
+import { members, pushMessages, pushSubscriptions, textMessages, type Member, type PushKind, type TextKind } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
 import type { Commissioner } from "@/lib/members/authority";
@@ -22,6 +29,7 @@ import { InvalidMember, magicLinkFor, memberByNumber } from "@/lib/members/membe
 import { pickReport, type MemberProgress, type PickReport } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
 import { Refusal } from "@/lib/refusal";
+import type { Pusher, PushPayload, SendOutcome } from "@/lib/push/sender";
 import { publishedSlate } from "@/lib/slate/slate";
 import { toE164 } from "./phone";
 import { NOOP, type SmsSender } from "./sender";
@@ -67,11 +75,23 @@ export const REMINDER_WINDOW_MS = 24 * 3600_000;
 
 export class TextRefused extends Refusal {}
 
-/** Why the app did not text someone. */
-export type Unreached = "deactivated" | "opted_out" | "no_phone" | "bad_phone" | "member_cap" | "over_budget";
+/** Why the app did not remind someone. */
+export type Unreached =
+  | "deactivated"
+  | "reminder_off"
+  | "push_not_set_up"
+  | "texting_paused"
+  | "opted_out"
+  | "no_phone"
+  | "bad_phone"
+  | "member_cap"
+  | "over_budget";
 
 export const UNREACHED: Record<Unreached, string> = {
   deactivated: "deactivated",
+  reminder_off: "reminder is off",
+  push_not_set_up: "push is not set up on this server",
+  texting_paused: "texting is paused",
   opted_out: "opted out",
   no_phone: "no phone number",
   bad_phone: "phone number is not one we can text",
@@ -137,6 +157,26 @@ export function reminderBody(
   );
 }
 
+/** Where a push tap opens: the first Picks step still owed. */
+function reminderPath(row: Pick<MemberProgress, "progress">): string {
+  if (row.progress.countingGames > row.progress.picksMade) return "/picks";
+  if (row.progress.lockOpen) return "/picks?step=lock";
+  return "/picks?step=guess";
+}
+
+/** The Pick reminder as a push: the Deadline in the title, what is owed in the body. */
+export function reminderPush(
+  report: Pick<PickReport, "week" | "deadline">,
+  row: Pick<MemberProgress, "progress">,
+): PushPayload {
+  return {
+    title: `Week ${report.week.weekNumber} picks lock ${deadlineBriefly(report.deadline)}`,
+    body: `Still need ${owedBriefly(row)}.`,
+    url: reminderPath(row),
+    tag: `reminder-week-${report.week.weekNumber}`,
+  };
+}
+
 /** The number to text and why not, in the order a commissioner would fix them. */
 function reach(member: Member): { to: string } | { why: Unreached } {
   if (!member.active) return { why: "deactivated" };
@@ -200,26 +240,56 @@ export interface PlannedText {
 }
 
 export interface ReminderPlan {
+  /** Members on Push, sent to every device they have. */
+  push: MemberProgress[];
   send: (PlannedText & { row: MemberProgress })[];
   skip: { row: MemberProgress; why: Unreached }[];
 }
 
+/** What a reminder can go out through right now. */
+export interface ReminderReach {
+  /** False when push is not configured on this server. */
+  push: boolean;
+  /** `TEXTING_PAUSED`: members on Text are skipped. */
+  textingPaused: boolean;
+}
+
 /**
- * Who is texted, in the order the members joined, until the budget runs out;
- * everyone else who is behind is listed with the reason. A member who is
- * complete is in neither list. `already` are members not to text again.
+ * Who is reminded, and how, in the order the members joined: each by their
+ * channel, and texts until the budget runs out. Everyone else who is behind is
+ * listed with the reason. A member who is complete is in no list. `already`
+ * are members not to remind again.
  */
 export function planReminders(
   report: PickReport,
   appUrl: string,
   budget: Pick<TextBudget, "remaining" | "byMember">,
   already: ReadonlySet<number> = new Set(),
+  can: ReminderReach = { push: true, textingPaused: false },
 ): ReminderPlan {
-  const plan: ReminderPlan = { send: [], skip: [] };
+  const plan: ReminderPlan = { push: [], send: [], skip: [] };
   let left = budget.remaining;
   for (const row of report.members) {
     if (row.complete || already.has(row.member.id)) continue;
-    const target = reach(row.member);
+    const { member } = row;
+    if (!member.active) {
+      plan.skip.push({ row, why: "deactivated" });
+      continue;
+    }
+    if (member.reminderChannel === "off") {
+      plan.skip.push({ row, why: "reminder_off" });
+      continue;
+    }
+    if (member.reminderChannel === "push") {
+      if (can.push) plan.push.push(row);
+      else plan.skip.push({ row, why: "push_not_set_up" });
+      continue;
+    }
+    if (can.textingPaused) {
+      plan.skip.push({ row, why: "texting_paused" });
+      continue;
+    }
+    const target = reach(member);
     if ("why" in target) {
       plan.skip.push({ row, why: target.why });
       continue;
@@ -344,37 +414,107 @@ export async function textOwnLink(
   return "check_your_texts";
 }
 
+/** What a reminder goes out through: the text sender, the push sender (null when push is not set up), and the pause. */
+export interface ReminderSenders {
+  sms: SmsSender;
+  push: Pusher | null;
+  textingPaused: boolean;
+}
+
+export interface PushOutcome {
+  member: Member;
+  /** At least one device took it. */
+  ok: boolean;
+  /** Push stopped reaching every device, so the member's reminder turned off. */
+  stopped: boolean;
+  detail: string;
+}
+
 export interface ReminderResult {
+  pushed: PushOutcome[];
   texted: TextOutcome[];
   skipped: ReminderPlan["skip"];
 }
 
-/** Texts everyone behind on a Week who can be reached, and reports who could not be. */
+/** Reminds everyone behind on a Week who can be reached, each by their channel, and reports who could not be. */
 export async function remindEveryone(
   db: Db,
-  sender: SmsSender,
+  senders: ReminderSenders,
   actor: Commissioner,
   weekId: number,
   appUrl: string,
   now: Date = new Date(),
 ): Promise<ReminderResult> {
-  return sendReminders(db, sender, "reminder", await pickReport(db, weekId, now), appUrl, now);
+  return sendReminders(db, senders, "reminder", await pickReport(db, weekId, now), appUrl, now);
+}
+
+/** The reminder plan for these senders: the console reads it to show who a press would reach. */
+export async function reminderPlan(
+  db: Db,
+  senders: ReminderSenders,
+  report: PickReport,
+  appUrl: string,
+  now: Date,
+  already?: ReadonlySet<number>,
+): Promise<ReminderPlan> {
+  const budget = await textBudget(db, senders.sms, now);
+  return planReminders(report, appUrl, budget, already, { push: senders.push !== null, textingPaused: senders.textingPaused });
+}
+
+/**
+ * Pushes one member's reminder to every device they have and logs it. Devices
+ * the push service says are gone are deleted; when none is left (or there were
+ * none to begin with), the member's reminder turns off and Settings says push
+ * stopped reaching them. A device that failed otherwise keeps its row.
+ */
+async function pushTo(
+  db: Db,
+  pusher: Pusher,
+  kind: PushKind,
+  report: PickReport,
+  row: MemberProgress,
+  now: Date,
+): Promise<PushOutcome> {
+  const { member } = row;
+  const devices = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.memberId, member.id));
+  const payload = reminderPush(report, row);
+  const outcomes = await Promise.all(
+    devices.map(async (d): Promise<[number, SendOutcome]> => [d.id, await pusher.send(d, payload)]),
+  );
+  const count = (o: SendOutcome) => outcomes.filter(([, outcome]) => outcome === o).length;
+  const gone = outcomes.filter(([, outcome]) => outcome === "gone").map(([id]) => id);
+  const sent = count("sent");
+  const failed = count("failed");
+  if (gone.length) await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone));
+  const stopped = gone.length === devices.length;
+  if (stopped) {
+    await db.update(members).set({ reminderChannel: "off", pushStoppedAt: now }).where(eq(members.id, member.id));
+  }
+  await db.insert(pushMessages).values({ memberId: member.id, kind, weekId: report.week.id, sent, gone: gone.length, failed });
+  const detail = stopped
+    ? "push stopped reaching their phone, so their reminder turned off"
+    : sent === 0
+      ? "the push service did not answer"
+      : plural(sent, "device");
+  return { member, ok: sent > 0, stopped, detail };
 }
 
 async function sendReminders(
   db: Db,
-  sender: SmsSender,
-  kind: TextKind,
+  senders: ReminderSenders,
+  kind: PushKind,
   report: PickReport,
   appUrl: string,
   now: Date,
   already?: ReadonlySet<number>,
 ): Promise<ReminderResult> {
-  const plan = planReminders(report, appUrl, await textBudget(db, sender, now), already);
+  const plan = await reminderPlan(db, senders, report, appUrl, now, already);
+  const pushed: PushOutcome[] = [];
+  if (senders.push) for (const row of plan.push) pushed.push(await pushTo(db, senders.push, kind, report, row, now));
   const texted: TextOutcome[] = [];
   // One at a time: a shared sender number is rate limited, and the order stays the roster's.
-  for (const text of plan.send) texted.push(await deliver(db, sender, kind, report.week.id, text));
-  return { texted, skipped: plan.skip };
+  for (const text of plan.send) texted.push(await deliver(db, senders.sms, kind, report.week.id, text));
+  return { pushed, texted, skipped: plan.skip };
 }
 
 export type ScheduledRun =
@@ -383,14 +523,14 @@ export type ScheduledRun =
 
 /**
  * The daily cron's work: when the latest published Week's Deadline is within
- * the next day, text whoever is still behind. Cron is best effort and can fire
- * twice, so a member already sent this Week's scheduled reminder is not sent it
- * again; the once-a-day schedule makes sure each Deadline falls in exactly one
- * window.
+ * the next day, remind whoever is still behind. Cron is best effort and can fire
+ * twice, so a member already sent this Week's scheduled reminder, by text or by
+ * a push that reached a device, is not sent it again; the once-a-day schedule
+ * makes sure each Deadline falls in exactly one window.
  */
 export async function runScheduledReminder(
   db: Db,
-  sender: SmsSender,
+  senders: ReminderSenders,
   appUrl: string,
   now: Date = new Date(),
 ): Promise<ScheduledRun> {
@@ -405,15 +545,21 @@ export async function runScheduledReminder(
     .where(
       and(eq(textMessages.weekId, slate.week.id), eq(textMessages.kind, "scheduled_reminder"), eq(textMessages.status, "sent")),
     );
+  const pushedEarlier = await db
+    .select({ memberId: pushMessages.memberId })
+    .from(pushMessages)
+    .where(
+      and(eq(pushMessages.weekId, slate.week.id), eq(pushMessages.kind, "scheduled_reminder"), gt(pushMessages.sent, 0)),
+    );
   const report = await pickReport(db, slate.week.id, now);
   const result = await sendReminders(
     db,
-    sender,
+    senders,
     "scheduled_reminder",
     report,
     appUrl,
     now,
-    new Set(earlier.map((r) => r.memberId)),
+    new Set([...earlier, ...pushedEarlier].map((r) => r.memberId)),
   );
   return { ran: true, weekNumber: slate.week.weekNumber, ...result };
 }
@@ -449,12 +595,17 @@ export async function recentTexts(db: Db, actor: Commissioner, limit = 20): Prom
 
 /** The sentence a bulk send answers with. */
 export function reminderSummary(result: ReminderResult): string {
+  const names = (rows: { member: Member }[]) => rows.map((r) => r.member.displayName).join(", ");
+  const pushed = result.pushed.filter((p) => p.ok);
   const sent = result.texted.filter((t) => t.ok);
-  const failed = result.texted.filter((t) => !t.ok);
-  const parts = [sent.length === 0 ? "Nobody was texted." : `Texted ${sent.map((t) => t.member.displayName).join(", ")}.`];
+  const failed = [...result.pushed.filter((p) => !p.ok), ...result.texted.filter((t) => !t.ok)];
+  const parts: string[] = [];
+  if (pushed.length) parts.push(`Pushed ${names(pushed)}.`);
+  if (sent.length) parts.push(`Texted ${names(sent)}.`);
+  if (parts.length === 0) parts.push("Nobody was reminded.");
   if (failed.length) parts.push(`Failed: ${failed.map((t) => `${t.member.displayName} (${t.detail})`).join("; ")}.`);
   if (result.skipped.length) {
-    parts.push(`Not texted: ${result.skipped.map((s) => `${s.row.member.displayName} (${UNREACHED[s.why]})`).join(", ")}.`);
+    parts.push(`Not reminded: ${result.skipped.map((s) => `${s.row.member.displayName} (${UNREACHED[s.why]})`).join(", ")}.`);
   }
   return parts.join(" ");
 }

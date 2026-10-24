@@ -16,6 +16,7 @@ import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
 import { recentTexts, textBudget } from "@/lib/messaging/texts";
 import { listMembers, magicLinkFor, pickCountByMember } from "@/lib/members/members";
 import { plural } from "@/lib/plural";
+import { reminderSwitch } from "@/lib/push/settings";
 import { relativeTime } from "@/lib/relative-time";
 import { clearPhotoAction, deleteMemberAction, editPhoneAction, optOutAction, regenerateAction, setActiveAction, textMagicLinkAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
@@ -77,6 +78,7 @@ export default async function Members() {
                         <p className="text-xs text-muted-foreground">
                           {member.phone ?? "No phone yet"}
                           {member.smsOptedOut ? " · opted out of texts" : ""}
+                          {` · Reminder: ${reminderSwitch(member).on ? "Push" : "Off"}`}
                         </p>
                       </div>
                     </div>

@@ -5,12 +5,12 @@
  */
 import { PGlite } from "@electric-sql/pglite";
 import { dataDir } from "@electric-sql/pglite-prepopulatedfs";
-import { asc } from "drizzle-orm";
+import { asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { describe, expect, test, vi } from "vitest";
 import * as schema from "@/db/schema";
-import { members, tourDismissals } from "@/db/schema";
+import { tourDismissals } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { removeMember, setMemberActive } from "@/lib/members/members";
 import { migrationsThrough } from "@/test/db";
@@ -93,14 +93,13 @@ describe("the migration", () => {
     const client = await PGlite.create({ loadDataDir: await dataDir() });
     const db = drizzle({ client, schema });
     await migrate(db, { migrationsFolder: migrationsThrough("0014_game-stats") });
-    const [welcomed, partWay, alsoWelcomed] = await db
-      .insert(members)
-      .values([
-        { displayName: "Welcomed", token: "a", welcomedAt: THURSDAY },
-        { displayName: "Part way through setup", token: "b" },
-        { displayName: "Also welcomed", token: "c", welcomedAt: LATER },
-      ])
-      .returning();
+    // Raw SQL: this database predates the newer member columns the schema's own insert would name.
+    const { rows: added } = (await db.execute(sql`
+      insert into members (display_name, token, welcomed_at)
+      values ('Welcomed', 'a', ${THURSDAY.toISOString()}), ('Part way through setup', 'b', null),
+        ('Also welcomed', 'c', ${LATER.toISOString()})
+      returning id`)) as unknown as { rows: { id: number }[] };
+    const [welcomed, partWay, alsoWelcomed] = added;
 
     await migrate(db, { migrationsFolder: "drizzle" });
 

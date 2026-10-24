@@ -46,6 +46,8 @@ function member(overrides: Partial<Member> = {}): Member {
     joinedAt: new Date("2026-08-01T00:00:00Z"),
     active: true,
     smsOptedOut: false,
+    reminderChannel: "off",
+    pushStoppedAt: null,
     welcomedAt: null,
     lastSeenAt: null,
     createdAt: new Date("2026-08-01T00:00:00Z"),
