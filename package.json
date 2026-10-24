@@ -18,6 +18,7 @@
     "migrate": "drizzle-kit migrate",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
     "agent-db": "tsx scripts/agent-db.ts",
+    "agent-route": "tsx scripts/agent-route.ts",
     "agent-shots": "tsx scripts/agent-shots.ts",
     "start-season": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/start-season.ts",
     "check-field": "tsx --env-file-if-exists=.env.local scripts/check-field.ts",
