@@ -7,6 +7,7 @@ import { ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } 
 import { useEffect, useRef, useState } from "react";
 import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
 
+import { HomeScreenNudge } from "@/components/picks/home-screen-nudge";
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
@@ -321,6 +322,8 @@ export function PickFlow({
         <HeaderLinks />
         {page ? null : <StatusChip pick={pick} />}
       </header>
+
+      <HomeScreenNudge open={!locked} banner={page === null} />
 
       {/* The content under the header, on every page of the flow: the Welcome Tour's `picks-screen` target. */}
       <div data-tour="picks-screen" className="flex flex-1 flex-col">
