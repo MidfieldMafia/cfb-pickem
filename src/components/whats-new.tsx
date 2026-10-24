@@ -1,6 +1,6 @@
 "use client";
 
-import { Flag, Lock, Megaphone, Target, X, type LucideIcon } from "lucide-react";
+import { BadgeCheck, Bell, Megaphone, MessageSquareOff, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -12,23 +12,23 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-10-04",
-  label: "What's new · Oct 4–10",
+  id: "2026-10-18",
+  label: "What's new · Oct 18–24",
   items: [
     {
-      icon: Flag,
-      title: "Make your own Pennant",
-      body: "On the welcome page, Flags now has a Make your own maker: pick colors, a pattern and a pole for a flag of your own.",
+      icon: Bell,
+      title: "Reminders by push",
+      body: "Turn on Remind me before picks lock in Settings, from the Profile menu, and your phone gets a push before the Deadline. It works from the app on your Home Screen.",
     },
     {
-      icon: Lock,
-      title: "Lock and Guess after your picks",
-      body: "After your last pick, you go straight to your Lock of the Week and Tiebreaker Guess. Skip for now leaves them for later.",
+      icon: MessageSquareOff,
+      title: "Texts are paused",
+      body: "The app sends no texts for now, so the sign-in screens can't text you your link. Open it from an earlier text, or ask a commissioner.",
     },
     {
-      icon: Target,
-      title: "The over/under on your Guess",
-      body: "When a line is out, the Tiebreaker Guess page shows the game's over/under as a starting point.",
+      icon: BadgeCheck,
+      title: "Your pick on the game sheet",
+      body: "Before kickoff, a game sheet's Your pick card shows your team's logo, your Lock of the Week and, on the Tiebreaker Game, your Tiebreaker Guess.",
     },
   ],
 };
