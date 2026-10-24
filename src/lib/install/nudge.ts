@@ -20,7 +20,8 @@ export const VISIT_GAP_MS = 30 * 60 * 1000;
 
 export type Nudge = "sheet" | "banner" | null;
 
-type Storage = () => Pick<globalThis.Storage, "getItem" | "setItem">;
+/** `localStorage`, behind a call: reaching it can throw as well as reading it. */
+type Store = () => Pick<Storage, "getItem" | "setItem">;
 
 /** What this browser remembers. Each visit is named by the time it started. */
 interface Remembered {
@@ -36,7 +37,7 @@ interface Remembered {
   bannerHidden?: { day: string; visit: number };
 }
 
-function read(storage: Storage): Remembered {
+function read(storage: Store): Remembered {
   const raw = storage().getItem(NUDGE_KEY);
   if (!raw) return {};
   try {
@@ -48,7 +49,7 @@ function read(storage: Storage): Remembered {
 }
 
 /** Reads, changes and writes back, swallowing a storage that throws. */
-function update(storage: Storage, change: (memory: Remembered) => void): void {
+function update(storage: Store, change: (memory: Remembered) => void): void {
   try {
     const memory = read(storage);
     change(memory);
@@ -69,7 +70,7 @@ function localDay(now: Date): string {
  * Welcome Tour, What's new), and once closed never shows again; the banner
  * then shows on every later visit, unless its X hid it today or this visit.
  */
-export function openPicks(storage: Storage, now: Date, { popupShowing }: { popupShowing: boolean }): Nudge {
+export function openPicks(storage: Store, now: Date, { popupShowing }: { popupShowing: boolean }): Nudge {
   let shown: Nudge = null;
   try {
     const memory = read(storage);
@@ -100,21 +101,21 @@ export function openPicks(storage: Storage, now: Date, { popupShowing }: { popup
 }
 
 /** Picks is still open: keeps the visit from lapsing while the member is on it. */
-export function stillHere(storage: Storage, now: Date): void {
+export function stillHere(storage: Store, now: Date): void {
   update(storage, (memory) => {
     memory.lastSeen = now.getTime();
   });
 }
 
 /** The sheet closed, any way, or its Add was tapped: it never opens again. */
-export function closeSheet(storage: Storage): void {
+export function closeSheet(storage: Store): void {
   update(storage, (memory) => {
     memory.sheetClosed ??= memory.visit ?? 0;
   });
 }
 
 /** The banner's X: hidden for the rest of the member's day, and of this visit. */
-export function hideBanner(storage: Storage, now: Date): void {
+export function hideBanner(storage: Store, now: Date): void {
   update(storage, (memory) => {
     memory.bannerHidden = { day: localDay(now), visit: memory.visit ?? now.getTime() };
   });
