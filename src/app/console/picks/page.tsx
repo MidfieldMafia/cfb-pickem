@@ -6,6 +6,7 @@ import { Pennant } from "@/components/pennant";
 
 import { appUrl } from "@/lib/app-url";
 import { requireConsole } from "@/lib/members/current";
+import { TEXTING_PAUSED } from "@/lib/messaging/paused";
 import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
 import { planReminders, textBudget, UNREACHED } from "@/lib/messaging/texts";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
@@ -207,7 +208,17 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
                 <p className="text-xs text-muted-foreground">Paste it into the group chat.</p>
               </section>
             </Card>
-            {plan ? (
+            {TEXTING_PAUSED ? (
+              <Card asChild className="gap-2 rounded-md p-4">
+                <section>
+                  <p className={SECTION_LABEL}>Text reminders</p>
+                  <p className="text-sm text-muted-foreground">
+                    Texting is paused until the app has a registered number, and no daily reminder goes out. Copy the
+                    reminder above and send it yourself.
+                  </p>
+                </section>
+              </Card>
+            ) : plan ? (
               <Card asChild className="gap-2 rounded-md p-4">
                 <section>
                   <p className={SECTION_LABEL}>Text reminders</p>

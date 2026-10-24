@@ -11,6 +11,7 @@ import { requireConsole } from "@/lib/members/current";
 import { deleteWarning } from "@/lib/members/console-edits";
 import { MAX_PHONE } from "@/lib/members/limits";
 import { isPhotoId } from "@/lib/members/photos";
+import { TEXTING_PAUSED } from "@/lib/messaging/paused";
 import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
 import { recentTexts, textBudget } from "@/lib/messaging/texts";
 import { listMembers, magicLinkFor, pickCountByMember } from "@/lib/members/members";
@@ -118,13 +119,15 @@ export default async function Members() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      <ActionForm
-                        action={textMagicLinkAction}
-                        hidden={{ memberId: member.id }}
-                        submit="Text link"
-                        pendingLabel="Texting…"
-                        className="space-y-1 text-right"
-                      />
+                      {TEXTING_PAUSED ? null : (
+                        <ActionForm
+                          action={textMagicLinkAction}
+                          hidden={{ memberId: member.id }}
+                          submit="Text link"
+                          pendingLabel="Texting…"
+                          className="space-y-1 text-right"
+                        />
+                      )}
                       <form action={regenerateAction}>
                         <input type="hidden" name="memberId" value={member.id} />
                         <Button type="submit" variant="outline" size="sm">
@@ -224,7 +227,9 @@ export default async function Members() {
         <div className="border-b border-border p-3">
           <p className="font-semibold">Recent texts</p>
           <p className="text-xs text-muted-foreground">
-            {sender.name === NOOP
+            {TEXTING_PAUSED
+              ? "Texting is paused until the app has a registered number. Copy a member's link and send it yourself."
+              : sender.name === NOOP
               ? "No PINGRAM_API_KEY is set, so texts are logged but not delivered."
               : `${budget.used} of ${budget.budget} texts used this month.`}
           </p>
