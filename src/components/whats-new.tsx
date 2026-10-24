@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Bell, Megaphone, MessageSquareOff, X, type LucideIcon } from "lucide-react";
+import { Bell, Megaphone, MessageSquareOff, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -24,11 +24,6 @@ const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: stri
       icon: MessageSquareOff,
       title: "Texts are paused",
       body: "The app sends no texts for now, so the sign-in screens can't text you your link. Open it from an earlier text, or ask a commissioner.",
-    },
-    {
-      icon: BadgeCheck,
-      title: "Your pick on the game sheet",
-      body: "Before kickoff, a game sheet's Your pick card shows your team's logo, your Lock of the Week and, on the Tiebreaker Game, your Tiebreaker Guess.",
     },
   ],
 };
