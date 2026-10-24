@@ -11,6 +11,9 @@
 //                            before the shot: a Live Board row opens its Game sheet
 //   --scroll "On the field"  scroll the first heading containing this into view; with
 //                            --open or --scroll the shot is the viewport, not the page
+//   --iphone                 load as Safari on iPhone (its user agent), for screens that
+//                            read `readBrowser`, such as the Home Screen nudge on Picks
+//   --storage 'key=value'    put this localStorage item in place before each page loads
 //
 // A path may carry its own key as `<key>=<path>` when the URL alone would not
 // name the state well. The What's new modal is marked seen so it covers
@@ -33,6 +36,9 @@ const out = flag("out", "/tmp/shots");
 const width = Number(flag("width", "390"));
 const openText = flag("open", "");
 const scrollText = flag("scroll", "");
+const stored = flag("storage", "");
+const iphone = args.includes("--iphone");
+if (iphone) args.splice(args.indexOf("--iphone"), 1);
 const showWhatsNew = args.includes("--show-whats-new");
 if (showWhatsNew) args.splice(args.indexOf("--show-whats-new"), 1);
 const targets = args;
@@ -84,6 +90,23 @@ const keyOf = (target) => {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
   await page.setViewport({ width, height: 844, deviceScaleFactor: 2 });
+  if (iphone) {
+    await page.setUserAgent(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+    );
+  }
+  if (stored) {
+    const eq = stored.indexOf("=");
+    await page.evaluateOnNewDocument(
+      (key, value) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch {}
+      },
+      stored.slice(0, eq),
+      stored.slice(eq + 1),
+    );
+  }
   await page.setCookie({ name: "slate_session", value: session, domain: new URL(BASE).hostname, path: "/" });
   // The What's new modal opens over every member screen in a browser that has
   // not seen this week's entry, which a fresh Chromium never has. Mark it seen
