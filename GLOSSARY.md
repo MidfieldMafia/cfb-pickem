@@ -112,6 +112,10 @@ _Avoid_: Dark mode, color scheme
 The Saturday view of the slate with live scores and the picks of every member of a group, colored by whether they are currently winning.
 _Avoid_: Scoreboard, dashboard
 
+**Reminder**:
+The message sent before the Deadline to a member whose picks, Lock or Tiebreaker Guess are unfinished, delivered by push or text. Each member chooses it in Settings, and it starts off. While texting is paused, Settings offers only push, on or off; when push stops reaching every one of the member's devices, it turns itself off.
+_Avoid_: Notification, nudge, alert
+
 **Feedback**:
 A Member's bug report or idea, sent from the app to the Commissioners: either a Bug or an Idea, in the member's words, with an optional screenshot. Only commissioners read it, and the member hears nothing back beyond the thanks on sending.
 _Avoid_: Ticket, request, issue

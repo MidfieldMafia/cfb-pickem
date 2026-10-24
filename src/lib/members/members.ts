@@ -14,6 +14,8 @@ import {
   memberships,
   pickAudits,
   picks,
+  pushMessages,
+  pushSubscriptions,
   resultAudits,
   sessions,
   textMessages,
@@ -280,11 +282,13 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     tx.delete(chatReactions).where(inArray(chatReactions.messageId, theirMessages)),
     tx.delete(chatMessages).where(eq(chatMessages.memberId, memberId)),
     tx.delete(tourDismissals).where(eq(tourDismissals.memberId, memberId)),
+    tx.delete(pushSubscriptions).where(eq(pushSubscriptions.memberId, memberId)),
+    tx.delete(pushMessages).where(eq(pushMessages.memberId, memberId)),
     // A message they took down stays down; it just no longer names who did it.
     tx.update(chatMessages).set({ removedBy: null }).where(eq(chatMessages.removedBy, memberId)),
     tx.delete(members).where(eq(members.id, memberId)).returning(),
   ]);
-  const [deleted] = writes[16];
+  const [deleted] = writes[18];
   return deleted;
 }
 

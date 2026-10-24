@@ -227,6 +227,9 @@ export const seasonRosters = pgTable("season_rosters", {
   fetchedAt: utc("fetched_at").notNull(),
 });
 
+export const reminderChannels = ["push", "text", "off"] as const;
+export type ReminderChannel = (typeof reminderChannels)[number];
+
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   displayName: text("display_name").notNull(),
@@ -250,6 +253,18 @@ export const members = pgTable("members", {
    * console: the app hears no replies, only the commissioner does.
    */
   smsOptedOut: boolean("sms_opted_out").notNull().default(false),
+  /**
+   * How the member's Pick reminder reaches them (#454). Everyone starts `off`:
+   * `text` stays a value so texts can come back without a migration, but while
+   * texting is paused the Settings page offers only Push, on or off, and shows
+   * anything else as off.
+   */
+  reminderChannel: text("reminder_channel", { enum: reminderChannels }).notNull().default("off"),
+  /**
+   * When push stopped reaching every one of the member's devices and the reminder
+   * turned itself off. Settings says so until the member next flips the switch.
+   */
+  pushStoppedAt: utc("push_stopped_at"),
   /** Set when the member finishes the welcome page for the first time. */
   welcomedAt: utc("welcomed_at"),
   lastSeenAt: utc("last_seen_at"),
@@ -511,6 +526,55 @@ export const textMessages = pgTable(
   (t) => [index("text_messages_created_idx").on(t.createdAt), index("text_messages_week_kind_idx").on(t.weekId, t.kind)],
 );
 
+/**
+ * One device a member has turned push on for (#454): its push service endpoint
+ * and keys. The endpoint is the device, so it is unique, and a device that
+ * changes hands moves to whoever subscribed it last. A Reminder goes to every
+ * row a member has; turning the reminder off deletes them all.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: serial("id").primaryKey(),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("push_subscriptions_member_idx").on(t.memberId)],
+);
+
+export const pushKinds = ["reminder", "scheduled_reminder"] as const;
+export type PushKind = (typeof pushKinds)[number];
+
+/**
+ * One row per Reminder the app pushed to a member, across all their devices:
+ * how many took it, how many the push service said are gone, and how many
+ * failed otherwise. The daily run reads it so a member is pushed a Week's
+ * scheduled reminder once.
+ */
+export const pushMessages = pgTable(
+  "push_messages",
+  {
+    id: serial("id").primaryKey(),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    kind: text("kind", { enum: pushKinds }).notNull(),
+    weekId: integer("week_id")
+      .notNull()
+      .references(() => weeks.id),
+    sent: integer("sent").notNull(),
+    gone: integer("gone").notNull(),
+    failed: integer("failed").notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("push_messages_week_kind_idx").on(t.weekId, t.kind)],
+);
+
 export const feedbackKinds = ["bug", "idea"] as const;
 export type FeedbackKind = (typeof feedbackKinds)[number];
 
@@ -636,6 +700,7 @@ export type Group = typeof groups.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type TextMessage = typeof textMessages.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type ChatReaction = typeof chatReactions.$inferSelect;
