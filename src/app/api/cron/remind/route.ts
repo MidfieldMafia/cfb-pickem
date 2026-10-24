@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { appUrl } from "@/lib/app-url";
+import { TEXTING_PAUSED } from "@/lib/messaging/paused";
 import { senderFromEnv } from "@/lib/messaging/sender";
 import { runScheduledReminder } from "@/lib/messaging/texts";
 import { authorized } from "../auth";
@@ -11,6 +12,7 @@ import { authorized } from "../auth";
  */
 export async function GET(request: Request) {
   if (!authorized(request)) return new Response("Unauthorized", { status: 401 });
+  if (TEXTING_PAUSED) return Response.json({ ran: false, why: "texting is paused" });
   const run = await runScheduledReminder(db(), senderFromEnv(), appUrl());
   if (!run.ran) return Response.json({ ran: false, why: run.why });
   return Response.json({
