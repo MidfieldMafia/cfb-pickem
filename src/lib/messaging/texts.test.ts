@@ -5,12 +5,13 @@
  */
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
-import { members, textMessages } from "@/db/schema";
+import { members, pushMessages, pushSubscriptions, textMessages, type ReminderChannel } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { setMemberActive, setPhone, setSmsOptedOut, removeMember } from "@/lib/members/members";
 import { pickReport } from "@/lib/picks/console";
 import { guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { toE164 } from "./phone";
+import type { Pusher, PushTarget, SendOutcome } from "@/lib/push/sender";
 import { noopSender, type SmsSender } from "./sender";
 import {
   FREE_TIER_BUDGET,
@@ -21,6 +22,7 @@ import {
   OPT_OUT_LINE,
   planReminders,
   reminderBody,
+  reminderPush,
   recentTexts,
   remindEveryone,
   reminderSummary,
@@ -34,15 +36,39 @@ import {
 
 const APP = "https://slate.example";
 
+/** Texts through `sms`, pushes through `push` when there is one; texting runs unless `textingPaused`. */
+const by = (sms: SmsSender, push: Pusher | null = null, textingPaused = false) => ({ sms, push, textingPaused });
+
+/** A push sender that records each send; an endpoint in `answers` gets that outcome instead of `sent`. */
+function pusher(answers: Record<string, SendOutcome> = {}): Pusher & { sent: { endpoint: string; payload: unknown }[] } {
+  const sent: { endpoint: string; payload: unknown }[] = [];
+  return {
+    sent,
+    async send(target: PushTarget, payload) {
+      const answer = answers[target.endpoint] ?? "sent";
+      if (answer === "sent") sent.push({ endpoint: target.endpoint, payload });
+      return answer;
+    },
+  };
+}
+
+async function channel(db: Db, memberId: number, to: ReminderChannel) {
+  await db.update(members).set({ reminderChannel: to }).where(eq(members.id, memberId));
+}
+
+async function device(db: Db, memberId: number, endpoint: string) {
+  await db.insert(pushSubscriptions).values({ memberId, endpoint, p256dh: "key", auth: "secret" });
+}
+
 /** A sender that records what it was asked to send; `failFor` numbers get a provider error. */
-function recorder(failFor: string[] = []): SmsSender & { sent: { to: string; body: string }[] } {
-  const sent: { to: string; body: string }[] = [];
+function recorder(failFor: string[] = []): SmsSender & { sent: { to: string; body: string; memberId: number }[] } {
+  const sent: { to: string; body: string; memberId: number }[] = [];
   return {
     name: "pingram",
     sent,
-    async send(to, body) {
+    async send(to, body, memberId) {
       if (failFor.includes(to)) return { ok: false, detail: "carrier rejected" };
-      sent.push({ to, body });
+      sent.push({ to, body, memberId });
       return { ok: true, detail: `track-${sent.length}` };
     },
   };
@@ -62,6 +88,8 @@ async function setup() {
   await lockAs(db, jonah, slate, texas.id, THURSDAY);
   await guessAs(db, jonah, slate, 70, THURSDAY);
   await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
+  // Everyone starts with the reminder off; these tests are about texting, so everyone here chose Text.
+  await db.update(members).set({ reminderChannel: "text" });
   return { ...fixture, grandma, em, gone };
 }
 
@@ -99,16 +127,18 @@ describe("reminding everyone who hasn't picked", () => {
     const { db, jonah, week, em } = await setup();
     const sender = recorder();
 
-    const result = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
+    const result = await remindEveryone(db, by(sender), jonah, week.id, APP, THURSDAY);
 
     expect(result.texted.map((t) => t.member.displayName)).toEqual(["Grandma", "Cousin Em"]);
     expect(result.skipped).toEqual([]);
     expect(sender.sent).toHaveLength(2);
     expect(sender.sent[1].to).toBe(em.phone!.replace(/^\+?/, "+"));
-    // Thu 2026-09-11 00:00Z is 7:00 PM Central on the 10th. The plain app link, no shortener, and the opt-out.
-    expect(sender.sent[1].body).toBe(
-      `Saturday Slate: Week 2 picks lock Thu 7 PM CT. Still need 3 picks, Lock, Tiebreaker. ${APP} ${OPT_OUT_LINE}`,
-    );
+    // Filed under the member, so Pingram's STOP event for this number names them.
+    expect(sender.sent[1].memberId).toBe(em.id);
+    // Thu 2026-09-11 00:00Z is 7:00 PM Central on the 10th. No link, which carriers filter on unregistered
+    // numbers, and no STOP line, which the member's first text, the Magic Link, already carried.
+    expect(sender.sent[1].body).toBe("Saturday Slate: Week 2 picks lock Thu 7 PM CT. Still need 3 picks, Lock, Tiebreaker.");
+    expect(sender.sent[1].body).not.toContain(OPT_OUT_LINE);
     expect(sender.sent[0].body).toContain("Still need 2 picks, Lock, Tiebreaker.");
   });
 
@@ -118,7 +148,7 @@ describe("reminding everyone who hasn't picked", () => {
     await setSmsOptedOut(db, jonah, grandma.id, true);
     await setPhone(db, jonah, em.id, "555-0123");
 
-    const result = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
+    const result = await remindEveryone(db, by(sender), jonah, week.id, APP, THURSDAY);
 
     expect(sender.sent).toEqual([]);
     expect(result.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([
@@ -126,11 +156,11 @@ describe("reminding everyone who hasn't picked", () => {
       ["Cousin Em", "bad_phone"],
     ]);
     expect(reminderSummary(result)).toBe(
-      "Nobody was texted. Not texted: Grandma (opted out), Cousin Em (phone number is not one we can text).",
+      "Nobody was reminded. Not reminded: Grandma (opted out), Cousin Em (phone number is not one we can text).",
     );
 
     await setPhone(db, jonah, em.id, "");
-    const again = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
+    const again = await remindEveryone(db, by(sender), jonah, week.id, APP, THURSDAY);
     expect(again.skipped.map((s) => s.why)).toEqual(["opted_out", "no_phone"]);
   });
 
@@ -138,7 +168,7 @@ describe("reminding everyone who hasn't picked", () => {
     const { db, jonah, grandma, em, week } = await setup();
     const sender = recorder([toE164(grandma.phone!)!]);
 
-    const result = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
+    const result = await remindEveryone(db, by(sender), jonah, week.id, APP, THURSDAY);
 
     expect(result.texted.map((t) => [t.member.displayName, t.ok])).toEqual([
       ["Grandma", false],
@@ -161,9 +191,7 @@ describe("reminding everyone who hasn't picked", () => {
 
     const body = reminderBody(report, row, "https://slate.midfield-mafia.com/");
 
-    expect(body).toBe(
-      `Saturday Slate: Week 16 picks lock Sat 12:30 PM CT. Still need 25 picks, Lock, Tiebreaker. https://slate.midfield-mafia.com ${OPT_OUT_LINE}`,
-    );
+    expect(body).toBe("Saturday Slate: Week 16 picks lock Sat 12:30 PM CT. Still need 25 picks, Lock, Tiebreaker.");
     expect(body.length).toBeLessThanOrEqual(160);
     expect(segmentsOf(body)).toBe(1);
   });
@@ -178,7 +206,7 @@ describe("the monthly budget", () => {
     const before = await textBudget(db, sender, THURSDAY);
     expect(before).toMatchObject({ used: FREE_TIER_BUDGET - 1, budget: FREE_TIER_BUDGET, remaining: 1 });
 
-    const result = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
+    const result = await remindEveryone(db, by(sender), jonah, week.id, APP, THURSDAY);
 
     expect(result.texted.map((t) => t.member.displayName)).toEqual(["Grandma"]);
     expect(result.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Cousin Em", "over_budget"]]);
@@ -209,11 +237,11 @@ describe("the monthly budget", () => {
     await spend(db, grandma.id, MEMBER_MONTHLY_TEXTS, THURSDAY);
     await spend(db, em.id, MEMBER_MONTHLY_TEXTS - 1, THURSDAY);
 
-    const result = await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
+    const result = await remindEveryone(db, by(sender), jonah, week.id, APP, THURSDAY);
 
     expect(result.texted.map((t) => t.member.displayName)).toEqual(["Cousin Em"]);
     expect(result.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Grandma", "member_cap"]]);
-    expect(reminderSummary(result)).toBe(`Texted Cousin Em. Not texted: Grandma (already sent ${MEMBER_MONTHLY_TEXTS} texts this month).`);
+    expect(reminderSummary(result)).toBe(`Texted Cousin Em. Not reminded: Grandma (already sent ${MEMBER_MONTHLY_TEXTS} texts this month).`);
     await expect(textMagicLink(db, sender, jonah, em.id, APP, THURSDAY)).rejects.toThrow("Cousin Em has already sent");
     // The signed-out form answers as it would for a stranger's number.
     expect(await textOwnLink(db, sender, grandma.phone!, APP, THURSDAY)).toBe("check_your_texts");
@@ -262,12 +290,126 @@ describe("the monthly budget", () => {
     const { db, jonah, week } = await setup();
     await spend(db, jonah.id, 500, THURSDAY);
 
-    const result = await remindEveryone(db, noopSender, jonah, week.id, APP, THURSDAY);
+    const result = await remindEveryone(db, by(noopSender), jonah, week.id, APP, THURSDAY);
 
     expect(result.texted).toHaveLength(2);
     expect(result.skipped).toEqual([]);
     expect((await recentTexts(db, jonah))[0]).toMatchObject({ provider: "noop", ok: true });
     expect((await textBudget(db, recorder(), THURSDAY)).remaining).toBe(0);
+  });
+});
+
+describe("the Pick reminder by push", () => {
+  test("a member on Push gets a push on every device and no text, opening the Picks step still owed", async () => {
+    const { db, jonah, grandma, em, week } = await setup();
+    await channel(db, em.id, "push");
+    await device(db, em.id, "https://push.example/em-phone");
+    await device(db, em.id, "https://push.example/em-tablet");
+    const sms = recorder();
+    const push = pusher();
+
+    const result = await remindEveryone(db, by(sms, push), jonah, week.id, APP, THURSDAY);
+
+    expect(sms.sent.map((s) => s.memberId)).toEqual([grandma.id]);
+    expect(result.pushed.map((p) => [p.member.displayName, p.ok])).toEqual([["Cousin Em", true]]);
+    expect(push.sent.map((s) => s.endpoint).sort()).toEqual(["https://push.example/em-phone", "https://push.example/em-tablet"]);
+    expect(push.sent[0].payload).toEqual({
+      title: "Week 2 picks lock Thu 7 PM CT",
+      body: "Still need 3 picks, Lock, Tiebreaker.",
+      url: "/picks",
+      tag: "reminder-week-2",
+    });
+    expect(reminderSummary(result)).toBe("Pushed Cousin Em. Texted Grandma.");
+  });
+
+  test("when every device is gone, the subscriptions are deleted and the reminder turns off, with no text", async () => {
+    const { db, jonah, em, week } = await setup();
+    await channel(db, em.id, "push");
+    await device(db, em.id, "https://push.example/em-phone");
+    await device(db, em.id, "https://push.example/em-old-phone");
+    const sms = recorder();
+    const push = pusher({ "https://push.example/em-phone": "gone", "https://push.example/em-old-phone": "gone" });
+
+    const result = await remindEveryone(db, by(sms, push), jonah, week.id, APP, THURSDAY);
+
+    expect(result.pushed.map((p) => [p.member.displayName, p.ok, p.stopped])).toEqual([["Cousin Em", false, true]]);
+    expect(sms.sent.map((s) => s.memberId)).not.toContain(em.id);
+    expect(await db.select().from(pushSubscriptions)).toEqual([]);
+    const [after] = await db.select().from(members).where(eq(members.id, em.id));
+    expect(after).toMatchObject({ reminderChannel: "off", pushStoppedAt: THURSDAY });
+    expect(reminderSummary(result)).toContain("Failed: Cousin Em (push stopped reaching their phone, so their reminder turned off).");
+  });
+
+  test("one gone device among working ones is dropped and the reminder stays on; a service that fails keeps its row", async () => {
+    const { db, jonah, em, week } = await setup();
+    await channel(db, em.id, "push");
+    await device(db, em.id, "https://push.example/new");
+    await device(db, em.id, "https://push.example/old");
+    await device(db, em.id, "https://push.example/flaky");
+    const push = pusher({ "https://push.example/old": "gone", "https://push.example/flaky": "failed" });
+
+    const result = await remindEveryone(db, by(recorder(), push), jonah, week.id, APP, THURSDAY);
+
+    expect(result.pushed.map((p) => [p.ok, p.stopped])).toEqual([[true, false]]);
+    expect((await db.select().from(pushSubscriptions)).map((d) => d.endpoint).sort()).toEqual([
+      "https://push.example/flaky",
+      "https://push.example/new",
+    ]);
+    const [after] = await db.select().from(members).where(eq(members.id, em.id));
+    expect(after.reminderChannel).toBe("push");
+    expect(await db.select().from(pushMessages)).toMatchObject([{ memberId: em.id, kind: "reminder", sent: 1, gone: 1, failed: 1 }]);
+  });
+
+  test("Off is skipped, Text is skipped while texting is paused, and Push goes out either way", async () => {
+    const { db, jonah, grandma, em, week } = await setup();
+    await channel(db, grandma.id, "off");
+    await channel(db, em.id, "push");
+    await device(db, em.id, "https://push.example/em");
+    const sms = recorder();
+
+    const off = await remindEveryone(db, by(sms, pusher()), jonah, week.id, APP, THURSDAY);
+    expect(off.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Grandma", "reminder_off"]]);
+
+    await channel(db, grandma.id, "text");
+    const paused = await remindEveryone(db, by(sms, pusher(), true), jonah, week.id, APP, THURSDAY);
+    expect(paused.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Grandma", "texting_paused"]]);
+    expect(paused.pushed.map((p) => p.member.displayName)).toEqual(["Cousin Em"]);
+    expect(sms.sent).toEqual([]);
+
+    // With no VAPID keys on the server, a member on Push is named, not silently dropped.
+    const unset = await remindEveryone(db, by(sms, null, true), jonah, week.id, APP, THURSDAY);
+    expect(unset.skipped.map((s) => s.why)).toEqual(["texting_paused", "push_not_set_up"]);
+  });
+
+  test("a push tap opens the first Picks step still owed", () => {
+    const report = { week: { weekNumber: 8 }, deadline: new Date("2026-10-17T16:00:00Z") } as Parameters<typeof reminderPush>[0];
+    const owing = (picksMade: number, lockOpen: boolean) =>
+      ({ progress: { countingGames: 5, picksMade, lockOpen, guessSet: false } }) as Parameters<typeof reminderPush>[1];
+
+    expect(reminderPush(report, owing(3, true))).toMatchObject({
+      title: "Week 8 picks lock Sat 11 AM CT",
+      body: "Still need 2 picks, Lock, Tiebreaker.",
+      url: "/picks",
+    });
+    expect(reminderPush(report, owing(5, true))).toMatchObject({ body: "Still need Lock, Tiebreaker.", url: "/picks?step=lock" });
+    expect(reminderPush(report, owing(5, false))).toMatchObject({ body: "Still need Tiebreaker.", url: "/picks?step=guess" });
+  });
+
+  test("the daily run pushes a member once a Week, and texts nobody on Push", async () => {
+    const { db, em, deadline } = await setup();
+    await channel(db, em.id, "push");
+    await device(db, em.id, "https://push.example/em");
+    const sms = recorder();
+    const push = pusher();
+    const now = new Date(deadline.getTime() - 20 * 3600_000);
+
+    const first = await runScheduledReminder(db, by(sms, push, true), APP, now);
+    const second = await runScheduledReminder(db, by(sms, push, true), APP, new Date(now.getTime() + 3600_000));
+
+    expect(first.ran && first.pushed.map((p) => p.member.displayName)).toEqual(["Cousin Em"]);
+    expect(second.ran && second.pushed).toEqual([]);
+    expect(push.sent).toHaveLength(1);
+    expect(sms.sent).toEqual([]);
   });
 });
 
@@ -282,6 +424,7 @@ describe("texting a Magic Link", () => {
       {
         to: toE164(grandma.phone!),
         body: `Hi Grandma, your Saturday Slate sign-in link: ${APP}/m/${grandma.token} ${OPT_OUT_LINE}`,
+        memberId: grandma.id,
       },
     ]);
     expect(await recentTexts(db, jonah)).toMatchObject([{ memberName: "Grandma", kind: "magic_link", ok: true }]);
@@ -316,13 +459,13 @@ describe("the scheduled reminder", () => {
     const { db, deadline } = await setup();
     const sender = recorder();
 
-    const early = await runScheduledReminder(db, sender, APP, new Date(deadline.getTime() - 25 * HOUR));
+    const early = await runScheduledReminder(db, by(sender), APP, new Date(deadline.getTime() - 25 * HOUR));
     expect(early).toEqual({ ran: false, why: "deadline is more than a day away" });
-    const late = await runScheduledReminder(db, sender, APP, new Date(deadline.getTime() + HOUR));
+    const late = await runScheduledReminder(db, by(sender), APP, new Date(deadline.getTime() + HOUR));
     expect(late).toEqual({ ran: false, why: "deadline has passed" });
     expect(sender.sent).toEqual([]);
 
-    const run = await runScheduledReminder(db, sender, APP, new Date(deadline.getTime() - 23 * HOUR));
+    const run = await runScheduledReminder(db, by(sender), APP, new Date(deadline.getTime() - 23 * HOUR));
     expect(run.ran && run.texted.map((t) => t.member.displayName)).toEqual(["Grandma", "Cousin Em"]);
     expect(sender.sent).toHaveLength(2);
   });
@@ -332,11 +475,11 @@ describe("the scheduled reminder", () => {
     const now = new Date(deadline.getTime() - 20 * HOUR);
     const sender = recorder([toE164(grandma.phone!)!]);
 
-    await runScheduledReminder(db, sender, APP, now);
+    await runScheduledReminder(db, by(sender), APP, now);
     expect(sender.sent).toHaveLength(1);
 
     const healthy = recorder();
-    const again = await runScheduledReminder(db, healthy, APP, new Date(now.getTime() + HOUR));
+    const again = await runScheduledReminder(db, by(healthy), APP, new Date(now.getTime() + HOUR));
     expect(again.ran && again.texted.map((t) => t.member.displayName)).toEqual(["Grandma"]);
     expect(await recentTexts(db, jonah)).toHaveLength(3);
   });
@@ -344,8 +487,8 @@ describe("the scheduled reminder", () => {
   test("a manual reminder does not use up the scheduled one", async () => {
     const { db, jonah, week, deadline } = await setup();
     const sender = recorder();
-    await remindEveryone(db, sender, jonah, week.id, APP, THURSDAY);
-    const run = await runScheduledReminder(db, sender, APP, new Date(deadline.getTime() - HOUR));
+    await remindEveryone(db, by(sender), jonah, week.id, APP, THURSDAY);
+    const run = await runScheduledReminder(db, by(sender), APP, new Date(deadline.getTime() - HOUR));
     expect(run.ran && run.texted).toHaveLength(2);
   });
 
@@ -357,7 +500,7 @@ describe("the scheduled reminder", () => {
       await guessAs(db, member, slate, 60, THURSDAY);
     }
     const sender = recorder();
-    const run = await runScheduledReminder(db, sender, APP, new Date(deadline.getTime() - HOUR));
+    const run = await runScheduledReminder(db, by(sender), APP, new Date(deadline.getTime() - HOUR));
     expect(run).toMatchObject({ ran: true, texted: [], skipped: [] });
     expect(sender.sent).toEqual([]);
     expect(jonah.isCommissioner).toBe(true);
@@ -388,6 +531,7 @@ describe("text me my link", () => {
       {
         to: "+12565550002",
         body: `Hi Grandma, your Saturday Slate sign-in link: ${APP}/m/${grandma.token} ${OPT_OUT_LINE}`,
+        memberId: grandma.id,
       },
     ]);
   });

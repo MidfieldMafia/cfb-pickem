@@ -21,6 +21,7 @@ export const config = {
     "/leaderboard/:path*",
     "/chat/:path*",
     "/you/:path*",
+    "/settings/:path*",
     "/manage/:path*",
     "/console/:path*",
   ],

@@ -136,3 +136,20 @@ month with four Friday Deadlines and 75–85 with five. That fits the free tier,
 five-Friday month. Before dropping back to it, check whether the paid plan is what gives the
 account a registered sending number: the free tier sends from the shared, unregistered
 numbers described above.
+
+## Update (2026-10-23): carriers blocked reminders as spam
+
+Friday's scheduled reminder sent 17 texts at 11:07 CT and Pingram's logs show 8 of them
+"Blocked as spam: The message was blocked by the carrier due to automated spam detection".
+The app logged all 17 as `sent`, because it records Pingram's acceptance, not delivery.
+
+The paid plan did not register anything by itself. Pingram's SMS → Coverage & compliance page
+showed the A2P 10DLC **brand approved** but the campaign not yet filed (next steps by email),
+no dedicated number on the workspace, and US sending still "Testing enabled", so texts still
+leave from the shared, unregistered numbers.
+
+Changed in response: the reminder no longer carries the app link, which Pingram suggested and
+which is the strongest spam signal in a text from an unregistered number. Magic Link texts
+keep theirs, since the link is the whole message. Still to do: file the 10DLC campaign and get
+the dedicated number it comes with; the campaign asks for a site with Terms and Privacy pages,
+sample messages and the opt-in method. Once it is approved, the link can go back in.

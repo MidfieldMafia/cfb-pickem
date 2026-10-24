@@ -8,6 +8,7 @@ import { requireConsole } from "@/lib/members/current";
 import type { ActionState } from "@/lib/console/state";
 import { appUrl } from "@/lib/app-url";
 import { editOptOut, sendMagicLinkText } from "@/lib/messaging/console-edits";
+import { TEXTING_PAUSED, TEXTING_PAUSED_REASON } from "@/lib/messaging/paused";
 import { senderFromEnv } from "@/lib/messaging/sender";
 import { addPersonToGroup } from "@/lib/groups/console-edits";
 import { clearMemberPhoto, deleteMember, editPhone } from "@/lib/members/console-edits";
@@ -40,6 +41,7 @@ export async function deleteMemberAction(_prev: ActionState, formData: FormData)
 }
 
 export async function textMagicLinkAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (TEXTING_PAUSED) return { error: TEXTING_PAUSED_REASON };
   return sendMagicLinkText(consoleRoute(), senderFromEnv(), appUrl(), formData);
 }
 

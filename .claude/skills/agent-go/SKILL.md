@@ -12,6 +12,11 @@ is watching, so every refusal is a comment on the issue, never a question.
 What the cloud can and cannot do, and the reason behind each workaround below,
 is in `docs/agents/cloud-environment.md`: read it when a command fails there.
 
+The routine's session is the **orchestrator**: it runs steps 1, 2 and 2b
+itself. Step 2b asks Jev how hard the ticket is and hands steps 3–7 to one
+subagent on the model and effort that answer picks, since a session cannot
+change its own (#463).
+
 ## 1. Gate
 
 Which issue: the one the trigger context names. A run with no trigger context
@@ -43,8 +48,140 @@ without commenting.
 
 ## 2. Claim it
 
-Remove `agent:go`, assign the issue to `jonahmabry`, and comment that a build
-has started. Removing the label first is what makes check 1 stop a duplicate run.
+Remove `agent:go` and assign the issue to `jonahmabry`. Removing the label
+first is what makes check 1 stop a duplicate run. The "build started" comment
+waits for step 2b, which adds the tier to it.
+
+Then record the claim time, which step 7 turns into minutes:
+`date -u +%s > /tmp/agent-go-claim-<issue number>`. Each command runs in a
+fresh shell, so the file is the only place it survives.
+
+## 2b. Route and hand off
+
+Only a run that passed all four gate checks gets here, so a ticket that stops
+at the gate never reaches Jev.
+
+```bash
+npm run -s agent-route -- <issue number>
+```
+
+builds Jev's state from the issue (its title, body and labels, whether it has
+an Agent Brief, the comments that are a brief or spec, the parent map's title,
+and each path the brief names with its line count; no file contents), asks the
+question below, applies the table, and prints the route as one JSON line, saved
+to `/tmp/agent-go-route-<issue number>.json`. The key is a network secret the
+proxy adds, so the run never sees it. It never stops the run over Jev: on a
+refused key, a network error, a non-200 or an answer it cannot read, it
+prints the routine's default (level 1, Sonnet medium) with
+`"reason":"jev-error"` and the `error`. If the command itself fails, build on
+that default and say so.
+
+Then comment on the issue that the build has started, and on what:
+`Build started on opus / medium: Jev level 2, confidence 0.55, below 0.7 so level 4.`
+On an error: `Build started on sonnet / medium, the routine's default: <error>.`
+
+### Jev's question
+
+`npm run agent-route` reads the question, the five levels and the table from
+this section, and the tests in `src/lib/agent-go/route.test.ts` hold it to
+five of each. Retune the levels here after about ten `Built on:` lines (#463
+decision 10). The 0.7 floor and its level 4 live in `src/lib/agent-go/route.ts`;
+change them there and in this section's wording together.
+
+Question: How much judgment and risk does building this ticket carry, for a coding agent working alone from the ticket to an open PR with nobody to ask?
+
+1. Mechanical. A full Agent Brief names the files and the exact change, with
+   nothing left to decide, and the diff stays in a few files of presentation or
+   copy, like #334 (the Your pick card: a logo disc, a Lock badge and the
+   viewer's Tiebreaker Guess, built in PR #459 with no failed step).
+2. Routine. A full brief, but the build makes small calls of its own: a new
+   component or helper, a test seam to choose, or several screens touched in the
+   same way.
+3. Involved. A brief that leaves real decisions open, or a change across server
+   and client: a new route handler or server action, a new table read, or shared
+   logic that several screens rely on.
+4. Risky. It touches grading or scoring, what members can see before the
+   Deadline or Reveal, a database migration, or money and messaging limits; or
+   the brief is thin and the build has to work out what is meant.
+5. Open. No Agent Brief, or open design questions the build must settle itself,
+   or several of the level 4 risks at once.
+
+| Level | `model` | `effort` |
+|---|---|---|
+| 1 | `sonnet` | `medium` |
+| 2 | `sonnet` | `high` |
+| 3 | `opus` | `low` |
+| 4 | `opus` | `medium` |
+| 5 | `opus` | `high` |
+
+Jev's most probable level picks the row; confidence below 0.7 builds at level 4
+whatever it leaned to, because an under-powered build of a hard ticket costs a
+bad PR and an over-powered one only tokens.
+
+### Hand off
+
+Make **one** Agent call with the route's `model` and `effort`,
+`run_in_background: false`, no `subagent_type`, and the description
+`build #<issue number>`. A background call ends this session's turn before the
+build is done. Pick the branch name now, `<slug>-<issue number>`, so a second
+leg uses the same one. The subagent starts cold, so the prompt carries
+everything:
+
+```text
+You are building issue #<issue number> in MidfieldMafia/cfb-pickem, unattended,
+as the agent:go routine's build subagent, on <model> / <effort>. The gate and
+claim are done: do not comment on the issue, relabel or reassign it. Follow
+.claude/skills/agent-go/SKILL.md from step 3 to step 7, exactly, on branch
+<branch>. Your effort for the Built on: line is <effort>.
+
+Your build instructions, from the routine's /mattpocock-skills:implement,
+which cannot be invoked from here:
+<implement's instructions, verbatim as they appear in your context>
+
+You have no Agent tool, so where code-review says to run its two axes as
+parallel sub-agents, run Standards and then Spec yourself, one after the other.
+
+<the routine prompt's "Authorized for this run" sentence, verbatim>
+
+Nobody is watching: never ask a question. Never merge and never push to main.
+If the build cannot finish, commit and push what exists, run agent-db down if
+it is up, and stop: open no draft PR, since the orchestrator decides what
+happens next. End with exactly two lines: the model id you run on, as you know
+it, then the PR URL or FAILED: <why>.
+```
+
+A second leg (below) adds, after the first paragraph: `An earlier leg on
+<model> / <effort> stopped: <its FAILED line>. Its worktree is <path from git
+worktree list>, on <branch>: work there instead of making a new one, run
+warm.sh again, and continue from what it left. Keep /tmp/shots/before--*.png,
+which it took before any code.`
+
+The call returns a line ending `<usage>subagent_tokens: N tool_uses: M
+duration_ms: D</usage>`, and the subagent's final report arrives as a separate
+message after it. Note each leg's model id from that report, and N and M from
+the call: they are the build's tokens and tool calls. Nothing reports this
+session's own.
+
+### After the subagent returns
+
+- **A PR URL**: go to the `Built on:` line below.
+- **`FAILED`, or no PR URL**: escalate once. `npm run -s agent-route -- <issue
+  number> --escalate` prints the next level's route and saves it, or
+  `no escalation: level 5`; if the command fails, take the table's next row
+  by hand. Dispatch a second leg on it, with the extra paragraph above. A run
+  that has had two legs, or is at level 5, gets no more: comment on the issue
+  with what stopped it, the branch it pushed if any, and what decision it
+  needs from Jonah, and stop (#463 decision 7).
+
+Then rewrite the PR body's `Built on:` line, in place, to the full format in
+step 7, keeping the minutes the subagent wrote: `gh pr view <n> --json body`, replace only the line that starts
+`Built on:`, and `gh pr edit <n> --body-file <file>`. Change nothing else in
+the body, `Members see:` least of all. Comment the PR's URL on the issue, and
+end with the issue number and the PR URL, or why there is none.
+
+**Done when** the subagent has returned, at most twice, and either the PR's
+`Built on:` line is the whole format and the issue's last comment links the
+PR, or that comment says why there is none.
 
 ## 3. Worktree
 
@@ -83,8 +220,15 @@ Coastal Carolina is in progress, Q2 10:27, from a real recorded CFBD feed.
 Set up any other state the screens need with
 `npm run agent-db -- sql "<statement>"`, the one way to change the branch's
 data: it runs only against this run's branch, so it is covered by the same
-authorization as `up` and `down`. The seeded Week 7 has Coastal Carolina at
-home; `update games set home_team = 'LSU' ...` turns it into another school's.
+authorization as `up` and `down`. It takes one statement per call. The seeded
+Week 7 has Coastal Carolina at home. Turning a game into another school's
+changes `games.home_team_id` and `home_team` together (`away_*` likewise), and
+the member's `picks.team_id` with them. A void is `games.void = true` with a
+`void_note`. A Lock is one `locks` row per member and week, so move it with
+`update locks set game_id = ...`. The Week's Tiebreaker Game is
+`weeks.tiebreaker_game_id`, and guesses are in `tiebreaker_guesses`. Team ids are
+CollegeFootballData's (Iowa 2294, Michigan State 127, Duke 150), and the
+logo follows the id.
 
 Before writing any code, screenshot every existing screen the ticket will
 change, in the state that shows the change, as the member who would see it:
@@ -119,14 +263,17 @@ screen the ticket changes, or the ticket changes none.
 
 ## 5. Build
 
-The routine's prompt starts with `/mattpocock-skills:implement`, so its
-instructions are already in your context: that skill cannot be invoked by the
-model, only typed, which is why the prompt carries it. Follow them inside the
-worktree, after steps 1–4, including the `tdd` and `code-review` passes. Read
+The routine's prompt starts with `/mattpocock-skills:implement`, and step 2b's
+hand-off quotes its instructions: that skill cannot be invoked by the model,
+only typed, which is why the prompt carries it. Follow them inside the
+worktree, after steps 1–4, including the `tdd` and `code-review` passes (call
+the `code-review` skill on the diff before step 6; **done when** every finding
+is fixed or listed in the PR). Read
 the ticket, its parent map, and any spec, design or research it links first.
 Where implement says to ask, there is nobody to answer: make the call the
 ticket and docs support and record it under **Judgment calls** in the PR, or,
-when nothing supports either way, stop and ship a draft (step 7).
+when nothing supports either way, stop as step 7 says for a build that
+cannot finish.
 
 CLAUDE.md's checks apply as written: `npx next build` when the diff touches a
 `"use server"` file, a route handler or the client/server boundary; never
@@ -183,10 +330,37 @@ Commit, run `npm run preflight` (it fails an agent build whose diff touches
 issue, written with `/mattpocock-skills:pr`, with its `Members see:` line and
 the Screenshots section from step 6. Never merge.
 
-If the build cannot finish, push what exists as a draft PR, run `agent-db down`
-if it is still up, and comment on the issue with what stopped it and what
-decision it needs from Jonah.
+Directly under `Members see:` the body carries one evidence line, in this
+format and nowhere else in the skill:
 
-**Done when** the issue links an open PR, ready or draft, whose body has a
-`## Screenshots` section (or `Screenshots: none, <reason>` when
-`/tmp/shots/skipped.txt` says why), and whose last issue comment says which.
+`Built on: <legs> (<Jev>) · build <tokens> tokens, <tool calls> tool calls, orchestrator not counted · <minutes> min claim→PR`
+
+for example `Built on: claude-opus-5-5 / medium (Jev level 4, confidence 0.82, 1.2k tokens) · build 1.9M tokens, 41 tool calls, orchestrator not counted · 26 min claim→PR`.
+
+- **Legs**: `<model id> / <effort>` for each build leg, joined by ` → `, with
+  ` (escalated)` after a second: `claude-sonnet-5-5 / medium → claude-opus-5-5 / low (escalated)`.
+  The model id is the one the build session reports for itself; the effort is
+  the one its hand-off named. A run that cannot tell its effort writes
+  `effort unknown`, never a guess.
+- **Jev**: `Jev level <n>, confidence <c>, <input + output> tokens`, adding
+  `, below 0.7 so level 4` when the floor moved it; on an error,
+  `Jev error: <error>, routine default`. These come from the saved route.
+- **Tokens and tool calls**: each leg's `subagent_tokens` and `tool_uses`,
+  summed, as `640k` or `1.9M`. The orchestrator's own are not visible to it,
+  which the line says.
+- **Minutes**: `($(date -u +%s) - $(cat /tmp/agent-go-claim-<issue number>)) / 60`,
+  rounded, taken just before the PR is opened: never estimated.
+
+The build subagent opening the PR writes the parts of that line it knows, its
+own leg and the minutes, leaving out the parenthesis and the build part. The
+orchestrator rewrites the line in place to the whole format (step 2b). The line
+sits on its own line, so `Members see:` stays exactly as `weekly-changelog`
+reads it.
+
+If the build cannot finish, commit and push what exists, run `agent-db down`
+if it is still up, and end with `FAILED: <why>`. Step 2b decides whether a
+second leg follows, and comments on the issue.
+
+**Done when** the branch's PR is open, its body has a `## Screenshots` section
+(or `Screenshots: none, <reason>` when `/tmp/shots/skipped.txt` says why), and
+the subagent has ended with its URL; or it has ended with `FAILED`.

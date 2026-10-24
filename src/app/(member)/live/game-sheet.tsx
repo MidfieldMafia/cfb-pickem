@@ -338,41 +338,90 @@ function SidePanel({
 
 /**
  * Before the Deadline, one card in place of the two picks panels (#318): the
- * viewer's own pick, when everyone's appear, and the way to the pick screen.
+ * viewer's own pick on a cream disc (a logo never sits on pine), their
+ * Tiebreaker Guess on the Tiebreaker Game, when everyone's appear, and the
+ * ways to the pick screen.
  */
-function OwnPickCard({ game, deadline }: { game: LiveGameJson; deadline: string }) {
+function OwnPickCard({ game, deadline, tiebreaker }: { game: LiveGameJson; deadline: string; tiebreaker: boolean }) {
   const mine: OwnPickJson | null = game.ownPick;
   const team = mine === null ? null : mine.teamId === game.game.homeTeamId ? game.game.homeTeam : game.game.awayTeam;
+  const guess = game.ownTiebreakerGuess;
   return (
     <Card className="grid gap-2.5 p-3">
-      {mine && team ? (
-        <div className="flex items-center gap-2 border-b border-muted pb-2.5">
-          <span className="flex-1 text-xs font-bold tracking-[0.08em] text-secondary uppercase">Your pick</span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary py-1 pr-2.5 pl-1 text-primary-foreground">
-            <TeamLogo team={team} size={20} />
-            <span className="text-xs font-extrabold">{team}</span>
-            {mine.lock === "counts" ? <Lock size={12} strokeWidth={3} aria-label="Lock of the Week" /> : null}
-            {mine.lock === "dropped" ? (
-              <LockOpen size={12} strokeWidth={3} aria-label="Lock of the Week, dropped: the game is void" />
-            ) : null}
-          </span>
+      {(mine && team) || tiebreaker ? (
+        <div className="grid gap-2.5 border-b border-muted pb-2.5">
+          {mine && team ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-card">
+                <TeamLogo team={team} size={26} />
+              </span>
+              <div className="min-w-32 flex-1">
+                <p className="text-xs leading-4 font-bold tracking-[0.08em] text-secondary uppercase">Your pick</p>
+                <p className="font-display text-lg leading-6 font-black">{team}</p>
+              </div>
+              {mine.lock === "counts" ? (
+                <Badge variant="secondary" className="shrink-0 font-bold">
+                  <Lock strokeWidth={3} aria-hidden />
+                  Lock of the Week
+                </Badge>
+              ) : null}
+              {mine.lock === "dropped" ? (
+                <Badge variant="outline" className="shrink-0 font-bold">
+                  <LockOpen strokeWidth={3} aria-hidden />
+                  Lock dropped: game void
+                </Badge>
+              ) : null}
+            </div>
+          ) : null}
+          {tiebreaker ? (
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center text-secondary">
+                <Scale size={20} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs leading-4 font-bold tracking-[0.08em] text-secondary uppercase">Your Tiebreaker Guess</p>
+                {guess === null ? (
+                  <p className="text-lg leading-6 text-muted-foreground">No guess yet</p>
+                ) : (
+                  <p className="leading-6">
+                    <span className="font-display text-lg font-black tabular-nums">{guess}</span>{" "}
+                    <span className="text-sm text-muted-foreground">combined points</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="flex items-start gap-2.5">
         <Eye size={18} className="mt-px shrink-0 text-muted-foreground" aria-hidden />
         <p className="text-sm">
-          <b>Everyone&rsquo;s picks show at the deadline,</b>{" "}
+          <b>Everyone&rsquo;s picks {tiebreaker ? "and guesses " : ""}show at the deadline,</b>{" "}
           <span className="text-muted-foreground">
             <LocalTime at={deadline} style="slot" />.
           </span>
         </p>
       </div>
-      <Link href="/picks" className="tap inline-flex min-h-11 items-center self-start text-sm font-semibold text-secondary">
-        {mine ? "Change your pick" : "Make your pick"}
-      </Link>
+      <div className="flex flex-wrap gap-x-4">
+        <Link href="/picks" className={LINK}>
+          {mine ? "Change your pick" : "Make your pick"}
+        </Link>
+        {tiebreaker ? (
+          <Link href="/picks?step=guess" className={LINK}>
+            {guess === null ? "Add your guess" : "Change your guess"}
+          </Link>
+        ) : null}
+        {mine?.lock === "dropped" ? (
+          <Link href="/picks?step=lock" className={LINK}>
+            Move your Lock
+          </Link>
+        ) : null}
+      </div>
     </Card>
   );
 }
+
+const LINK = "tap inline-flex min-h-11 items-center text-sm font-semibold text-secondary";
 
 /** A card's heading, in the sheet's small-caps style. */
 function CardHeading({ children, aside }: { children: string; aside?: string }) {
@@ -705,7 +754,7 @@ function SheetBody({
             {padlock ? <p className="text-xs text-muted-foreground">A padlock marks that member&rsquo;s Lock of the Week.</p> : null}
           </>
         ) : (
-          <OwnPickCard game={game} deadline={deadline} />
+          <OwnPickCard game={game} deadline={deadline} tiebreaker={g.id === tiebreakerGameId} />
         )}
         {g.id === tiebreakerGameId && scores ? <TiebreakerSection game={game} scores={scores} viewerId={viewerId} /> : null}
         {live && card ? <RecentPlaysCard card={card} /> : null}

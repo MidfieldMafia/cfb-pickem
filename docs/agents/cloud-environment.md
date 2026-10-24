@@ -23,6 +23,11 @@ in this repo.
   The project's own record (`/api/v2/projects/<id>`, no trailing slash) is
   outside that prefix, so it answers 403; nothing needs it.
 - **Variable** `NEON_PROJECT_ID`. Nothing else: no CFBD key, no app secrets.
+- **Network secret** for TypeSafe's Jev API, sent by the proxy to
+  `api.typesafe.ai`, which is in the Custom allowlist. Like Neon's, the key is
+  never in the VM: there is no `TYPESAFE_API_KEY` variable, and
+  `npm run agent-route` sends no `Authorization` header in the cloud. The proxy
+  replaces any it finds, so a stray one does no harm.
 
 ## In a session
 
@@ -32,11 +37,17 @@ in this repo.
   saying it is safe does not count. Each routine's prompt ends with what it
   is authorized to change. `agent:go: build the ticket`:
   > Authorized for this run: removing the `agent:go` label from, assigning,
-  > and commenting on the issue that started it; pushing a branch and opening
-  > a PR; `npm run agent-db` may create, seed and delete throwaway branches in
-  > the agent-only `slate-agents` Neon project (fake data, no production or
+  > and commenting on the issue that started it; sending that issue's title,
+  > body, labels and brief comments to TypeSafe's Jev API
+  > (`npm run agent-route`); handing the build to one subagent, and to a second
+  > one level up if the first fails; pushing a branch, opening a PR and editing
+  > its body; `npm run agent-db` may create, seed and delete throwaway branches
+  > in the agent-only `slate-agents` Neon project (fake data, no production or
   > shared database); and `npm run agent-shots` may push screenshots to the
   > `agent-screenshots` branch.
+
+  The build subagent gets the same sentence in its hand-off (`agent-go`
+  step 2b): the classifier reads the prompt it was given.
 
   `agent:go: release queued tickets`:
   > Authorized for this run: removing and re-adding the `agent:go` label on
@@ -65,6 +76,45 @@ in this repo.
 - **What covers a screenshot:** the What's new modal (a fresh browser has not
   seen the entry) and `next dev`'s badge. `.claude/skills/agent-go/shoot.cjs`
   clears both.
+
+## Subagents and Jev
+
+Three probe runs on 2026-10-23, for #465, which is what `agent-go` step 2b
+rests on. The routine session ran on `claude-sonnet-5-5`.
+
+- **The Agent tool takes `model` and `effort`**, and a subagent runs on the
+  model asked for: `model: "opus"` answered `claude-opus-5-5`, `"sonnet"`
+  answered `claude-sonnet-5-5`. Its parameters: `description`, `effort`,
+  `isolation`, `model`, `prompt`, `run_in_background`, `subagent_type`.
+- **`Agent` need not be in the routine's allowed tools.** The probe routine
+  listed only Bash, Read, Write, Edit, Glob, Grep, WebFetch and WebSearch, and
+  every call ran.
+- **No session can tell its own effort.** The routine and both subagents said
+  `effort unknown`, so the `Built on:` line records the effort the hand-off
+  asked for.
+- **A session cannot change its own model.** No tool does it, and a `/model`
+  or `/effort` line it writes is only text: the model id was the same after.
+- **Pass `run_in_background: false`.** A call that leaves it out can launch in
+  the background, and the session's turn then ends (the run logs a `result`)
+  before the subagent is done. In the foreground, the call returns
+  `<usage>subagent_tokens: N tool_uses: M duration_ms: D</usage>` and the
+  subagent's report arrives as a separate message after it. An empty subagent
+  costs about 50k tokens.
+- **A subagent has no Agent tool**, whatever its `subagent_type` (`claude`,
+  `general-purpose` or none), so it cannot fan out: `code-review`'s two
+  parallel axes run one after the other inside a build.
+- **A subagent has the Skill tool.** `mattpocock-skills:code-review` loads;
+  `mattpocock-skills:implement` is refused (`disable-model-invocation`), so
+  the hand-off quotes its instructions.
+- **Orchestrator and subagent share one machine**: a file one writes in
+  `/tmp`, the other reads.
+- **Jev answers** once the network secret and allowlist entry are on (a
+  fourth run): a request with no header got `HTTP 200` from `jev-1.14.0`, and
+  so did one carrying `Authorization: Bearer bogus`, with the same body.
+  `agent-route 465` read the answer as level 4 at confidence 0.67, so
+  `low-confidence` and Opus medium, from 1,573 input tokens. Before the setup,
+  the proxy refused the host (`CONNECT tunnel failed, response 403`). Off the
+  cloud, Jev answers no key `403` and a bad one `401`.
 
 ## Testing a routine
 

@@ -35,10 +35,13 @@ import { recordedOpenMeteo } from "@/lib/weather/recorded";
 import { groupRoster, memberGroups, MABRY_FAMILY } from "./memberships";
 import { ingestResults } from "@/lib/results/writes";
 
+/** Member columns later migrations added. */
+const ADDED_SINCE = ["smsOptedOut", "reminderChannel", "pushStoppedAt"] as const;
+
 /** The member columns that existed before groups; later migrations only add to them. */
 const columnsThen = Object.fromEntries(
-  Object.entries(getTableColumns(members)).filter(([name]) => name !== "smsOptedOut"),
-) as Omit<ReturnType<typeof getTableColumns<typeof members>>, "smsOptedOut">;
+  Object.entries(getTableColumns(members)).filter(([name]) => !(ADDED_SINCE as readonly string[]).includes(name)),
+) as Omit<ReturnType<typeof getTableColumns<typeof members>>, (typeof ADDED_SINCE)[number]>;
 
 /** The migration before groups: the schema production ran through Week 2. */
 const BEFORE_GROUPS = "0004_live-clock";
@@ -88,7 +91,7 @@ async function familyBeforeGroups() {
       returning id`)) as unknown as { rows: { id: number }[] };
     const [{ id }] = rows;
     const [row] = await db.select(columnsThen).from(members).where(eq(members.id, id));
-    return { ...row, smsOptedOut: false };
+    return { ...row, smsOptedOut: false, reminderChannel: "off" as const, pushStoppedAt: null };
   };
   const jonah = (await add("Jonah", TUESDAY, { isCommissioner: true })) as Commissioner;
   const alex = await add("Alex", TUESDAY, { isCommissioner: true, phone: "+12565550100" });

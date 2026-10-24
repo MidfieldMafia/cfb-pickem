@@ -1,5 +1,5 @@
 /**
- * The commissioner's texting buttons as the console submits them, over an
+ * The commissioner's texting and reminder buttons as the console submits them, over an
  * injected `ConsoleRoute` like the other console edits, plus the sender and the
  * app's address, which a test also wants to choose.
  */
@@ -9,7 +9,7 @@ import type { ActionState } from "@/lib/console/state";
 import { InvalidMember, setSmsOptedOut } from "@/lib/members/members";
 import { integerField } from "@/lib/parse";
 import type { SmsSender } from "./sender";
-import { remindEveryone, reminderSummary, textMagicLink } from "./texts";
+import { remindEveryone, reminderSummary, textMagicLink, type ReminderSenders } from "./texts";
 
 const MEMBERS_PATH = "/console/members";
 const PICKS_PATH = "/console/picks";
@@ -29,14 +29,15 @@ export function sendMagicLinkText(
   });
 }
 
-export function sendReminderTexts(
+/** "Remind everyone": each member who is behind, by their own channel. */
+export function sendReminders(
   route: ConsoleRoute,
-  sender: SmsSender,
+  senders: ReminderSenders,
   appUrl: string,
   form: FormData,
 ): Promise<ActionState> {
   return consoleEdit(route, async ({ db, actor, now }) => {
-    const result = await remindEveryone(db, sender, actor, id(form, "weekId"), appUrl, now);
+    const result = await remindEveryone(db, senders, actor, id(form, "weekId"), appUrl, now);
     return { done: reminderSummary(result), revalidate: [PICKS_PATH, MEMBERS_PATH] };
   });
 }

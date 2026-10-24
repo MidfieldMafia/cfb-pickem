@@ -6,13 +6,27 @@ import { Button, Input } from "@saturday-slate/design-system";
 import { textMyLinkAction } from "@/app/text-my-link/actions";
 import type { ActionState } from "@/lib/console/state";
 import { MAX_PHONE } from "@/lib/members/limits";
+import { TEXTING_PAUSED } from "@/lib/messaging/paused";
 
 /**
  * "Text me my link" for someone signed out who already plays: their own phone
  * number gets their own Magic Link, and nobody is signed in from here. A
  * separate form from the one it sits beside, which it must never be nested in.
+ * While texting is paused it is a note on where the link is instead.
  */
 export function TextMyLink({ id = "textLinkPhone" }: { id?: string }) {
+  if (TEXTING_PAUSED) {
+    return (
+      <p className="w-full text-left text-sm text-muted-foreground">
+        <span className="font-semibold text-foreground">Already play?</span> Open the sign-in link from an earlier
+        text, or ask your organizer or a commissioner to send it again.
+      </p>
+    );
+  }
+  return <TextMyLinkForm id={id} />;
+}
+
+function TextMyLinkForm({ id }: { id: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(textMyLinkAction, {});
   return (
     <form action={action} className="w-full space-y-2 text-left">

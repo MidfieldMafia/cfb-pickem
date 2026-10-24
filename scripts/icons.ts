@@ -5,24 +5,17 @@
  *
  *   npm run icons
  *
- * The shapes match public/brand/mark.svg; only the corner radius differs,
- * because both home screens mask the icon themselves and a rounded source
- * would show paper-colored corners inside their mask.
+ * The mark is src/lib/brand-mark.ts's, the same shapes as public/brand/mark.svg;
+ * only the corner radius differs, because both home screens mask the icon
+ * themselves and a rounded source would show paper-colored corners inside
+ * their mask.
  */
 import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { markSvg } from "../src/lib/brand-mark";
 
-const PINE = "#1F4034";
-const CREAM = "#FBF6EC";
-const RUST = "#A94B17";
-
-/** The monogram, square and full bleed. Chivo when installed, Arial Black otherwise. */
-const MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="${PINE}"/>
-  <text x="32" y="38" text-anchor="middle" font-family="Chivo, 'Arial Black', Impact, sans-serif" font-weight="900" font-size="40" fill="${CREAM}">S</text>
-  <rect x="19" y="44" width="26" height="5" fill="${RUST}"/>
-</svg>`;
+const MARK = markSvg();
 
 const targets = [
   // The two sizes Chrome requires before it will call the app installable.
