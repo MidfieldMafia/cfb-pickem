@@ -69,9 +69,10 @@ builds Jev's state from the issue (its title, body and labels, whether it has
 an Agent Brief, the comments that are a brief or spec, the parent map's title,
 and each path the brief names with its line count; no file contents), asks the
 question below, applies the table, and prints the route as one JSON line, saved
-to `/tmp/agent-go-route-<issue number>.json`. It never stops the run over Jev:
-with no `TYPESAFE_API_KEY`, a network error, a non-200 or an answer it cannot
-read, it prints the routine's default (level 1, Sonnet medium) with
+to `/tmp/agent-go-route-<issue number>.json`. The key is a network secret the
+proxy adds, so the run never sees it. It never stops the run over Jev: on a
+refused key, a network error, a non-200 or an answer it cannot read, it
+prints the routine's default (level 1, Sonnet medium) with
 `"reason":"jev-error"` and the `error`. If the command itself fails, build on
 that default and say so.
 

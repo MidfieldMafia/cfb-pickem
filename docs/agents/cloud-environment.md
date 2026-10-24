@@ -23,9 +23,11 @@ in this repo.
   The project's own record (`/api/v2/projects/<id>`, no trailing slash) is
   outside that prefix, so it answers 403; nothing needs it.
 - **Variable** `NEON_PROJECT_ID`. Nothing else: no CFBD key, no app secrets.
-- **Owed for Jev (#463)**: variable `TYPESAFE_API_KEY` and `api.typesafe.ai`
-  in the Custom allowlist. Neither was set on 2026-10-23; `agent-go` builds on
-  the routine's default until both are.
+- **Network secret** for TypeSafe's Jev API, sent by the proxy to
+  `api.typesafe.ai`, which is in the Custom allowlist. Like Neon's, the key is
+  never in the VM: there is no `TYPESAFE_API_KEY` variable, and
+  `npm run agent-route` sends no `Authorization` header in the cloud. The proxy
+  replaces any it finds, so a stray one does no harm.
 
 ## In a session
 
@@ -106,11 +108,13 @@ rests on. The routine session ran on `claude-sonnet-5-5`.
   the hand-off quotes its instructions.
 - **Orchestrator and subagent share one machine**: a file one writes in
   `/tmp`, the other reads.
-- **Jev was not reachable yet**: `TYPESAFE_API_KEY` was unset and the proxy
-  refused `api.typesafe.ai` (`CONNECT tunnel failed, response 403`). Both are
-  on #463's "Jonah does first" list; until then every build routes to the
-  default with `"reason":"jev-error"`. From a laptop, a bad key answers
-  `HTTP 401`, so the endpoint is right.
+- **Jev answers** once the network secret and allowlist entry are on (a
+  fourth run): a request with no header got `HTTP 200` from `jev-1.14.0`, and
+  so did one carrying `Authorization: Bearer bogus`, with the same body.
+  `agent-route 465` read the answer as level 4 at confidence 0.67, so
+  `low-confidence` and Opus medium, from 1,573 input tokens. Before the setup,
+  the proxy refused the host (`CONNECT tunnel failed, response 403`). Off the
+  cloud, Jev answers no key `403` and a bad one `401`.
 
 ## Testing a routine
 
