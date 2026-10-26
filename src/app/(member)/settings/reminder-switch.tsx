@@ -4,8 +4,9 @@ import { Bell } from "lucide-react";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { LINK, Switch } from "@saturday-slate/design-system";
-import { deviceFacts, pushBlock, subscribeDevice, unsubscribeDevice, type PushBlock } from "@/lib/push/device";
-import { turnOffReminderAction, turnOnReminderAction } from "./actions";
+import { deviceFacts, pushBlock, unsubscribeDevice, type PushBlock } from "@/lib/push/device";
+import { turnOnReminder } from "@/components/push/turn-on-reminder";
+import { turnOffReminderAction } from "./actions";
 
 const FOOTNOTE: Record<PushBlock | "stopped", string> = {
   home_screen: "Works from the Home Screen app.",
@@ -52,15 +53,10 @@ export function ReminderSwitch({ on: savedOn, stopped: savedStopped, publicKey }
         return;
       }
       if (!publicKey) return;
-      const device = await subscribeDevice(publicKey);
-      if (!device.ok) {
-        if (device.why === "denied") setDeniedNow(true);
-        else setError("Couldn't turn it on. Try again.");
-        return;
-      }
-      const saved = await turnOnReminderAction(device.subscription);
-      if (saved.error) {
-        setError(saved.error);
+      const turned = await turnOnReminder(publicKey);
+      if (!turned.ok) {
+        if (turned.why === "denied") setDeniedNow(true);
+        else setError(turned.message);
         return;
       }
       setOn(true);
