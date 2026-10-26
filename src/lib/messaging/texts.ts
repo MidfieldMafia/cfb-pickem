@@ -211,7 +211,7 @@ function overMemberCap(budget: Pick<TextBudget, "byMember">, memberId: number, s
   return (budget.byMember.get(memberId) ?? 0) + segments > MEMBER_MONTHLY_TEXTS;
 }
 
-export interface PlannedText {
+interface PlannedText {
   member: Member;
   to: string;
   body: string;
@@ -259,19 +259,12 @@ export interface TextOutcome {
   detail: string;
 }
 
-/** Sends one planned text and logs the try. */
-async function deliver(
-  db: Db,
-  sender: SmsSender,
-  kind: TextKind,
-  weekId: number | null,
-  text: PlannedText,
-): Promise<TextOutcome> {
+/** Sends one Magic Link text and logs the try. */
+async function deliver(db: Db, sender: SmsSender, text: PlannedText): Promise<TextOutcome> {
   const result = await sender.send(text.to, text.body, text.member.id);
   await db.insert(textMessages).values({
     memberId: text.member.id,
-    kind,
-    weekId,
+    kind: "magic_link",
     phone: text.to,
     provider: sender.name,
     status: result.ok ? "sent" : "failed",
@@ -303,7 +296,7 @@ export async function textMagicLink(
   if (segments > budget.remaining) {
     throw new TextRefused(`${UNTEXTABLE.over_budget}; copy ${member.displayName}'s link and send it by hand.`);
   }
-  const outcome = await deliver(db, sender, "magic_link", null, { member, to: target.to, body, segments });
+  const outcome = await deliver(db, sender, { member, to: target.to, body, segments });
   if (!outcome.ok) throw new TextRefused(`The text to ${member.displayName} failed: ${outcome.detail}`);
   return outcome;
 }
@@ -353,7 +346,7 @@ export async function textOwnLink(
   // Answered as for a number nobody holds, so the cap tells nobody who plays.
   if (overMemberCap(budget, member.id, segments)) return "check_your_texts";
   if (segments > budget.remaining) return "budget_spent";
-  await deliver(db, sender, "magic_link", null, { member, to: asked, body, segments });
+  await deliver(db, sender, { member, to: asked, body, segments });
   return "check_your_texts";
 }
 
