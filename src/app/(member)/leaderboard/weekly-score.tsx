@@ -14,12 +14,16 @@ import { guessLabel, record } from "@/lib/results/summary";
  * Only the members tied for first carry a Guess, and only in a Week with a
  * Tiebreaker Game to decide it: theirs are the Guesses that settled the Weekly
  * Win, and a Guess under every row is noise.
+ *
+ * With `showMax`, while the Week still has games to play, each row carries the
+ * most that member can still finish on under their points.
  */
 export function WeeklyScoreList({
   scores,
   winners,
   viewerId,
   guessers,
+  showMax,
 }: {
   scores: WeeklyScore[];
   /** The member ids the Weekly Win went to; more than one when it was shared. */
@@ -27,6 +31,8 @@ export function WeeklyScoreList({
   viewerId: number;
   /** The member ids tied for first by points, whose Guesses are shown; empty when one member led outright. */
   guessers: Set<number>;
+  /** Show each member's max possible Weekly Score: true while the Week is not complete. */
+  showMax: boolean;
 }) {
   return (
     <Card asChild className="gap-0 overflow-hidden p-0">
@@ -59,9 +65,16 @@ export function WeeklyScoreList({
             <span className="text-sm text-muted-foreground tabular-nums">
               {record(score.correct, score.incorrect)}
             </span>
-            <span className="w-10 text-right font-display text-lg font-black tabular-nums">
-              {score.points}
-            </span>
+            {showMax ? (
+              <span className="flex w-14 flex-col items-end">
+                <span className="font-display text-lg font-black tabular-nums">{score.points}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">max {score.maxPoints}</span>
+              </span>
+            ) : (
+              <span className="w-10 text-right font-display text-lg font-black tabular-nums">
+                {score.points}
+              </span>
+            )}
           </li>
         );
       })}

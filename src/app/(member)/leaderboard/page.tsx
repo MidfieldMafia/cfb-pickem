@@ -104,6 +104,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
                 winners={weeklyWinners(shown.weeklyWin, shown.complete)}
                 viewerId={member.id}
                 guessers={weeklyContenders(shown.weeklyWin)}
+                showMax={!shown.complete}
               />
               {won ? <p className="pt-3 text-sm text-muted-foreground">{won}.</p> : null}
             </>

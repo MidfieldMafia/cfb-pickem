@@ -77,6 +77,12 @@ export interface WeeklyScore {
   /** 1-based place in the Week, from the engine; members level on everything share one. */
   place: number;
   points: number;
+  /**
+   * The most the member can still finish the Week on, if every Pick still
+   * pending comes in: the engine's `maxPoints`. Equals `points` once the Week
+   * is complete.
+   */
+  maxPoints: number;
   correct: number;
   incorrect: number;
   /** Picks on games that are not final yet: what is still to play for. */

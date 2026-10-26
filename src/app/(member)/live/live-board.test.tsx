@@ -90,12 +90,13 @@ function picks(teamId: number, ids: number[], outcome: RevealPick["outcome"] = "
   return ids.map((memberId) => ({ memberId, teamId, outcome, lock: null, points }));
 }
 
-function score(who: ScoredMember, points: number): WeeklyScore {
+function score(who: ScoredMember, points: number, maxPoints = points): WeeklyScore {
   return {
     member: who,
     played: true,
     place: 1,
     points,
+    maxPoints,
     correct: points / 10,
     incorrect: 0,
     pending: 0,
@@ -145,6 +146,7 @@ describe("the states a Saturday passes through", () => {
     expect(screen.getByText(/Picks lock/)).not.toBeNull();
     expect(screen.getByText(/Everyone.s picks show here once they do/)).not.toBeNull();
     expect(screen.queryByText(/of 12/)).toBeNull();
+    expect(screen.queryByText(/Max/)).toBeNull();
     expect(screen.queryByRole("link", { name: /on the Leaderboard/ })).toBeNull();
   });
 
@@ -1143,6 +1145,28 @@ describe("the viewer's own rank", () => {
     const link = screen.getByRole("link", { name: /Open Week 2 on the Leaderboard/ });
     expect(link.getAttribute("href")).toBe("/leaderboard?week=2");
     expect(link.getAttribute("aria-label")).toBe("You are 1st of 12 in Week 2 with 30 pts. Open Week 2 on the Leaderboard");
+  });
+
+  test("shows the most the viewer can still finish on while the Week has games left", () => {
+    render(
+      <LiveBoard
+        initial={state({ complete: false, games: [game(LIVE)], scores: FAMILY.map((m) => score(m, 30, 70)) })}
+        viewer={VIEWER}
+      />,
+    );
+
+    expect(screen.getByText("Max 70 pts")).not.toBeNull();
+    const link = screen.getByRole("link", { name: /Open Week 2 on the Leaderboard/ });
+    expect(link.getAttribute("aria-label")).toBe(
+      "You are 1st of 12 in Week 2 with 30 pts, max 70 pts. Open Week 2 on the Leaderboard",
+    );
+  });
+
+  test("shows no max once the Week is complete", () => {
+    render(<LiveBoard initial={state()} viewer={VIEWER} />);
+
+    expect(screen.getByText("30 pts")).not.toBeNull();
+    expect(screen.queryByText(/Max/)).toBeNull();
   });
 
   test("tells a member who joined after the Deadline that the week does not count", () => {

@@ -152,6 +152,13 @@ export interface WeeklyScore {
    */
   place: number;
   points: number;
+  /**
+   * The most the member can still finish the Week on: `points`, plus what each
+   * Pick still pending would earn if it came in, a Lock on it at the
+   * `lockMultiplier`. An unpicked or Void game adds nothing, so a Dropped Lock
+   * loses its double. Equals `points` once the Week is complete.
+   */
+  maxPoints: number;
   correct: number;
   incorrect: number;
   pending: number;

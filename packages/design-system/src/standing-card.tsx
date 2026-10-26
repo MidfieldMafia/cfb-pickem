@@ -10,6 +10,9 @@ import { PINE_LABEL } from "./section-label";
  * `leading` mark (the member's pennant) before them. Presentational: the
  * caller builds every string.
  *
+ * `note` is an optional smaller line under the figure, such as the most the
+ * member can still score.
+ *
  * With `href` the whole card is the link and gains a chevron; `ariaLabel` then
  * says in one sentence what the four strings say in a grid.
  *
@@ -22,6 +25,7 @@ export function StandingCard({
   detail,
   place,
   figure,
+  note,
   href,
   ariaLabel,
 }: {
@@ -30,6 +34,7 @@ export function StandingCard({
   detail: string;
   place: string;
   figure: string;
+  note?: string;
   href?: string;
   ariaLabel?: string;
 }) {
@@ -41,6 +46,9 @@ export function StandingCard({
         <span className={`text-right tabular-nums ${PINE_LABEL}`}>{detail}</span>
         <span className="font-display text-2xl font-black">{place}</span>
         <span className="text-right font-display text-2xl font-black tabular-nums">{figure}</span>
+        {note !== undefined && (
+          <span className="col-start-2 text-right text-xs tabular-nums opacity-85">{note}</span>
+        )}
       </div>
       {href !== undefined && <ChevronRight size={18} aria-hidden className="shrink-0 opacity-85" />}
     </Card>

@@ -21,6 +21,7 @@ function score(id: number, points: number, played = true): WeeklyScore {
     played,
     place: 1,
     points,
+    maxPoints: points,
     correct: 0,
     incorrect: 0,
     pending: 0,

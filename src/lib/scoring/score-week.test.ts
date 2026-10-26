@@ -513,4 +513,149 @@ describe("scoreWeek", () => {
       expect(result.weeklyWin).toBeNull();
     });
   });
+
+  describe("max possible Weekly Score", () => {
+    function pendingGame(id: string, home: string, away: string, status: Game["status"] = "scheduled"): Game {
+      return { id, homeTeam: home, awayTeam: away, homeScore: null, awayScore: null, status, void: false };
+    }
+
+    it("is every Pick at full value, the Lock doubled, while every game is still to come", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [pendingGame("g1", "Georgia", "Clemson", "in_progress"), pendingGame("g2", "Ohio State", "Texas")],
+          picks: [
+            { memberId: "jonah", gameId: "g1", team: "Georgia" },
+            { memberId: "jonah", gameId: "g2", team: "Texas" },
+          ],
+          locks: [{ memberId: "jonah", gameId: "g1" }],
+        }),
+        members,
+      );
+
+      const jonah = result.scores.find((s) => s.memberId === "jonah")!;
+      expect(jonah.points).toBe(0);
+      expect(jonah.maxPoints).toBe(30);
+    });
+
+    it("adds the pending games to the points already won, and nothing for a final one", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [
+            finalGame("g1", "Georgia", "Clemson", 31, 17),
+            finalGame("g2", "Ohio State", "Texas", 14, 24),
+            pendingGame("g3", "Oregon", "USC", "in_progress"),
+            pendingGame("g4", "LSU", "Alabama"),
+          ],
+          picks: [
+            { memberId: "jonah", gameId: "g1", team: "Georgia" },
+            { memberId: "jonah", gameId: "g2", team: "Ohio State" },
+            { memberId: "jonah", gameId: "g3", team: "Oregon" },
+            { memberId: "jonah", gameId: "g4", team: "Alabama" },
+          ],
+        }),
+        members,
+      );
+
+      const jonah = result.scores.find((s) => s.memberId === "jonah")!;
+      expect(jonah.points).toBe(10);
+      expect(jonah.maxPoints).toBe(30);
+    });
+
+    it("adds nothing for a game the member did not pick", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [pendingGame("g1", "Georgia", "Clemson"), pendingGame("g2", "Ohio State", "Texas")],
+          picks: [{ memberId: "alex", gameId: "g2", team: "Texas" }],
+        }),
+        members,
+      );
+
+      expect(result.scores.find((s) => s.memberId === "alex")!.maxPoints).toBe(10);
+    });
+
+    it("adds nothing for a Void game, and a Lock on it loses its double", () => {
+      const voided: Game = { ...pendingGame("g1", "Georgia", "Clemson"), void: true };
+      const games = [voided, pendingGame("g2", "Ohio State", "Texas")];
+      const picks = [
+        { memberId: "jonah", gameId: "g1", team: "Georgia" },
+        { memberId: "jonah", gameId: "g2", team: "Texas" },
+      ];
+      const locks = [{ memberId: "jonah", gameId: "g1" }];
+
+      const voidedResult = scoreWeek(rules2026, week({ games, picks, locks }), members);
+      expect(voidedResult.scores.find((s) => s.memberId === "jonah")!.maxPoints).toBe(10);
+
+      // Restored: the game and the Lock's double both come back.
+      const restored = scoreWeek(
+        rules2026,
+        week({ games: [{ ...voided, void: false }, games[1]], picks, locks }),
+        members,
+      );
+      expect(restored.scores.find((s) => s.memberId === "jonah")!.maxPoints).toBe(30);
+    });
+
+    it("counts a Lock on a pending game at the multiplier, and one on a final game only once", () => {
+      const games = [finalGame("g1", "Georgia", "Clemson", 31, 17), pendingGame("g2", "Ohio State", "Texas")];
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games,
+          picks: [
+            { memberId: "jonah", gameId: "g1", team: "Georgia" },
+            { memberId: "jonah", gameId: "g2", team: "Texas" },
+            { memberId: "alex", gameId: "g1", team: "Georgia" },
+            { memberId: "alex", gameId: "g2", team: "Texas" },
+          ],
+          locks: [
+            { memberId: "jonah", gameId: "g2" },
+            { memberId: "alex", gameId: "g1" },
+          ],
+        }),
+        members,
+      );
+
+      const jonah = result.scores.find((s) => s.memberId === "jonah")!;
+      expect([jonah.points, jonah.maxPoints]).toEqual([10, 30]);
+      const alex = result.scores.find((s) => s.memberId === "alex")!;
+      expect([alex.points, alex.maxPoints]).toEqual([20, 30]);
+    });
+
+    it("equals the points for every member once the Week is complete", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [finalGame("g1", "Georgia", "Clemson", 31, 17), finalGame("g2", "Ohio State", "Texas", 14, 24)],
+          picks: [
+            { memberId: "jonah", gameId: "g1", team: "Georgia" },
+            { memberId: "jonah", gameId: "g2", team: "Texas" },
+            { memberId: "alex", gameId: "g1", team: "Clemson" },
+          ],
+          locks: [{ memberId: "jonah", gameId: "g2" }],
+        }),
+        members,
+      );
+
+      expect(result.complete).toBe(true);
+      expect(result.scores.map((s) => [s.memberId, s.points, s.maxPoints])).toEqual([
+        ["jonah", 30, 30],
+        ["alex", 0, 0],
+      ]);
+    });
+
+    it("is 0 for a member with no Picks on the Week", () => {
+      const result = scoreWeek(
+        rules2026,
+        week({
+          games: [pendingGame("g1", "Georgia", "Clemson")],
+          picks: [{ memberId: "jonah", gameId: "g1", team: "Georgia" }],
+        }),
+        members,
+      );
+
+      expect(result.scores.find((s) => s.memberId === "alex")!.maxPoints).toBe(0);
+    });
+  });
 });
