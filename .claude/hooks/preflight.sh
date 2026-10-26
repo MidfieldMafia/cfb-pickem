@@ -142,6 +142,16 @@ if ! node -e 'const p=require(process.cwd()+"/package.json");process.exit(((p.de
   exit 0
 fi
 
+# A branch whose every change sits under docs/ (a prototype captured to
+# docs/prototypes/, research, an ADR) gives the four checks nothing to read, so
+# it goes through without them and without node_modules: capturing a canvas
+# used to cost an `npm ci` and a full build. An empty diff, or no origin/main
+# to compare with, falls through to the full gate.
+if changed=$(git diff --name-only origin/main...HEAD 2>/dev/null) && [ -n "$changed" ] &&
+  ! printf '%s\n' "$changed" | grep -qv '^docs/'; then
+  exit 0
+fi
+
 if [ ! -d node_modules ]; then
   echo "BLOCKED: no node_modules in $target -- run 'npm ci' first. A fresh worktree does not share it, and every server-seam suite and the build fail without it." >&2
   exit 2
