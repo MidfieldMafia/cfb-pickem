@@ -29,15 +29,10 @@ export function sendMagicLinkText(
   });
 }
 
-/** "Remind everyone": each member who is behind, by their own channel. */
-export function sendReminders(
-  route: ConsoleRoute,
-  senders: ReminderSenders,
-  appUrl: string,
-  form: FormData,
-): Promise<ActionState> {
+/** "Remind everyone": each member who is behind and has the reminder on, by push. */
+export function sendReminders(route: ConsoleRoute, senders: ReminderSenders, form: FormData): Promise<ActionState> {
   return consoleEdit(route, async ({ db, actor, now }) => {
-    const result = await remindEveryone(db, senders, actor, id(form, "weekId"), appUrl, now);
+    const result = await remindEveryone(db, senders, actor, id(form, "weekId"), now);
     return { done: reminderSummary(result), revalidate: [PICKS_PATH, MEMBERS_PATH] };
   });
 }

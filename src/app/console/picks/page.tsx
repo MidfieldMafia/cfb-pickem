@@ -4,11 +4,9 @@ import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, CopyButton
 
 import { Pennant } from "@/components/pennant";
 
-import { appUrl } from "@/lib/app-url";
 import { requireConsole } from "@/lib/members/current";
 import { reminderSendersFromEnv } from "@/lib/messaging/reminder-senders";
-import { NOOP } from "@/lib/messaging/sender";
-import { reminderPlan, textBudget, UNREACHED } from "@/lib/messaging/texts";
+import { reminderPlan, UNREACHED } from "@/lib/messaging/texts";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
 import { consoleWeek, isPublished } from "@/lib/slate/slate";
@@ -94,11 +92,8 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
     : [null, []];
   // What the Remind button will do, planned from the same rows it sends from, so
   // the people it cannot reach are named here before anyone presses it.
-  const senders = reminderSendersFromEnv();
-  const now = new Date();
-  const budget = await textBudget(database, senders.sms, now);
-  const plan = report ? await reminderPlan(database, senders, report, appUrl(), now) : null;
-  const reached = plan ? plan.push.length + plan.send.length : 0;
+  const plan = report ? reminderPlan(reminderSendersFromEnv(), report) : null;
+  const reached = plan ? plan.push.length : 0;
   const gameName = new Map(slate.games.map((g) => [g.id, `${g.awayTeam} at ${g.homeTeam}`]));
 
   return (
@@ -217,12 +212,7 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
                   <p className="text-sm">
                     {reached === 0
                       ? "Nobody left to remind."
-                      : [
-                          plan.push.length ? `Pushes ${plan.push.map((r) => r.member.displayName).join(", ")}.` : "",
-                          plan.send.length ? `Texts ${plan.send.map((t) => t.member.displayName).join(", ")}.` : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
+                      : `Pushes ${plan.push.map((r) => r.member.displayName).join(", ")}.`}
                   </p>
                   <ActionForm
                     action={remindAction}
@@ -234,13 +224,8 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
                     className="space-y-2"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {senders.textingPaused
-                      ? "Texting is paused until the app has a registered number, so only members with push on get a reminder."
-                      : senders.sms.name === NOOP
-                        ? "No PINGRAM_API_KEY is set, so texts are logged but not delivered."
-                        : `${budget.used} of ${budget.budget} texts used this month.`}{" "}
-                    Each member is reminded the way they chose in Settings, and the reminder also goes out on its own
-                    the day the Deadline is within 24 hours.
+                    Reminders go by push to members who turned them on in Settings, and also go out on their own the
+                    day the Deadline is within 24 hours.
                   </p>
                   {plan.skip.length > 0 ? (
                     <div className="space-y-2 border-t border-border pt-2">

@@ -3,17 +3,17 @@
  * says, who may get it, what a text costs against the month's budget, and the
  * logs that record each try.
  *
- * A member's Pick reminder follows their channel (#454): Push goes to every
- * device they subscribed and never also as a text, Text is texted, and Off is
- * skipped. When every device answers that it is gone, the subscriptions are
- * deleted and the reminder turns itself off; nothing falls back to a text.
+ * The Pick reminder goes by push or not at all (#475): a member with it on is
+ * pushed on every device they subscribed, and a member with it off is skipped.
+ * It is never texted. When every device answers that it is gone, the
+ * subscriptions are deleted and the reminder turns itself off.
  *
- * A send is planned before it is made. `planReminders` decides who is reached
- * and who is not, and why, from plain rows and a remaining budget; the console
- * reads the same plan to show the people the app cannot text, so what the page
- * promises and what the button does cannot drift apart. Delivery then walks the
- * plan and writes one `text_messages` row per try, and one `push_messages`
- * row per member pushed.
+ * A reminder is planned before it is sent. `planReminders` decides who is
+ * reached and who is not, and why, from plain rows; the console reads the same
+ * plan to show the people a press would not reach, so what the page promises and
+ * what the button does cannot drift apart. Delivery then walks the plan and
+ * writes one `push_messages` row per member pushed. A Magic Link text writes one
+ * `text_messages` row per try.
  *
  * Vocabulary follows GLOSSARY.md. Every writer takes the database first and the
  * `SmsSender`, or for a reminder the `ReminderSenders`, second; `now` is the server clock, injected so tests can sit on
@@ -35,8 +35,8 @@ import { toE164 } from "./phone";
 import { NOOP, type SmsSender } from "./sender";
 
 /**
- * A member's first text from the app, the Magic Link, ends with this; the Pick
- * reminder does not repeat it (docs/research/pingram-opt-out.md). Pingram honors
+ * A member's text from the app, the Magic Link, ends with this
+ * (docs/research/pingram-opt-out.md). Pingram honors
  * the reply itself and tells the app by webhook (`opt-outs.ts`).
  */
 export const OPT_OUT_LINE = "Reply STOP to opt out.";
@@ -50,8 +50,7 @@ export const OPT_OUT_LINE = "Reply STOP to opt out.";
 export const FREE_TIER_BUDGET = 95;
 
 /**
- * No member is sent more than this in a month, whatever the budget: a month of
- * Friday reminders is four or five, so the rest is room for Magic Links, and a
+ * No member is sent more than this in a month, whatever the budget, so a
  * button pressed over and over cannot spend the month on one person.
  */
 export const MEMBER_MONTHLY_TEXTS = 10;
@@ -76,22 +75,19 @@ export const REMINDER_WINDOW_MS = 24 * 3600_000;
 export class TextRefused extends Refusal {}
 
 /** Why the app did not remind someone. */
-export type Unreached =
-  | "deactivated"
-  | "reminder_off"
-  | "push_not_set_up"
-  | "texting_paused"
-  | "opted_out"
-  | "no_phone"
-  | "bad_phone"
-  | "member_cap"
-  | "over_budget";
+export type Unreached = "deactivated" | "reminder_off" | "push_not_set_up";
 
 export const UNREACHED: Record<Unreached, string> = {
   deactivated: "deactivated",
   reminder_off: "reminder is off",
   push_not_set_up: "push is not set up on this server",
-  texting_paused: "texting is paused",
+};
+
+/** Why the app would not text someone their Magic Link. */
+type Untextable = "deactivated" | "opted_out" | "no_phone" | "bad_phone" | "member_cap" | "over_budget";
+
+const UNTEXTABLE: Record<Untextable, string> = {
+  deactivated: "deactivated",
   opted_out: "opted out",
   no_phone: "no phone number",
   bad_phone: "phone number is not one we can text",
@@ -140,23 +136,6 @@ function owedBriefly(row: Pick<MemberProgress, "progress">): string {
   return missing.join(", ");
 }
 
-/**
- * Worded to bill as one message whatever the member owes; a test holds the longest one to 160 characters.
- * It carries no link: until the 10DLC campaign is approved, texts go out from Pingram's unregistered
- * shared numbers, and carriers blocked 8 of 17 reminders with a link as spam on 2026-10-23. `_appUrl`
- * stays so the link can come back once the number is registered.
- */
-export function reminderBody(
-  report: Pick<PickReport, "week" | "deadline">,
-  row: Pick<MemberProgress, "progress">,
-  _appUrl: string,
-): string {
-  return (
-    `Saturday Slate: Week ${report.week.weekNumber} picks lock ${deadlineBriefly(report.deadline)}. ` +
-    `Still need ${owedBriefly(row)}.`
-  );
-}
-
 /** Where a push tap opens: the first Picks step still owed. */
 function reminderPath(row: Pick<MemberProgress, "progress">): string {
   if (row.progress.countingGames > row.progress.picksMade) return "/picks";
@@ -178,7 +157,7 @@ export function reminderPush(
 }
 
 /** The number to text and why not, in the order a commissioner would fix them. */
-function reach(member: Member): { to: string } | { why: Unreached } {
+function reach(member: Member): { to: string } | { why: Untextable } {
   if (!member.active) return { why: "deactivated" };
   if (member.smsOptedOut) return { why: "opted_out" };
   if (!member.phone) return { why: "no_phone" };
@@ -240,9 +219,8 @@ export interface PlannedText {
 }
 
 export interface ReminderPlan {
-  /** Members on Push, sent to every device they have. */
+  /** Members with the reminder on, pushed to every device they have. */
   push: MemberProgress[];
-  send: (PlannedText & { row: MemberProgress })[];
   skip: { row: MemberProgress; why: Unreached }[];
 }
 
@@ -250,62 +228,27 @@ export interface ReminderPlan {
 export interface ReminderReach {
   /** False when push is not configured on this server. */
   push: boolean;
-  /** `TEXTING_PAUSED`: members on Text are skipped. */
-  textingPaused: boolean;
 }
 
 /**
- * Who is reminded, and how, in the order the members joined: each by their
- * channel, and texts until the budget runs out. Everyone else who is behind is
- * listed with the reason. A member who is complete is in no list. `already`
- * are members not to remind again.
+ * Who is reminded, in the order the members joined: everyone behind with the
+ * reminder on, by push. Everyone else who is behind is listed with the reason. A
+ * member who is complete is in no list. `already` are members not to remind
+ * again. Any channel but Push counts as Off, so a row left on Text by hand is
+ * skipped, never texted.
  */
 export function planReminders(
   report: PickReport,
-  appUrl: string,
-  budget: Pick<TextBudget, "remaining" | "byMember">,
   already: ReadonlySet<number> = new Set(),
-  can: ReminderReach = { push: true, textingPaused: false },
+  can: ReminderReach = { push: true },
 ): ReminderPlan {
-  const plan: ReminderPlan = { push: [], send: [], skip: [] };
-  let left = budget.remaining;
+  const plan: ReminderPlan = { push: [], skip: [] };
   for (const row of report.members) {
     if (row.complete || already.has(row.member.id)) continue;
-    const { member } = row;
-    if (!member.active) {
-      plan.skip.push({ row, why: "deactivated" });
-      continue;
-    }
-    if (member.reminderChannel === "off") {
-      plan.skip.push({ row, why: "reminder_off" });
-      continue;
-    }
-    if (member.reminderChannel === "push") {
-      if (can.push) plan.push.push(row);
-      else plan.skip.push({ row, why: "push_not_set_up" });
-      continue;
-    }
-    if (can.textingPaused) {
-      plan.skip.push({ row, why: "texting_paused" });
-      continue;
-    }
-    const target = reach(member);
-    if ("why" in target) {
-      plan.skip.push({ row, why: target.why });
-      continue;
-    }
-    const body = reminderBody(report, row, appUrl);
-    const segments = segmentsOf(body);
-    if (overMemberCap(budget, row.member.id, segments)) {
-      plan.skip.push({ row, why: "member_cap" });
-      continue;
-    }
-    if (segments > left) {
-      plan.skip.push({ row, why: "over_budget" });
-      continue;
-    }
-    left -= segments;
-    plan.send.push({ row, member: row.member, to: target.to, body, segments });
+    if (!row.member.active) plan.skip.push({ row, why: "deactivated" });
+    else if (row.member.reminderChannel !== "push") plan.skip.push({ row, why: "reminder_off" });
+    else if (can.push) plan.push.push(row);
+    else plan.skip.push({ row, why: "push_not_set_up" });
   }
   return plan;
 }
@@ -350,15 +293,15 @@ export async function textMagicLink(
   const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
   if (!member) throw new InvalidMember("No such member.");
   const target = reach(member);
-  if ("why" in target) throw new TextRefused(`${member.displayName} was not texted: ${UNREACHED[target.why]}.`);
+  if ("why" in target) throw new TextRefused(`${member.displayName} was not texted: ${UNTEXTABLE[target.why]}.`);
   const body = magicLinkBody(member, appUrl);
   const segments = segmentsOf(body);
   const budget = await textBudget(db, sender, now);
   if (overMemberCap(budget, member.id, segments)) {
-    throw new TextRefused(`${member.displayName} has ${UNREACHED.member_cap}; copy their link and send it by hand.`);
+    throw new TextRefused(`${member.displayName} has ${UNTEXTABLE.member_cap}; copy their link and send it by hand.`);
   }
   if (segments > budget.remaining) {
-    throw new TextRefused(`${UNREACHED.over_budget}; copy ${member.displayName}'s link and send it by hand.`);
+    throw new TextRefused(`${UNTEXTABLE.over_budget}; copy ${member.displayName}'s link and send it by hand.`);
   }
   const outcome = await deliver(db, sender, "magic_link", null, { member, to: target.to, body, segments });
   if (!outcome.ok) throw new TextRefused(`The text to ${member.displayName} failed: ${outcome.detail}`);
@@ -414,11 +357,9 @@ export async function textOwnLink(
   return "check_your_texts";
 }
 
-/** What a reminder goes out through: the text sender, the push sender (null when push is not set up), and the pause. */
+/** What a reminder goes out through: the push sender, null when push is not set up. */
 export interface ReminderSenders {
-  sms: SmsSender;
   push: Pusher | null;
-  textingPaused: boolean;
 }
 
 export interface PushOutcome {
@@ -432,33 +373,23 @@ export interface PushOutcome {
 
 export interface ReminderResult {
   pushed: PushOutcome[];
-  texted: TextOutcome[];
   skipped: ReminderPlan["skip"];
 }
 
-/** Reminds everyone behind on a Week who can be reached, each by their channel, and reports who could not be. */
+/** Pushes everyone behind on a Week who has the reminder on, and reports who was not reminded. */
 export async function remindEveryone(
   db: Db,
   senders: ReminderSenders,
   actor: Commissioner,
   weekId: number,
-  appUrl: string,
   now: Date = new Date(),
 ): Promise<ReminderResult> {
-  return sendReminders(db, senders, "reminder", await pickReport(db, weekId, now), appUrl, now);
+  return sendReminders(db, senders, "reminder", await pickReport(db, weekId, now), now);
 }
 
 /** The reminder plan for these senders: the console reads it to show who a press would reach. */
-export async function reminderPlan(
-  db: Db,
-  senders: ReminderSenders,
-  report: PickReport,
-  appUrl: string,
-  now: Date,
-  already?: ReadonlySet<number>,
-): Promise<ReminderPlan> {
-  const budget = await textBudget(db, senders.sms, now);
-  return planReminders(report, appUrl, budget, already, { push: senders.push !== null, textingPaused: senders.textingPaused });
+export function reminderPlan(senders: ReminderSenders, report: PickReport, already?: ReadonlySet<number>): ReminderPlan {
+  return planReminders(report, already, { push: senders.push !== null });
 }
 
 /**
@@ -504,17 +435,13 @@ async function sendReminders(
   senders: ReminderSenders,
   kind: PushKind,
   report: PickReport,
-  appUrl: string,
   now: Date,
   already?: ReadonlySet<number>,
 ): Promise<ReminderResult> {
-  const plan = await reminderPlan(db, senders, report, appUrl, now, already);
+  const plan = reminderPlan(senders, report, already);
   const pushed: PushOutcome[] = [];
   if (senders.push) for (const row of plan.push) pushed.push(await pushTo(db, senders.push, kind, report, row, now));
-  const texted: TextOutcome[] = [];
-  // One at a time: a shared sender number is rate limited, and the order stays the roster's.
-  for (const text of plan.send) texted.push(await deliver(db, senders.sms, kind, report.week.id, text));
-  return { pushed, texted, skipped: plan.skip };
+  return { pushed, skipped: plan.skip };
 }
 
 export type ScheduledRun =
@@ -524,14 +451,13 @@ export type ScheduledRun =
 /**
  * The daily cron's work: when the latest published Week's Deadline is within
  * the next day, remind whoever is still behind. Cron is best effort and can fire
- * twice, so a member already sent this Week's scheduled reminder, by text or by
- * a push that reached a device, is not sent it again; the once-a-day schedule
- * makes sure each Deadline falls in exactly one window.
+ * twice, so a member already sent this Week's scheduled reminder by a push that
+ * reached a device is not sent it again; the once-a-day schedule makes sure each
+ * Deadline falls in exactly one window.
  */
 export async function runScheduledReminder(
   db: Db,
   senders: ReminderSenders,
-  appUrl: string,
   now: Date = new Date(),
 ): Promise<ScheduledRun> {
   const slate = await publishedSlate(db);
@@ -539,12 +465,6 @@ export async function runScheduledReminder(
   const { deadline } = slate.week;
   if (deadline <= now) return { ran: false, why: "deadline has passed" };
   if (deadline.getTime() - now.getTime() > REMINDER_WINDOW_MS) return { ran: false, why: "deadline is more than a day away" };
-  const earlier = await db
-    .select({ memberId: textMessages.memberId })
-    .from(textMessages)
-    .where(
-      and(eq(textMessages.weekId, slate.week.id), eq(textMessages.kind, "scheduled_reminder"), eq(textMessages.status, "sent")),
-    );
   const pushedEarlier = await db
     .select({ memberId: pushMessages.memberId })
     .from(pushMessages)
@@ -557,9 +477,8 @@ export async function runScheduledReminder(
     senders,
     "scheduled_reminder",
     report,
-    appUrl,
     now,
-    new Set([...earlier, ...pushedEarlier].map((r) => r.memberId)),
+    new Set(pushedEarlier.map((r) => r.memberId)),
   );
   return { ran: true, weekNumber: slate.week.weekNumber, ...result };
 }
@@ -597,13 +516,9 @@ export async function recentTexts(db: Db, actor: Commissioner, limit = 20): Prom
 export function reminderSummary(result: ReminderResult): string {
   const names = (rows: { member: Member }[]) => rows.map((r) => r.member.displayName).join(", ");
   const pushed = result.pushed.filter((p) => p.ok);
-  const sent = result.texted.filter((t) => t.ok);
-  const failed = [...result.pushed.filter((p) => !p.ok), ...result.texted.filter((t) => !t.ok)];
-  const parts: string[] = [];
-  if (pushed.length) parts.push(`Pushed ${names(pushed)}.`);
-  if (sent.length) parts.push(`Texted ${names(sent)}.`);
-  if (parts.length === 0) parts.push("Nobody was reminded.");
-  if (failed.length) parts.push(`Failed: ${failed.map((t) => `${t.member.displayName} (${t.detail})`).join("; ")}.`);
+  const failed = result.pushed.filter((p) => !p.ok);
+  const parts: string[] = [pushed.length ? `Pushed ${names(pushed)}.` : "Nobody was reminded."];
+  if (failed.length) parts.push(`Failed: ${failed.map((p) => `${p.member.displayName} (${p.detail})`).join("; ")}.`);
   if (result.skipped.length) {
     parts.push(`Not reminded: ${result.skipped.map((s) => `${s.row.member.displayName} (${UNREACHED[s.why]})`).join(", ")}.`);
   }

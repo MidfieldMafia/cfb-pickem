@@ -227,7 +227,7 @@ export const seasonRosters = pgTable("season_rosters", {
   fetchedAt: utc("fetched_at").notNull(),
 });
 
-export const reminderChannels = ["push", "text", "off"] as const;
+export const reminderChannels = ["push", "off"] as const;
 export type ReminderChannel = (typeof reminderChannels)[number];
 
 export const members = pgTable("members", {
