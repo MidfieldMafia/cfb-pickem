@@ -18,6 +18,9 @@ export const NUDGE_KEY = "home-screen-nudge";
  */
 export const VISIT_GAP_MS = 30 * 60 * 1000;
 
+/** The banner's X hides it until tomorrow; this many taps hide it for good (#481). */
+export const BANNER_HIDES_FOR_GOOD = 3;
+
 export type Nudge = "sheet" | "banner" | null;
 
 /** `localStorage`, behind a call: reaching it can throw as well as reading it. */
@@ -35,6 +38,8 @@ interface Remembered {
   sheetWaited?: number;
   /** The X on the banner: the local date it was tapped, and the visit. */
   bannerHidden?: { day: string; visit: number };
+  /** How many times the banner's X has been tapped, ever. */
+  bannerHides?: number;
 }
 
 function read(storage: Store): Remembered {
@@ -68,7 +73,8 @@ function localDay(now: Date): string {
  * Picks has just opened: starts a visit when the last one has lapsed, and says
  * what to show. The sheet waits for a visit with no other pop-up open (the
  * Welcome Tour, What's new), and once closed never shows again; the banner
- * then shows on every later visit, unless its X hid it today or this visit.
+ * then shows on every later visit, unless its X hid it today or this visit,
+ * or has been tapped three times.
  */
 export function openPicks(storage: Store, now: Date, { popupShowing }: { popupShowing: boolean }): Nudge {
   let shown: Nudge = null;
@@ -90,7 +96,8 @@ export function openPicks(storage: Store, now: Date, { popupShowing }: { popupSh
       shown = null;
     } else {
       const hidden = memory.bannerHidden;
-      shown = hidden && (hidden.day === localDay(now) || hidden.visit === visit) ? null : "banner";
+      const forGood = (memory.bannerHides ?? 0) >= BANNER_HIDES_FOR_GOOD;
+      shown = forGood || (hidden && (hidden.day === localDay(now) || hidden.visit === visit)) ? null : "banner";
     }
 
     storage().setItem(NUDGE_KEY, JSON.stringify(memory));
@@ -114,9 +121,13 @@ export function closeSheet(storage: Store): void {
   });
 }
 
-/** The banner's X: hidden for the rest of the member's day, and of this visit. */
+/**
+ * The banner's X: hidden for the rest of the member's day, and of this visit;
+ * the third tap hides it for good.
+ */
 export function hideBanner(storage: Store, now: Date): void {
   update(storage, (memory) => {
     memory.bannerHidden = { day: localDay(now), visit: memory.visit ?? now.getTime() };
+    memory.bannerHides = (memory.bannerHides ?? 0) + 1;
   });
 }
