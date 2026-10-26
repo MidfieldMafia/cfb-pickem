@@ -102,6 +102,44 @@ describe("the banner's X", () => {
     hideBanner(storage, at(24, 23, 50));
     expect(openPicks(storage, at(25, 0, 5), QUIET)).toBe(null);
   });
+
+  test("the first X still brings it back tomorrow", () => {
+    const storage = bannerShowingAt(at(24, 9));
+    hideBanner(storage, at(24, 9));
+    expect(openPicks(storage, at(25, 9), QUIET)).toBe("banner");
+  });
+
+  test("the second X still brings it back tomorrow", () => {
+    const storage = bannerShowingAt(at(24, 9));
+    hideBanner(storage, at(24, 9));
+    expect(openPicks(storage, at(25, 9), QUIET)).toBe("banner");
+    hideBanner(storage, at(25, 9));
+    expect(openPicks(storage, at(26, 9), QUIET)).toBe("banner");
+  });
+
+  test("the third X hides it for good", () => {
+    const storage = bannerShowingAt(at(24, 9));
+    hideBanner(storage, at(24, 9));
+    expect(openPicks(storage, at(25, 9), QUIET)).toBe("banner");
+    hideBanner(storage, at(25, 9));
+    expect(openPicks(storage, at(26, 9), QUIET)).toBe("banner");
+    hideBanner(storage, at(26, 9));
+    expect(openPicks(storage, at(27, 9), QUIET)).toBe(null);
+    expect(openPicks(storage, at(30, 9), BUSY)).toBe(null);
+  });
+
+  test("a third X on a later day than the second hides it for good", () => {
+    const storage = bannerShowingAt(at(24, 9));
+    hideBanner(storage, at(24, 9));
+    expect(openPicks(storage, at(25, 9), QUIET)).toBe("banner");
+    hideBanner(storage, at(25, 9));
+    // A week goes by with the banner showing and no X.
+    expect(openPicks(storage, at(26, 9), QUIET)).toBe("banner");
+    expect(openPicks(storage, at(31, 9), QUIET)).toBe("banner");
+    hideBanner(storage, at(31, 9));
+    expect(openPicks(storage, at(31, 20), QUIET)).toBe(null);
+    expect(openPicks(storage, new Date(2026, 10, 15, 9), QUIET)).toBe(null);
+  });
 });
 
 describe("storage that throws", () => {
