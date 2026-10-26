@@ -104,7 +104,8 @@ Question: How much judgment and risk does building this ticket carry, for a codi
    Deadline or Reveal, a database migration, or money and messaging limits; or
    the brief is thin and the build has to work out what is meant.
 5. Open. No Agent Brief, or open design questions the build must settle itself,
-   or several of the level 4 risks at once.
+   or several of the level 4 risks at once. A ticket with What to build and
+   Acceptance sections is a full brief, with or without that heading.
 
 | Level | `model` | `effort` |
 |---|---|---|
@@ -153,7 +154,7 @@ it, then the PR URL or FAILED: <why>.
 A second leg (below) adds, after the first paragraph: `An earlier leg on
 <model> / <effort> stopped: <its FAILED line>. Its worktree is <path from git
 worktree list>, on <branch>: work there instead of making a new one, run
-warm.sh again, and continue from what it left. Keep /tmp/shots/before--*.png,
+warm.sh --quick again, and continue from what it left. Keep /tmp/shots/before--*.png,
 which it took before any code.`
 
 The call returns a line ending `<usage>subagent_tokens: N tool_uses: M
@@ -186,11 +187,15 @@ PR, or that comment says why there is none.
 ## 3. Worktree
 
 Follow `new-worktree`: a branch named for the issue (`<slug>-<number>`), cut
-from `origin/main`, warmed and green before any code. The clone has no
-`.env.local`, so `warm.sh` skips the env step; build and tests need no secrets.
+from `origin/main`, warmed before any code. Warm it with
+`warm.sh --quick`: install and `next typegen`, no build or checks. `main` is
+already green, and step 7's `npm run preflight` runs the build and every check
+once on the finished diff; the full warm-up cost 12 minutes of a 53-minute
+cloud build (#471). The clone has no `.env.local`, so `warm.sh` skips the env
+step; build and tests need no secrets.
 
-**Done when** `warm.sh` prints `all green`. Every later change happens in that
-worktree.
+**Done when** `warm.sh` prints `worktree warm (quick)`. Every later change
+happens in that worktree.
 
 ## 4. Database, and the "before" screenshots
 
@@ -278,6 +283,13 @@ cannot finish.
 CLAUDE.md's checks apply as written: `npx next build` when the diff touches a
 `"use server"` file, a route handler or the client/server boundary; never
 `npm run build`.
+
+The full suite runs **once**, in step 7's `npm run preflight`. Each run of it
+costs about 9 minutes in the cloud, and #471 spent 26 minutes re-running it
+around a one-word rename. While building, and after a code-review fix, run only
+what the change reaches: `npx vitest run <test files>`, `npm run -s typecheck`,
+`npx eslint <files>`. Never `npm run test`, `warm.sh` or a bare `npx vitest run`
+before preflight, and when preflight fails, fix and re-run preflight itself.
 
 ## 6. Check it on a screen
 
