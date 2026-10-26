@@ -19,7 +19,7 @@ export const NUDGE_KEY = "home-screen-nudge";
 export const VISIT_GAP_MS = 30 * 60 * 1000;
 
 /** The banner's X hides it until tomorrow; this many taps hide it for good (#481). */
-export const BANNER_HIDES_FOR_GOOD = 3;
+const BANNER_HIDES_FOR_GOOD = 3;
 
 export type Nudge = "sheet" | "banner" | null;
 
