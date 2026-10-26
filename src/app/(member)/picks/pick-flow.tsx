@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
 
 import { HomeScreenNudge } from "@/components/picks/home-screen-nudge";
+import { PickReminderAsk } from "@/components/push/pick-reminder-ask";
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
@@ -177,10 +178,13 @@ export function PickFlow({
   sheet: initial,
   startGameId,
   startPage,
+  reminder,
 }: {
   sheet: SheetJson;
   startGameId?: number;
   startPage?: WalkPage;
+  /** The Pick reminder ask's server-side facts (#482); none, none shown. */
+  reminder?: { on: boolean; publicKey: string | null; onboarding: boolean };
 }) {
   const router = useRouter();
   // Only a saved Pick counts as picked: an in-flight or failed save leaves its
@@ -324,6 +328,17 @@ export function PickFlow({
       </header>
 
       <HomeScreenNudge open={!locked} banner={page === null} />
+      {reminder ? (
+        <PickReminderAsk
+          open={!locked}
+          banner={page === null}
+          on={reminder.on}
+          publicKey={reminder.publicKey}
+          onboarding={reminder.onboarding}
+          weekNumber={held.weekNumber}
+          deadline={held.deadline}
+        />
+      ) : null}
 
       {/* The content under the header, on every page of the flow: the Welcome Tour's `picks-screen` target. */}
       <div data-tour="picks-screen" className="flex flex-1 flex-col">

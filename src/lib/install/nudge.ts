@@ -40,10 +40,12 @@ interface Remembered {
   bannerHidden?: { day: string; visit: number };
   /** How many times the banner's X has been tapped, ever. */
   bannerHides?: number;
+  /** The onboarding step (#482) was shown and left. Set once, never cleared. */
+  stepShown?: boolean;
 }
 
-function read(storage: Store): Remembered {
-  const raw = storage().getItem(NUDGE_KEY);
+function read(storage: Store, key: string): Remembered {
+  const raw = storage().getItem(key);
   if (!raw) return {};
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -54,11 +56,11 @@ function read(storage: Store): Remembered {
 }
 
 /** Reads, changes and writes back, swallowing a storage that throws. */
-function update(storage: Store, change: (memory: Remembered) => void): void {
+function update(storage: Store, key: string, change: (memory: Remembered) => void): void {
   try {
-    const memory = read(storage);
+    const memory = read(storage, key);
     change(memory);
-    storage().setItem(NUDGE_KEY, JSON.stringify(memory));
+    storage().setItem(key, JSON.stringify(memory));
   } catch {
     // Nowhere to remember it.
   }
@@ -76,10 +78,15 @@ function localDay(now: Date): string {
  * then shows on every later visit, unless its X hid it today or this visit,
  * or has been tapped three times.
  */
-export function openPicks(storage: Store, now: Date, { popupShowing }: { popupShowing: boolean }): Nudge {
+export function openPicks(
+  storage: Store,
+  now: Date,
+  { popupShowing }: { popupShowing: boolean },
+  key: string = NUDGE_KEY,
+): Nudge {
   let shown: Nudge = null;
   try {
-    const memory = read(storage);
+    const memory = read(storage, key);
     const at = now.getTime();
     const visit =
       memory.visit !== undefined && memory.lastSeen !== undefined && at - memory.lastSeen <= VISIT_GAP_MS
@@ -100,7 +107,7 @@ export function openPicks(storage: Store, now: Date, { popupShowing }: { popupSh
       shown = forGood || (hidden && (hidden.day === localDay(now) || hidden.visit === visit)) ? null : "banner";
     }
 
-    storage().setItem(NUDGE_KEY, JSON.stringify(memory));
+    storage().setItem(key, JSON.stringify(memory));
   } catch {
     return null;
   }
@@ -108,15 +115,15 @@ export function openPicks(storage: Store, now: Date, { popupShowing }: { popupSh
 }
 
 /** Picks is still open: keeps the visit from lapsing while the member is on it. */
-export function stillHere(storage: Store, now: Date): void {
-  update(storage, (memory) => {
+export function stillHere(storage: Store, now: Date, key: string = NUDGE_KEY): void {
+  update(storage, key, (memory) => {
     memory.lastSeen = now.getTime();
   });
 }
 
 /** The sheet closed, any way, or its Add was tapped: it never opens again. */
-export function closeSheet(storage: Store): void {
-  update(storage, (memory) => {
+export function closeSheet(storage: Store, key: string = NUDGE_KEY): void {
+  update(storage, key, (memory) => {
     memory.sheetClosed ??= memory.visit ?? 0;
   });
 }
@@ -125,9 +132,30 @@ export function closeSheet(storage: Store): void {
  * The banner's X: hidden for the rest of the member's day, and of this visit;
  * the third tap hides it for good.
  */
-export function hideBanner(storage: Store, now: Date): void {
-  update(storage, (memory) => {
+export function hideBanner(storage: Store, now: Date, key: string = NUDGE_KEY): void {
+  update(storage, key, (memory) => {
     memory.bannerHidden = { day: localDay(now), visit: memory.visit ?? now.getTime() };
     memory.bannerHides = (memory.bannerHides ?? 0) + 1;
+  });
+}
+
+/**
+ * Whether the onboarding step (#482) has been shown on this device. Storage
+ * that cannot be read counts as shown: a full page that returns on every open
+ * is worse than none.
+ */
+export function stepWasShown(storage: Store, key: string = NUDGE_KEY): boolean {
+  try {
+    return read(storage, key).stepShown === true;
+  } catch {
+    return true;
+  }
+}
+
+/** The onboarding step was left: it never shows again, and neither does the first-open sheet. */
+export function markStepShown(storage: Store, key: string = NUDGE_KEY): void {
+  update(storage, key, (memory) => {
+    memory.stepShown = true;
+    memory.sheetClosed ??= memory.visit ?? 0;
   });
 }
