@@ -107,6 +107,10 @@ export function route(response: unknown, tiers: readonly Tier[]): Route {
   const probabilities = [0, 1, 2, 3, 4].map((i) => (answer.probabilities as Record<string, unknown>)[String(i)]);
   if (probabilities.some((p) => typeof p !== "number")) return routeOnError("Jev's answer did not score five levels", tiers);
   const scores = probabilities as number[];
+  // Confidence 0 with every level at 0 is an empty answer (#481 got one: 17 output
+  // tokens), not a verdict of "unsure". Reporting it as one would put noise in the
+  // `Built on:` lines the levels are retuned from.
+  if (answer.confidence <= 0 || scores.every((p) => p === 0)) return routeOnError("Jev's answer was empty", tiers);
   const top = scores.reduce((best, p, i) => (p >= scores[best] ? i : best), 0);
 
   const jev: JevVerdict = {

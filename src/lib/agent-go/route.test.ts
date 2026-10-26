@@ -93,6 +93,11 @@ describe("route", () => {
     expect(route("not json", TIERS).reason).toBe("jev-error");
     expect(route(answer([0.5, 0.5], 0.9), TIERS).reason).toBe("jev-error");
   });
+
+  test("an empty answer, confidence 0 or every level at 0, is an error and not an unsure verdict", () => {
+    expect(route(answer([0, 0, 0, 0, 1], 0), TIERS)).toMatchObject({ reason: "jev-error", error: "Jev's answer was empty" });
+    expect(route(answer([0, 0, 0, 0, 0], 0.9), TIERS).reason).toBe("jev-error");
+  });
 });
 
 describe("routeOnError", () => {

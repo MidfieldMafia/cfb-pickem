@@ -62,6 +62,7 @@ Only a run that passed all four gate checks gets here, so a ticket that stops
 at the gate never reaches Jev.
 
 ```bash
+npm ci --no-audit --no-fund    # a fresh clone has no tsx; without it agent-route stops at "tsx: not found"
 npm run -s agent-route -- <issue number>
 ```
 
@@ -174,10 +175,11 @@ session's own.
   with what stopped it, the branch it pushed if any, and what decision it
   needs from Jonah, and stop (#463 decision 7).
 
-Then rewrite the PR body's `Built on:` line, in place, to the full format in
-step 7, keeping the minutes the subagent wrote: `gh pr view <n> --json body`, replace only the line that starts
-`Built on:`, and `gh pr edit <n> --body-file <file>`. Change nothing else in
-the body, `Members see:` least of all. Comment the PR's URL on the issue, and
+Then rewrite the PR body's `Built on:` line to the full format in step 7:
+`npm run -s agent-built-on -- <issue number> <pr number> --tokens <N> --tools <M>`,
+with the sums over every leg (repeat `--legs "<legs>"` only for an escalated run, to name
+both). It keeps the minutes the subagent wrote, replaces only that line, and
+edits the PR. Comment the PR's URL on the issue, and
 end with the issue number and the PR URL, or why there is none.
 
 **Done when** the subagent has returned, at most twice, and either the PR's
