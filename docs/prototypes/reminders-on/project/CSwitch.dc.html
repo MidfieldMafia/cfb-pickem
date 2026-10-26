@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reminders C: switch banner</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--background); font-family: var(--font-sans); color: var(--foreground); display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 12px 16px 4px;">
+    <img src="/_blob/d35a5062221f9cdbdd4cd331bcd5a717" alt="" width="44" height="44">
+    <div style="min-width: 0; flex: 1;">
+      <h1 style="margin: 0; font: 900 22px/28px var(--font-display);">Week 8</h1>
+      <div style="font-size: 14px; line-height: 20px; color: var(--muted-foreground);">Game 1 of 8</div>
+    </div>
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.HeaderLinks"></x-import>
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.Badge" variant="pending">Pending</x-import>
+  </header>
+
+  <sc-if value="{{showAsk}}" hint-placeholder-val="{{true}}">
+    <div style="padding: 4px 16px 0; ">
+      <section aria-label="Pick reminder" style="display: flex; min-height: 56px; box-sizing: border-box; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+        <p id="reminder-label" style="margin: 0; min-width: 0; flex: 1; font: 700 14px/20px var(--font-sans); white-space: nowrap;">Remind me before picks lock</p>
+        <x-import component-from-global-scope="SaturdaySlateDesignSystem.Switch" checked="{{isOn}}" on-checked-change="{{flip}}" aria-labelledby="reminder-label"></x-import>
+        <button type="button" aria-label="Not now" onClick="{{hide}}" style="width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{showOn}}" hint-placeholder-val="{{false}}">
+    <div style="padding: 4px 16px 0;">
+      <section role="status" style="display: flex; align-items: center; gap: 10px; min-height: 56px; box-sizing: border-box; padding: 6px 0 6px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary); flex-shrink: 0;"><path d="M20 6 9 17l-5-5"></path></svg>
+        <div style="flex: 1; min-width: 0; display: grid;">
+          <span style="font: 700 14px/18px var(--font-sans);">Reminders are on</span>
+          <span style="font-size: 13px; line-height: 18px; color: var(--muted-foreground);">Turn them off any time in Settings.</span>
+        </div>
+        <button type="button" aria-label="Close" onClick="{{hide}}" style="width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{showDenied}}" hint-placeholder-val="{{false}}">
+    <div style="padding: 4px 16px 0;">
+      <section role="status" style="display: flex; align-items: center; gap: 10px; min-height: 56px; box-sizing: border-box; padding: 6px 0 6px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--muted-foreground); flex-shrink: 0;"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742"></path><path d="m2 2 20 20"></path><path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05"></path></svg>
+        <div style="flex: 1; min-width: 0; display: grid;">
+          <span style="font: 700 14px/18px var(--font-sans);">Notifications are off</span>
+          <span style="font-size: 13px; line-height: 18px; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Allow them in iPhone Settings.</span>
+        </div>
+        <button type="button" aria-label="Close" onClick="{{hide}}" style="width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </section>
+    </div>
+  </sc-if>
+
+  <nav aria-label="Games" style="display: flex; align-items: center; gap: 4px; padding: 0 16px;">
+    <sc-for list="{{segments}}" as="s" hint-placeholder-count="8">
+      <span style="flex: 1; padding: 18px 0;"><span style="{{s.style}}"></span></span>
+    </sc-for>
+    <span style="width: 26px; display: grid; place-items: center; min-height: 44px;"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 999px; border: 2px dashed var(--secondary);"></span></span>
+    <span style="width: 26px; display: grid; place-items: center; min-height: 44px;"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 999px; border: 2px dashed var(--secondary);"></span></span>
+  </nav>
+
+  <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 12px; min-height: 0;">
+    <div style="display: grid; font-size: 14px; line-height: 18px; color: var(--muted-foreground);">
+      <span>Sat 11:00 AM · ABC</span>
+      <span style="font-size: 12px;">Cotton Bowl · Dallas, TX</span>
+    </div>
+    <div style="display: grid; gap: 8px; padding: 6px 4px 10px;">
+      <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 14px;">
+        <span style="font-weight: 500; color: var(--muted-foreground);">OU +3.5</span>
+        <span style="font: 700 10px/12px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Spread</span>
+        <span style="text-align: right; font-weight: 800;">TEX −3.5</span>
+      </div>
+      <span style="display: flex; gap: 3px; height: 6px; border-radius: 999px; overflow: hidden; background: var(--border);"><span style="flex: 1; background: #841617;"></span><span style="flex: 1; background: #BF5700;"></span></span>
+    </div>
+    <div style="flex: 1; display: flex; align-items: stretch; gap: 6px; min-height: 0;">
+      <button type="button" style="flex: 1; min-width: 0; min-height: 124px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; padding: 12px 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--foreground); font-family: var(--font-sans);">
+        <span style="flex: 1; align-self: stretch; margin: 30px 4px 8px; min-height: 32px; background: url(/_blob/c6bd0837103749bc3cb973516cbe5c65) center / contain no-repeat;"></span>
+        <span style="font: 900 22px/26px var(--font-display);">Oklahoma</span>
+        <span style="display: block; width: 70%; height: 6px; border-radius: 999px; background: #841617;"></span>
+      </button>
+      <div style="width: 24px; align-self: center; text-align: center; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground);">at</div>
+      <button type="button" style="flex: 1; min-width: 0; min-height: 124px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; padding: 12px 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--foreground); font-family: var(--font-sans);">
+        <span style="flex: 1; align-self: stretch; margin: 30px 4px 8px; min-height: 32px; background: url(/_blob/c06b7ac55628562b949e9e837f32bd5d) center / contain no-repeat;"></span>
+        <span style="font: 900 22px/26px var(--font-display);">Texas</span>
+        <span style="display: block; width: 70%; height: 6px; border-radius: 999px; background: #BF5700;"></span>
+      </button>
+    </div>
+    <div style="min-height: 44px; display: flex; align-items: center; padding-top: 4px; font-size: 14px; color: var(--muted-foreground);">Tap a team to pick it.</div>
+  </div>
+
+  <x-import component-from-global-scope="SaturdaySlateDesignSystem.BottomNav" tabs="{{tabs}}"></x-import>
+
+  <sc-if value="{{asking}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; z-index: 200; display: grid; place-items: center; background: rgba(0,0,0,0.25);">
+      <div style="display: grid; gap: 8px; justify-items: center;">
+        <span style="padding: 2px 8px; border: 1px dashed #5c5246; border-radius: 6px; background: #e8e3d6; color: #3d362e; font: 600 12px/16px var(--font-sans);">Prototype: iOS asks here</span>
+        <div role="alertdialog" aria-labelledby="ios-title" style="width: 270px; border-radius: 14px; overflow: hidden; background: rgba(242,242,242,0.97); color: #000; font-family: -apple-system, system-ui, sans-serif; text-align: center;">
+          <div style="padding: 18px 16px 16px; display: grid; gap: 4px;">
+            <strong id="ios-title" style="font-size: 17px; line-height: 22px;">“Saturday Slate” Would Like to Send You Notifications</strong>
+            <span style="font-size: 13px; line-height: 17px;">Notifications may include alerts, sounds and icon badges. These can be configured in Settings.</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid rgba(60,60,67,0.29);">
+            <button type="button" onClick="{{deny}}" style="height: 44px; border: 0; border-right: 1px solid rgba(60,60,67,0.29); background: transparent; color: #007aff; font-size: 17px; cursor: pointer;">Don’t Allow</button>
+            <button type="button" onClick="{{allow}}" style="height: 44px; border: 0; background: transparent; color: #007aff; font-size: 17px; font-weight: 600; cursor: pointer;">Allow</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hidden}}" hint-placeholder-val="{{false}}">
+    <button type="button" onClick="{{reset}}" style="position: absolute; left: 16px; right: 16px; bottom: 96px; height: 36px; border: 1px dashed #5c5246; border-radius: 6px; background: #e8e3d6; color: #3d362e; font: 600 13px/18px var(--font-sans); cursor: pointer;">{{hiddenNote}}</button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'ask', hidden: false };
+  }
+  icon(parts) {
+    const h = window.React.createElement;
+    return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+      parts.map((p, i) => h(p[0], Object.assign({ key: i }, p[1]))));
+  }
+  renderVals() {
+    const { mode, hidden } = this.state;
+    const segments = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({
+      style: 'display: block; height: 8px; border-radius: 999px; background: var(--muted);' + (i === 0 ? ' box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--primary);' : '')
+    }));
+    const tabs = [
+      { href: '#', label: 'Picks', active: true, icon: this.icon([['rect', { x: 8, y: 2, width: 8, height: 4, rx: 1 }], ['path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' }], ['path', { d: 'm9 14 2 2 4-4' }]]) },
+      { href: '#', label: 'Live Board', active: false, icon: this.icon([['path', { d: 'M4.9 19.1C1 15.2 1 8.8 4.9 4.9' }], ['path', { d: 'M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5' }], ['circle', { cx: 12, cy: 12, r: 2 }], ['path', { d: 'M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5' }], ['path', { d: 'M19.1 4.9C23 8.8 23 15.1 19.1 19' }]]) },
+      { href: '#', label: 'Leaderboard', active: false, icon: this.icon([['path', { d: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6' }], ['path', { d: 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18' }], ['path', { d: 'M4 22h16' }], ['path', { d: 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' }], ['path', { d: 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' }], ['path', { d: 'M18 2H6v7a6 6 0 0 0 12 0V2Z' }]]) },
+      { href: '#', label: 'Chat', active: false, icon: this.icon([['path', { d: 'M7.9 20A9 9 0 1 0 4 16.1L2 22Z' }]]) }
+    ];
+    const notes = {
+      ask: 'Prototype: X hides it until tomorrow. Tap to show again',
+      on: 'Prototype: reminders on, the row is gone from the next visit. Tap to start over',
+      denied: 'Prototype: blocked, the row is gone from the next visit. Tap to start over'
+    };
+    const live = mode === 'asking' ? 'ask' : mode;
+    return {
+      showAsk: !hidden && live === 'ask',
+      showOn: !hidden && mode === 'on',
+      showDenied: !hidden && mode === 'denied',
+      isOn: mode === 'on',
+      asking: mode === 'asking',
+      footnote: mode === 'on' || mode === 'denied',
+      footnoteText: mode === 'on' ? 'On. Change it any time in Settings.' : 'Blocked in iPhone Settings › Notifications.',
+      hidden: hidden,
+      hiddenNote: notes[live],
+      flip: (next) => { if (mode === 'denied') return; this.setState({ mode: next ? 'asking' : 'ask' }); },
+      allow: () => this.setState({ mode: 'on' }),
+      deny: () => this.setState({ mode: 'denied' }),
+      hide: () => this.setState({ hidden: true }),
+      reset: () => this.setState({ mode: 'ask', hidden: false }),
+      segments: segments,
+      tabs: tabs
+    };
+  }
+}
+</script>
+</body>
+</html>

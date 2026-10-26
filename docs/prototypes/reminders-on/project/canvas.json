@@ -1,0 +1,114 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "ABanner.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "A2 · Every later visit: banner, Turn on",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "BWelcome.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "B · First open: a page of its own, then a banner to Settings",
+      "w": 390,
+      "x": 1100,
+      "y": 0
+    },
+    "CSwitch.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "C · No first-open ask: the switch in the banner",
+      "w": 390,
+      "x": 1730,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "A1 · First open of the app: bottom sheet",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-25T15:00:00Z",
+    "v": 1
+  },
+  "designSystems": [
+    {
+      "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU",
+      "copiedAt": "2026-10-25T15:00:00Z",
+      "namespace": "saturdayslatedesignsystem",
+      "title": "Saturday Slate Design System",
+      "version": "1792811404-d4d4"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "a": {
+      "fill": "gray",
+      "text": "A · The #455 machinery again: a sheet once, then the banner on every later visit. Both buttons ask iOS right there.",
+      "w": 860,
+      "x": 0,
+      "y": -110
+    },
+    "b": {
+      "fill": "gray",
+      "text": "B · A one-time page before Picks, holding the Settings switch. Later, a banner that opens Settings.",
+      "w": 390,
+      "x": 1100,
+      "y": -110
+    },
+    "c": {
+      "fill": "gray",
+      "text": "C · Nothing on first open. The banner is the Settings row itself.",
+      "w": 390,
+      "x": 1730,
+      "y": -110
+    },
+    "denied": {
+      "fill": "teal",
+      "text": "Don't Allow (all three): iOS never asks again, so the second chance is iPhone Settings. The ask says so once, in place, then stops for good. Settings keeps its footnote 'Blocked in iPhone Settings › Notifications.' If the member later allows it there, the ask returns on the next visit, because permission is read fresh each time.",
+      "w": 340,
+      "x": 2200,
+      "y": 520
+    },
+    "how": {
+      "fill": "orange",
+      "text": "Who sees any of these: a member in the Home Screen app (standalone) whose reminder is off, on a device that can subscribe (pushBlock null), with picks open. Never in Safari (the #455 install nudge owns the slot there, so the two can never show together), never on a computer, never on an old iPhone with no Push API, never after the Deadline. Why not on /install: that page runs in Safari, where an iPhone cannot subscribe, and the Home Screen app starts with its own empty storage, so 'first open' is simply 'nothing remembered yet'. Press Play; the dashed iOS prompt stands in for the real one and lets you try Allow and Don't Allow.",
+      "w": 340,
+      "x": 2200,
+      "y": 0
+    },
+    "open": {
+      "fill": "blue",
+      "text": "Calls for Jonah: (1) A, B or C, or a mix; (2) the banner's X: until the next local day like #455 (drawn), or permanent after some number of taps; (3) direct Turn on in the banner (A, C) or a link to Settings (B); (4) the copy, which reuses the install sheet's promise 'Get your Pick reminder as a notification'.",
+      "w": 340,
+      "x": 2200,
+      "y": 960
+    },
+    "row1": {
+      "kind": "title1",
+      "maxW": 2120,
+      "text": "Pick reminders on: in the Home Screen app",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "ABanner.dc.html",
+    "BWelcome.dc.html",
+    "CSwitch.dc.html"
+  ],
+  "pages": [],
+  "title": "Pick reminders on (#472 + #473)"
+}
