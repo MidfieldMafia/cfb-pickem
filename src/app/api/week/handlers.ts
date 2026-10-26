@@ -12,6 +12,7 @@
  * holding; now the server does that folding once and the answer is the sheet.
  */
 import { createHash } from "node:crypto";
+import { conditionalJson } from "@/lib/conditional";
 import { asMember } from "@/lib/members/authority";
 import { applyEdit, type PickEdit } from "@/lib/picks/edits";
 import { integer, readBody, withPickContext, type ApiError, type PickRoute } from "@/lib/picks/http";
@@ -101,11 +102,7 @@ export async function getWeekState(request: Request, route: PickRoute): Promise<
   const week = await scoredWeek(route.db, actor, group, route.now?.() ?? new Date(), { cfbd: route.cfbd });
   if (!week) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
   const state = toWeekStateJson(week);
-  const etag = weekStateEtag(state, group);
-  // `no-store`: the browser must not answer a later poll from its own cache, and the 304 must reach the script.
-  const headers = { etag, "cache-control": "no-store" };
-  if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
-  return Response.json(state, { headers });
+  return conditionalJson(request, state, weekStateEtag(state, group));
 }
 
 /**
@@ -128,9 +125,6 @@ export function getGamePlays(request: Request, route: PickRoute, gameIdParam: st
       return Response.json({ error: "That game is not on this week's slate." } satisfies ApiError, { status: 404 });
     }
     // A box score is stored once and never changes, so whether it is here is all the tag needs.
-    const etag = `W/"plays-${gameId}-${plays.fetchedAt ?? "none"}-${plays.final ? "final" : "not-final"}"`;
-    const headers = { etag, "cache-control": "no-store" };
-    if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
-    return Response.json(plays, { headers });
+    return conditionalJson(request, plays, `W/"plays-${gameId}-${plays.fetchedAt ?? "none"}-${plays.final ? "final" : "not-final"}"`);
   });
 }
