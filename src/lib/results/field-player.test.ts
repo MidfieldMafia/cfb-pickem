@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { LIBERTY_AT_COASTAL_FINAL } from "@/lib/cfbd/recorded";
 import type { CfbdLiveDrive } from "@/lib/cfbd/types";
 import { describePlays, type PlayDescription } from "./field";
-import { BALL_Y, drawingKey, feedBefore, fieldX, frame, newestDrawn, timeline } from "./field-player";
+import { BALL_Y, drawingKey, feedBefore, fieldX, frame, newestDrawn, playerView, receive, timeline } from "./field-player";
 import { gameFeed, type GamePlaysJson } from "./game-feed";
 
 // Liberty at Coastal Carolina: Liberty (LIB, 2335) is away and attacks towards 100, Coastal (CCU, 324) home.
@@ -199,5 +199,96 @@ describe("feedBefore", () => {
     const before = feedBefore(through, id("314"));
     expect(before.drive).toBe(through.drive - 1);
     expect(before.recap).toBeNull();
+  });
+});
+
+describe("the player", () => {
+  const LIVE = { live: true, now: 1000, still: false };
+  const suffixOf = (playId: string) => playId.slice(9);
+  /** The play logged straight after the one ending in `suffix`. */
+  const after = (suffix: string) => WHOLE.plays[WHOLE.plays.findIndex((play) => play.id === id(suffix)) + 1];
+  const run = feedThrough("21");
+
+  test("on open, starts the newest drawn play as the opening replay, after the lead", () => {
+    const last = receive(null, run, LIVE)!;
+    expect(last).toMatchObject({ description: { id: id("21") }, opening: true, snapAt: 1300 });
+  });
+
+  test("keeps the play in the air off the list and the strip, and the header too on open", () => {
+    const last = receive(null, run, LIVE)!;
+    const view = playerView(last, run, true, 1000);
+    expect(view.playing).toBe(last);
+    expect(view.shown?.plays.map((play) => play.id)).not.toContain(id("21"));
+    expect(view.landed).toBe(run.plays.at(-2));
+    expect(view.holdsHeader).toBe(false);
+    expect(view.wakeAt).toBe(1300 + last.line.ms);
+  });
+
+  test("lands: the play joins the list and the strip, and its drawing rests on the field", () => {
+    const last = receive(null, run, LIVE)!;
+    const view = playerView(last, run, true, last.snapAt + last.line.ms);
+    expect(view).toMatchObject({ playing: null, score: null, wakeAt: null, holdsHeader: true });
+    expect(view.landed).toBe(run.plays.at(-1));
+    expect(view.rested?.description.id).toBe(id("21"));
+  });
+
+  test("the same play on the next poll, a fresh object as the wire gives it, does not replay", () => {
+    const last = receive(null, run, LIVE);
+    expect(receive(last, structuredClone(run), { ...LIVE, now: 5000 })).toBe(last);
+  });
+
+  test("a revision that changes the drawing replays once, and is no longer the opening", () => {
+    const last = receive(null, run, LIVE)!;
+    const revised = structuredClone(run);
+    revised.plays.at(-1)!.description.segments = [{ kind: "ground", from: 59, to: 40 }];
+    const replay = receive(last, revised, { ...LIVE, now: 9000 })!;
+    expect(replay).toMatchObject({ opening: false, snapAt: 9300 });
+    expect(playerView(replay, revised, true, 9000).holdsHeader).toBe(true);
+    expect(receive(replay, structuredClone(revised), { ...LIVE, now: 12_000 })).toBe(replay);
+  });
+
+  test("a new play is held back even in the render before the player has seen it", () => {
+    const first = receive(null, run, LIVE)!;
+    const later = feedThrough("29");
+    const view = playerView(first, later, true, 99_999);
+    const before = later.plays[later.plays.findIndex((play) => play.id === id("29")) - 1];
+    expect(view.playing).toBeNull();
+    expect(view.landed).toBe(before);
+    expect(view.holdsHeader).toBe(true);
+    // And on open, the header waits for it as the replay will.
+    expect(playerView(null, later, true, 0).holdsHeader).toBe(false);
+  });
+
+  test("steps the score as the ball reaches each score, and wakes for each", () => {
+    const touchdown = feedThrough("153");
+    const last = receive(null, touchdown, { ...LIVE, now: 0 })!;
+    const scores = last.line.steps.filter((step) => step.kind === "score");
+    expect(scores.length).toBeGreaterThan(1);
+    const [first, second] = scores;
+    if (first.kind !== "score") throw new Error("not a score");
+    expect(playerView(last, touchdown, true, 0)).toMatchObject({ score: null, wakeAt: last.snapAt + first.t0 });
+    expect(playerView(last, touchdown, true, last.snapAt + first.t0)).toMatchObject({
+      score: { home: first.home, away: first.away },
+      wakeAt: last.snapAt + second.t0,
+    });
+  });
+
+  test("waits longer before the snap while the chevron fades out", () => {
+    // The incompletion on the first snap after the kickoff left the drive unmoved.
+    expect(WHOLE.plays.find((play) => play.id === id("128"))?.readout.unmoved).toBe(true);
+    const next = after("128");
+    expect(next.description.segments.length).toBeGreaterThan(0);
+    expect(receive(null, feedThrough(suffixOf(next.id)), LIVE)?.snapAt).toBe(1700);
+  });
+
+  test("with reduced motion, the play lands the moment it starts", () => {
+    const last = receive(null, run, { ...LIVE, still: true })!;
+    expect(last.snapAt).toBe(1000);
+    expect(playerView(last, run, true, 1000)).toMatchObject({ playing: null, wakeAt: null, landed: run.plays.at(-1) });
+  });
+
+  test("a game that is not live starts nothing, and passes the feed straight through", () => {
+    expect(receive(null, run, { ...LIVE, live: false })).toBeNull();
+    expect(playerView(null, run, false, 0)).toMatchObject({ shown: run, landed: null, playing: null, holdsHeader: false, wakeAt: null });
   });
 });

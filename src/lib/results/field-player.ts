@@ -13,7 +13,7 @@
  * Pure and free of database imports: it runs in the browser.
  */
 import type { PlayDescription, Segment, Side, TurnoverLabel, Yard } from "./field";
-import type { GamePlaysJson } from "./game-feed";
+import type { FeedPlay, GamePlaysJson } from "./game-feed";
 
 /** The drawing is 336 × 112: each end zone is 28 wide, and a yard is 2.8. */
 export const FIELD_WIDTH = 336;
@@ -243,4 +243,123 @@ export function feedBefore(feed: GamePlaysJson, id: string): GamePlaysJson {
   const plays = at === -1 ? feed.plays : feed.plays.slice(0, at);
   const drive = plays.at(-1)?.drive ?? -1;
   return { ...feed, plays, drive, recap: drive === feed.drive ? feed.recap : null };
+}
+
+/** The pause before the snap, and the longer one while the chevron fades out first. */
+const LEAD_MS = 300;
+const CHEVRON_LEAD_MS = 700;
+
+/** One play the field has started: what it draws, its timing, and when (on the caller's clock) the ball is snapped. */
+export interface Playing {
+  description: PlayDescription;
+  line: Timeline;
+  snapAt: number;
+  /** The replay on open, of a play the Live Board row has already shown the result of. */
+  opening: boolean;
+}
+
+/** Whether `last` is already the field's run of `target`: the same play with the same drawing. */
+const started = (last: Playing | null, target: PlayDescription | null): last is Playing =>
+  last !== null && target !== null && last.description.id === target.id && drawingKey(last.description) === drawingKey(target);
+
+const passing = (feed: GamePlaysJson | null, live: boolean): feed is GamePlaysJson =>
+  live && feed !== null && feed.fetchedAt !== null;
+
+/**
+ * The field player's one decision (#303, #310): what it is playing once
+ * `feed` arrives at `now`, given `last`, the play it last started — in the
+ * air, or landed — or null before the first. Only the newest play that draws
+ * anything animates; plays that arrive with it go straight to the list, and
+ * the field snaps to its start first. On open, the last play animates once. A
+ * revision that changes the drawing replays once; the same drawing again
+ * carries on, and answers `last` itself. With `still` (reduced motion), the
+ * play lands the moment it starts.
+ *
+ * Unless the game is `live`, nothing plays and `last` is kept.
+ */
+export function receive(
+  last: Playing | null,
+  feed: GamePlaysJson | null,
+  { live, now, still }: { live: boolean; now: number; still: boolean },
+): Playing | null {
+  if (!passing(feed, live)) return last;
+  const target = newestDrawn(feed);
+  if (target === null || started(last, target)) return last;
+  const index = feed.plays.findIndex((play) => play.id === target.id);
+  const prior = index > 0 ? feed.plays[index - 1] : null;
+  const line = timeline(target, { was: prior?.score ?? { home: 0, away: 0 }, still });
+  const lead = still ? 0 : prior?.readout.unmoved ? CHEVRON_LEAD_MS : LEAD_MS;
+  return { description: target, line, snapAt: now + lead, opening: last === null };
+}
+
+/** What the Game sheet may show of the field and the plays at one moment. */
+export interface FieldPlayer {
+  /** The feed as the sheet shows it: without the play in the air, so nothing is spoiled. Null before the first poll. */
+  shown: GamePlaysJson | null;
+  /** The last play that landed: the field's readouts, and the header's score and clock. */
+  landed: FeedPlay | null;
+  /** Each side's abbreviation as the feed writes it: the end zone's last fallback for a long name. */
+  labels: Record<Side, string> | null;
+  /** The score while a play is in the air: each score step as the ball reaches it. */
+  score: { home: number; away: number } | null;
+  /** The play in the air, the pause before its snap included. */
+  playing: Playing | null;
+  /** The last play the field drew, once landed: its trail, X and flag stay on the field until the next snap. */
+  rested: Omit<Playing, "snapAt" | "opening"> | null;
+  /**
+   * Whether the header should follow the field. Not during the replay on
+   * open: the board row already showed that score, and counting it back down
+   * to replay it would only look wrong.
+   */
+  holdsHeader: boolean;
+  /** When this view next changes on its own — the next score step, or the landing — on the caller's clock. Null with nothing in the air. */
+  wakeAt: number | null;
+}
+
+/**
+ * The sheet at `now`, with `last` as `receive` left it. Until the ball
+ * lands, the list, the strip and the header's score and clock stay as they
+ * were, and the score steps as the ball reaches each score.
+ *
+ * A newest drawn play that `receive` has not started yet — a render with the
+ * new feed, before the player has seen it — is held back as if in the air, so
+ * not even one frame shows it early.
+ */
+export function playerView(last: Playing | null, feed: GamePlaysJson | null, live: boolean, now: number): FieldPlayer {
+  if (!passing(feed, live))
+    return { shown: feed, landed: null, labels: null, score: null, playing: null, rested: null, holdsHeader: false, wakeAt: null };
+  const target = newestDrawn(feed);
+  const current = started(last, target) ? last : null;
+  const landsAt = current ? current.snapAt + current.line.ms : null;
+  const playing = current && landsAt !== null && now < landsAt ? current : null;
+  const pending = target !== null && current === null;
+  const held = playing ? playing.description.id : pending ? target.id : null;
+  const shown = held === null ? feed : feedBefore(feed, held);
+
+  let score: FieldPlayer["score"] = null;
+  let wakeAt: number | null = null;
+  if (playing && landsAt !== null) {
+    wakeAt = landsAt;
+    for (const step of playing.line.steps) {
+      if (step.kind !== "score") continue;
+      const at = playing.snapAt + step.t0;
+      if (at > now) {
+        wakeAt = Math.min(wakeAt, at);
+        break;
+      }
+      score = { home: step.home, away: step.away };
+    }
+  }
+
+  return {
+    shown,
+    landed: shown.plays.at(-1) ?? null,
+    labels: feed.labels,
+    score,
+    playing,
+    rested: current && !playing ? { description: current.description, line: current.line } : null,
+    // A play about to replay on open holds the header back as its run will.
+    holdsHeader: playing ? !playing.opening : !(pending && last === null),
+    wakeAt,
+  };
 }
