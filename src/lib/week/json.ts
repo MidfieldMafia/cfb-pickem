@@ -17,6 +17,12 @@ import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/res
 import { toGameView, toWeekJson, type WeekJson } from "@/lib/slate/json";
 import type { ScoredWeek } from "./week";
 
+/** Where the Live Board polls the week state (`usePoll`). */
+export const WEEK_STATE_PATH = "/api/week/state";
+
+/** Where an open Game sheet polls one Slate game's stored play-by-play. */
+export const gamePlaysPath = (gameId: number) => `/api/week/games/${gameId}/plays`;
+
 /**
  * A Live Board Game: the Reveal's Game, plus the stored `detail` (kickoff ·
  * TV · venue, the spread, the weather) the Game sheet shows before kickoff.

@@ -20,10 +20,8 @@ const endpointsOf = async (db: Db, memberId: number) =>
   (await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.memberId, memberId))).map((d) => d.endpoint).sort();
 
 describe("the Pick reminder switch", () => {
-  test("everyone starts off, and nothing else than Push reads as on", async () => {
+  test("everyone starts off", async () => {
     const { db, grandma } = await seedWeek2();
-    expect(reminderSwitch(await memberRow(db, grandma.id))).toEqual({ on: false, stopped: false });
-    await db.update(members).set({ reminderChannel: "text" }).where(eq(members.id, grandma.id));
     expect(reminderSwitch(await memberRow(db, grandma.id))).toEqual({ on: false, stopped: false });
   });
 

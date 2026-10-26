@@ -20,6 +20,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { conditionalJson } from "@/lib/conditional";
 import { Refusal } from "@/lib/refusal";
 import { chatThread, markRead, NotInGroup, postMessage, setReaction, takeDown, unreadCount } from "./chat";
 import { toChatStateJson, type ChatStateJson, type ChatUnreadJson } from "./json";
@@ -91,10 +92,7 @@ async function answerThread(request: Request | null, { db, member, group, now }:
   const thread = await chatThread(db, member, group);
   await markRead(db, member.id, group, thread);
   const state = toChatStateJson(thread, now);
-  const etag = chatEtag(state, group);
-  const headers = { ...NO_STORE, etag };
-  if (request?.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
-  return Response.json(state, { headers });
+  return conditionalJson(request, state, chatEtag(state, group));
 }
 
 /** `GET /api/chat?group=<id>`: that Group's thread, for the Chat screen's poll. */

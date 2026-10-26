@@ -188,6 +188,17 @@ describe("jevState", () => {
     expect(state.parentMap).toBeNull();
   });
 
+  test("a to-tickets ticket, What to build with its Acceptance, is a brief", () => {
+    const body = "## What's wrong\n\nThe S sits high.\n\n## What to build\n\nCentre it.\n\n## Acceptance\n\n- [ ] Centred\n\n## Blocked by\n\nNone";
+    const state = jevState({ issue: { ...issue, body }, comments: [], parentMap: null, lineCount: () => null });
+    expect(state.hasAgentBrief).toBe(true);
+  });
+
+  test("What to build with no Acceptance is not a brief yet", () => {
+    const state = jevState({ issue: { ...issue, body: "## What to build\n\nSomething." }, comments: [], parentMap: null, lineCount: () => null });
+    expect(state.hasAgentBrief).toBe(false);
+  });
+
   test("no brief anywhere says so", () => {
     const state = jevState({ issue: { ...issue, body: "Make it nicer." }, comments: [], parentMap: null, lineCount: () => null });
     expect(state.hasAgentBrief).toBe(false);

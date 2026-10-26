@@ -113,7 +113,7 @@ The Saturday view of the slate with live scores and the picks of every member of
 _Avoid_: Scoreboard, dashboard
 
 **Reminder**:
-The message sent before the Deadline to a member whose picks, Lock or Tiebreaker Guess are unfinished, delivered by push or text. Each member chooses it in Settings, and it starts off. While texting is paused, Settings offers only push, on or off; when push stops reaching every one of the member's devices, it turns itself off.
+The message sent before the Deadline to a member whose picks, Lock or Tiebreaker Guess are unfinished, delivered by push and never by text. Each member turns it on or off in Settings, and it starts off; when push stops reaching every one of the member's devices, it turns itself off.
 _Avoid_: Notification, nudge, alert
 
 **Feedback**:

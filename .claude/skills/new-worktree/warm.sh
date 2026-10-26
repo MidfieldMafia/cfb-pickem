@@ -7,9 +7,13 @@
 # instead of every install warning, route table and test file name -- output that
 # would otherwise be re-read on every later turn.
 #
-# Usage: bash .claude/skills/new-worktree/warm.sh [--skip-checks]
+# Usage: bash .claude/skills/new-worktree/warm.sh [--skip-checks | --quick]
 #   --skip-checks  stop after the warm-up (install, env, build) and skip
 #                  typecheck/test/eslint; the push gate runs all of them anyway.
+#   --quick        install, env and `next typegen` only: what typecheck and the
+#                  tests need, without a build or the checks. For agent:go
+#                  builds, whose `npm run preflight` runs all of them once at
+#                  the end; in the cloud, the full warm-up took 12 minutes.
 
 set -u
 
@@ -36,6 +40,13 @@ common=$(git rev-parse --path-format=absolute --git-common-dir)
 # A cloud clone has no .env.local to copy; build and tests run without one.
 if [ -f "$common/../.env.local" ]; then
   step env cp "$common/../.env.local" .env.local
+fi
+
+if [ "${1:-}" = "--quick" ]; then
+  step typegen npx next typegen
+  echo "worktree warm (quick): install, env, typegen done (no build or checks)"
+  rm -rf "$logs"
+  exit 0
 fi
 
 step build npx next build

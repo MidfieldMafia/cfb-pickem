@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronRight, Lock, LockOpen, Radio, RefreshCw, X } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { AppHeader, LocalTime, Badge, Card, StandingCard } from "@saturday-slate/design-system";
 
 import { Football } from "@/components/football";
@@ -21,70 +21,24 @@ import { sideStanding } from "@/lib/results/side";
 import { record, standing } from "@/lib/results/summary";
 import { plural } from "@/lib/plural";
 import { isVoid, voidNote, type MemberJson } from "@/lib/slate/json";
-import { fetchWeekState } from "@/lib/week/client";
 import { agoLabel, dueInLabel } from "@/lib/week/freshness";
-import type { LiveGameJson, WeekStateJson } from "@/lib/week/json";
+import { WEEK_STATE_PATH, type LiveGameJson, type WeekStateJson } from "@/lib/week/json";
 import { nextPollMs } from "@/lib/week/poll";
+import { usePoll } from "@/lib/use-poll";
 
 /**
- * Keeps the state fresh. Asks again after `nextPollMs` of the state it holds,
- * carrying the ETag so an unchanged Week is a 304 and no re-render; goes
- * quiet while the tab is hidden and asks the moment it is back. A poll that
- * fails leaves the last state standing and tries again on the same cadence.
- *
- * Re-armed on every state change rather than on a fixed timer, because the
- * cadence itself is a function of the state: a kickoff moves it from five
- * minutes to thirty seconds, and the last final stops it.
+ * Keeps the state fresh (`usePoll`): asks again after `nextPollMs` of the
+ * state it holds, so a kickoff moves the cadence from five minutes to thirty
+ * seconds and the last final stops it.
  *
  * `nextPollAt` is the phone's own clock plus that same delay, stamped every
  * time a poll is scheduled — the freshness line's "next check" reads it
- * straight off, rather than re-deriving the cadence a second time (#95).
+ * straight off, rather than re-deriving the cadence a second time (#95). Once
+ * `state.complete` it goes stale, but `LiveBoard` stops rendering the
+ * freshness line then, so there is nothing to reset it to.
  */
 function useWeekState(initial: WeekStateJson): { state: WeekStateJson; nextPollAt: number | null } {
-  const [state, setState] = useState(initial);
-  const [nextPollAt, setNextPollAt] = useState<number | null>(null);
-  const etag = useRef<string | null>(null);
-
-  useEffect(() => {
-    const delay = nextPollMs(state);
-    // Null only once `state.complete`, at which point `LiveBoard` stops
-    // rendering the freshness line altogether — a stale `nextPollAt` here is
-    // inert, so there is nothing to reset it to.
-    if (delay === null) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const schedule = () => {
-      setNextPollAt(Date.now() + delay);
-      timer = setTimeout(() => void poll(), delay);
-    };
-    const poll = async () => {
-      // A hidden tab does not poll; `visibilitychange` picks it up on return.
-      if (document.visibilityState === "hidden") return;
-      const result = await fetchWeekState(etag.current);
-      if (cancelled) return;
-      if (result.kind === "fresh") {
-        etag.current = result.etag;
-        setState(result.state);
-        return; // the new state re-runs this effect and schedules the next poll on its own cadence
-      }
-      schedule();
-    };
-    const onVisibility = () => {
-      if (document.visibilityState !== "visible") return;
-      clearTimeout(timer);
-      void poll();
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    schedule();
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [state]);
-
+  const { held: state, nextPollAt } = usePoll(WEEK_STATE_PATH, { initial, cadence: (held) => nextPollMs(held) });
   return { state, nextPollAt };
 }
 

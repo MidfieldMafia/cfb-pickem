@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { MessageCircle, Send, Trash } from "lucide-react";
 import {
   Button,
@@ -15,6 +15,7 @@ import { Pennant } from "@/components/pennant";
 import { GONE_LABELS, type ChatMessageJson, type ChatStateJson } from "@/lib/chat/json";
 import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import { nextChatPollMs } from "@/lib/chat/poll";
+import { usePoll } from "@/lib/use-poll";
 import { reactionSheet, tapReaction, withReaction, type ChatReactionKind } from "@/lib/chat/reactions";
 import { chatTimeLabel, threadRows, type ThreadRow } from "@/lib/chat/thread";
 import type { MemberJson } from "@/lib/slate/json";
@@ -41,70 +42,25 @@ const COUNTER_FROM = 20;
  * poll stops, and the composer says why.
  */
 function useChatState(initial: ChatStateJson, groupId: number) {
-  const [state, setState] = useState(initial);
   const [gone, setGone] = useState<string | null>(null);
-  const etag = useRef<string | null>(null);
-  const changedAt = useRef(0);
-
-  useEffect(() => {
-    changedAt.current = Date.now();
-  }, [state]);
-
-  useEffect(() => {
-    if (gone) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const schedule = () => {
-      timer = setTimeout(() => void poll(), nextChatPollMs(Date.now() - changedAt.current));
-    };
-    const poll = async () => {
-      clearTimeout(timer);
-      if (document.visibilityState === "hidden") return;
-      try {
-        const response = await fetch(`${CHAT_PATH}?group=${groupId}`, { cache: "no-store", headers: etag.current ? { "if-none-match": etag.current } : {} });
-        if (cancelled) return;
-        if (response.status === 403) {
-          setGone(((await response.json()) as { error: string }).error);
-          return;
-        }
-        if (response.ok) {
-          etag.current = response.headers.get("etag");
-          setState((await response.json()) as ChatStateJson);
-        }
-      } catch {
-        // A missed poll is a thread a few seconds behind; the next one catches up.
-      }
-      if (!cancelled) schedule();
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") void poll();
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    schedule();
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [gone, groupId]);
+  const { held: state, hold } = usePoll(gone ? null : `${CHAT_PATH}?group=${groupId}`, {
+    initial,
+    cadence: (_held, quietForMs) => nextChatPollMs(quietForMs),
+    onFailed: ({ status, error }) => {
+      if (status === 403) setGone(error ?? "You are no longer in this group.");
+    },
+  });
 
   /** What a send answered: the thread with the new message in it, which is the freshest state there is. */
-  const accept = (next: ChatStateJson, nextEtag: string | null) => {
-    etag.current = nextEtag;
-    setState(next);
-  };
+  const accept = (next: ChatStateJson, nextEtag: string | null) => hold(next, nextEtag);
 
   /**
    * Shows a change before the server has it, as a reaction does the moment it
    * is tapped. The ETag is dropped with it, so should the server never take
    * the change, the next poll answers in full and puts the thread right.
    */
-  const revise = (change: (message: ChatMessageJson) => ChatMessageJson) => {
-    etag.current = null;
-    setState((current) => ({ ...current, messages: current.messages.map(change) }));
-  };
+  const revise = (change: (message: ChatMessageJson) => ChatMessageJson) =>
+    hold((current) => ({ ...current, messages: current.messages.map(change) }), null);
 
   return { state, gone, setGone, accept, revise };
 }
