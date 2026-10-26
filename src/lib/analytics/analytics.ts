@@ -17,7 +17,19 @@ export type AnalyticsEvent =
   /** A Tiebreaker Guess saved. */
   | "tiebreaker_saved"
   /** Feedback sent to the commissioners. */
-  | "feedback_sent";
+  | "feedback_sent"
+  /** The Home Screen nudge (#455) rendered; `form` is `sheet` or `banner`. */
+  | "install_nudge_shown"
+  /** The Home Screen nudge closed without acting: Not now, a swipe down or the banner's X; `form` as above. */
+  | "install_nudge_dismissed"
+  /** The Home Screen nudge's Add to Home Screen, or the banner's Add; `form` as above. */
+  | "install_nudge_tapped"
+  /** The Pick reminder ask (#482) rendered; `form` is `step`, `sheet` or `banner`. */
+  | "reminder_ask_shown"
+  /** The Pick reminder ask closed before the member answered; `form` as above. */
+  | "reminder_ask_dismissed"
+  /** The member's answer came back from `turnOnReminder`; `source` is `step`, `sheet`, `banner` or `settings`, `result` is `on`, `denied` or `error`. */
+  | "reminder_turn_on";
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>): void {
   if (!posthog.__loaded) return;

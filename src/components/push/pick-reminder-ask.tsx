@@ -15,6 +15,7 @@ import {
   Wordmark,
 } from "@saturday-slate/design-system";
 
+import { track } from "@/lib/analytics/analytics";
 import { closeSheet, hideBanner, stillHere } from "@/lib/install/nudge";
 import { isInstalled } from "@/lib/install/install";
 import { deviceFacts } from "@/lib/push/device";
@@ -79,24 +80,36 @@ export function PickReminderAsk({
   weekNumber: number;
   deadline: string;
 }) {
-  const [shown, setShown] = useState<Ask>(null);
+  // `count` bumps on every decision, so a return to the tab that lands on a
+  // form again counts as a new appearance.
+  const [{ shown, count }, setDecision] = useState<{ shown: Ask; count: number }>({ shown: null, count: 0 });
+  const setShown = (next: Ask) => setDecision((current) => ({ shown: next, count: current.count }));
   // Set once the member has answered: the ask stays on its result card, and no
   // later visit check replaces it, since `on` is the server's word from page load.
   const [result, setResult] = useState<Result | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // What is actually drawn: nothing after the Deadline or without a key, and no banner on the game pages.
+  const form = !open || publicKey === null ? null : shown === "banner" && !banner ? null : shown;
+  useEffect(() => {
+    if (form) track("reminder_ask_shown", { form });
+  }, [form, count]);
+
   useEffect(() => {
     if (!isInstalled()) return;
     const decide = () => {
-      setShown((current) => {
-        if (current === "step") return current;
-        return chooseAsk(
-          storage,
-          new Date(),
-          { reminderOn: on, hasKey: publicKey !== null, onboarding, device: deviceFacts() },
-          otherPopupShowing(),
-        );
+      setDecision((current) => {
+        if (current.shown === "step") return current;
+        return {
+          shown: chooseAsk(
+            storage,
+            new Date(),
+            { reminderOn: on, hasKey: publicKey !== null, onboarding, device: deviceFacts() },
+            otherPopupShowing(),
+          ),
+          count: current.count + 1,
+        };
       });
     };
     // After the rest of this render's effects: What's new opens its dialog in
@@ -121,6 +134,7 @@ export function PickReminderAsk({
     setMessage(null);
     try {
       const answered = await ask(publicKey);
+      track("reminder_turn_on", { source: shown, result: answered.result });
       setResult(answered.result);
       setMessage(answered.message ?? null);
     } finally {
@@ -128,7 +142,13 @@ export function PickReminderAsk({
     }
   };
 
+  // Closing without an answer; once the answer has gone out as `reminder_turn_on`, closing is not a dismissal.
+  const trackDismissed = (from: "step" | "sheet" | "banner") => {
+    if (result === null) track("reminder_ask_dismissed", { form: from });
+  };
+
   const dismissSheet = () => {
+    trackDismissed("sheet");
     closeSheet(storage, REMINDER_ASK_KEY);
     setShown(null);
   };
@@ -154,6 +174,7 @@ export function PickReminderAsk({
               size="lg"
               className="tap w-full"
               onClick={() => {
+                trackDismissed("step");
                 leaveStep(storage);
                 setShown(null);
               }}
@@ -237,6 +258,7 @@ export function PickReminderAsk({
           onTurnOn={turnOn}
           error={result === "error" ? message : null}
           onClose={() => {
+            trackDismissed("banner");
             hideBanner(storage, new Date(), REMINDER_ASK_KEY);
             setShown(null);
           }}

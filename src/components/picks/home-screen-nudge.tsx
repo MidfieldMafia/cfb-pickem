@@ -13,6 +13,7 @@ import {
   DrawerTitle,
 } from "@saturday-slate/design-system";
 
+import { track } from "@/lib/analytics/analytics";
 import { isInstalled, readBrowser } from "@/lib/install/install";
 import { closeSheet, hideBanner, openPicks, stillHere, type Nudge } from "@/lib/install/nudge";
 
@@ -46,11 +47,23 @@ function otherPopupShowing(): boolean {
  * room: the banner belongs to the game screens.
  */
 export function HomeScreenNudge({ open, banner }: { open: boolean; banner: boolean }) {
-  const [nudge, setNudge] = useState<Nudge>(null);
+  // `count` bumps on every decision that lands on a form, so a return to the
+  // tab that shows one again counts as a new appearance.
+  const [{ nudge, count }, setDecision] = useState<{ nudge: Nudge; count: number }>({ nudge: null, count: 0 });
+  const setNudge = (next: Nudge) => setDecision((current) => ({ nudge: next, count: current.count }));
+
+  // What is actually drawn: `banner` may be false and `open` is false after the Deadline.
+  const form = !open ? null : nudge === "sheet" ? "sheet" : nudge === "banner" && banner ? "banner" : null;
+  useEffect(() => {
+    if (form) track("install_nudge_shown", { form });
+  }, [form, count]);
 
   useEffect(() => {
     if (readBrowser(navigator.userAgent).phone !== "ios" || isInstalled()) return;
-    const decide = () => setNudge(openPicks(storage, new Date(), { popupShowing: otherPopupShowing() }));
+    const decide = () => {
+      const next = openPicks(storage, new Date(), { popupShowing: otherPopupShowing() });
+      setDecision((current) => ({ nudge: next, count: next ? current.count + 1 : current.count }));
+    };
     // After the rest of this render's effects: What's new opens its dialog in
     // its own, which runs after this one, and the sheet must see it.
     const first = setTimeout(decide, 0);
@@ -69,6 +82,7 @@ export function HomeScreenNudge({ open, banner }: { open: boolean; banner: boole
   if (!open) return null;
 
   const dismissSheet = () => {
+    track("install_nudge_dismissed", { form: "sheet" });
     closeSheet(storage);
     setNudge(null);
   };
@@ -90,7 +104,13 @@ export function HomeScreenNudge({ open, banner }: { open: boolean; banner: boole
           </DrawerHeader>
           <DrawerFooter className="mt-0 gap-1 px-4 pt-5 pb-8">
             <Button asChild size="lg" className="tap w-full">
-              <Link href="/install" onClick={() => closeSheet(storage)}>
+              <Link
+                href="/install"
+                onClick={() => {
+                  track("install_nudge_tapped", { form: "sheet" });
+                  closeSheet(storage);
+                }}
+              >
                 Add to Home Screen
               </Link>
             </Button>
@@ -122,12 +142,15 @@ export function HomeScreenNudge({ open, banner }: { open: boolean; banner: boole
           <span className="text-[13px] leading-[18px] text-muted-foreground">Put Saturday Slate on your Home Screen.</span>
         </div>
         <Button asChild className="tap h-11 shrink-0">
-          <Link href="/install">Add</Link>
+          <Link href="/install" onClick={() => track("install_nudge_tapped", { form: "banner" })}>
+            Add
+          </Link>
         </Button>
         <button
           type="button"
           aria-label="Not now"
           onClick={() => {
+            track("install_nudge_dismissed", { form: "banner" });
             hideBanner(storage, new Date());
             setNudge(null);
           }}
