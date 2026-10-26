@@ -19,7 +19,7 @@ set -u
 
 payload=$(cat)
 
-# Decide whether to gate at all, and find the session's working directory.
+# Decide whether to gate at all, and find the directory the push runs in.
 # Commits, and read-only git commands, pass straight through.
 #
 # This asks whether a segment of the command *invokes* `git push`, rather than
@@ -39,6 +39,7 @@ const p = (() => {
   try { return JSON.parse(process.env.PAYLOAD || "{}"); } catch { return {}; }
 })();
 const cmd = (p.tool_input && p.tool_input.command) || "";
+const path = require("node:path");
 
 // git's own options that swallow the following token, so we do not read their
 // value as the subcommand.
@@ -51,30 +52,48 @@ const PREFIXES = /^(?:sudo|command|time|env|nohup|exec|builtin)$/;
 
 const unquote = (t) => t.replace(/^["\x27]|["\x27]$/g, "");
 
-function invokesPush(segment) {
+function tokensOf(segment) {
   // Command substitution and grouping punctuation are not part of the command word.
   const seg = segment.replace(/^[\s({]+/, "");
-  const tokens = seg.trim().match(/(?:[^\s"\x27]+|"[^"]*"|\x27[^\x27]*\x27)+/g) || [];
+  return seg.trim().match(/(?:[^\s"\x27]+|"[^"]*"|\x27[^\x27]*\x27)+/g) || [];
+}
+
+// The directory a `cd` segment moves to, or null for any other segment.
+function cdTarget(segment) {
+  const tokens = tokensOf(segment).map(unquote);
+  if (tokens[0] !== "cd" || !tokens[1] || tokens[1] === "-") return null;
+  return tokens[1].replace(/^~(?=\/|$)/, process.env.HOME || "~");
+}
+
+// null when the segment is not a `git push`; otherwise the `git -C` directory
+// it names, or "" for none.
+function pushDir(segment) {
+  const tokens = tokensOf(segment);
   let i = 0;
   while (i < tokens.length &&
          (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[i]) || PREFIXES.test(unquote(tokens[i])))) {
     i++;
   }
-  if (i >= tokens.length) return false;
+  if (i >= tokens.length) return null;
   const cmdWord = unquote(tokens[i]).replace(/\.exe$/i, "");
   // Basename, without writing a path separator into a regex: an escaped backslash
   // does not survive every way this file gets written, and if this expression
   // throws, the hook fails open and gates nothing.
   const BACKSLASH = String.fromCharCode(92);
   const sep = Math.max(cmdWord.lastIndexOf("/"), cmdWord.lastIndexOf(BACKSLASH));
-  if ((sep < 0 ? cmdWord : cmdWord.slice(sep + 1)) !== "git") return false;
+  if ((sep < 0 ? cmdWord : cmdWord.slice(sep + 1)) !== "git") return null;
+  let dir = "";
   for (i++; i < tokens.length; i++) {
     const t = unquote(tokens[i]);
-    if (t === "push") return true;
-    if (!t.startsWith("-")) return false;      // some other subcommand
+    if (t === "push") return dir;
+    if (!t.startsWith("-")) return null;       // some other subcommand
+    if (t === "-C" && tokens[i + 1]) {
+      const to = unquote(tokens[i + 1]);
+      dir = path.isAbsolute(to) ? to : path.join(dir, to);  // relative to the caller's directory
+    }
     if (OPTS_WITH_VALUE.has(t)) i++;           // skip its value too
   }
-  return false;
+  return null;
 }
 
 // Operators that start a new command. `&&` and `||` are listed before the single
@@ -83,8 +102,20 @@ function invokesPush(segment) {
 // subcommand glued to a paren as `push)`.
 const segments = cmd.split(/\r?\n|&&|\|\||;|\||&|\$\(|`|\)|\}/);
 
-if (!segments.some(invokesPush)) { console.log("SKIP"); }
-else { console.log(p.cwd || process.cwd()); }
+// Check the tree the push leaves from, not the session's own directory. A
+// session in the main checkout that ran `cd <worktree> && git push` used to
+// check main, miss the worktree's stamp, build the wrong tree in full and let
+// the pushed diff through unchecked. Each `cd` moves the directory for the
+// segments after it; `git -C` moves it once more.
+let dir = p.cwd || process.cwd();
+let target = null;
+for (const segment of segments) {
+  const cd = cdTarget(segment);
+  if (cd !== null) { dir = path.resolve(dir, cd); continue; }
+  const pushed = pushDir(segment);
+  if (pushed !== null) { target = path.resolve(dir, pushed); break; }
+}
+console.log(target === null ? "SKIP" : target);
 JS
 }
 

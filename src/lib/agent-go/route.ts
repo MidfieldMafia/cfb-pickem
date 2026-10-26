@@ -159,6 +159,16 @@ export interface JevState {
 
 const BRIEF_HEADING = /^#{1,6}\s*Agent Brief\b/im;
 const SPEC_HEADING = /^#{1,6}\s*Spec\b/im;
+// `to-tickets` writes every build ticket as What to build, Acceptance and
+// Blocked by, never under an Agent Brief heading. Missing it told Jev that
+// each one had no brief, and level 5 opens with "No Agent Brief".
+const BUILD_HEADING = /^#{1,6}\s*What to build\b/im;
+const ACCEPTANCE_HEADING = /^#{1,6}\s*Acceptance\b/im;
+
+/** An Agent Brief by name, or a `to-tickets` ticket: what to build and how to tell it is done. */
+function isBrief(text: string): boolean {
+  return BRIEF_HEADING.test(text) || (BUILD_HEADING.test(text) && ACCEPTANCE_HEADING.test(text));
+}
 
 /** The state Jev scores (#463 decision 5): the ticket and its brief, no file contents. */
 export function jevState(input: {
@@ -168,12 +178,12 @@ export function jevState(input: {
   lineCount: (path: string) => number | null;
 }): JevState {
   const { issue, comments, parentMap, lineCount } = input;
-  const briefComments = comments.filter((c) => BRIEF_HEADING.test(c) || SPEC_HEADING.test(c));
+  const briefComments = comments.filter((c) => isBrief(c) || SPEC_HEADING.test(c));
   return {
     title: issue.title,
     body: issue.body,
     labels: issue.labels,
-    hasAgentBrief: BRIEF_HEADING.test(issue.body) || briefComments.some((c) => BRIEF_HEADING.test(c)),
+    hasAgentBrief: isBrief(issue.body) || briefComments.some(isBrief),
     briefComments,
     parentMap,
     paths: namedPaths([issue.body, ...briefComments].join("\n")).map((path) => ({ path, lines: lineCount(path) })),

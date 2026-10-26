@@ -42,7 +42,9 @@ install log, route table and test list stay out of your context for the rest of
 the session. Spend the ~2 minutes reading the ticket or asking design questions.
 
 For a small change, add `--skip-checks`: it stops after the build, and the push
-gate runs typecheck, test and eslint anyway.
+gate runs typecheck, test and eslint anyway. `--quick` goes further: install
+and `next typegen`, no build, in seconds rather than minutes. `agent-go` builds
+use it, since their `npm run preflight` builds and checks once at the end.
 
 **Done when** it prints `worktree warm: ... all green`. A failure prints the
 step name and its log tail; see [Cold gaps](#cold-gaps) and fix that setup step.
