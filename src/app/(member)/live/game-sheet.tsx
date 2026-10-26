@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Calendar, Eye, Lock, LockOpen, MapPin, Radio, Scale, Tv } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   Badge,
   Button,
@@ -30,8 +30,8 @@ import { guessOrder } from "@/lib/results/summary";
 import { spreadHeadline } from "@/lib/spread";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
 import { plural } from "@/lib/plural";
-import { fetchGamePlays } from "@/lib/week/client";
-import type { LiveGameJson, OwnPickJson } from "@/lib/week/json";
+import { usePoll } from "@/lib/use-poll";
+import { gamePlaysPath, type LiveGameJson, type OwnPickJson } from "@/lib/week/json";
 import { kickoffDay, kickoffLine, kickoffTime } from "@/lib/week/kickoff";
 
 import { FieldCard, useFieldPlayer } from "./field-card";
@@ -51,41 +51,12 @@ const COUNT_STEP_MS = 145;
  * the week state's poll does.
  */
 function useGamePlays(gameId: number, live: boolean, final: boolean): GamePlaysJson | null {
-  const [plays, setPlays] = useState<GamePlaysJson | null>(null);
-  const etag = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!live && !final) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const poll = async () => {
-      // A hidden tab does not poll; `visibilitychange` picks it up on return.
-      if (document.visibilityState === "hidden") return;
-      const result = await fetchGamePlays(gameId, etag.current);
-      if (cancelled) return;
-      if (result.kind === "fresh") {
-        etag.current = result.etag;
-        setPlays(result.plays);
-        // A final game's box score is stored once and never changes, so there is nothing more to ask.
-        if (!live && result.plays.final !== null) return;
-      }
-      timer = setTimeout(() => void poll(), PLAYS_POLL_MS);
-    };
-    const onVisibility = () => {
-      if (document.visibilityState !== "visible") return;
-      clearTimeout(timer);
-      void poll();
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    void poll();
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [gameId, live, final]);
-
+  const { held: plays } = usePoll<GamePlaysJson | null>(live || final ? gamePlaysPath(gameId) : null, {
+    initial: null,
+    askFirst: true,
+    // A final game's box score is stored once and never changes, so once it is here there is nothing more to ask.
+    cadence: (held) => (!live && held !== null && held.final !== null ? null : PLAYS_POLL_MS),
+  });
   return live || final ? plays : null;
 }
 
