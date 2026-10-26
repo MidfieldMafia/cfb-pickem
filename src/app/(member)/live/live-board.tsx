@@ -116,7 +116,7 @@ function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson 
   const week = state.week.weekNumber;
   // The most the viewer can still finish on: worth showing only while games
   // are left to play, since a complete Week's max is its points.
-  const max = state.complete ? null : `Max ${mine.maxPoints} pts`;
+  const max = state.complete ? undefined : `Max ${mine.maxPoints} pts`;
   return (
     <StandingCard
       leading={<Pennant avatarId={viewer.avatarId} name={viewer.displayName} size={40} />}
@@ -124,7 +124,7 @@ function YourRank({ state, viewer }: { state: WeekStateJson; viewer: MemberJson 
       detail={`${record(mine.correct, mine.incorrect)} so far`}
       place={place.label}
       figure={`${mine.points} pts`}
-      note={max ?? undefined}
+      note={max}
       href={`/leaderboard?week=${week}`}
       ariaLabel={`You are ${place.label} in Week ${week} with ${mine.points} pts${max ? `, ${max.toLowerCase()}` : ""}. Open Week ${week} on the Leaderboard`}
     />

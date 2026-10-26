@@ -65,16 +65,12 @@ export function WeeklyScoreList({
             <span className="text-sm text-muted-foreground tabular-nums">
               {record(score.correct, score.incorrect)}
             </span>
-            {showMax ? (
-              <span className="flex w-14 flex-col items-end">
-                <span className="font-display text-lg font-black tabular-nums">{score.points}</span>
+            <span className={`flex flex-col items-end ${showMax ? "w-14" : "w-10"}`}>
+              <span className="font-display text-lg font-black tabular-nums">{score.points}</span>
+              {showMax ? (
                 <span className="text-xs text-muted-foreground tabular-nums">max {score.maxPoints}</span>
-              </span>
-            ) : (
-              <span className="w-10 text-right font-display text-lg font-black tabular-nums">
-                {score.points}
-              </span>
-            )}
+              ) : null}
+            </span>
           </li>
         );
       })}
