@@ -6,7 +6,7 @@ import { Badge, Card, Table, TableBody, TableCell, TableHead, TableHeader, Table
 
 import { Pennant } from "@/components/pennant";
 
-import type { LeaderboardRow } from "@/lib/results/results";
+import type { LeaderboardRow } from "@/lib/results/json";
 import { movement, tiebreakerMissLabel, winRateLabel, type Movement } from "@/lib/results/summary";
 import { sortLeaderboard, type SortColumn, type SortDirection } from "./leaderboard-sort";
 import { SolidTrophy } from "./solid-trophy";

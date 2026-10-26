@@ -6,7 +6,7 @@
  * `src/app/console/slate/candidate-sort.ts`.
  */
 import { describe, expect, test } from "vitest";
-import type { LeaderboardRow } from "@/lib/results/results";
+import type { LeaderboardRow } from "@/lib/results/json";
 import { sortLeaderboard } from "./leaderboard-sort";
 
 function member(id: number) {

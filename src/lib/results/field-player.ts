@@ -1,7 +1,8 @@
 /**
  * The Game sheet's "On the field" card, as numbers: when each step of a play's
- * drawable description happens, where the ball is at any moment of it, and
- * what the Down / Ball on / Drive strip reads once a play has landed.
+ * drawable description happens, and where the ball is at any moment of it.
+ * What the strip reads once a play has landed comes finished from the server
+ * (`./game-feed`).
  *
  * The card is a player, not a parser (#310). Everything a play draws comes
  * from `describePlays` in ./field; this module only times those segments and
@@ -11,19 +12,8 @@
  *
  * Pure and free of database imports: it runs in the browser.
  */
-import type { CfbdLivePlay } from "@/lib/cfbd/types";
-import {
-  isMarker,
-  sideOf,
-  type FieldTeams,
-  type PlayDescription,
-  type Segment,
-  type Side,
-  type TurnoverLabel,
-  type Yard,
-} from "./field";
-import type { GamePlaysJson } from "./live-feed";
-import { clockLabel } from "./result";
+import type { PlayDescription, Segment, Side, TurnoverLabel, Yard } from "./field";
+import type { FeedPlay, GamePlaysJson } from "./game-feed";
 
 /** The drawing is 336 × 112: each end zone is 28 wide, and a yard is 2.8. */
 export const FIELD_WIDTH = 336;
@@ -231,7 +221,7 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
  * no play in the feed draws anything yet.
  */
 export function newestDrawn(feed: GamePlaysJson): PlayDescription | null {
-  return feed.descriptions.findLast((description) => description.segments.length > 0) ?? null;
+  return feed.plays.findLast((play) => play.description.segments.length > 0)?.description ?? null;
 }
 
 /**
@@ -245,178 +235,131 @@ export const drawingKey = (description: PlayDescription): string =>
  * The feed as it stood before a play landed: every play logged before `id`,
  * and nothing after. Recent plays is built from this while the play is in the
  * air, so the list only grows when the ball lands. The recap line is kept
- * only while the newest drive is still the same one, because it describes
+ * only while the newest drive still has a play on show, because it describes
  * the drive before the newest.
  */
 export function feedBefore(feed: GamePlaysJson, id: string): GamePlaysJson {
-  const kept = new Set<string>();
-  for (const play of feed.drives.flatMap((drive) => drive.plays)) {
-    if (play.id === id) break;
-    kept.add(play.id);
-  }
-  const drives = feed.drives
-    .map((drive) => ({ ...drive, plays: drive.plays.filter((play) => kept.has(play.id)) }))
-    .filter((drive) => drive.plays.length > 0);
-  return {
-    ...feed,
-    drives,
-    descriptions: feed.descriptions.filter((description) => kept.has(description.id)),
-    recap: drives.length === feed.drives.length ? feed.recap : null,
-  };
+  const at = feed.plays.findIndex((play) => play.id === id);
+  const plays = at === -1 ? feed.plays : feed.plays.slice(0, at);
+  const drive = plays.at(-1)?.drive ?? -1;
+  return { ...feed, plays, drive, recap: drive === feed.drive ? feed.recap : null };
 }
 
-/** The Down / Ball on / Drive strip, the lines on the field, and the header's score and clock, once a play has landed. */
-export interface Readout {
-  down: string;
-  spot: string;
-  drive: string;
-  /** The white line and the logo marker. Null when nothing says where the ball is, such as after a touchdown. */
-  ball: Yard | null;
-  /** The orange line. Null with no down to play. */
-  gain: Yard | null;
-  /** Where the drive band starts. Null with no drive under way. */
-  driveStart: Yard | null;
-  side: Side | null;
-  /** The drive hasn't moved from where it started: a new 1st & 10, or after an incompletion or no gain. The chevron shows. */
-  unmoved: boolean;
-  /** The end zone lit by the landed play's score, at the yard the ball reached. It stays lit until the next play. */
-  flash: { label: Extract<Segment, { kind: "flash" }>["label"]; yard: Yard } | null;
-  /** The landed play's turnover callout, at the yard the ball changed hands. It stays until the next drawn play. */
-  turnover: { label: TurnoverLabel; yard: Yard; side: Side } | null;
-  /** The landed play's words. */
-  text: string;
-  score: { home: number; away: number };
-  /** "Q3 · 8:15". */
-  clock: string | null;
+/** The pause before the snap, and the longer one while the chevron fades out first. */
+const LEAD_MS = 300;
+const CHEVRON_LEAD_MS = 700;
+
+/** One play the field has started: what it draws, its timing, and when (on the caller's clock) the ball is snapped. */
+export interface Playing {
+  description: PlayDescription;
+  line: Timeline;
+  snapAt: number;
+  /** The replay on open, of a play the Live Board row has already shown the result of. */
+  opening: boolean;
 }
 
-const ORDINAL = ["", "1st", "2nd", "3rd", "4th"];
+/** Whether `last` is already the field's run of `target`: the same play with the same drawing. */
+const started = (last: Playing | null, target: PlayDescription | null): last is Playing =>
+  last !== null && target !== null && last.description.id === target.id && drawingKey(last.description) === drawingKey(target);
 
-/** "3rd & 7", or "1st & Goal" once the distance reaches the goal line. "–" for a distance the feed hasn't given. */
-export function downLabel(down: number, distance: number | null, yardsToGoal: number | null): string {
-  const goal = distance !== null && yardsToGoal !== null && distance >= yardsToGoal;
-  return `${ORDINAL[down]} & ${goal ? "Goal" : (distance ?? "–")}`;
+const passing = (feed: GamePlaysJson | null, live: boolean): feed is GamePlaysJson =>
+  live && feed !== null && feed.fetchedAt !== null;
+
+/**
+ * The field player's one decision (#303, #310): what it is playing once
+ * `feed` arrives at `now`, given `last`, the play it last started — in the
+ * air, or landed — or null before the first. Only the newest play that draws
+ * anything animates; plays that arrive with it go straight to the list, and
+ * the field snaps to its start first. On open, the last play animates once. A
+ * revision that changes the drawing replays once; the same drawing again
+ * carries on, and answers `last` itself. With `still` (reduced motion), the
+ * play lands the moment it starts.
+ *
+ * Unless the game is `live`, nothing plays and `last` is kept.
+ */
+export function receive(
+  last: Playing | null,
+  feed: GamePlaysJson | null,
+  { live, now, still }: { live: boolean; now: number; still: boolean },
+): Playing | null {
+  if (!passing(feed, live)) return last;
+  const target = newestDrawn(feed);
+  if (target === null || started(last, target)) return last;
+  const index = feed.plays.findIndex((play) => play.id === target.id);
+  const prior = index > 0 ? feed.plays[index - 1] : null;
+  const line = timeline(target, { was: prior?.score ?? { home: 0, away: 0 }, still });
+  const lead = still ? 0 : prior?.readout.unmoved ? CHEVRON_LEAD_MS : LEAD_MS;
+  return { description: target, line, snapAt: now + lead, opening: last === null };
 }
 
-/** "UGA 28", "50", or "End zone", from the team labels the Recent plays card uses. */
-export function spotLabel(spot: Yard, labels: Record<Side, string>): string {
-  if (spot < 0 || spot > 100) return "End zone";
-  if (spot === 50) return "50";
-  return spot < 50 ? `${labels.away} ${Math.round(spot)}` : `${labels.home} ${Math.round(100 - spot)}`;
-}
-
-/** "3 plays, 25 yds", "1 play, 1 yd", "2 plays, −7 yds". */
-function driveLabel(plays: number, yards: number | null): string {
-  if (plays === 0) return "Just started";
-  const count = `${plays} ${plays === 1 ? "play" : "plays"}`;
-  if (yards === null) return count;
-  const n = Math.round(yards);
-  return `${count}, ${n < 0 ? "−" : ""}${Math.abs(n)} ${Math.abs(n) === 1 ? "yd" : "yds"}`;
+/** What the Game sheet may show of the field and the plays at one moment. */
+export interface FieldPlayer {
+  /** The feed as the sheet shows it: without the play in the air, so nothing is spoiled. Null before the first poll. */
+  shown: GamePlaysJson | null;
+  /** The last play that landed: the field's readouts, and the header's score and clock. */
+  landed: FeedPlay | null;
+  /** Each side's abbreviation as the feed writes it: the end zone's last fallback for a long name. */
+  labels: Record<Side, string> | null;
+  /** The score while a play is in the air: each score step as the ball reaches it. */
+  score: { home: number; away: number } | null;
+  /** The play in the air, the pause before its snap included. */
+  playing: Playing | null;
+  /** The last play the field drew, once landed: its trail, X and flag stay on the field until the next snap. */
+  rested: Omit<Playing, "snapAt" | "opening"> | null;
+  /**
+   * Whether the header should follow the field. Not during the replay on
+   * open: the board row already showed that score, and counting it back down
+   * to replay it would only look wrong.
+   */
+  holdsHeader: boolean;
+  /** When this view next changes on its own — the next score step, or the landing — on the caller's clock. Null with nothing in the air. */
+  wakeAt: number | null;
 }
 
 /**
- * What the card reads once the play `id` has landed. Everything comes from
- * the plays and their descriptions: the ball, the side and the next down from
- * the play's resting state, the drive from the feed's drive holding it.
+ * The sheet at `now`, with `last` as `receive` left it. Until the ball
+ * lands, the list, the strip and the header's score and clock stay as they
+ * were, and the score steps as the ball reaches each score.
  *
- * A timeout or a period's end lands along with the play before it, so it
- * reads as that play does, words, score and clock apart. Read on its own, a
- * marker after a score would lose the drive's yards, as nothing yet says
- * where the next snap is (#391).
+ * A newest drawn play that `receive` has not started yet — a render with the
+ * new feed, before the player has seen it — is held back as if in the air, so
+ * not even one frame shows it early.
  */
-export function readout(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Record<Side, string>): Readout {
-  const all = feed.drives.flatMap((drive) => drive.plays);
-  const at = all.findIndex((play) => play.id === id);
-  const landed = all[at];
-  const lastSnap =
-    landed && isMarker(landed.playType) ? all.slice(0, at).findLast((play) => !isMarker(play.playType)) : undefined;
-  if (!lastSnap) return readPlay(feed, id, teams, labels);
-  return {
-    ...readPlay(feed, lastSnap.id, teams, labels),
-    text: landed.playText,
-    score: { home: landed.homeScore, away: landed.awayScore },
-    clock: clockLabel({ period: landed.period, clock: landed.clock }),
-  };
-}
+export function playerView(last: Playing | null, feed: GamePlaysJson | null, live: boolean, now: number): FieldPlayer {
+  if (!passing(feed, live))
+    return { shown: feed, landed: null, labels: null, score: null, playing: null, rested: null, holdsHeader: false, wakeAt: null };
+  const target = newestDrawn(feed);
+  const current = started(last, target) ? last : null;
+  const landsAt = current ? current.snapAt + current.line.ms : null;
+  const playing = current && landsAt !== null && now < landsAt ? current : null;
+  const pending = target !== null && current === null;
+  const held = playing ? playing.description.id : pending ? target.id : null;
+  const shown = held === null ? feed : feedBefore(feed, held);
 
-/** The readout for one play read on its own, marker or not. */
-function readPlay(feed: GamePlaysJson, id: string, teams: FieldTeams, labels: Record<Side, string>): Readout {
-  const descriptions = new Map(feed.descriptions.map((description) => [description.id, description]));
-  const drive = feed.drives.find((d) => d.plays.some((play) => play.id === id));
-  const plays = drive?.plays ?? [];
-  const play = plays.find((p) => p.id === id) as CfbdLivePlay | undefined;
-  const landed = descriptions.get(id);
-  const rest = landed?.rest ?? { spot: null, side: null, down: null, distance: null };
-  const flash = landed?.segments.find((segment) => segment.kind === "flash");
-  const turnover = landed?.segments.find((segment) => segment.kind === "turnover");
-  const forwards = (side: Side) => (side === "away" ? 1 : -1);
-
-  // The down: the next snap's, or what comes after a score.
-  let down = "–";
-  if (rest.down !== null && rest.side !== null) {
-    const toGoal = rest.spot === null ? null : rest.side === "away" ? 100 - rest.spot : rest.spot;
-    down = downLabel(rest.down, rest.distance, toGoal);
-  } else if (flash?.kind === "flash") {
-    down = flash.label === "Safety" ? "Free kick" : "Kickoff";
-  }
-
-  const gain =
-    rest.down !== null && rest.distance !== null && rest.spot !== null && rest.side !== null
-      ? Math.min(100, Math.max(0, rest.spot + forwards(rest.side) * rest.distance))
-      : null;
-
-  // The drive: the plays its offense has run so far. A play that handed the
-  // ball over without a score, a kick or a turnover, starts a new drive at
-  // the spot, whichever drive the feed filed it under.
-  const offense = drive ? sideOf(teams)(drive.offenseId) : null;
-  let driveText = "–";
-  let driveStart: Yard | null = null;
-  if (flash === undefined && rest.side !== null && rest.side !== offense) {
-    driveText = driveLabel(0, null);
-    driveStart = rest.spot;
-  } else if (drive && offense !== null) {
-    const run = plays.slice(0, plays.findIndex((p) => p.id === id) + 1);
-    const first = run[0];
-    const firstDescription = descriptions.get(first.id);
-    driveStart = first.teamId === drive.offenseId ? (firstDescription?.start ?? null) : (firstDescription?.rest.spot ?? null);
-    const snaps = run.filter((p) => p.teamId === drive.offenseId && !isMarker(p.playType)).length;
-    const end =
-      flash?.kind === "flash"
-        ? flash.label === "Touchdown"
-          ? offense === "away"
-            ? 100
-            : 0
-          : (landed?.start ?? null)
-        : rest.spot;
-    const yards = driveStart === null || end === null ? null : (end - driveStart) * forwards(offense);
-    driveText = driveLabel(snaps, yards);
-    if (flash !== undefined) driveStart = null;
+  let score: FieldPlayer["score"] = null;
+  let wakeAt: number | null = null;
+  if (playing && landsAt !== null) {
+    wakeAt = landsAt;
+    for (const step of playing.line.steps) {
+      if (step.kind !== "score") continue;
+      const at = playing.snapAt + step.t0;
+      if (at > now) {
+        wakeAt = Math.min(wakeAt, at);
+        break;
+      }
+      score = { home: step.home, away: step.away };
+    }
   }
 
   return {
-    down,
-    spot: rest.spot === null ? "–" : spotLabel(rest.spot, labels),
-    drive: driveText,
-    ball: rest.spot,
-    gain,
-    driveStart,
-    side: rest.side,
-    unmoved: rest.down !== null && rest.spot !== null && driveStart !== null && rest.spot === driveStart,
-    flash: flash?.kind === "flash" && landed ? { label: flash.label, yard: flashYard(landed) } : null,
-    turnover: turnover?.kind === "turnover" ? { label: turnover.label, yard: turnover.at, side: turnover.side } : null,
-    text: play?.playText ?? "",
-    score: { home: play?.homeScore ?? 0, away: play?.awayScore ?? 0 },
-    clock: play ? clockLabel({ period: play.period, clock: play.clock }) : null,
+    shown,
+    landed: shown.plays.at(-1) ?? null,
+    labels: feed.labels,
+    score,
+    playing,
+    rested: current && !playing ? { description: current.description, line: current.line } : null,
+    // A play about to replay on open holds the header back as its run will.
+    holdsHeader: playing ? !playing.opening : !(pending && last === null),
+    wakeAt,
   };
-}
-
-/** Where the ball was when a play's flash went up: the end of the flight before it. */
-function flashYard(description: PlayDescription): Yard {
-  let yard = description.start ?? 50;
-  for (const segment of description.segments) {
-    if (segment.kind === "flash") break;
-    if (segment.kind === "arc" || segment.kind === "ground" || segment.kind === "jump") yard = segment.to;
-    if (segment.kind === "penalty") yard = segment.to;
-  }
-  return yard;
 }

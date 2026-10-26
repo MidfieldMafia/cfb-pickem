@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Calendar, Eye, Lock, LockOpen, MapPin, Radio, Scale, Tv } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   Badge,
   Button,
@@ -22,10 +22,9 @@ import { WeatherPill } from "@/components/picks/weather-pill";
 import { TeamLogo } from "@/components/team-logo";
 
 import { awayShare, type FinalStats, type Leader, type LeaderKey, type LeaderRow, type TeamStatRow } from "@/lib/results/box-score";
-import type { GamePlaysJson } from "@/lib/results/live-feed";
-import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
+import { recentPlays, type GamePlaysJson, type RecentPlays } from "@/lib/results/game-feed";
 import { clockLabel, sideWithBall } from "@/lib/results/result";
-import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/json";
 import { guessOrder } from "@/lib/results/summary";
 import { spreadHeadline } from "@/lib/spread";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";
@@ -417,23 +416,23 @@ function RecentPlaysCard({ card }: { card: RecentPlays }) {
       ) : (
         <ol>
           {card.plays.map((play, i) => {
-            const ruled = i > 0 && play.score === null && card.plays[i - 1].score === null;
+            const ruled = i > 0 && play.scored === null && card.plays[i - 1].scored === null;
             return (
               <li
                 key={play.id}
                 className={`grid grid-cols-[40px_minmax(0,1fr)] gap-2 py-2 ${
-                  play.score ? "rounded-md bg-accent px-2" : ""
+                  play.scored ? "rounded-md bg-accent px-2" : ""
                 } ${ruled ? "border-t border-muted" : ""}`}
               >
                 <span className="text-xs leading-5 tabular-nums text-muted-foreground">{play.clock}</span>
                 <span className="flex min-w-0 flex-col gap-1">
-                  {play.score ? (
+                  {play.scored ? (
                     <span className="flex items-center gap-2">
                       <span className="rounded-full bg-live px-2 py-px text-[11px] leading-4 font-extrabold tracking-[0.06em] text-live-foreground uppercase">
-                        {play.score.tag}
+                        {play.scored.tag}
                       </span>
                       <span className="flex-1" />
-                      <span className="font-display text-sm font-black tabular-nums">{play.score.line}</span>
+                      <span className="font-display text-sm font-black tabular-nums">{play.scored.line}</span>
                     </span>
                   ) : null}
                   <span className={`text-sm ${i === 0 ? "font-semibold" : ""}`}>{play.text}</span>
@@ -678,19 +677,15 @@ function SheetBody({
   const preGame = result.phase === "scheduled" || result.phase === "due";
   const final = result.phase === "final";
   const feed = useGamePlays(g.id, live, final);
-  const teams = useMemo(
-    () => ({ homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId, homeTeam: g.homeTeam, awayTeam: g.awayTeam }),
-    [g.homeTeamId, g.awayTeamId, g.homeTeam, g.awayTeam],
-  );
   // With the card up, the list and the header wait for each play to land.
-  const player = useFieldPlayer(feed, teams, live);
-  const card = player.shown ? recentPlays(player.shown, teams) : null;
+  const player = useFieldPlayer(feed, live);
+  const card = player.shown ? recentPlays(player.shown) : null;
   const landed: Landed | null =
-    player.readout && player.holdsHeader
+    player.landed && player.holdsHeader
       ? {
-          score: player.score ?? player.readout.score,
-          clock: player.readout.clock,
-          ball: player.readout.side,
+          score: player.score ?? player.landed.score,
+          clock: player.landed.gameClock,
+          ball: player.landed.readout.side,
         }
       : null;
   const padlock = locked && game.picks.some((pick) => pick.lock !== null);
@@ -699,7 +694,7 @@ function SheetBody({
     <>
       <SheetHeader game={game} serverNow={serverNow} landed={landed} />
       <div className="grid gap-2.5 overflow-y-auto px-4 pb-2" style={{ maxHeight: "calc(100dvh - 300px)" }}>
-        {player.readout ? <FieldCard player={player} awayTeam={g.awayTeam} homeTeam={g.homeTeam} neutralSite={game.detail?.neutralSite} /> : null}
+        {player.landed ? <FieldCard player={player} awayTeam={g.awayTeam} homeTeam={g.homeTeam} neutralSite={game.detail?.neutralSite} /> : null}
         {locked ? (
           <>
             <SidePanel

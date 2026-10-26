@@ -1,14 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { finalResult, SCHEDULED, voidResult } from "@/test/game";
-import type {
-  LeaderboardRow,
-  Reveal,
-  RevealGame,
-  RevealPick,
-  ScoredMember,
-  WeeklyScore,
-  WeeklyWin,
-} from "./results";
+import type { LeaderboardRow, Reveal, RevealGame, RevealPick, ScoredMember, WeeklyScore, WeeklyWin } from "./json";
 import type { GameJson, GameView } from "@/lib/slate/json";
 import {
   movement,

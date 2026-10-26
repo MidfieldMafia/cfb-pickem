@@ -22,10 +22,12 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { FinalStats } from "@/lib/results/box-score";
+import type { PlayDescription } from "@/lib/results/field";
+import { gameFeed, type StoredFeed } from "@/lib/results/game-feed";
 import type { LiveFeed } from "@/lib/results/live-feed";
 import type { GameResult } from "@/lib/results/result";
 import { DUE, finalResult, liveResult, SCHEDULED, voidResult } from "@/test/game";
-import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/json";
 import type { MemberJson } from "@/lib/slate/json";
 import type { LiveGameJson, WeekStateJson } from "@/lib/week/json";
 import { kickoffDay, kickoffLine, kickoffTime } from "@/lib/week/kickoff";
@@ -35,6 +37,18 @@ afterEach(cleanup);
 
 const CLEMSON = 10;
 const GEORGIA = 11;
+
+/**
+ * The plays endpoint's answer for a stored feed: the server's own `gameFeed`,
+ * so the strip and the list read what the real readout makes of these drives.
+ */
+const asServed = (stored: Omit<StoredFeed, "descriptions"> & { descriptions: unknown[] }) =>
+  gameFeed({ ...stored, descriptions: stored.descriptions as PlayDescription[] }, {
+    homeTeamId: GEORGIA,
+    awayTeamId: CLEMSON,
+    homeTeam: "Georgia",
+    awayTeam: "Clemson",
+  });
 
 function member(id: number): ScoredMember {
   return { id, displayName: `Member ${id}`, avatarId: null };
@@ -667,7 +681,7 @@ describe("the final sheet (#309)", () => {
   function serving(final: FinalStats | null) {
     const fetch = vi.fn(async (path: string) =>
       path.endsWith("/plays")
-        ? Response.json({ gameId: 1, fetchedAt: null, drives: [], descriptions: [], recap: null, final })
+        ? Response.json(asServed({ gameId: 1, fetchedAt: null, drives: [], descriptions: [], final }))
         : new Response(null, { status: 304 }),
     );
     vi.stubGlobal("fetch", fetch);
@@ -762,7 +776,7 @@ describe("the live sheet", () => {
       downType: "standard",
       playText: text,
     });
-    return {
+    return asServed({
       gameId: 1,
       fetchedAt,
       drives:
@@ -803,9 +817,8 @@ describe("the live sheet", () => {
           rest: { spot: null, side: "home", down: null, distance: null },
         },
       ],
-      recap: null,
       final: null,
-    };
+    });
   }
 
   /** Answers the plays endpoint with `plays` and the week state with `weekState`, or a 304 without one. */
@@ -951,8 +964,13 @@ describe("the On the field card", () => {
    * 60 yards for a touchdown with the kick good. `touchdown` is the second
    * play's drawing, so a revision can change it.
    */
-  function feed(touchdown = [{ kind: "ground", from: 60, to: 0 }]) {
-    return {
+  function feed(touchdown: unknown[] = [{ kind: "ground", from: 60, to: 0 }]) {
+    return stored(touchdown, 2);
+  }
+
+  /** The feed through its first `count` plays, as stored before the endpoint finishes it. */
+  function stored(touchdown: unknown[], count: number) {
+    const whole = {
       gameId: 1,
       fetchedAt: "2026-09-12T23:45:00.000Z",
       drives: [
@@ -1002,9 +1020,13 @@ describe("the On the field card", () => {
           rest: { spot: null, side: "home", down: null, distance: null },
         },
       ],
-      recap: null,
       final: null,
     };
+    return asServed({
+      ...whole,
+      drives: [{ ...whole.drives[0], plays: whole.drives[0].plays.slice(0, count) }],
+      descriptions: whole.descriptions.slice(0, count),
+    });
   }
 
   /** Answers the plays endpoint from `plays()` on every poll; the week state has nothing new. */
@@ -1044,8 +1066,7 @@ describe("the On the field card", () => {
 
   test("a play that arrives while the sheet is open holds the header, and steps the score as it lands", async () => {
     vi.useFakeTimers({ now: new Date(state().serverNow) });
-    const run = feed();
-    const upToRun = { ...run, drives: [{ ...run.drives[0], plays: run.drives[0].plays.slice(0, 1) }], descriptions: run.descriptions.slice(0, 1) };
+    const upToRun = stored([{ kind: "ground", from: 60, to: 0 }], 1);
     let answer: unknown = upToRun;
     serving(() => answer);
     const before: GameResult = { ...LIVE, shown: { awayScore: 10, homeScore: 21 }, live: { ...LIVE.live!, homeScore: 21 } };

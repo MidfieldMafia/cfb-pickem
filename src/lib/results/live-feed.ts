@@ -11,9 +11,7 @@
  * docs/research/cfbd-live-plays.md.
  */
 import type { CfbdLiveDrive, CfbdLiveGame, CfbdLivePlay } from "@/lib/cfbd/types";
-import type { FinalStats } from "./box-score";
-import type { DriveRecap } from "./drive-recap";
-import { abbreviations, ballSide, sideOf, type FieldTeams, type PlayDescription, type Side } from "./field";
+import { ballSide, sideAbbreviations, type FieldTeams, type Side } from "./field";
 
 /** The newest play, as the Live Board row reads it. Text, type and team are the feed's own words. */
 export interface LivePlay {
@@ -88,9 +86,8 @@ export function toLiveFeed(feed: CfbdLiveGame, teams: FieldTeams): LiveFeed | nu
     yardsToGoal: feed.yardsToGoal,
   };
   const plays = feed.drives.flatMap((drive) => drive.plays);
-  // The last one placed, as the Game sheet's labels take it (`feedLabels`).
-  const abbrs = [...abbreviations(plays, sideOf(teams))];
-  const abbrOf = (side: Side) => abbrs.findLast(([, placed]) => placed === side)?.[0] ?? null;
+  // The same vote the Game sheet names the teams by (`gameFeed`).
+  const abbrs = sideAbbreviations(plays, teams);
   return {
     play: {
       id: play.id,
@@ -106,8 +103,8 @@ export function toLiveFeed(feed: CfbdLiveGame, teams: FieldTeams): LiveFeed | nu
     },
     ...header,
     ball: ballSide(plays, teams, header),
-    homeAbbr: abbrOf("home"),
-    awayAbbr: abbrOf("away"),
+    homeAbbr: abbrs.home,
+    awayAbbr: abbrs.away,
   };
 }
 
@@ -147,27 +144,4 @@ export function newerScore(board: BoardMoment, feed: LiveFeed | null): { homeSco
   const boardLeft = clockSeconds(board.clock);
   if (feedLeft === null || boardLeft === null) return fromFeed;
   return feedLeft <= boardLeft ? fromFeed : scoreboard;
-}
-
-/**
- * What the Game sheet polls for one game: every drive with its plays as the
- * newest fetch stored them, when that fetch was, and every play's drawable
- * description for the field, in the order the plays were logged.
- * `fetchedAt` is null and `drives` and `descriptions` empty for a game the
- * feed has never been read for.
- */
-export interface GamePlaysJson {
-  gameId: number;
-  /** ISO 8601. */
-  fetchedAt: string | null;
-  drives: CfbdLiveDrive[];
-  /** One per play across `drives`, matched by `id`. Worked out on every request; nothing of it is stored. */
-  descriptions: PlayDescription[];
-  /** The drive before the newest, for the line under Recent plays. Null before the second drive. Worked out on every request. */
-  recap: DriveRecap | null;
-  /**
-   * The final sheet's team stats, game leaders and bar colours. Null for "not
-   * yet": the game is not final, or CFBD has not published its stats.
-   */
-  final: FinalStats | null;
 }

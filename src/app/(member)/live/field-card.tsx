@@ -4,23 +4,19 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Card } from "@saturday-slate/design-system";
 
 import { CREAM, INK, endZone, fitName, teamFill, textOn } from "@/lib/results/end-zones";
-import type { PlayDescription, Side, TurnoverLabel } from "@/lib/results/field";
+import type { Side, TurnoverLabel } from "@/lib/results/field";
 import {
   BALL_Y,
   FIELD_HEIGHT,
   FIELD_WIDTH,
-  drawingKey,
-  feedBefore,
   fieldX,
   frame,
-  newestDrawn,
-  readout,
-  timeline,
-  type Readout,
-  type Timeline,
+  playerView,
+  receive,
+  type FieldPlayer,
+  type Playing,
 } from "@/lib/results/field-player";
-import type { GamePlaysJson } from "@/lib/results/live-feed";
-import { feedLabels, type RecentTeams } from "@/lib/results/recent-plays";
+import type { GamePlaysJson } from "@/lib/results/game-feed";
 import { PINE_FIELD, fieldFor, numberedYards, type FieldStyle } from "@/lib/results/fields";
 import { logoSrc } from "@/lib/logos";
 
@@ -32,118 +28,40 @@ const GAIN = "#D26A12";
 const LOSS = "#F08A6E";
 const FLAG = "#F2C94C";
 
-/** The pause before the snap, and the longer one while the chevron fades out first. */
-const LEAD_MS = 300;
-const CHEVRON_LEAD_MS = 700;
-
-/** One play in the air: what it draws, its timing, and when (on `performance.now()`) the ball is snapped. */
-interface Playing {
-  description: PlayDescription;
-  line: Timeline;
-  snapAt: number;
-  /** The replay on open, of a play the Live Board row has already shown the result of. */
-  opening: boolean;
-}
-
-export interface FieldPlayer {
-  /** The feed as the sheet shows it: without the play in the air, so nothing is spoiled. Null before the first poll. */
-  shown: GamePlaysJson | null;
-  /** The field's readouts and the header's score and clock, as of the last play that landed. */
-  readout: Readout | null;
-  /** Each side's abbreviation as the feed writes it: the end zone's last fallback for a long name. */
-  labels: Record<Side, string> | null;
-  /** The score while a play is in the air: each score step as the ball reaches it. */
-  score: { home: number; away: number } | null;
-  playing: Playing | null;
-  /** The last play the field drew, once landed: its trail, X and flag stay on the field until the next snap. */
-  rested: Omit<Playing, "snapAt" | "opening"> | null;
-  /**
-   * Whether the header should follow the field. Not during the replay on
-   * open: the board row already showed that score, and counting it back down
-   * to replay it would only look wrong.
-   */
-  holdsHeader: boolean;
-}
-
 const reducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 
 /**
- * The field's player: which play animates, when it lands, and what the rest
- * of the sheet may show meanwhile (#303, #310). Only the newest play that
- * draws anything animates. Plays that arrive with it go straight to the list,
- * and the field snaps to its start first. On open, the last play animates
- * once. A revision that changes the drawing replays once. Until the ball
- * lands, the list, the strip and the header's score and clock stay as they
- * were, and the score steps as the ball reaches each score.
- *
- * Unless the game is `live`, it passes the feed straight through.
+ * The field's player on `performance.now()`: `receive` decides what plays
+ * when a feed arrives, `playerView` what the sheet shows, and this only keeps
+ * the clock — one timer, for the moment the view next changes on its own.
  */
-export function useFieldPlayer(feed: GamePlaysJson | null, teams: RecentTeams, live: boolean): FieldPlayer {
-  const [playing, setPlaying] = useState<Playing | null>(null);
-  const [score, setScore] = useState<{ home: number; away: number } | null>(null);
-  const [rested, setRested] = useState<FieldPlayer["rested"]>(null);
-  const animated = useRef<{ id: string; key: string } | null>(null);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+export function useFieldPlayer(feed: GamePlaysJson | null, live: boolean): FieldPlayer {
+  const [player, setPlayer] = useState<{ last: Playing | null; now: number }>({ last: null, now: 0 });
 
   useEffect(() => {
-    if (!live || feed === null || feed.fetchedAt === null) return;
-    const target = newestDrawn(feed);
-    if (target === null) return;
-    const key = drawingKey(target);
-    const last = animated.current;
-    // Nothing new to draw: a play in the air carries on, and lands on the newest feed.
-    if (last && last.id === target.id && last.key === key) return;
-    const opening = last === null;
-    animated.current = { id: target.id, key };
-
-    for (const timer of timers.current) clearTimeout(timer);
-    const plays = feed.drives.flatMap((drive) => drive.plays);
-    const index = plays.findIndex((play) => play.id === target.id);
-    const prior = index > 0 ? plays[index - 1] : null;
-    const was = prior ? { home: prior.homeScore, away: prior.awayScore } : { home: 0, away: 0 };
-    const still = reducedMotion();
-    const line = timeline(target, { was, still });
-    const priorReadout = prior ? readout(feed, prior.id, teams, feedLabels(feed, teams)) : null;
-    const lead = still ? 0 : priorReadout?.unmoved ? CHEVRON_LEAD_MS : LEAD_MS;
-    const snapAt = performance.now() + lead;
-
-    // Each step and the landing are timed off the same snap the drawing uses.
-    const after = (ms: number, run: () => void) => timers.current.push(setTimeout(run, Math.max(0, snapAt + ms - performance.now())));
-    timers.current = [];
-    setScore(null);
-    setPlaying({ description: target, line, snapAt, opening });
-    for (const step of line.steps)
-      if (step.kind === "score") after(step.t0, () => setScore({ home: step.home, away: step.away }));
-    after(line.ms, () => {
-      setPlaying(null);
-      setScore(null);
-      setRested({ description: target, line });
+    const now = performance.now();
+    // The snap is timed from the clock, which a render may not read. The render before this one already holds the new play back (`playerView`).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPlayer((current) => {
+      const last = receive(current.last, feed, { live, now, still: reducedMotion() });
+      return last === current.last ? current : { last, now };
     });
-  }, [feed, teams, live]);
+  }, [feed, live]);
 
-  useEffect(
-    () => () => {
-      for (const timer of timers.current) clearTimeout(timer);
-    },
-    [],
-  );
+  const view = playerView(player.last, feed, live, player.now);
+  const { wakeAt } = view;
+  useEffect(() => {
+    if (wakeAt === null) return;
+    // The timer firing is the moment come, even on a clock that has not quite reached it.
+    const timer = setTimeout(
+      () => setPlayer((current) => ({ ...current, now: Math.max(performance.now(), wakeAt) })),
+      Math.max(0, wakeAt - performance.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [wakeAt, player.now]);
 
-  if (!live || feed === null || feed.fetchedAt === null)
-    return { shown: feed, readout: null, labels: null, score: null, playing: null, rested: null, holdsHeader: false };
-  const shown = playing ? feedBefore(feed, playing.description.id) : feed;
-  const newest = shown.drives.flatMap((drive) => drive.plays).at(-1);
-  const labels = feedLabels(feed, teams);
-  return {
-    shown,
-    readout: newest ? readout(feed, newest.id, teams, labels) : null,
-    labels,
-    score,
-    playing,
-    // Only while it is still the newest thing drawn.
-    rested: rested && newestDrawn(feed)?.id === rested.description.id ? rested : null,
-    holdsHeader: playing === null || !playing.opening,
-  };
+  return view;
 }
 
 /** `performance.now()` on every frame while a play is in the air. */
@@ -325,13 +243,13 @@ export function FieldCard({
   homeTeam: string;
   neutralSite?: boolean;
 }) {
-  const { playing, shown } = player;
+  const { playing } = player;
   const field = fieldFor(homeTeam, neutralSite);
   const now = useFrameClock(playing !== null);
-  const newestShown = shown?.drives.flatMap((drive) => drive.plays).at(-1) ?? null;
-  const ago = useAgo(newestShown?.wallClock ?? null);
-  const at = player.readout;
-  if (at === null) return null;
+  const { landed } = player;
+  const ago = useAgo(landed?.wallClock ?? null);
+  if (landed === null) return null;
+  const at = landed.readout;
 
   const f = playing ? frame(playing.description, playing.line, Math.max(0, now - playing.snapAt)) : null;
   // At rest, the last play's drawing stays: its trail, the X and the flag. The ball and the marker go where the readout says.
@@ -522,7 +440,7 @@ export function FieldCard({
         </span>
       </p>
       <p aria-live="polite" className="text-sm text-muted-foreground">
-        {at.text}
+        {landed.text}
       </p>
     </Card>
   );

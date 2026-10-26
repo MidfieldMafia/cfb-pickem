@@ -1,25 +1,12 @@
 import { describe, expect, test } from "vitest";
 import { LIBERTY_AT_COASTAL_FINAL } from "@/lib/cfbd/recorded";
 import type { CfbdLiveDrive } from "@/lib/cfbd/types";
-import { recapPreviousDrive } from "./drive-recap";
 import { describePlays, type PlayDescription } from "./field";
-import {
-  BALL_Y,
-  downLabel,
-  drawingKey,
-  feedBefore,
-  fieldX,
-  frame,
-  newestDrawn,
-  readout,
-  spotLabel,
-  timeline,
-} from "./field-player";
-import type { GamePlaysJson } from "./live-feed";
+import { BALL_Y, drawingKey, feedBefore, fieldX, frame, newestDrawn, playerView, receive, timeline } from "./field-player";
+import { gameFeed, type GamePlaysJson } from "./game-feed";
 
 // Liberty at Coastal Carolina: Liberty (LIB, 2335) is away and attacks towards 100, Coastal (CCU, 324) home.
 const TEAMS = { homeTeamId: 324, awayTeamId: 2335, homeTeam: "Coastal Carolina", awayTeam: "Liberty" };
-const LABELS = { home: "CCU", away: "LIB" };
 const DRIVES = LIBERTY_AT_COASTAL_FINAL.drives;
 const id = (suffix: string) => `401869941${suffix}`;
 
@@ -31,24 +18,26 @@ function feedThrough(suffix: string, drives: CfbdLiveDrive[] = DRIVES): GamePlay
     kept.push(at === -1 ? drive : { ...drive, plays: drive.plays.slice(0, at + 1) });
     if (at !== -1) break;
   }
-  return {
-    gameId: 1,
-    fetchedAt: "2026-09-20T20:00:00.000Z",
-    drives: kept,
-    descriptions: describePlays(
-      kept.flatMap((drive) => drive.plays),
-      TEAMS,
-    ),
-    recap: recapPreviousDrive(kept, TEAMS),
-    final: null,
-  };
+  return gameFeed(
+    {
+      gameId: 1,
+      fetchedAt: "2026-09-20T20:00:00.000Z",
+      drives: kept,
+      descriptions: describePlays(
+        kept.flatMap((drive) => drive.plays),
+        TEAMS,
+      ),
+      final: null,
+    },
+    TEAMS,
+  );
 }
 
 const WHOLE = feedThrough("349");
 function described(suffix: string): PlayDescription {
-  const found = WHOLE.descriptions.find((d) => d.id === id(suffix));
+  const found = WHOLE.plays.find((play) => play.id === id(suffix));
   if (!found) throw new Error(`no play …${suffix}`);
-  return found;
+  return found.description;
 }
 
 describe("timeline", () => {
@@ -146,7 +135,7 @@ describe("frame", () => {
   test("a lost fumble's callout waits for the ball to reach the recovery", () => {
     // "fumbled by #7 P.Jones at CCU40 … recovered by CCU #19 S.McDowell at CCU41".
     const final = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
-    const play = final.descriptions.find((d) => d.id === id("662"))!;
+    const play = final.plays.find((p) => p.id === id("662"))!.description;
     const line = timeline(play);
     const swap = line.steps.find((s) => s.kind === "turnover")!;
     expect(frame(play, line, swap.t0 - 1).turnover).toBeNull();
@@ -199,193 +188,107 @@ describe("which play animates", () => {
 describe("feedBefore", () => {
   test("leaves out the play in the air and everything after it", () => {
     const before = feedBefore(WHOLE, id("338"));
-    const ids = before.drives.flatMap((d) => d.plays.map((p) => p.id));
-    expect(ids.at(-1)).toBe(id("333"));
-    expect(before.descriptions.map((d) => d.id)).toEqual(ids);
+    expect(before.plays.at(-1)?.id).toBe(id("333"));
+    expect(before.plays).toEqual(WHOLE.plays.slice(0, before.plays.length));
+    expect(before.drive).toBe(WHOLE.drive);
     expect(before.recap).toEqual(WHOLE.recap);
   });
 
   test("drops the recap when the play in the air opened the newest drive", () => {
-    const before = feedBefore(feedThrough("314"), id("314"));
-    expect(before.drives).toHaveLength(7);
+    const through = feedThrough("314");
+    const before = feedBefore(through, id("314"));
+    expect(before.drive).toBe(through.drive - 1);
     expect(before.recap).toBeNull();
   });
 });
 
-describe("readout", () => {
-  test("a play mid-drive: the down, the spot, and the drive so far", () => {
-    // Coastal's drive from its own 25 after the touchback: 20-yard run to the LIB39.
-    expect(readout(WHOLE, id("21"), TEAMS, LABELS)).toMatchObject({
-      down: "1st & 10",
-      spot: "LIB 39",
-      drive: "3 plays, 36 yds",
-      ball: 39,
-      gain: 29,
-      driveStart: 75,
-      side: "home",
-      unmoved: false,
-      clock: "Q1 · 13:50",
+describe("the player", () => {
+  const LIVE = { live: true, now: 1000, still: false };
+  const suffixOf = (playId: string) => playId.slice(9);
+  /** The play logged straight after the one ending in `suffix`. */
+  const after = (suffix: string) => WHOLE.plays[WHOLE.plays.findIndex((play) => play.id === id(suffix)) + 1];
+  const run = feedThrough("21");
+
+  test("on open, starts the newest drawn play as the opening replay, after the lead", () => {
+    const last = receive(null, run, LIVE)!;
+    expect(last).toMatchObject({ description: { id: id("21") }, opening: true, snapAt: 1300 });
+  });
+
+  test("keeps the play in the air off the list and the strip, and the header too on open", () => {
+    const last = receive(null, run, LIVE)!;
+    const view = playerView(last, run, true, 1000);
+    expect(view.playing).toBe(last);
+    expect(view.shown?.plays.map((play) => play.id)).not.toContain(id("21"));
+    expect(view.landed).toBe(run.plays.at(-2));
+    expect(view.holdsHeader).toBe(false);
+    expect(view.wakeAt).toBe(1300 + last.line.ms);
+  });
+
+  test("lands: the play joins the list and the strip, and its drawing rests on the field", () => {
+    const last = receive(null, run, LIVE)!;
+    const view = playerView(last, run, true, last.snapAt + last.line.ms);
+    expect(view).toMatchObject({ playing: null, score: null, wakeAt: null, holdsHeader: true });
+    expect(view.landed).toBe(run.plays.at(-1));
+    expect(view.rested?.description.id).toBe(id("21"));
+  });
+
+  test("the same play on the next poll, a fresh object as the wire gives it, does not replay", () => {
+    const last = receive(null, run, LIVE);
+    expect(receive(last, structuredClone(run), { ...LIVE, now: 5000 })).toBe(last);
+  });
+
+  test("a revision that changes the drawing replays once, and is no longer the opening", () => {
+    const last = receive(null, run, LIVE)!;
+    const revised = structuredClone(run);
+    revised.plays.at(-1)!.description.segments = [{ kind: "ground", from: 59, to: 40 }];
+    const replay = receive(last, revised, { ...LIVE, now: 9000 })!;
+    expect(replay).toMatchObject({ opening: false, snapAt: 9300 });
+    expect(playerView(replay, revised, true, 9000).holdsHeader).toBe(true);
+    expect(receive(replay, structuredClone(revised), { ...LIVE, now: 12_000 })).toBe(replay);
+  });
+
+  test("a new play is held back even in the render before the player has seen it", () => {
+    const first = receive(null, run, LIVE)!;
+    const later = feedThrough("29");
+    const view = playerView(first, later, true, 99_999);
+    const before = later.plays[later.plays.findIndex((play) => play.id === id("29")) - 1];
+    expect(view.playing).toBeNull();
+    expect(view.landed).toBe(before);
+    expect(view.holdsHeader).toBe(true);
+    // And on open, the header waits for it as the replay will.
+    expect(playerView(null, later, true, 0).holdsHeader).toBe(false);
+  });
+
+  test("steps the score as the ball reaches each score, and wakes for each", () => {
+    const touchdown = feedThrough("153");
+    const last = receive(null, touchdown, { ...LIVE, now: 0 })!;
+    const scores = last.line.steps.filter((step) => step.kind === "score");
+    expect(scores.length).toBeGreaterThan(1);
+    const [first, second] = scores;
+    if (first.kind !== "score") throw new Error("not a score");
+    expect(playerView(last, touchdown, true, 0)).toMatchObject({ score: null, wakeAt: last.snapAt + first.t0 });
+    expect(playerView(last, touchdown, true, last.snapAt + first.t0)).toMatchObject({
+      score: { home: first.home, away: first.away },
+      wakeAt: last.snapAt + second.t0,
     });
   });
 
-  test("a drive that has not moved shows the chevron", () => {
-    // An incompletion on the first snap after the kickoff.
-    expect(readout(WHOLE, id("128"), TEAMS, LABELS)).toMatchObject({
-      down: "2nd & 10",
-      drive: "1 play, 0 yds",
-      unmoved: true,
-    });
+  test("waits longer before the snap while the chevron fades out", () => {
+    // The incompletion on the first snap after the kickoff left the drive unmoved.
+    expect(WHOLE.plays.find((play) => play.id === id("128"))?.readout.unmoved).toBe(true);
+    const next = after("128");
+    expect(next.description.segments.length).toBeGreaterThan(0);
+    expect(receive(null, feedThrough(suffixOf(next.id)), LIVE)?.snapAt).toBe(1700);
   });
 
-  test("a kick starts the receiving team's drive", () => {
-    expect(readout(WHOLE, id("195"), TEAMS, LABELS)).toMatchObject({
-      down: "1st & 10",
-      spot: "LIB 20",
-      drive: "Just started",
-      side: "away",
-      unmoved: true,
-    });
+  test("with reduced motion, the play lands the moment it starts", () => {
+    const last = receive(null, run, { ...LIVE, still: true })!;
+    expect(last.snapAt).toBe(1000);
+    expect(playerView(last, run, true, 1000)).toMatchObject({ playing: null, wakeAt: null, landed: run.plays.at(-1) });
   });
 
-  test("an interception starts a drive for the other side", () => {
-    expect(readout(WHOLE, id("29"), TEAMS, LABELS)).toMatchObject({
-      drive: "Just started",
-      side: "away",
-      driveStart: 20,
-    });
-  });
-
-  test("a touchdown reads the kickoff next and the drive to the goal line", () => {
-    expect(readout(WHOLE, id("153"), TEAMS, LABELS)).toMatchObject({
-      down: "Kickoff",
-      drive: "7 plays, 75 yds",
-      gain: null,
-      driveStart: null,
-      unmoved: false,
-      score: { home: 3, away: 10 },
-    });
-  });
-
-  test("a score keeps its end zone lit at rest", () => {
-    expect(readout(WHOLE, id("153"), TEAMS, LABELS).flash).toEqual({ label: "Touchdown", yard: 100 });
-    expect(readout(WHOLE, id("122"), TEAMS, LABELS).flash).toEqual({ label: "Field goal", yard: -10 });
-    expect(readout(WHOLE, id("21"), TEAMS, LABELS).flash).toBeNull();
-  });
-
-  test("a turnover keeps its callout at rest, until the next drawn play", () => {
-    const final = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
-    expect(readout(WHOLE, id("29"), TEAMS, LABELS).turnover).toEqual({ label: "Interception", yard: 20, side: "away" });
-    expect(readout(final, id("552"), TEAMS, LABELS).turnover).toEqual({
-      label: "Turnover on downs",
-      yard: 55,
-      side: "away",
-    });
-    expect(readout(final, id("662"), TEAMS, LABELS).turnover).toEqual({ label: "Fumble", yard: 59, side: "home" });
-    const plays = WHOLE.drives.flatMap((drive) => drive.plays);
-    const next = plays[plays.findIndex((play) => play.id === id("29")) + 1];
-    expect(readout(WHOLE, next.id, TEAMS, LABELS).turnover).toBeNull();
-    expect(readout(WHOLE, id("153"), TEAMS, LABELS).turnover).toBeNull();
-  });
-
-  test("goal to go", () => {
-    // Liberty on the CCU8, 1st & 8.
-    const game = feedThrough(DRIVES.at(-1)!.plays.at(-1)!.id.slice(9));
-    expect(readout(game, id("755"), TEAMS, LABELS)).toMatchObject({ down: "1st & Goal", spot: "CCU 8", gain: 100 });
-  });
-
-  describe("a marker logged after a score keeps the score's drive (#391)", () => {
-    /**
-     * The recording with a marker logged after the play ending in `after`: in
-     * the same drive, or at the head of the next one. The marker comes from
-     * the defence, as a timeout before the kickoff usually does.
-     */
-    function withMarker(after: string, marker: { suffix: string; playType: string; playText: string; nextDrive?: boolean }) {
-      const drives = DRIVES.map((drive) => {
-        const at = drive.plays.findIndex((play) => play.id === id(after));
-        if (at === -1) return drive;
-        const score = drive.plays[at];
-        const added = {
-          ...score,
-          id: id(marker.suffix),
-          teamId: score.teamId === TEAMS.homeTeamId ? TEAMS.awayTeamId : TEAMS.homeTeamId,
-          playType: marker.playType,
-          playTypeId: 21, // CFBD's Timeout; only playType makes it a marker
-          yardsGained: 0,
-          playText: marker.playText,
-        };
-        return { ...drive, plays: [...drive.plays.slice(0, at + 1), added, ...drive.plays.slice(at + 1)] };
-      });
-      if (!marker.nextDrive) return drives;
-      // Move it to the head of the drive after the score's.
-      const from = drives.findIndex((drive) => drive.plays.some((play) => play.id === id(marker.suffix)));
-      const moved = drives[from].plays.find((play) => play.id === id(marker.suffix))!;
-      return drives.map((drive, i) =>
-        i === from
-          ? { ...drive, plays: drive.plays.filter((play) => play !== moved) }
-          : i === from + 1
-            ? { ...drive, plays: [moved, ...drive.plays] }
-            : drive,
-      );
-    }
-
-    test("a field goal then a timeout", () => {
-      const scored = readout(WHOLE, id("122"), TEAMS, LABELS);
-      const game = feedThrough("1221", withMarker("122", { suffix: "1221", playType: "Timeout", playText: "Timeout Liberty, clock 05:19" }));
-      expect(readout(game, id("1221"), TEAMS, LABELS)).toMatchObject({
-        drive: scored.drive,
-        down: "Kickoff",
-        flash: { label: "Field goal", yard: -10 },
-        text: "Timeout Liberty, clock 05:19",
-        clock: "Q1 · 5:19",
-      });
-      expect(scored.drive).toMatch(/^\d+ plays, \d+ yds$/);
-    });
-
-    test("a touchdown then a timeout filed under the next drive", () => {
-      const game = feedThrough(
-        "1531",
-        withMarker("153", { suffix: "1531", playType: "Timeout", playText: "Timeout Coastal Carolina, clock 03:13", nextDrive: true }),
-      );
-      expect(readout(game, id("1531"), TEAMS, LABELS)).toMatchObject({
-        drive: readout(WHOLE, id("153"), TEAMS, LABELS).drive,
-        down: "Kickoff",
-        flash: { label: "Touchdown", yard: 100 },
-        text: "Timeout Coastal Carolina, clock 03:13",
-      });
-    });
-
-    test("a field goal then the end of the quarter", () => {
-      const scored = readout(WHOLE, id("122"), TEAMS, LABELS);
-      const game = feedThrough("1221", withMarker("122", { suffix: "1221", playType: "End Period", playText: "End of 1st Quarter" }));
-      expect(readout(game, id("1221"), TEAMS, LABELS)).toMatchObject({ drive: scored.drive, text: "End of 1st Quarter" });
-    });
-
-    test("an interception then a timeout keeps the callout", () => {
-      const game = feedThrough("291", withMarker("29", { suffix: "291", playType: "Timeout", playText: "Timeout Coastal Carolina, clock 13:05" }));
-      expect(readout(game, id("291"), TEAMS, LABELS).turnover).toEqual({ label: "Interception", yard: 20, side: "away" });
-    });
-
-    test("a timeout mid-drive still reads the drive so far", () => {
-      // Liberty's timeout after the incompletion on 2nd & 6 at the CCU8.
-      expect(readout(WHOLE, id("56"), TEAMS, LABELS).drive).toBe(readout(WHOLE, id("51"), TEAMS, LABELS).drive);
-    });
-  });
-});
-
-describe("downLabel", () => {
-  test("reads the down and the distance, or Goal once the distance reaches the goal line", () => {
-    expect(downLabel(3, 7, 35)).toBe("3rd & 7");
-    expect(downLabel(1, 8, 8)).toBe("1st & Goal");
-    expect(downLabel(2, 10, null)).toBe("2nd & 10");
-    expect(downLabel(4, null, 20)).toBe("4th & –");
-  });
-});
-
-describe("spotLabel", () => {
-  test("names the half the ball is in", () => {
-    expect(spotLabel(28, LABELS)).toBe("LIB 28");
-    expect(spotLabel(72, LABELS)).toBe("CCU 28");
-    expect(spotLabel(50, LABELS)).toBe("50");
-    expect(spotLabel(-3, LABELS)).toBe("End zone");
+  test("a game that is not live starts nothing, and passes the feed straight through", () => {
+    expect(receive(null, run, { ...LIVE, live: false })).toBeNull();
+    expect(playerView(null, run, false, 0)).toMatchObject({ shown: run, landed: null, playing: null, holdsHeader: false, wakeAt: null });
   });
 });

@@ -1,7 +1,7 @@
 import { Lock, LockOpen } from "lucide-react";
 import { Badge, Card, LocalTime } from "@saturday-slate/design-system";
 
-import type { RevealPick } from "@/lib/results/results";
+import type { RevealPick } from "@/lib/results/json";
 import type { BreakdownRow } from "@/lib/results/summary";
 import { isVoid, teamName, voidNote, type GameView } from "@/lib/slate/json";
 
