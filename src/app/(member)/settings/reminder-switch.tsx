@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { LINK, Switch } from "@saturday-slate/design-system";
+import { track } from "@/lib/analytics/analytics";
 import { deviceFacts, pushBlock, unsubscribeDevice, type PushBlock } from "@/lib/push/device";
 import { turnOnReminder } from "@/components/push/turn-on-reminder";
 import { turnOffReminderAction } from "./actions";
@@ -54,6 +55,7 @@ export function ReminderSwitch({ on: savedOn, stopped: savedStopped, publicKey }
       }
       if (!publicKey) return;
       const turned = await turnOnReminder(publicKey);
+      track("reminder_turn_on", { source: "settings", result: turned.ok ? "on" : turned.why });
       if (!turned.ok) {
         if (turned.why === "denied") setDeniedNow(true);
         else setError(turned.message);
