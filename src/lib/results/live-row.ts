@@ -9,7 +9,7 @@
  */
 import { agoLabel } from "@/lib/week/freshness";
 import { fromGoal } from "./field";
-import { downLabel, spotLabel } from "./field-player";
+import { downLabel, spotLabel } from "./game-feed";
 import type { LiveScore } from "./result";
 
 /** A play this long past its `wallClock` reads stale, unless it announced a break. */

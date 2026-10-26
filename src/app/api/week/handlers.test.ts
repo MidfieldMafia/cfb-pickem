@@ -30,7 +30,7 @@ import {
   THURSDAY,
   TUESDAY,
 } from "@/test/week-2";
-import type { GamePlaysJson } from "@/lib/results/live-feed";
+import type { GamePlaysJson } from "@/lib/results/game-feed";
 import { getGamePlays, getSheet, getWeekState, guessEdit, lockEdit, pickEdit, putEdit } from "./handlers";
 import { refreshStatsIfStale } from "@/lib/results/box-scores";
 import { ingestResults } from "@/lib/results/writes";
@@ -523,10 +523,10 @@ describe("a game's plays, for the Game sheet", () => {
     expect(response.status).toBe(200);
     expect(plays.gameId).toBe(texas.id);
     expect(plays.fetchedAt).toBe(SUNDAY.toISOString());
-    expect(plays.drives.flatMap((d) => d.plays).at(-1)).toMatchObject({ playType: "Rush", homeScore: 7, clock: "6:10" });
+    expect(plays.plays.at(-1)).toMatchObject({ clock: "6:10", score: { home: 7 } });
     // Each play drawn, the newest resting on the header's next snap: "rush middle for 3 yards gain to the CCU31", Ohio State's ball.
-    expect(plays.descriptions.map((d) => d.id)).toEqual(plays.drives.flatMap((d) => d.plays).map((p) => p.id));
-    expect(plays.descriptions.at(-1)).toMatchObject({
+    expect(plays.plays.every((play) => play.description.id === play.id)).toBe(true);
+    expect(plays.plays.at(-1)?.description).toMatchObject({
       id: "401869941249",
       start: 66,
       side: "away",
@@ -547,7 +547,7 @@ describe("a game's plays, for the Game sheet", () => {
 
     const plays = await json<GamePlaysJson>(await getGamePlays(get(), asGrandma(SUNDAY), String(miami.id)));
 
-    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, drives: [], descriptions: [], recap: null, final: null });
+    expect(plays).toEqual({ gameId: miami.id, fetchedAt: null, labels: { home: miami.homeTeam, away: miami.awayTeam }, plays: [], drive: -1, recap: null, final: null });
   });
 
   test("a final game's box score is served once stored, and a poll holding the old tag sees it arrive", async () => {

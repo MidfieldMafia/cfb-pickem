@@ -4,7 +4,7 @@
  * holds so an unchanged answer costs a 304 and no body. Never throws — every caller is a timer on a phone that
  * has to keep going. Client-safe: no database imports.
  */
-import type { GamePlaysJson } from "@/lib/results/live-feed";
+import type { GamePlaysJson } from "@/lib/results/game-feed";
 import type { WeekStateJson } from "./json";
 
 export type WeekStateFetch =

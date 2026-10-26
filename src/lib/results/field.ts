@@ -183,6 +183,17 @@ export function abbreviations(plays: readonly CfbdLivePlay[], sideOf: (teamId: n
   return sides;
 }
 
+/**
+ * Each side's abbreviation as the play text spells it: the last one the vote
+ * placed for that side, or null before the feed has placed one. The Game
+ * row's slice and the Game sheet both name the teams with this.
+ */
+export function sideAbbreviations(plays: readonly CfbdLivePlay[], teams: FieldTeams): Record<Side, string | null> {
+  const placed: Record<Side, string | null> = { home: null, away: null };
+  for (const [abbr, side] of abbreviations(plays, sideOf(teams))) placed[side] = abbr;
+  return placed;
+}
+
 /** Everything one play is described from. */
 interface Context {
   play: CfbdLivePlay;

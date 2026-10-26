@@ -9,14 +9,14 @@ import { liveFeeds } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { Slate } from "@/lib/slate/slate";
 import { finalStats } from "./box-scores";
-import { recapPreviousDrive } from "./drive-recap";
 import { describePlays } from "./field";
-import { newestPlay, type GamePlaysJson } from "./live-feed";
+import { gameFeed, type GamePlaysJson } from "./game-feed";
+import { newestPlay } from "./live-feed";
 
 /**
- * One Slate game's stored plays, each with its drawable description, and its
- * box score once it is final. Null for
- * a game the Slate does not have, so no other Week's feed is reachable.
+ * One Slate game's stored plays, finished for the sheet (`gameFeed`), and its
+ * box score once it is final. Null for a game the Slate does not have, so no
+ * other Week's feed is reachable.
  *
  * The newest play reads the game header's next snap from the Game's row, but
  * only while that row's slice names the same play: the slice and the stored
@@ -30,16 +30,18 @@ export async function gamePlays(db: Db, slate: Slate, gameId: number): Promise<G
   const drives = row?.drives ?? [];
   const slice = game.liveFeed;
   const header = slice && slice.play.id === newestPlay(drives)?.id ? slice : null;
-  return {
-    gameId,
-    fetchedAt: row?.fetchedAt.toISOString() ?? null,
-    drives,
-    descriptions: describePlays(
-      drives.flatMap((drive) => drive.plays),
-      game,
-      header,
-    ),
-    recap: recapPreviousDrive(drives, game),
-    final: await finalStats(db, game),
-  };
+  return gameFeed(
+    {
+      gameId,
+      fetchedAt: row?.fetchedAt.toISOString() ?? null,
+      drives,
+      descriptions: describePlays(
+        drives.flatMap((drive) => drive.plays),
+        game,
+        header,
+      ),
+      final: await finalStats(db, game),
+    },
+    game,
+  );
 }
