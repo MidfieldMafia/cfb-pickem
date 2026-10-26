@@ -10,7 +10,7 @@
  * `"use client"` file and calls this on every poll.
  */
 import type { GameResult, Score } from "./result";
-import type { RevealPick } from "./results";
+import type { RevealPick } from "./json";
 
 export type Side = "home" | "away";
 

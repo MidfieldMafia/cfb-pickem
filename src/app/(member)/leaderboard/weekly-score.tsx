@@ -2,7 +2,7 @@ import { Trophy } from "lucide-react";
 import { Badge, Card } from "@saturday-slate/design-system";
 
 import { Pennant } from "@/components/pennant";
-import type { WeeklyScore } from "@/lib/results/results";
+import type { WeeklyScore } from "@/lib/results/json";
 import { guessLabel, record } from "@/lib/results/summary";
 
 /**

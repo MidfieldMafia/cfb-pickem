@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { AFTER_KICKOFF, DUE, finalResult, liveResult, resultOf, SCHEDULED } from "@/test/game";
-import type { RevealPick } from "./results";
+import type { RevealPick } from "./json";
 import { pennantRow, sideStanding } from "./side";
 
 const live = (awayScore: number, homeScore: number) => liveResult(awayScore, homeScore, { period: 2, clock: "05:00" });

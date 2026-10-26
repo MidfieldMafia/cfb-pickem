@@ -5,7 +5,8 @@
  */
 import { describe, expect, test } from "vitest";
 import { DUE, finalResult, liveResult, SCHEDULED, voidResult } from "@/test/game";
-import type { GradedWeek, LeaderboardRow, WeeklyScore } from "@/lib/results/results";
+import type { GradedWeek } from "@/lib/results/results";
+import type { LeaderboardRow, WeeklyScore } from "@/lib/results/json";
 import { gamesLeftLabel, revealHref, SEASON_PARAM, selectedWeek, stripTiles, weekInProgress } from "./week-view";
 
 const ME = 1;

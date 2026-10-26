@@ -1,4 +1,4 @@
-import type { LeaderboardRow } from "@/lib/results/results";
+import type { LeaderboardRow } from "@/lib/results/json";
 import { winRate } from "@/lib/results/summary";
 
 /** The four Leaderboard columns a member can tap to sort by. */

@@ -11,7 +11,7 @@
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
-import type { LeaderboardRow } from "@/lib/results/results";
+import type { LeaderboardRow } from "@/lib/results/json";
 import { LeaderboardTable } from "./leaderboard-table";
 
 afterEach(cleanup);

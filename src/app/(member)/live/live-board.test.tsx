@@ -25,7 +25,7 @@ import type { FinalStats } from "@/lib/results/box-score";
 import type { LiveFeed } from "@/lib/results/live-feed";
 import type { GameResult } from "@/lib/results/result";
 import { DUE, finalResult, liveResult, SCHEDULED, voidResult } from "@/test/game";
-import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/json";
 import type { MemberJson } from "@/lib/slate/json";
 import type { LiveGameJson, WeekStateJson } from "@/lib/week/json";
 import { kickoffDay, kickoffLine, kickoffTime } from "@/lib/week/kickoff";

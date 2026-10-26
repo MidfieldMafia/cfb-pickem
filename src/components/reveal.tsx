@@ -5,7 +5,7 @@ import { Pennant } from "@/components/pennant";
 
 import { TeamLogo } from "@/components/team-logo";
 import { clockLabel } from "@/lib/results/result";
-import type { Reveal, RevealPick, ScoredMember } from "@/lib/results/results";
+import type { Reveal, RevealPick, ScoredMember } from "@/lib/results/json";
 import { guessLabel, type TiebreakerGuessRow } from "@/lib/results/summary";
 import { isVoid } from "@/lib/slate/json";
 

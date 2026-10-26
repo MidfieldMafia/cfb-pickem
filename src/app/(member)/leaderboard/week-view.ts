@@ -5,7 +5,8 @@
  * rather than by eye.
  */
 import { underway, type GameResult } from "@/lib/results/result";
-import type { GradedWeek, LeaderboardRow } from "@/lib/results/results";
+import type { GradedWeek } from "@/lib/results/results";
+import type { LeaderboardRow } from "@/lib/results/json";
 import { ordinal } from "@/lib/results/summary";
 import { plural } from "@/lib/plural";
 import { weekParam } from "@/lib/slate/slate";

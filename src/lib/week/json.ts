@@ -13,7 +13,7 @@
  */
 import type { GameDetail } from "@/lib/detail";
 import type { PickSheet } from "@/lib/picks/picks";
-import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/results";
+import type { RevealGame, ScoredMember, WeeklyScore, WeeklyWin } from "@/lib/results/json";
 import { toGameView, toWeekJson, type WeekJson } from "@/lib/slate/json";
 import type { ScoredWeek } from "./week";
 

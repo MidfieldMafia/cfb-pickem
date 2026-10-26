@@ -25,7 +25,7 @@ import { awayShare, type FinalStats, type Leader, type LeaderKey, type LeaderRow
 import type { GamePlaysJson } from "@/lib/results/live-feed";
 import { recentPlays, type RecentPlays } from "@/lib/results/recent-plays";
 import { clockLabel, sideWithBall } from "@/lib/results/result";
-import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/results";
+import type { RevealPick, ScoredMember, WeeklyScore } from "@/lib/results/json";
 import { guessOrder } from "@/lib/results/summary";
 import { spreadHeadline } from "@/lib/spread";
 import { sideStanding, type Side, type SideStanding } from "@/lib/results/side";

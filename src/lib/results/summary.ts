@@ -16,14 +16,7 @@
  */
 import { plural } from "@/lib/plural";
 import type { GameView } from "@/lib/slate/json";
-import type {
-  LeaderboardRow,
-  Reveal,
-  RevealPick,
-  ScoredMember,
-  WeeklyScore,
-  WeeklyWin,
-} from "./results";
+import type { LeaderboardRow, Reveal, RevealPick, ScoredMember, WeeklyScore, WeeklyWin } from "./json";
 
 /** "8–1", with the en dash the type scale asks for. Wins and losses only; a Void is neither. */
 export function record(correct: number, incorrect: number): string {
