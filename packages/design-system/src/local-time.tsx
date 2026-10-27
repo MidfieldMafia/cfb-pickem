@@ -21,8 +21,20 @@ const FORMATS: Record<TimeStyle, Intl.DateTimeFormatOptions> = {
   slot: { weekday: "short", hour: "numeric", minute: "2-digit" },
 };
 
+/**
+ * Joined from the parts rather than `format()`: the parts agree across
+ * engines, the literals between them do not. WebKit writes "Sat, Sep 26 at
+ * 3:30 PM" where Node writes "Sat, Sep 26, 3:30 PM", and ICU versions differ
+ * on the space before PM, so the server's text failed to hydrate on every
+ * iPhone (React #418, #515).
+ */
 function formatLocal(at: Date, style: TimeStyle, timeZone?: string): string {
-  return formatterFor({ ...FORMATS[style], timeZone }).format(at);
+  const parts = formatterFor({ ...FORMATS[style], timeZone }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value;
+  const time = `${part("hour")}:${part("minute")} ${part("dayPeriod")}`;
+  if (style === "slot") return `${part("weekday")} ${time}`;
+  const text = `${part("weekday")}, ${part("month")} ${part("day")}, ${time}`;
+  return style === "deadline" ? `${text} ${part("timeZoneName")}` : text;
 }
 
 const subscribe = () => () => {};
