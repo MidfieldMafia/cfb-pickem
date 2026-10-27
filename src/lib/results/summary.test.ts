@@ -76,6 +76,7 @@ function score(who: ScoredMember, points: number, over: Partial<WeeklyScore> = {
     played: true,
     place: 1,
     points,
+    maxPoints: points,
     correct: points / 10,
     incorrect: 0,
     pending: 0,

@@ -14,12 +14,20 @@ import { guessLabel, record } from "@/lib/results/summary";
  * Only the members tied for first carry a Guess, and only in a Week with a
  * Tiebreaker Game to decide it: theirs are the Guesses that settled the Weekly
  * Win, and a Guess under every row is noise.
+ *
+ * With `showMax`, while the Week still has games to play, each row carries the
+ * most that member can still finish on in a Max column after their points, and
+ * a caps header row names the three figures (#488, board A). A member who sat
+ * the Week out has no Picks to come in, so their max is 0. Once the Week is
+ * complete the max equals the points: the column and its header go, and the
+ * list is as it was.
  */
 export function WeeklyScoreList({
   scores,
   winners,
   viewerId,
   guessers,
+  showMax,
 }: {
   scores: WeeklyScore[];
   /** The member ids the Weekly Win went to; more than one when it was shared. */
@@ -27,9 +35,23 @@ export function WeeklyScoreList({
   viewerId: number;
   /** The member ids tied for first by points, whose Guesses are shown; empty when one member led outright. */
   guessers: Set<number>;
+  /** Show each member's max possible Weekly Score: true while the Week is not complete. */
+  showMax: boolean;
 }) {
   return (
-    <Card asChild className="gap-0 overflow-hidden p-0">
+    <Card className="gap-0 overflow-hidden p-0">
+      {showMax ? (
+        // The figures' names, for the eye; a screen reader hears each cell's own label.
+        <div
+          aria-hidden
+          className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground"
+        >
+          <span className="flex-1" />
+          <span className="w-9 text-right">W–L</span>
+          <span className="w-10 text-right">Pts</span>
+          <span className="w-8 text-right">Max</span>
+        </div>
+      ) : null}
       <ul className="divide-y divide-border">
       {scores.map((score) => {
         const you = score.member.id === viewerId;
@@ -56,12 +78,17 @@ export function WeeklyScoreList({
                 </span>
               ) : null}
             </span>
-            <span className="text-sm text-muted-foreground tabular-nums">
+            {/* Fixed widths while the header is up, so each figure sits under its name. */}
+            <span className={`text-sm text-muted-foreground tabular-nums ${showMax ? "w-9 text-right" : ""}`}>
               {record(score.correct, score.incorrect)}
             </span>
-            <span className="w-10 text-right font-display text-lg font-black tabular-nums">
-              {score.points}
-            </span>
+            <span className="w-10 text-right font-display text-lg font-black tabular-nums">{score.points}</span>
+            {showMax ? (
+              <span className="w-8 text-right text-sm font-semibold text-muted-foreground tabular-nums">
+                <span className="sr-only">max </span>
+                {score.maxPoints}
+              </span>
+            ) : null}
           </li>
         );
       })}

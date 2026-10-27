@@ -219,6 +219,7 @@ function toWeeklyScore(score: engine.WeeklyScore, byId: Map<string, ScoredMember
     played: score.played,
     place: score.place,
     points: score.points,
+    maxPoints: score.maxPoints,
     correct: score.correct,
     incorrect: score.incorrect,
     pending: score.pending,

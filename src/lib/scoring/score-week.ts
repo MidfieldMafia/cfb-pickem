@@ -53,6 +53,16 @@ function scorePick(rules: Rules, game: Game, team: TeamId | undefined, locked: b
 }
 
 /**
+ * What a Pick still in play would add if it came in. Only `pending` counts:
+ * a Void or unpicked game can earn nothing, and a final one is already in
+ * `points`.
+ */
+function pendingValue(rules: Rules, pick: PickResult): number {
+  if (pick.outcome !== "pending") return 0;
+  return rules.pointsPerCorrectPick * (pick.locked ? rules.lockMultiplier : 1);
+}
+
+/**
  * Picks, locks and guesses indexed by member once per week, so scoring a member
  * is a lookup rather than a scan of every other member's rows.
  */
@@ -107,10 +117,12 @@ function scoreMember(
       : { gameId: lockGameId, dropped: index.voidGameIds.has(lockGameId) };
   const tiebreakerGuess = index.guesses.get(member.id) ?? null;
   const tiebreakerError = tiebreakerTotal === null ? null : Math.abs((tiebreakerGuess ?? 0) - tiebreakerTotal);
+  const points = picks.reduce((sum, p) => sum + p.points, 0);
   return {
     memberId: member.id,
     played,
-    points: picks.reduce((sum, p) => sum + p.points, 0),
+    points,
+    maxPoints: points + picks.reduce((sum, p) => sum + pendingValue(rules, p), 0),
     correct: picks.filter((p) => p.outcome === "correct").length,
     incorrect: picks.filter((p) => p.outcome === "incorrect").length,
     pending: picks.filter((p) => p.outcome === "pending").length,
