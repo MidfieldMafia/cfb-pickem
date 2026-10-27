@@ -1,0 +1,33 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-26T15:00:00Z" },
+  "title": "Max Weekly Score (#488)",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 844, "title": "A · Leaderboard: a Max column", "is_interactive": true },
+    "CList.dc.html": { "x": 940, "y": 0, "w": 390, "h": 844, "title": "C · Leaderboard: /80 inside the points", "is_interactive": true },
+    "ALive.dc.html": { "x": 0, "y": 1300, "w": 390, "h": 844, "title": "A alone · Live Board: the card as on main", "is_interactive": true },
+    "BLive.dc.html": { "x": 470, "y": 1300, "w": 390, "h": 844, "title": "B · Live Board: max in the detail line", "is_interactive": true },
+    "CLive.dc.html": { "x": 940, "y": 1300, "w": 390, "h": 844, "title": "C · Live Board: /80 inside the figure", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "CList.dc.html", "ALive.dc.html", "BLive.dc.html", "CLive.dc.html"],
+  "notes": {
+    "row1": { "kind": "title1", "text": "Where the max possible Weekly Score shows", "x": 0, "y": -330, "maxW": 1330 },
+    "a": { "fill": "gray", "text": "A · The Week list gets its own Max column right of the points, in the row's grid. Tweaks: header row on or off, the max's look, and what a member who sat out shows.", "w": 390, "x": 0, "y": -110 },
+    "b": { "fill": "gray", "text": "B only touches the Live Board card, so on the Leaderboard it pairs with A (or with nothing). Its board is below.", "w": 390, "x": 470, "y": 0 },
+    "c": { "fill": "gray", "text": "C · No new column and no new line: the max rides inside the points, small and muted, on both screens.", "w": 390, "x": 940, "y": -110 },
+    "row2": { "fill": "gray", "text": "Live Board, sticky YourRank card. All three keep the card at main's height: B and C put the max in a slot the card already has.", "w": 1330, "x": 0, "y": 1190 },
+    "how": { "fill": "orange", "text": "Week 8, 8 games: 5 final, 1 live, 2 to kick off. 10 a Pick, a Lock doubles. Max = points now + every Pick still pending coming in. Dee 50 (Lock won) max 80. Sam (you) 40, Lock pending, max 80. Marcus 30 (Lock lost) max 60. Kim 30, skipped two games, max 50. Ray 20, Lock pending, max 60: below Kim on points, above Kim on max. Tasha sat the Week out. Press Play, then the dashed button at the bottom of each board to see the Week complete: the max goes away.", "w": 340, "x": 1410, "y": 0 },
+    "open": { "fill": "blue", "text": "Calls for Jonah and Alex: (1) A, B, C or a mix, A+B likely. (2) A's header row (W–L · Pts · Max) or no header. (3) The max's look: small muted Manrope, or muted Chivo like the points. (4) Sat out: –, 0 or blank. (5) With A, does the Live Board show the max at all, or does the card's link to /leaderboard?week=8 cover it (board 'A alone')? (6) B's detail copy: '4–1 · max 80', '4–1 so far · max 80' or 'max 80' (Tweaks on the B board).", "w": 340, "x": 1410, "y": 560 }
+  },
+  "designSystems": [
+    {
+      "title": "Saturday Slate Design System",
+      "namespace": "saturdayslatedesignsystem",
+      "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU",
+      "version": "1792811404-d4d4",
+      "copiedAt": "2026-10-26T15:00:00Z"
+    }
+  ]
+}

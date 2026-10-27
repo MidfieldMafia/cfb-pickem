@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Max A alone: Live Board card as on main</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--background); font-family: var(--font-sans); color: var(--foreground); display: flex; flex-direction: column; gap: 12px;">
+
+  <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Live Board" sub="{{sub}}" right="{{menu}}"></x-import>
+
+  <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 16px 12px; border-bottom: 1px solid var(--border);">
+    <sc-if value="{{inProgress}}" hint-placeholder-val="{{true}}">
+      <p style="margin: 0; display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground);">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+        Updated 1 min ago · next check in 28 sec
+      </p>
+    </sc-if>
+    <x-import component-from-global-scope="SaturdaySlateDesignSystem.StandingCard" leading="{{lead}}" label="You · Week 8" detail="{{detail}}" place="2nd of 6" figure="{{figure}}" href="#" aria-label="{{aria}}"></x-import>
+  </div>
+
+  <ul style="list-style: none; margin: 0; padding: 0 16px; display: flex; flex-direction: column; gap: 12px;">
+    <sc-for list="{{games}}" as="g" hint-placeholder-count="4">
+      <li style="border: 1px solid var(--border); border-radius: 14px; background: {{g.bg}}; padding: 12px; display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; color: var(--muted-foreground);">
+          <sc-if value="{{g.isLive}}" hint-placeholder-val="{{false}}">
+            <x-import component-from-global-scope="SaturdaySlateDesignSystem.Badge" variant="live">Live</x-import>
+          </sc-if>
+          <span style="flex: 1;">{{g.status}}</span>
+        </div>
+        <sc-for list="{{g.sides}}" as="s" hint-placeholder-count="2">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="{{s.ring}}"></span>
+            <span style="{{s.nameStyle}}">{{s.team}}</span>
+            <span style="{{s.scoreStyle}}">{{s.score}}</span>
+          </div>
+        </sc-for>
+      </li>
+    </sc-for>
+  </ul>
+
+  <button type="button" onClick="{{toggle}}" style="position: absolute; left: 16px; right: 16px; bottom: 92px; height: 36px; border: 1px dashed #5c5246; border-radius: 6px; background: #e8e3d6; color: #3d362e; font: 600 13px/18px var(--font-sans); cursor: pointer;">{{toggleNote}}</button>
+
+  <x-import component-from-global-scope="SaturdaySlateDesignSystem.BottomNav" tabs="{{tabs}}"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { complete: false };
+  }
+  icon(parts) {
+    const h = window.React.createElement;
+    return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+      parts.map((p, i) => h(p[0], Object.assign({ key: i }, p[1]))));
+  }
+  games(complete) {
+    // Your pick is the ringed side: hollow pine while in play, as the Live Board's PickMark.
+    const side = (team, score, picked, dim) => ({
+      team: team,
+      score: score,
+      ring: 'width: 14px; height: 14px; flex-shrink: 0; box-sizing: border-box; border-radius: 999px;' + (picked ? ' border: 2px solid var(--primary);' : ''),
+      nameStyle: 'flex: 1; min-width: 0; font: 900 16px/22px var(--font-display);' + (dim ? ' color: var(--muted-foreground);' : ''),
+      scoreStyle: 'font: 900 18px/22px var(--font-display); font-variant-numeric: tabular-nums;' + (dim ? ' color: var(--muted-foreground);' : '')
+    });
+    const card = (status, isLive, sides, settled) => ({ status: status, isLive: isLive, sides: sides, bg: settled ? 'var(--settled)' : 'var(--card)' });
+    if (complete) {
+      return [
+        card('Final', false, [side('Oklahoma', '17', false, true), side('Texas', '27', true, false)], true),
+        card('Final', false, [side('Georgia', '24', true, false), side('Alabama', '20', false, true)], true),
+        card('Final', false, [side('Oregon', '31', false, false), side('USC', '28', true, true)], true),
+        card('Final', false, [side('Ohio State', '35', true, false), side('Penn State', '14', false, true)], true)
+      ];
+    }
+    return [
+      card('Q3 · 4:12 · ABC', true, [side('Oklahoma', '17', false, true), side('Texas', '21', true, false)], false),
+      card('Sat 7:30 PM · ESPN', false, [side('Georgia', '', true, false), side('Alabama', '', false, false)], false),
+      card('Sat 7:30 PM · NBC', false, [side('Oregon', '', false, false), side('USC', '', true, false)], false),
+      card('Final', false, [side('Ohio State', '35', true, false), side('Penn State', '14', false, true)], true)
+    ];
+  }
+  renderVals() {
+    const DS = window.SaturdaySlateDesignSystem || {};
+    const h = window.React.createElement;
+    const complete = this.state.complete;
+    const d = { flag: 'pine', pattern: 'sash', patternColor: 'gold', pole: 'tan', bg: 'auto' };
+    const avatar = DS.pennantDataUri ? { name: 'Sam', file: DS.pennantDataUri(d), color: DS.pennantTint(d), kind: 'flag' } : undefined;
+    const tabs = [
+      { href: '#', label: 'Picks', active: false, icon: this.icon([['rect', { x: 3, y: 11, width: 18, height: 11, rx: 2, ry: 2 }], ['path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' }]]) },
+      { href: '#', label: 'Live Board', active: true, icon: this.icon([['path', { d: 'M4.9 19.1C1 15.2 1 8.8 4.9 4.9' }], ['path', { d: 'M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5' }], ['circle', { cx: 12, cy: 12, r: 2 }], ['path', { d: 'M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5' }], ['path', { d: 'M19.1 4.9C23 8.8 23 15.1 19.1 19' }]]) },
+      { href: '#', label: 'Leaderboard', active: false, icon: this.icon([['path', { d: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6' }], ['path', { d: 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18' }], ['path', { d: 'M4 22h16' }], ['path', { d: 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' }], ['path', { d: 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' }], ['path', { d: 'M18 2H6v7a6 6 0 0 0 12 0V2Z' }]]) },
+      { href: '#', label: 'Chat', active: false, icon: this.icon([['path', { d: 'M7.9 20A9 9 0 1 0 4 16.1L2 22Z' }]]) }
+    ];
+    const points = complete ? 60 : 40;
+    return {
+      sub: complete ? 'Week 8 · Final' : 'Week 8 · Picks revealed',
+      menu: DS.MemberMenu ? h(DS.MemberMenu, { avatar: avatar, displayName: 'Sam', group: 'Midfield Mafia' }) : null,
+      lead: DS.Pennant ? h(DS.Pennant, { avatar: avatar, name: 'Sam', size: 40 }) : null,
+      inProgress: !complete,
+      // As on main: no max on the card. The whole card already opens /leaderboard?week=8.
+      detail: complete ? '5–3 so far' : '4–1 so far',
+      figure: points + ' pts',
+      aria: 'You are 2nd of 6 in Week 8 with ' + points + ' pts. Open Week 8 on the Leaderboard',
+      games: this.games(complete),
+      toggle: () => this.setState({ complete: !complete }),
+      toggleNote: complete ? 'Prototype: Week complete. Tap for in progress' : 'Prototype: Week in progress. Tap for complete',
+      tabs: tabs
+    };
+  }
+}
+</script>
+</body>
+</html>

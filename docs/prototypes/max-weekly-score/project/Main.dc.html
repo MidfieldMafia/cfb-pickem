@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Max A: Leaderboard Max column</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--background); font-family: var(--font-sans); color: var(--foreground); display: flex; flex-direction: column; gap: 16px;">
+
+  <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Leaderboard" sub="{{sub}}" right="{{menu}}"></x-import>
+
+  <nav aria-label="Standings" style="display: flex; gap: 4px; padding: 0 16px 2px; overflow: hidden;">
+    <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
+      <a href="#" aria-label="{{t.label}}" style="{{t.box}}">
+        <span style="{{t.capStyle}}">{{t.caption}}</span>
+        <span style="{{t.titleStyle}}">{{t.title}}</span>
+        <span style="{{t.placeStyle}}">{{t.place}}</span>
+      </a>
+    </sc-for>
+  </nav>
+
+  <sc-if value="{{inProgress}}" hint-placeholder-val="{{true}}">
+    <div style="padding: 0 16px;">
+      <a href="#" style="display: flex; min-height: 56px; box-sizing: border-box; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--foreground); text-decoration: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><circle cx="12" cy="12" r="2"></circle><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path></svg>
+        <span style="flex: 1; font: 700 14px/20px var(--font-sans);">1 game live · 2 to kick off</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--muted-foreground);"><path d="m9 18 6-6-6-6"></path></svg>
+      </a>
+    </div>
+  </sc-if>
+
+  <section style="padding: 0 16px;">
+    <div style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); overflow: hidden;">
+      <sc-if value="{{showHeader}}" hint-placeholder-val="{{true}}">
+        <div aria-hidden="true" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground);">
+          <span style="flex: 1;"></span>
+          <span style="width: 36px; text-align: right;">W–L</span>
+          <span style="width: 40px; text-align: right;">Pts</span>
+          <sc-if value="{{inProgress}}" hint-placeholder-val="{{true}}">
+            <span style="width: 32px; text-align: right;">Max</span>
+          </sc-if>
+        </div>
+      </sc-if>
+      <ul style="list-style: none; margin: 0; padding: 0;">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+          <li style="{{r.rowStyle}}">
+            <span style="width: 16px; font-size: 14px; line-height: 20px; color: var(--muted-foreground);">{{r.place}}</span>
+            <x-import component-from-global-scope="SaturdaySlateDesignSystem.Pennant" avatar="{{r.avatar}}" name="{{r.name}}" size="{{r.size}}"></x-import>
+            <span style="min-width: 0; flex: 1; display: block;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</span>
+                <sc-if value="{{r.you}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: var(--muted-foreground);">you</span></sc-if>
+              </span>
+              <sc-if value="{{r.won}}" hint-placeholder-val="{{false}}">
+                <x-import component-from-global-scope="SaturdaySlateDesignSystem.Badge" variant="leader" style="margin-top: 2px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+                  Weekly Win
+                </x-import>
+              </sc-if>
+            </span>
+            <span style="width: 36px; text-align: right; font-size: 14px; line-height: 20px; color: var(--muted-foreground); font-variant-numeric: tabular-nums;">{{r.record}}</span>
+            <span style="width: 40px; text-align: right; font: 900 18px/28px var(--font-display); font-variant-numeric: tabular-nums;">{{r.points}}</span>
+            <sc-if value="{{inProgress}}" hint-placeholder-val="{{true}}">
+              <span aria-label="{{r.maxLabel}}" style="{{maxStyle}}">{{r.max}}</span>
+            </sc-if>
+          </li>
+        </sc-for>
+      </ul>
+    </div>
+    <p style="margin: 0; padding-top: 12px; font-size: 14px; line-height: 20px; color: var(--muted-foreground);">{{won}}</p>
+  </section>
+
+  <sc-if value="{{complete}}" hint-placeholder-val="{{false}}">
+    <div style="padding: 0 16px;">
+      <a href="#" style="display: flex; min-height: 56px; box-sizing: border-box; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--foreground); text-decoration: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        <span style="flex: 1; display: grid;">
+          <span style="font: 700 14px/20px var(--font-sans);">Week 8 Reveal</span>
+          <span style="font-size: 12px; line-height: 16px; color: var(--muted-foreground);">Your picks, and every Member’s, game by game</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--muted-foreground);"><path d="m9 18 6-6-6-6"></path></svg>
+      </a>
+    </div>
+  </sc-if>
+
+  <div style="display: flex; flex-direction: column; padding: 0 16px;">
+    <a href="#" style="min-height: 44px; display: flex; align-items: center; font: 600 14px/20px var(--font-sans); text-decoration: underline;">How scoring and ties work</a>
+  </div>
+
+  <button type="button" onClick="{{toggle}}" style="position: absolute; left: 16px; right: 16px; bottom: 92px; height: 36px; border: 1px dashed #5c5246; border-radius: 6px; background: #e8e3d6; color: #3d362e; font: 600 13px/18px var(--font-sans); cursor: pointer;">{{toggleNote}}</button>
+
+  <x-import component-from-global-scope="SaturdaySlateDesignSystem.BottomNav" tabs="{{tabs}}"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"header":{"editor":"enum","options":["row","none"],"default":"row","section":"Max column"},"maxLook":{"editor":"enum","options":["small muted","muted like the points"],"default":"small muted","section":"Max column"},"satOut":{"editor":"enum","options":["–","0","blank"],"default":"–","section":"Max column"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { complete: false };
+  }
+  icon(parts) {
+    const h = window.React.createElement;
+    return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+      parts.map((p, i) => h(p[0], Object.assign({ key: i }, p[1]))));
+  }
+  renderVals() {
+    const DS = window.SaturdaySlateDesignSystem || {};
+    const h = window.React.createElement;
+    const complete = this.state.complete;
+    const header = this.props.header ?? 'row';
+    const look = this.props.maxLook ?? 'small muted';
+    const satOut = this.props.satOut ?? '–';
+    const mark = (name, d) => (DS.pennantDataUri ? { name: name, file: DS.pennantDataUri(d), color: DS.pennantTint(d), kind: 'flag' } : undefined);
+    // Week 8: 8 games, 5 final, 1 live, 2 to kick off. 10 a Pick, a Lock doubles.
+    const members = [
+      { name: 'Dee', d: { flag: 'maroon', pattern: 'chevrons', patternColor: 'cream', pole: 'ink', bg: 'auto' }, live: [1, '4–1', 50, 80], final: [1, '6–2', 70], won: true },
+      { name: 'Sam', you: true, d: { flag: 'pine', pattern: 'sash', patternColor: 'gold', pole: 'tan', bg: 'auto' }, live: [2, '4–1', 40, 80], final: [2, '5–3', 60] },
+      { name: 'Marcus', d: { flag: 'sky', pattern: 'star', patternColor: 'cream', pole: 'ink', bg: 'auto' }, live: [3, '3–2', 30, 60], final: [4, '4–4', 40] },
+      { name: 'Kim', d: { flag: 'copper', pattern: 'tip', patternColor: 'ink', pole: 'stone', bg: 'auto' }, live: [3, '3–1', 30, 50], final: [4, '4–2', 40] },
+      { name: 'Ray', d: { flag: 'moss', pattern: 'dot', patternColor: 'cream', pole: 'ink', bg: 'auto' }, live: [5, '2–3', 20, 60], final: [3, '4–4', 50] },
+      { name: 'Tasha', out: true, d: { flag: 'slate', pattern: 'cross', patternColor: 'cream', pole: 'gold', bg: 'auto' }, live: [6, '0–0', 0, 0], final: [6, '0–0', 0] }
+    ];
+    const rows = members
+      .map((m) => {
+        const s = complete ? m.final : m.live;
+        const max = m.out ? (satOut === 'blank' ? '' : satOut) : String(m.live[3]);
+        return {
+          name: m.name,
+          you: !!m.you,
+          won: complete && !!m.won,
+          avatar: mark(m.name, m.d),
+          size: 28,
+          place: s[0],
+          record: s[1],
+          points: s[2],
+          max: max,
+          maxLabel: m.out ? 'Sat the Week out' : 'Max ' + m.live[3],
+          rowStyle: 'display: flex; align-items: center; gap: 8px; padding: 12px; border-top: 1px solid var(--border);' + (m.you ? ' background: var(--muted);' : '')
+        };
+      })
+      .sort((a, b) => a.place - b.place);
+    rows[0].rowStyle = rows[0].rowStyle.replace('border-top: 1px solid var(--border);', '');
+    const maxStyle = look === 'small muted'
+      ? 'width: 32px; text-align: right; font: 600 14px/20px var(--font-sans); color: var(--muted-foreground); font-variant-numeric: tabular-nums;'
+      : 'width: 32px; text-align: right; font: 900 18px/28px var(--font-display); color: var(--muted-foreground); font-variant-numeric: tabular-nums;';
+    const tile = (caption, title, place, opts) => {
+      const cur = !!opts.current;
+      const season = !!opts.season;
+      return {
+        caption: caption,
+        title: title,
+        place: place,
+        label: opts.label,
+        box: 'display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; flex-shrink: 0; height: 64px; width: ' + (season ? 64 : 48) + 'px; box-sizing: border-box; border-radius: 6px; text-decoration: none; border: 1px solid ' + (cur ? 'var(--primary)' : 'var(--border)') + '; background: ' + (cur ? 'var(--primary)' : 'var(--card)') + '; color: ' + (cur ? 'var(--primary-foreground)' : 'var(--foreground)') + ';',
+        capStyle: 'font: 700 11px/12px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: ' + (cur ? 'var(--primary-foreground)' : 'var(--secondary)') + ';',
+        titleStyle: 'font: 900 ' + (season ? '12px' : '22px') + '/24px var(--font-display);',
+        placeStyle: 'height: 16px; font: 700 12px/16px var(--font-sans); color: ' + (cur ? 'var(--primary-foreground)' : 'var(--muted-foreground)') + ';'
+      };
+    };
+    const tiles = [
+      tile('2026', 'Season', '3rd', { season: true, label: 'Season, 3rd' }),
+      tile('Week', '8', '2nd', { current: true, label: 'Week 8, 2nd' }),
+      tile('Week', '7', '1st', { label: 'Week 7, 1st' }),
+      tile('Week', '6', '4th', { label: 'Week 6, 4th' }),
+      tile('Week', '5', '2nd', { label: 'Week 5, 2nd' }),
+      tile('Week', '4', '5th', { label: 'Week 4, 5th' }),
+      tile('Week', '3', '3rd', { label: 'Week 3, 3rd' })
+    ];
+    const sam = members[1];
+    const tabs = [
+      { href: '#', label: 'Picks', active: false, icon: this.icon([['rect', { x: 3, y: 11, width: 18, height: 11, rx: 2, ry: 2 }], ['path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' }]]) },
+      { href: '#', label: 'Live Board', active: false, icon: this.icon([['path', { d: 'M4.9 19.1C1 15.2 1 8.8 4.9 4.9' }], ['path', { d: 'M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5' }], ['circle', { cx: 12, cy: 12, r: 2 }], ['path', { d: 'M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5' }], ['path', { d: 'M19.1 4.9C23 8.8 23 15.1 19.1 19' }]]) },
+      { href: '#', label: 'Leaderboard', active: true, icon: this.icon([['path', { d: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6' }], ['path', { d: 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18' }], ['path', { d: 'M4 22h16' }], ['path', { d: 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' }], ['path', { d: 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' }], ['path', { d: 'M18 2H6v7a6 6 0 0 0 12 0V2Z' }]]) },
+      { href: '#', label: 'Chat', active: false, icon: this.icon([['path', { d: 'M7.9 20A9 9 0 1 0 4 16.1L2 22Z' }]]) }
+    ];
+    return {
+      sub: complete ? '2026 · Week 8 · Final' : '2026 · Week 8 · In progress',
+      menu: DS.MemberMenu ? h(DS.MemberMenu, { avatar: mark('Sam', sam.d), displayName: 'Sam', group: 'Midfield Mafia' }) : null,
+      tiles: tiles,
+      complete: complete,
+      inProgress: !complete,
+      showHeader: header === 'row',
+      rows: rows,
+      maxStyle: maxStyle,
+      won: complete ? 'Dee took the week with 70.' : 'Dee leads with 50.',
+      toggle: () => this.setState({ complete: !complete }),
+      toggleNote: complete ? 'Prototype: Week complete. Tap for in progress' : 'Prototype: Week in progress. Tap for complete',
+      tabs: tabs
+    };
+  }
+}
+</script>
+</body>
+</html>
