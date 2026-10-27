@@ -24,4 +24,11 @@ A dashed button on each one switches the Week to complete:
 
 None of these makes the YourRank card taller than on main.
 
-Verdict: pending.
+Verdict (Jonah, 2026-10-27): A on the Leaderboard, and the Live Board left
+as on main (`ALive.dc.html`). On A:
+- The header row `W–L · Pts · Max` shows while the Week is in progress and goes
+  with the Max column once it is complete.
+- The max is small muted text: 14px Manrope semibold in `muted-foreground`.
+- A member who sat the Week out shows `0`.
+
+B and C were not chosen.
