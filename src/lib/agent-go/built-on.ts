@@ -15,12 +15,32 @@ export function formatTokens(n: number): string {
   return `${trim(n / 1_000_000)}M`;
 }
 
-/** `Jev level 5, confidence 0.4, 1.1k tokens, below 0.7 so level 4`, or the error. */
+/**
+ * What Jev answered and how the call went, for retuning the levels (#516):
+ * `levels 0.1/0.1/0.15/0.25/0.4, jev-1.14.0, HTTP 200 in 2.3 s`, with
+ * `after 2 tries` when it was retried. Each part only when it is known.
+ */
+function jevLog(route: Route): string {
+  const parts: string[] = [];
+  if (route.probabilities) parts.push(`levels ${route.probabilities.map((p) => String(Number(p.toFixed(2)))).join("/")}`);
+  if (route.jevModel) parts.push(route.jevModel);
+  if (route.call) {
+    const { status, ms, attempts } = route.call;
+    const seconds = (ms / 1000).toFixed(1).replace(/\.0$/, "");
+    const tries = attempts > 1 ? ` after ${attempts} tries` : "";
+    parts.push(`${status === null ? "no reply" : `HTTP ${status}`} in ${seconds} s${tries}`);
+  }
+  return parts.map((part) => `, ${part}`).join("");
+}
+
+/** `Jev level 5, confidence 0.4, 1.1k tokens, below 0.7 so level 4, levels …, jev-1.14.0, HTTP 200 in 2.3 s`, or the error. */
 export function jevPart(route: Route): string {
-  if (route.reason === "jev-error" || !route.jev) return `Jev error: ${route.error ?? "unknown"}, routine default`;
+  if (route.reason === "jev-error" || !route.jev) {
+    return `Jev error: ${route.error ?? "unknown"}, routine default${jevLog(route)}`;
+  }
   const { level, confidence, inputTokens, outputTokens } = route.jev;
   const base = `Jev level ${level}, confidence ${confidence}, ${formatTokens(inputTokens + outputTokens)} tokens`;
-  return route.reason === "low-confidence" ? `${base}, below 0.7 so level 4` : base;
+  return `${route.reason === "low-confidence" ? `${base}, below 0.7 so level 4` : base}${jevLog(route)}`;
 }
 
 const LINE = /^Built on:.*$/m;

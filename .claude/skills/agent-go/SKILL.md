@@ -71,11 +71,17 @@ an Agent Brief, the comments that are a brief or spec, the parent map's title,
 and each path the brief names with its line count; no file contents), asks the
 question below, applies the table, and prints the route as one JSON line, saved
 to `/tmp/agent-go-route-<issue number>.json`. The key is a network secret the
-proxy adds, so the run never sees it. It never stops the run over Jev: on a
-refused key, a network error, a non-200 or an answer it cannot read, it
-prints the routine's default (level 1, Sonnet medium) with
-`"reason":"jev-error"` and the `error`. If the command itself fails, build on
-that default and say so.
+proxy adds, so the run never sees it. It asks the pinned `jev-1.14.0`, and
+retries a 429, a 529 or a network error up to three tries with backoff,
+honouring `retry-after`; an answer is never asked again, however unsure. It
+never stops the run over Jev: on a refused key, a network error, a non-200 or
+an answer it cannot read, it prints the routine's default (level 1, Sonnet
+medium) with `"reason":"jev-error"` and the `error`. Confidence 0 is no error:
+TypeSafe floors it at 0 for a wide spread, so it takes the 0.7 floor to level 4;
+only probabilities that do not sum to about 1 are "Jev's answer was empty". The
+JSON also keeps Jev's five `probabilities`, its `jevModel` and the `call`'s
+status, time and tries. If the command itself fails, build on that default and
+say so.
 
 Then comment on the issue that the build has started, and on what:
 `Build started on opus / medium: Jev level 2, confidence 0.55, below 0.7 so level 4.`
@@ -358,7 +364,11 @@ for example `Built on: claude-opus-5-5 / medium (Jev level 4, confidence 0.82, 1
   `effort unknown`, never a guess.
 - **Jev**: `Jev level <n>, confidence <c>, <input + output> tokens`, adding
   `, below 0.7 so level 4` when the floor moved it; on an error,
-  `Jev error: <error>, routine default`. These come from the saved route.
+  `Jev error: <error>, routine default`. Either is followed by what Jev
+  answered and how the call went, each part when known:
+  `, levels 0.1/0.1/0.15/0.25/0.4, jev-1.14.0, HTTP 200 in 2.3 s`, with
+  ` after <n> tries` when it was retried. The levels are retuned from these.
+  All of it comes from the saved route.
 - **Tokens and tool calls**: each leg's `subagent_tokens` and `tool_uses`,
   summed, as `640k` or `1.9M`. The orchestrator's own are not visible to it,
   which the line says.

@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
-import { escalate, jevRequest, jevState, namedPaths, readSkill, route, routeOnError, type Tier } from "./route";
+import { escalate, jevRequest, jevState, namedPaths, readSkill, route, routeOnError, sendWithRetry, type Tier } from "./route";
 
 const TIERS: Tier[] = [
   { level: 1, model: "sonnet", effort: "medium" },
@@ -20,7 +20,7 @@ const TIERS: Tier[] = [
 /** Jev's answer to the difficulty question, its levels numbered from 0. */
 function answer(probabilities: number[], confidence: number) {
   return {
-    model: "jev-1.13.0",
+    model: "jev-1.14.0",
     answers: {
       difficulty: {
         type: "score",
@@ -94,9 +94,109 @@ describe("route", () => {
     expect(route(answer([0.5, 0.5], 0.9), TIERS).reason).toBe("jev-error");
   });
 
-  test("an empty answer, confidence 0 or every level at 0, is an error and not an unsure verdict", () => {
-    expect(route(answer([0, 0, 0, 0, 1], 0), TIERS)).toMatchObject({ reason: "jev-error", error: "Jev's answer was empty" });
-    expect(route(answer([0, 0, 0, 0, 0], 0.9), TIERS).reason).toBe("jev-error");
+  test("confidence 0 on a spread that sums to 1 is unsure, not empty: level 4 and no error (#516)", () => {
+    // TypeSafe floors Score confidence at 0 when the spread is as wide as an even one.
+    const r = route(answer([0.1, 0.1, 0.15, 0.25, 0.4], 0), TIERS);
+    expect(r).toMatchObject({ level: 4, model: "opus", effort: "medium", reason: "low-confidence", jev: { level: 5, confidence: 0 } });
+    expect(r.error).toBeUndefined();
+    expect(route(answer([0.2, 0.2, 0.2, 0.2, 0.2], 0), TIERS).reason).toBe("low-confidence");
+  });
+
+  test("probabilities that do not sum to about 1 are an empty answer, whatever the confidence", () => {
+    expect(route(answer([0, 0, 0, 0, 0], 0), TIERS)).toMatchObject({ reason: "jev-error", error: "Jev's answer was empty" });
+    expect(route(answer([0, 0, 0, 0, 0], 0.9), TIERS)).toMatchObject({ reason: "jev-error", error: "Jev's answer was empty" });
+    expect(route(answer([0.3, 0.3, 0.3, 0.3, 0.3], 0.8), TIERS).reason).toBe("jev-error");
+  });
+
+  test("rounding in Jev's probabilities is not an empty answer", () => {
+    expect(route(answer([0.33, 0.33, 0.33, 0, 0], 0.4), TIERS).reason).toBe("low-confidence");
+  });
+
+  test("keeps Jev's five probabilities and the model that answered, even on an answer called empty", () => {
+    const r = route(answer([0, 0.1, 0.8, 0.1, 0], 0.82), TIERS);
+    expect(r.jevModel).toBe("jev-1.14.0");
+    expect(r.probabilities).toEqual([0, 0.1, 0.8, 0.1, 0]);
+    expect(route(answer([0, 0, 0, 0, 0], 0), TIERS).probabilities).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  test("the call's status, time and attempts ride along on the route", () => {
+    const call = { status: 200, ms: 2300, attempts: 2 };
+    expect(route(answer([0, 0.1, 0.8, 0.1, 0], 0.82), TIERS, call).call).toEqual(call);
+    expect(routeOnError("HTTP 529 from Jev", TIERS, { status: 529, ms: 9000, attempts: 3 }).call).toMatchObject({ status: 529 });
+  });
+});
+
+describe("sendWithRetry", () => {
+  /** A reply with this status and, optionally, a `retry-after` header. */
+  function reply(status: number, retryAfter?: string) {
+    return { status, headers: { get: (name: string) => (name.toLowerCase() === "retry-after" ? (retryAfter ?? null) : null) } };
+  }
+
+  /** Sends the scripted replies in order (an Error is thrown), recording every wait. */
+  function harness(script: (ReturnType<typeof reply> | Error)[]) {
+    const waits: number[] = [];
+    let clock = 0;
+    let sent = 0;
+    const send = async () => {
+      const next = script[sent++];
+      clock += 100;
+      if (next instanceof Error) throw next;
+      return next;
+    };
+    const sleep = async (ms: number) => {
+      waits.push(ms);
+      clock += ms;
+    };
+    return { send, waits, sent: () => sent, opts: { sleep, now: () => clock } };
+  }
+
+  test("a 429 is retried with backoff until Jev answers", async () => {
+    const h = harness([reply(429), reply(429), reply(200)]);
+    const result = await sendWithRetry(h.send, h.opts);
+    expect(result).toMatchObject({ reply: { status: 200 }, call: { status: 200, attempts: 3 } });
+    expect(h.waits).toEqual([1000, 2000]);
+    expect(result.call.ms).toBe(3300);
+  });
+
+  test("a 529 honours retry-after, in seconds or as a date", async () => {
+    const h = harness([reply(529, "5"), reply(200)]);
+    await sendWithRetry(h.send, h.opts);
+    expect(h.waits).toEqual([5000]);
+
+    // The clock reads 100 ms when the first reply is in, so a date 9 s after epoch is 8.9 s away.
+    const dated = harness([reply(529, new Date(9000).toUTCString()), reply(200)]);
+    await sendWithRetry(dated.send, dated.opts);
+    expect(dated.waits).toEqual([8900]);
+  });
+
+  test("a network error is retried, and the reply after it kept", async () => {
+    const h = harness([new TypeError("fetch failed"), reply(200)]);
+    expect(await sendWithRetry(h.send, h.opts)).toMatchObject({ reply: { status: 200 }, call: { attempts: 2 } });
+  });
+
+  test("gives up after three tries with the last reply or error", async () => {
+    const busy = harness([reply(529), reply(529), reply(529), reply(200)]);
+    expect(await sendWithRetry(busy.send, busy.opts)).toMatchObject({ reply: { status: 529 }, call: { status: 529, attempts: 3 } });
+    expect(busy.sent()).toBe(3);
+
+    const down = harness([new TypeError("a"), new TypeError("b"), new TypeError("c")]);
+    const result = await sendWithRetry(down.send, down.opts);
+    expect(result).toMatchObject({ call: { status: null, attempts: 3 } });
+    expect("thrown" in result && (result.thrown as Error).message).toBe("c");
+  });
+
+  test("a retry-after longer than the run can wait is not waited for", async () => {
+    const h = harness([reply(429, "120"), reply(200)]);
+    expect(await sendWithRetry(h.send, h.opts)).toMatchObject({ reply: { status: 429 }, call: { attempts: 1 } });
+    expect(h.waits).toEqual([]);
+  });
+
+  test("an answer, a refused key, another error status or a timeout is never retried", async () => {
+    for (const first of [reply(200), reply(401), reply(500), new DOMException("timed out", "TimeoutError")]) {
+      const h = harness([first, reply(200)]);
+      await sendWithRetry(h.send, h.opts);
+      expect(h.sent()).toBe(1);
+    }
   });
 });
 
@@ -212,10 +312,10 @@ describe("jevState", () => {
 });
 
 describe("jevRequest", () => {
-  test("asks one Score question on jev-latest with the skill's levels as criteria", () => {
+  test("asks one Score question on the pinned jev-1.14.0, not the moving jev-latest, with the skill's levels as criteria", () => {
     const state = jevState({ issue: { title: "t", body: "b", labels: [] }, comments: [], parentMap: null, lineCount: () => null });
     expect(jevRequest(state, "How hard?", ["a", "b", "c", "d", "e"])).toEqual({
-      model: "jev-latest",
+      model: "jev-1.14.0",
       state,
       questions: { difficulty: { type: "score", instructions: "How hard?", criteria: ["a", "b", "c", "d", "e"] } },
     });
