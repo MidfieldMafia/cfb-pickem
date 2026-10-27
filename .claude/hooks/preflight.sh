@@ -20,111 +20,22 @@ set -u
 payload=$(cat)
 
 # Decide whether to gate at all, and find the directory the push runs in.
-# Commits, and read-only git commands, pass straight through.
+# Commits, read-only git commands, and text that only mentions a push (a heredoc
+# body, a quoted message) pass straight through. decide-target.cjs holds the
+# parsing and why; src/push-gate.test.ts holds its cases.
 #
-# This asks whether a segment of the command *invokes* `git push`, rather than
-# whether the words "git" and "push" both appear. Matching the raw string got this
-# wrong in both directions: it blocked read-only commands that merely named this
-# repo's own `chore/push-gate-and-worktree-skills` branch, and it let a real
-# `git -C <path> push` through, because the subcommand is not adjacent to `git`.
-#
-# The script lives in a function rather than directly inside `$(...)`: bash 3.2
-# (macOS's /bin/bash) does not parse the inside of a command substitution, it
-# scans it for a matching paren while honouring quotes, so a stray apostrophe or
-# backtick in the JavaScript turned the rest of this file into an unterminated
-# string. A function body goes through the real parser.
+# Next to this file, so the gate uses the main checkout's copy even in a worktree
+# cut before the script existed.
 decide_target() {
-  PAYLOAD="$payload" node <<'JS'
-const p = (() => {
-  try { return JSON.parse(process.env.PAYLOAD || "{}"); } catch { return {}; }
-})();
-const cmd = (p.tool_input && p.tool_input.command) || "";
-const path = require("node:path");
-
-// git's own options that swallow the following token, so we do not read their
-// value as the subcommand.
-const OPTS_WITH_VALUE = new Set([
-  "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
-  "--super-prefix", "--config-env",
-]);
-// Wrappers that can precede the real command word.
-const PREFIXES = /^(?:sudo|command|time|env|nohup|exec|builtin)$/;
-
-const unquote = (t) => t.replace(/^["\x27]|["\x27]$/g, "");
-
-function tokensOf(segment) {
-  // Command substitution and grouping punctuation are not part of the command word.
-  const seg = segment.replace(/^[\s({]+/, "");
-  return seg.trim().match(/(?:[^\s"\x27]+|"[^"]*"|\x27[^\x27]*\x27)+/g) || [];
-}
-
-// The directory a `cd` segment moves to, or null for any other segment.
-function cdTarget(segment) {
-  const tokens = tokensOf(segment).map(unquote);
-  if (tokens[0] !== "cd" || !tokens[1] || tokens[1] === "-") return null;
-  return tokens[1].replace(/^~(?=\/|$)/, process.env.HOME || "~");
-}
-
-// null when the segment is not a `git push`; otherwise the `git -C` directory
-// it names, or "" for none.
-function pushDir(segment) {
-  const tokens = tokensOf(segment);
-  let i = 0;
-  while (i < tokens.length &&
-         (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[i]) || PREFIXES.test(unquote(tokens[i])))) {
-    i++;
-  }
-  if (i >= tokens.length) return null;
-  const cmdWord = unquote(tokens[i]).replace(/\.exe$/i, "");
-  // Basename, without writing a path separator into a regex: an escaped backslash
-  // does not survive every way this file gets written, and if this expression
-  // throws, the hook fails open and gates nothing.
-  const BACKSLASH = String.fromCharCode(92);
-  const sep = Math.max(cmdWord.lastIndexOf("/"), cmdWord.lastIndexOf(BACKSLASH));
-  if ((sep < 0 ? cmdWord : cmdWord.slice(sep + 1)) !== "git") return null;
-  let dir = "";
-  for (i++; i < tokens.length; i++) {
-    const t = unquote(tokens[i]);
-    if (t === "push") return dir;
-    if (!t.startsWith("-")) return null;       // some other subcommand
-    if (t === "-C" && tokens[i + 1]) {
-      const to = unquote(tokens[i + 1]);
-      dir = path.isAbsolute(to) ? to : path.join(dir, to);  // relative to the caller's directory
-    }
-    if (OPTS_WITH_VALUE.has(t)) i++;           // skip its value too
-  }
-  return null;
-}
-
-// Operators that start a new command. `&&` and `||` are listed before the single
-// character forms so the two-character operators win at the same position.
-// Closing brackets end one too, so that `$(git push)` does not leave the
-// subcommand glued to a paren as `push)`.
-const segments = cmd.split(/\r?\n|&&|\|\||;|\||&|\$\(|`|\)|\}/);
-
-// Check the tree the push leaves from, not the session's own directory. A
-// session in the main checkout that ran `cd <worktree> && git push` used to
-// check main, miss the worktree's stamp, build the wrong tree in full and let
-// the pushed diff through unchecked. Each `cd` moves the directory for the
-// segments after it; `git -C` moves it once more.
-let dir = p.cwd || process.cwd();
-let target = null;
-for (const segment of segments) {
-  const cd = cdTarget(segment);
-  if (cd !== null) { dir = path.resolve(dir, cd); continue; }
-  const pushed = pushDir(segment);
-  if (pushed !== null) { target = path.resolve(dir, pushed); break; }
-}
-console.log(target === null ? "SKIP" : target);
-JS
+  PAYLOAD="$payload" node "$(dirname "${BASH_SOURCE[0]}")/decide-target.cjs"
 }
 
 if ! target=$(decide_target); then
   # The decision script died (no node on PATH, a syntax error introduced while
-  # editing this file). The old `|| exit 0` here made that failure silently
-  # disable the gate, which is the one outcome worth avoiding: a needless 10s
-  # build costs far less than an ungated push. So fall back to the coarse check
-  # and let it err toward gating.
+  # editing it, a command it could not read). The old `|| exit 0` here made that
+  # failure silently disable the gate, which is the one outcome worth avoiding:
+  # a needless 10s build costs far less than an ungated push. So fall back to
+  # the coarse check and let it err toward gating.
   if printf '%s' "$payload" | grep -qE 'git[^"]*push'; then
     echo "NOTE: preflight could not parse the command, so it is gating on a coarse match." >&2
     target=$(pwd)
@@ -145,20 +56,33 @@ fi
 # A branch whose every change sits under docs/ (a prototype captured to
 # docs/prototypes/, research, an ADR) gives the four checks nothing to read, so
 # it goes through without them and without node_modules: capturing a canvas
-# used to cost an `npm ci` and a full build. An empty diff, or no origin/main
-# to compare with, falls through to the full gate.
-if changed=$(git diff --name-only origin/main...HEAD 2>/dev/null) && [ -n "$changed" ] &&
-  ! printf '%s\n' "$changed" | grep -qv '^docs/'; then
+# used to cost an `npm ci` and a full build.
+#
+# The hook runs before the whole command, so a command that commits and pushes
+# in one go has not committed yet when it is judged: reading only HEAD's commits
+# saw an empty diff and sent four of five research pushes to `npm ci` (#517).
+# So it reads everything the push could carry: the branch's commits since
+# origin/main, staged and unstaged changes, and untracked files. Nothing there,
+# or no origin/main to compare with, falls through to the full gate.
+docs_only() {
+  local branch worktree untracked changed
+  branch=$(git -c core.quotePath=false diff --name-only origin/main...HEAD 2>/dev/null) || return 1
+  worktree=$(git -c core.quotePath=false diff --name-only HEAD 2>/dev/null) || return 1
+  untracked=$(git -c core.quotePath=false ls-files --others --exclude-standard 2>/dev/null) || return 1
+  changed=$(printf '%s\n%s\n%s\n' "$branch" "$worktree" "$untracked" | grep -v '^$')
+  [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qv '^docs/'
+}
+
+if docs_only; then
   exit 0
 fi
 
 if [ ! -d node_modules ]; then
-  echo "BLOCKED: no node_modules in $target -- run 'npm ci' first. A fresh worktree does not share it, and every server-seam suite and the build fail without it." >&2
+  echo "BLOCKED: no node_modules in $target -- run 'npm ci' first. A fresh worktree does not share it, and every server-seam suite and the build fail without it. A push whose every change is under docs/ skips the gate and needs none, but the gate only sees files that exist before the command runs: write and commit them first, then push as a separate command." >&2
   exit 2
 fi
 
-# Next to this file, so the gate uses the main checkout's copy even in a worktree
-# cut before the script existed.
+# Next to this file, like decide-target.cjs.
 checks="$(dirname "${BASH_SOURCE[0]}")/preflight-checks.sh"
 
 if bash "$checks" --stamped; then
