@@ -47,9 +47,7 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
           <span style="flex: 1;"></span>
           <span style="width: 36px; text-align: right;">W–L</span>
           <span style="width: 40px; text-align: right;">Pts</span>
-          <sc-if value="{{inProgress}}" hint-placeholder-val="{{true}}">
-            <span style="width: 32px; text-align: right;">Max</span>
-          </sc-if>
+          <span style="width: 32px; text-align: right;">Max</span>
         </div>
       </sc-if>
       <ul style="list-style: none; margin: 0; padding: 0;">
@@ -103,7 +101,7 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
   <x-import component-from-global-scope="SaturdaySlateDesignSystem.BottomNav" tabs="{{tabs}}"></x-import>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"header":{"editor":"enum","options":["row","none"],"default":"row","section":"Max column"},"maxLook":{"editor":"enum","options":["small muted","muted like the points"],"default":"small muted","section":"Max column"},"satOut":{"editor":"enum","options":["–","0","blank"],"default":"–","section":"Max column"},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props="{&quot;header&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;row&quot;,&quot;none&quot;],&quot;default&quot;:&quot;row&quot;,&quot;section&quot;:&quot;Max column&quot;},&quot;maxLook&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;small muted&quot;,&quot;muted like the points&quot;],&quot;default&quot;:&quot;small muted&quot;,&quot;section&quot;:&quot;Max column&quot;},&quot;satOut&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;–&quot;,&quot;0&quot;,&quot;blank&quot;],&quot;default&quot;:&quot;0&quot;,&quot;section&quot;:&quot;Max column&quot;},&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
 class Component extends DCLogic {
   constructor(props) {
     super(props);
@@ -190,7 +188,8 @@ class Component extends DCLogic {
       tiles: tiles,
       complete: complete,
       inProgress: !complete,
-      showHeader: header === 'row',
+      // The header labels the Max column, so it goes with it once the Week is complete.
+      showHeader: header === 'row' && !complete,
       rows: rows,
       maxStyle: maxStyle,
       won: complete ? 'Dee took the week with 70.' : 'Dee leads with 50.',
