@@ -11,6 +11,9 @@
  * `/tmp/agent-go-route-<issue>.json`, where `--escalate` reads it. It never
  * fails the run over Jev: a 401, a network error, another non-200 or an answer
  * it cannot read all route to the routine's default, with the error in the JSON.
+ * A 429, a 529 or a network error is first retried with backoff. The JSON also
+ * carries Jev's five probabilities, its model, the status and the elapsed time,
+ * which the `Built on:` line prints (#516).
  *
  * The key: in the cloud, the TypeSafe network secret adds it on the way out;
  * anywhere else, `TYPESAFE_API_KEY` in the environment.
@@ -24,6 +27,7 @@ import {
   readSkill,
   route,
   routeOnError,
+  sendWithRetry,
   type JevState,
   type Route,
 } from "../src/lib/agent-go/route";
@@ -83,25 +87,30 @@ async function askJev(issue: number): Promise<Route> {
     return routeOnError(`could not read the issue: ${error instanceof Error ? error.message : String(error)}`, tiers);
   }
 
-  try {
-    const response = await fetch(JEV_URL, {
+  const body = JSON.stringify(jevRequest(state, question, levels));
+  const sent = await sendWithRetry(() =>
+    fetch(JEV_URL, {
       method: "POST",
       headers: { ...auth, "Content-Type": "application/json" },
-      body: JSON.stringify(jevRequest(state, question, levels)),
+      body,
       signal: AbortSignal.timeout(JEV_TIMEOUT_MS),
-    });
-    // Jev answers a request with no key 403, and a bad one 401.
-    if ((response.status === 401 || response.status === 403) && !key) {
-      return routeOnError(
-        `HTTP ${response.status} from Jev: no key reached it (the TypeSafe network secret, or TYPESAFE_API_KEY off the cloud)`,
-        tiers,
-      );
-    }
-    if (!response.ok) return routeOnError(`HTTP ${response.status} from Jev`, tiers);
-    return route(await response.json().catch(() => null), tiers);
-  } catch (error) {
-    return routeOnError(error instanceof Error ? error.message : String(error), tiers);
+    }),
+  );
+  if ("thrown" in sent) {
+    const { thrown, call } = sent;
+    return routeOnError(thrown instanceof Error ? thrown.message : String(thrown), tiers, call);
   }
+  const { reply: response, call } = sent;
+  // Jev answers a request with no key 403, and a bad one 401.
+  if ((response.status === 401 || response.status === 403) && !key) {
+    return routeOnError(
+      `HTTP ${response.status} from Jev: no key reached it (the TypeSafe network secret, or TYPESAFE_API_KEY off the cloud)`,
+      tiers,
+      call,
+    );
+  }
+  if (!response.ok) return routeOnError(`HTTP ${response.status} from Jev`, tiers, call);
+  return route(await response.json().catch(() => null), tiers, call);
 }
 
 async function main() {

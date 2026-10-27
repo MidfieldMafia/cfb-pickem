@@ -28,11 +28,26 @@ export interface JevVerdict {
   outputTokens: number;
 }
 
+/** How the request to Jev went: its last HTTP status (null when none came back), the time it took and the tries. */
+export interface JevCall {
+  status: number | null;
+  ms: number;
+  attempts: number;
+}
+
 export interface Route extends Tier {
   /** `jev`: Jev's level; `low-confidence`: moved to level 4; `jev-error`: the routine's default. */
   reason: "jev" | "low-confidence" | "jev-error";
   jev: JevVerdict | null;
   error?: string;
+  /**
+   * Jev's five probabilities, level 1 first, whenever it scored all five, even
+   * on an answer called empty: the levels are retuned from these (#516).
+   */
+  probabilities?: number[];
+  /** The model that answered, as Jev names it. */
+  jevModel?: string;
+  call?: JevCall;
 }
 
 /** Below this, Jev's level is not trusted and the build runs at level 4. */
@@ -41,6 +56,11 @@ const UNSURE_LEVEL: Level = 4;
 /** The routine's own setting, Sonnet medium, which is level 1's tier. */
 const DEFAULT_LEVEL: Level = 1;
 const QUESTION_ID = "difficulty";
+/**
+ * Pinned, not `jev-latest`: that alias moved on 2026-10-14, in the middle of the
+ * runs the levels are retuned from (#516).
+ */
+const JEV_MODEL = "jev-1.14.0";
 
 /** The section of the skill that holds Jev's question, its levels and the table. */
 function routingSection(skill: string): string {
@@ -87,30 +107,40 @@ function tierAt(level: Level, tiers: readonly Tier[]): Tier {
 }
 
 /** A hard error (no key, network, non-200): build on the routine's default. */
-export function routeOnError(error: string, tiers: readonly Tier[]): Route {
-  return { ...tierAt(DEFAULT_LEVEL, tiers), reason: "jev-error", error, jev: null };
+export function routeOnError(error: string, tiers: readonly Tier[], call?: JevCall): Route {
+  return { ...tierAt(DEFAULT_LEVEL, tiers), reason: "jev-error", error, jev: null, ...(call && { call }) };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** How far Jev's probabilities may sum from 1 before the answer counts as empty: they come rounded. */
+const SUM_TOLERANCE = 0.02;
+
 /** Jev's response to the difficulty question as a tier, or the default when it cannot be read. */
-export function route(response: unknown, tiers: readonly Tier[]): Route {
+export function route(response: unknown, tiers: readonly Tier[], call?: JevCall): Route {
   const answer = isRecord(response) && isRecord(response.answers) ? response.answers[QUESTION_ID] : undefined;
   const usage = isRecord(response) && isRecord(response.usage) ? response.usage : {};
+  const jevModel = isRecord(response) && typeof response.model === "string" ? response.model : undefined;
+  const logged = { ...(jevModel && { jevModel }), ...(call && { call }) };
   if (!isRecord(answer) || !isRecord(answer.probabilities) || typeof answer.confidence !== "number") {
-    return routeOnError("Jev's answer could not be read", tiers);
+    return { ...routeOnError("Jev's answer could not be read", tiers), ...logged };
   }
 
   // Levels are 0-based in Jev's answer. The most probable wins; a tie goes to the harder level.
   const probabilities = [0, 1, 2, 3, 4].map((i) => (answer.probabilities as Record<string, unknown>)[String(i)]);
-  if (probabilities.some((p) => typeof p !== "number")) return routeOnError("Jev's answer did not score five levels", tiers);
+  if (probabilities.some((p) => typeof p !== "number")) {
+    return { ...routeOnError("Jev's answer did not score five levels", tiers), ...logged };
+  }
   const scores = probabilities as number[];
-  // Confidence 0 with every level at 0 is an empty answer (#481 got one: 17 output
-  // tokens), not a verdict of "unsure". Reporting it as one would put noise in the
-  // `Built on:` lines the levels are retuned from.
-  if (answer.confidence <= 0 || scores.every((p) => p === 0)) return routeOnError("Jev's answer was empty", tiers);
+  // TypeSafe's probabilities sum to 1, so one that does not, all zeros say, is an
+  // empty answer. Confidence 0 is not: Score confidence is floored at 0 whenever
+  // the spread is as wide as an even one, which is "unsure", the floor's job (#516).
+  const sum = scores.reduce((total, p) => total + p, 0);
+  if (Math.abs(sum - 1) > SUM_TOLERANCE) {
+    return { ...routeOnError("Jev's answer was empty", tiers), probabilities: scores, ...logged };
+  }
   const top = scores.reduce((best, p, i) => (p >= scores[best] ? i : best), 0);
 
   const jev: JevVerdict = {
@@ -119,8 +149,69 @@ export function route(response: unknown, tiers: readonly Tier[]): Route {
     inputTokens: typeof usage.input_tokens === "number" ? usage.input_tokens : 0,
     outputTokens: typeof usage.output_tokens === "number" ? usage.output_tokens : 0,
   };
-  if (jev.confidence < CONFIDENCE_FLOOR) return { ...tierAt(UNSURE_LEVEL, tiers), reason: "low-confidence", jev };
-  return { ...tierAt(jev.level, tiers), reason: "jev", jev };
+  const reason = jev.confidence < CONFIDENCE_FLOOR ? "low-confidence" : "jev";
+  const tier = tierAt(reason === "jev" ? jev.level : UNSURE_LEVEL, tiers);
+  return { ...tier, reason, jev, probabilities: scores, ...logged };
+}
+
+/** The statuses TypeSafe says to retry: rate limited, and overloaded. */
+const RETRY_STATUSES = new Set([429, 529]);
+const MAX_ATTEMPTS = 3;
+const BACKOFF_MS = 1000;
+/** A `retry-after` past this is not waited for: the build would sit idle instead. */
+const MAX_WAIT_MS = 20_000;
+
+/** What `sendWithRetry` needs of a reply: its status and its headers. */
+export interface JevReply {
+  status: number;
+  headers: { get(name: string): string | null };
+}
+
+/** How long to wait before the next try: `retry-after` (seconds or a date) when sent, else doubling backoff. */
+function waitBefore(attempt: number, reply: JevReply | null, now: number): number {
+  const header = reply?.headers.get("retry-after")?.trim();
+  if (header) {
+    if (/^\d+(\.\d+)?$/.test(header)) return Math.round(Number(header) * 1000);
+    const at = Date.parse(header);
+    if (!Number.isNaN(at)) return Math.max(0, at - now);
+  }
+  return BACKOFF_MS * 2 ** (attempt - 1);
+}
+
+/** A thrown error worth another try: a network failure, not our own timeout or abort. */
+function isRetryableThrow(error: unknown): boolean {
+  const name = error instanceof Error || error instanceof DOMException ? error.name : "";
+  return name !== "TimeoutError" && name !== "AbortError";
+}
+
+/**
+ * Sends the request to Jev, retrying a 429, a 529 or a network error up to
+ * three tries with backoff, as TypeSafe recommends (#516). Anything else comes
+ * back as it is: an answer, however unsure, is never asked again.
+ */
+export async function sendWithRetry<R extends JevReply>(
+  send: () => Promise<R>,
+  opts: { sleep?: (ms: number) => Promise<void>; now?: () => number } = {},
+): Promise<{ reply: R; call: JevCall } | { thrown: unknown; call: JevCall }> {
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const now = opts.now ?? Date.now;
+  const started = now();
+  for (let attempt = 1; ; attempt++) {
+    let reply: R | null = null;
+    let thrown: unknown = null;
+    try {
+      reply = await send();
+    } catch (error) {
+      thrown = error;
+    }
+    const retryable = reply ? RETRY_STATUSES.has(reply.status) : isRetryableThrow(thrown);
+    const wait = retryable && attempt < MAX_ATTEMPTS ? waitBefore(attempt, reply, now()) : Infinity;
+    if (wait > MAX_WAIT_MS) {
+      const call: JevCall = { status: reply?.status ?? null, ms: now() - started, attempts: attempt };
+      return reply ? { reply, call } : { thrown, call };
+    }
+    await sleep(wait);
+  }
 }
 
 /**
@@ -197,7 +288,7 @@ export function jevState(input: {
 /** The request body for Jev's System One endpoint: one Score question on the skill's levels. */
 export function jevRequest(state: JevState, question: string, levels: string[]) {
   return {
-    model: "jev-latest",
+    model: JEV_MODEL,
     state,
     questions: { [QUESTION_ID]: { type: "score", instructions: question, criteria: levels } },
   };
