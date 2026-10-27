@@ -60,7 +60,7 @@ const QUESTION_ID = "difficulty";
  * Pinned, not `jev-latest`: that alias moved on 2026-10-14, in the middle of the
  * runs the levels are retuned from (#516).
  */
-export const JEV_MODEL = "jev-1.14.0";
+const JEV_MODEL = "jev-1.14.0";
 
 /** The section of the skill that holds Jev's question, its levels and the table. */
 function routingSection(skill: string): string {
@@ -204,14 +204,12 @@ export async function sendWithRetry<R extends JevReply>(
     } catch (error) {
       thrown = error;
     }
-    const call = (): JevCall => ({ status: reply?.status ?? null, ms: now() - started, attempts: attempt });
-    const done = (): { reply: R; call: JevCall } | { thrown: unknown; call: JevCall } =>
-      reply ? { reply, call: call() } : { thrown, call: call() };
-
     const retryable = reply ? RETRY_STATUSES.has(reply.status) : isRetryableThrow(thrown);
-    if (!retryable || attempt >= MAX_ATTEMPTS) return done();
-    const wait = waitBefore(attempt, reply, now());
-    if (wait > MAX_WAIT_MS) return done();
+    const wait = retryable && attempt < MAX_ATTEMPTS ? waitBefore(attempt, reply, now()) : Infinity;
+    if (wait > MAX_WAIT_MS) {
+      const call: JevCall = { status: reply?.status ?? null, ms: now() - started, attempts: attempt };
+      return reply ? { reply, call } : { thrown, call };
+    }
     await sleep(wait);
   }
 }

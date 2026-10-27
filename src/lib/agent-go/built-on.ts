@@ -33,7 +33,10 @@ function jevLog(route: Route): string {
   return parts.map((part) => `, ${part}`).join("");
 }
 
-/** `Jev level 5, confidence 0.4, 1.1k tokens, below 0.7 so level 4, levels …, jev-1.14.0, HTTP 200 in 2.3 s`, or the error. */
+/**
+ * `Jev level 5, confidence 0.4, 1.1k tokens, below 0.7 so level 4, levels …,
+ * jev-1.14.0, HTTP 200 in 2.3 s`, or the error and what is known of the call.
+ */
 export function jevPart(route: Route): string {
   if (route.reason === "jev-error" || !route.jev) {
     return `Jev error: ${route.error ?? "unknown"}, routine default${jevLog(route)}`;
