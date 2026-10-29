@@ -1,6 +1,18 @@
 {
-  "generatedAt": "2026-10-24T03:30:01.141Z",
+  "generatedAt": "2026-10-29T13:19:38.064Z",
   "entries": [
+    {
+      "from": "2026-10-25",
+      "to": "2026-10-31",
+      "items": [
+        "While a Week is in play, the Leaderboard's week list has a Max column: the highest Weekly Score each member can still finish on.",
+        "In the app on your Home Screen, Picks asks once whether to turn on your Reminder, then shows a small banner with a switch until you do.",
+        "New members finish joining on a One last step page that offers to turn on the Reminder before they start picking.",
+        "In Safari on iPhone, Picks suggests adding Saturday Slate to your Home Screen, which is how the Reminder reaches you. Close its banner three times and it stays gone.",
+        "On an iPhone, kickoff times read \"Sat, Oct 31, 11:00 AM\" like everywhere else, and Picks no longer redraws itself when you open the app."
+      ],
+      "through": "2026-10-29T13:19:00Z"
+    },
     {
       "from": "2026-10-18",
       "to": "2026-10-24",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Megaphone, MessageSquareOff, X, type LucideIcon } from "lucide-react";
+import { Bell, Megaphone, Smartphone, TrendingUp, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -12,18 +12,23 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-10-18",
-  label: "What's new · Oct 18–24",
+  id: "2026-10-25",
+  label: "What's new · Oct 25–31",
   items: [
     {
-      icon: Bell,
-      title: "Reminders by push",
-      body: "Turn on Remind me before picks lock in Settings, from the Profile menu, and your phone gets a push before the Deadline. It works from the app on your Home Screen.",
+      icon: TrendingUp,
+      title: "Max on the Leaderboard",
+      body: "While a Week is in play, the Leaderboard's week list shows a Max column: the highest Weekly Score each member can still finish on.",
     },
     {
-      icon: MessageSquareOff,
-      title: "Texts are paused",
-      body: "The app sends no texts for now, so the sign-in screens can't text you your link. Open it from an earlier text, or ask a commissioner.",
+      icon: Bell,
+      title: "Your Reminder in one tap",
+      body: "In the app on your Home Screen, Picks asks once to turn on your Reminder, then keeps a small banner with a switch until you do.",
+    },
+    {
+      icon: Smartphone,
+      title: "Add to your Home Screen",
+      body: "In Safari on iPhone, Picks shows how to add Saturday Slate to your Home Screen, which is how the Reminder reaches your phone.",
     },
   ],
 };
