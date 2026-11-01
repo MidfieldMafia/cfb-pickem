@@ -27,6 +27,7 @@
     "icons": "tsx scripts/icons.ts",
     "splash": "tsx scripts/splash.ts",
     "sessions": "tsx scripts/sessions.ts",
+    "prune-local": "bash scripts/prune-local.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
