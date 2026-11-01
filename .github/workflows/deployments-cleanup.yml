@@ -1,0 +1,103 @@
+# Deletes stale GitHub deployment records (#503).
+#
+# The Vercel GitHub integration writes one record per deploy, 253 Production
+# and 389 Preview by 2026-10-27, and never marks one inactive, so they pile up
+# in the repo's Deployments list for good. Deleting a record leaves the Vercel
+# deployment, its URL, Instant Rollback and the PR's checks alone; only the
+# PR timeline's "View deployment" link goes. docs/research/github-deployments.md
+# on branch research/github-deployments (#502) holds the evidence.
+#
+# Three triggers, one rule, on the pattern of neon-preview-cleanup.yml. Closing
+# a PR deletes the Preview records of its commits (records carry a SHA, not a
+# branch). The weekly sweep and a manual run delete Preview records older than
+# 14 days and Production records beyond the newest 10. Nothing is deleted that
+# points at an open PR's head commit, and both environments stay.
+#
+# GitHub deletes only an inactive record, so each prune is an `inactive` status
+# then a DELETE; a 404 means it is already gone and passes. Each status counts
+# against GitHub's 500-an-hour limit on content-creating requests, so a run
+# stops after MAX_PRUNES and the next run carries on.
+name: Deployments cleanup
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: "41 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List the stale deployment records without deleting them
+        type: boolean
+        default: false
+
+permissions:
+  deployments: write
+  pull-requests: read
+
+concurrency:
+  group: deployments-cleanup
+  cancel-in-progress: false
+
+jobs:
+  prune-deployments:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      DRY_RUN: ${{ inputs.dry_run || false }}
+      KEEP_PRODUCTION: 10
+      PREVIEW_DAYS: 14
+      MAX_PRUNES: 200
+    steps:
+      - name: Delete stale deployment records
+        run: |
+          set -euo pipefail
+          api="repos/$GH_REPO/deployments"
+
+          # "<id>\t<environment>\t<sha>\t<created_at>" for every record, newest first.
+          gh api "$api?per_page=100" --paginate \
+            --jq '.[] | [.id, .environment, .sha, .created_at] | @tsv' > all.tsv
+          gh pr list --state open --limit 500 --json headRefOid --jq '.[].headRefOid' > open-heads.txt
+
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            gh api "repos/$GH_REPO/pulls/$PR_NUMBER/commits?per_page=100" --paginate --jq '.[].sha' > pr-shas.txt
+            awk -F'\t' 'NR == FNR { s[$1]; next } $2 == "Preview" && ($3 in s)' pr-shas.txt all.tsv > stale.tsv
+          else
+            cutoff=$(date -u -d "$PREVIEW_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+            awk -F'\t' -v cutoff="$cutoff" -v keep="$KEEP_PRODUCTION" '
+              $2 == "Production" { if (++prod > keep) print; next }
+              $2 == "Preview" && $4 < cutoff' all.tsv > stale.tsv
+          fi
+          awk -F'\t' 'NR == FNR { h[$1]; next } !($3 in h)' open-heads.txt stale.tsv > prune.tsv
+
+          total=$(grep -c . prune.tsv || true)
+          echo "$(grep -c . all.tsv || true) records; $total stale."
+
+          pruned=0
+          while IFS=$'\t' read -r id env sha created; do
+            [ -n "$id" ] || continue
+            if [ "$pruned" -ge "$MAX_PRUNES" ]; then
+              echo "Stopping at $MAX_PRUNES; the next run carries on."
+              break
+            fi
+            if [ "$DRY_RUN" = true ]; then
+              echo "Would delete $env $id ($sha, $created)."
+            else
+              # A 404 on either call means the record is already gone.
+              if ! out=$(gh api -X POST "$api/$id/statuses" -f state=inactive 2>&1 > /dev/null) && [[ "$out" != *404* ]]; then
+                echo "::error::Marking $id inactive failed: $out"; exit 1
+              fi
+              if ! out=$(gh api -X DELETE "$api/$id" 2>&1 > /dev/null) && [[ "$out" != *404* ]]; then
+                echo "::error::Deleting $id failed: $out"; exit 1
+              fi
+              echo "Deleted $env $id ($sha, $created)."
+              sleep 1
+            fi
+            pruned=$((pruned + 1))
+          done < prune.tsv
+
+          verb=$([ "$DRY_RUN" = true ] && echo "Would delete" || echo "Deleted")
+          echo "$verb $pruned of $total stale deployment record(s)." | tee -a "$GITHUB_STEP_SUMMARY"

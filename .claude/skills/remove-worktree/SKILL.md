@@ -19,7 +19,9 @@ Two refusals look alike and differ completely:
   shell's cwd): the tree is now stranded. Recover it with
   [Stranded tree](#stranded-tree).
 
-Creation is `new-worktree`.
+Creation is `new-worktree`. To sweep every finished tree and branch at once,
+`npm run prune-local` lists them and `npm run prune-local -- --apply` removes
+them; it keeps anything unpushed, uncommitted or recently used, and says why.
 
 ## 1. Confirm the work landed
 
