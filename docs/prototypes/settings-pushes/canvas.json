@@ -1,0 +1,21 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-02T23:40:00Z" },
+  "title": "Settings, a row per push (#494)",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 1040, "title": "A · One card, the switches show what reaches this phone", "is_interactive": true },
+    "Cards.dc.html": { "x": 470, "y": 0, "w": 390, "h": 1040, "title": "B · A one-line card per push, behind one Turn on button", "is_interactive": true },
+    "Choices.dc.html": { "x": 940, "y": 0, "w": 390, "h": 1040, "title": "C · This phone apart from your choices, editable anywhere", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "Cards.dc.html", "Choices.dc.html"],
+  "notes": {
+    "row1": { "x": 0, "y": -260, "text": "Settings: a row for each new push", "kind": "title1", "maxW": 1330 },
+    "how": { "x": 1410, "y": 0, "w": 320, "fill": "orange", "size": "s", "text": "Press Play, then use the Scenario picker above each phone; tick Commissioner to see the New Feedback row. Rows: Pick reminder (starts off), Chat (All / @mentions / Off, starts @mentions), Weekly Win, Close games and New Feedback (start on). The grey line under the picker shows what is saved for the member and what this phone holds. Turning on anything on a phone with no device walks the iPhone prompt." },
+    "open": { "x": 1410, "y": 480, "w": 320, "fill": "blue", "size": "s", "text": "What differs: (1) a member with no device on this phone: A shows every switch off (what will arrive), B shows the saved choices greyed behind one Turn on button, C shows the choices live and lets them change anywhere, a computer included. (2) Where the device problem goes: under the card (A), in the gate card (B), in its own This iPhone card (C). Shared on all three: Pick reminder stays first; turning every row off deletes the member's devices (#493)." }
+  },
+  "designSystems": [
+    { "title": "Saturday Slate Design System", "namespace": "saturdayslatedesignsystem", "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU", "version": "1792811404-d4d4", "copiedAt": "2026-11-02T23:40:00Z" }
+  ]
+}
