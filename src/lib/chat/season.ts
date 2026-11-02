@@ -1,13 +1,13 @@
 /**
  * Chat keeps one Season (#177, #251). Once the next Season is active, every
  * Group's messages from earlier ones are deleted, not archived: the rows go,
- * deleted and removed ones with them, and so do their reactions. Nobody can
+ * deleted and removed ones with them, and so do their reactions and mentions. Nobody can
  * read them afterwards.
  */
 import "server-only";
 import { and, eq, inArray, isNotNull, ne, notExists } from "drizzle-orm";
 import { inOneBatch } from "@/db/batch";
-import { chatMessages, chatReactions, memberships, seasons } from "@/db/schema";
+import { chatMentions, chatMessages, chatReactions, memberships, seasons } from "@/db/schema";
 import type { Db } from "@/db/types";
 
 /**
@@ -21,6 +21,7 @@ export async function clearPastSeasons(db: Db): Promise<void> {
   if (!season) return;
   const past = ne(chatMessages.seasonId, season.id);
   await inOneBatch(db, (tx) => [
+    tx.delete(chatMentions).where(inArray(chatMentions.messageId, tx.select({ id: chatMessages.id }).from(chatMessages).where(past))),
     tx.delete(chatReactions).where(inArray(chatReactions.messageId, tx.select({ id: chatMessages.id }).from(chatMessages).where(past))),
     tx.delete(chatMessages).where(past),
     // A cleared marker counts from the member's join, as for one who never

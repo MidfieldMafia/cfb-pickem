@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
-import { chatThread, markRead } from "@/lib/chat/chat";
+import { chatThread, markRead, mentionPeople } from "@/lib/chat/chat";
 import { toChatStateJson } from "@/lib/chat/json";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { groupBoard } from "@/lib/groups/memberships";
@@ -27,7 +27,11 @@ export default async function Chat() {
   if (choice === null) return <NoGroup member={member} />;
   const group = choice.current;
   const now = new Date();
-  const [thread, board] = await Promise.all([chatThread(db(), member, group.id), groupBoard(db(), group.id)]);
+  const [thread, board, people] = await Promise.all([
+    chatThread(db(), member, group.id),
+    groupBoard(db(), group.id),
+    mentionPeople(db(), member, group.id),
+  ]);
   await markRead(db(), member.id, group.id, thread);
   const members = board.filter((entry) => entry.active).length;
 
@@ -43,7 +47,14 @@ export default async function Chat() {
       {/* The thread and its composer: the Welcome Tour's `chat-screen` target. `min-h-0` keeps the thread scrolling inside its own box. */}
       <div data-tour="chat-screen" className="flex min-h-0 flex-1 flex-col">
         {/* Keyed on the Group, so switching boards starts the thread, its poll and its draft afresh. */}
-        <ChatThread key={group.id} initial={toChatStateJson(thread, now)} viewer={toMemberJson(member)} groupId={group.id} groupName={group.name} />
+        <ChatThread
+          key={group.id}
+          initial={toChatStateJson(thread, now)}
+          viewer={toMemberJson(member)}
+          groupId={group.id}
+          groupName={group.name}
+          people={people}
+        />
       </div>
     </main>
   );
