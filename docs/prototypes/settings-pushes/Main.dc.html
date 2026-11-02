@@ -38,6 +38,15 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
     <div style="margin: 0 16px; display: flex; flex-direction: column; gap: 8px;">
       <div style="display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; background: var(--card); overflow: hidden;">
 
+        <div style="min-height: 64px; box-sizing: border-box; padding: 8px 4px 8px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border);">
+          <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <h2 id="a-all" style="margin: 0; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Notifications</h2>
+            <p style="margin: 0; font: 600 16px/24px var(--font-sans);">{{masterLine}}</p>
+          </div>
+          <x-import component-from-global-scope="SaturdaySlateDesignSystem.Switch" checked="{{masterOn}}" on-checked-change="{{flipMaster}}" disabled="{{masterDim}}" aria-labelledby="a-all"></x-import>
+        </div>
+
+        <div style="display: flex; flex-direction: column; opacity: {{rowOpacity}};">
         <div style="min-height: 56px; box-sizing: border-box; padding: 6px 4px 6px 12px; display: flex; align-items: center; gap: 12px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--primary);"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
           <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;">
@@ -93,6 +102,7 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
             <x-import component-from-global-scope="SaturdaySlateDesignSystem.Switch" checked="{{fbOn}}" on-checked-change="{{flipFb}}" disabled="{{dim}}" aria-labelledby="a-fb"></x-import>
           </div>
         </sc-if>
+        </div>
       </div>
 
       <sc-if value="{{problem}}" hint-placeholder-val="{{false}}">
@@ -149,21 +159,19 @@ class Component extends DCLogic {
   }
   setKind(kind, value) {
     const st = this.state;
-    const s = this.scen();
-    const can = s.device === 'app' && st.perm !== 'denied';
+    if (!st.dev) return;
     const prefs = Object.assign({}, st.prefs);
     prefs[kind] = value;
-    const turningOn = value !== false && value !== 'off';
-    if (!turningOn) {
-      if (!st.dev) return;
-      const keep = this.anyOn(prefs, st.commish);
-      this.setState({ prefs: prefs, dev: keep });
-      return;
-    }
-    if (st.dev) { this.setState({ prefs: prefs }); return; }
+    this.setState({ prefs: prefs });
+  }
+  flipMaster(v) {
+    const st = this.state;
+    const s = this.scen();
+    const can = s.device === 'app' && st.perm !== 'denied';
+    if (!v) { this.setState({ dev: false, fell: false }); return; }
     if (!can) return;
-    if (st.perm === 'allowed') { this.setState({ prefs: prefs, dev: true, fell: false }); return; }
-    this.setState({ prompt: true, pending: { kind: kind, value: value } });
+    if (st.perm === 'allowed') { this.setState({ dev: true, fell: false }); return; }
+    this.setState({ prompt: true });
   }
   renderVals() {
     const st = this.state;
@@ -171,7 +179,7 @@ class Component extends DCLogic {
     const p = st.prefs;
     const can = s.device === 'app' && st.perm !== 'denied';
     const live = can && st.dev;
-    const shown = (k) => (live ? p[k] : (k === 'chat' ? 'off' : false));
+    const shown = (k) => p[k];
     const chat = shown('chat');
     const opts = [
       { id: 'all', label: 'All' },
@@ -186,7 +194,7 @@ class Component extends DCLogic {
     if (s.device === 'safari') problemText = 'Works from the Home Screen app.';
     else if (s.device === 'computer') problemText = 'Turn these on in the app on your phone.';
     else if (st.perm === 'denied') problemText = 'Blocked in iPhone Settings › Notifications.';
-    else if (st.fell && !st.dev) problemText = 'Stopped reaching your phone, so they turned off.';
+    else if (st.fell && !st.dev) problemText = 'Stopped reaching your phone, so this turned off.';
 
     const yn = (b) => (b ? 'on' : 'off');
     const chatName = { all: 'All', mentions: '@mentions', off: 'Off' };
@@ -196,8 +204,13 @@ class Component extends DCLogic {
       pickScenario: (e) => this.setState(this.fresh(e.target.value, st.commish)),
       commish: st.commish,
       toggleCommish: () => this.setState({ commish: !st.commish }),
-      dim: !can,
-      segOpacity: can ? 1 : 0.5,
+      dim: !live,
+      segOpacity: 1,
+      masterOn: live,
+      masterDim: !can,
+      masterLine: live ? 'On for this iPhone' : (s.device === 'computer' ? 'Off on this computer' : 'Off for this iPhone'),
+      flipMaster: (v) => this.flipMaster(v),
+      rowOpacity: live ? 1 : 0.5,
       remOn: shown('reminder'),
       winOn: shown('win'),
       closeOn: shown('close'),

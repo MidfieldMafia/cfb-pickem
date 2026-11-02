@@ -9,7 +9,7 @@ row show when push can't reach this phone? The rules for the rows are on #493 (c
 
 | File | Board |
 |---|---|
-| `Main.dc.html` | A · One card. Every row in one card, with switches showing what reaches this phone. Chat is a three-way segmented control. A device problem is one footnote under the card |
+| `Main.dc.html` | A · One card under a master switch. A Notifications header with its own switch tops the card; the rows below are greyed and disabled until it is on. Chat is a three-way segmented control. A device problem is one footnote under the card |
 | `Cards.dc.html` | B · A card per push. The shipped one-line row repeated, with Chat as a native Select. A Turn on notifications card gates the rows, which are greyed until a device is saved |
 | `Choices.dc.html` | C · This phone apart from your choices. A This iPhone status card, then checkboxes and Chat radios that save anywhere, a computer included |
 
