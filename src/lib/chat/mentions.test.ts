@@ -47,16 +47,16 @@ describe("tokens", () => {
 });
 
 describe("the picker's matches", () => {
-  const everyone: MentionCandidate = { target: "everyone", name: "everyone", role: "6 Members" };
+  const everyone: MentionCandidate = { target: "everyone", name: "everyone", note: "6 Members" };
   const group: MentionCandidate[] = [
     everyone,
-    { target: 12, name: "Tom Bradley", role: "" },
-    { target: 14, name: "Tommy", role: "" },
-    { target: 15, name: "Coach Ray", role: "Organizer" },
-    { target: 18, name: "Danny", role: "" },
-    { target: 21, name: "Danny", role: "" },
-    { target: 30, name: "Jess Álvarez", role: "Commissioner" },
-    { target: 31, name: "Big Tom", role: "" },
+    { target: 12, name: "Tom Bradley" },
+    { target: 14, name: "Tommy" },
+    { target: 15, name: "Coach Ray" },
+    { target: 18, name: "Danny" },
+    { target: 21, name: "Danny" },
+    { target: 30, name: "Jess Álvarez" },
+    { target: 31, name: "Big Tom" },
   ];
   const names = (query: string) => matchMentions(query, group).map((m) => `${m.name}#${m.target}`);
 
@@ -78,7 +78,7 @@ describe("the picker's matches", () => {
   });
 
   test("ignores case and accents, and marks the matched part of the name as written", () => {
-    expect(matchMentions("ALV", group)).toEqual([{ target: 30, name: "Jess Álvarez", role: "Commissioner", hit: { start: 5, end: 8 } }]);
+    expect(matchMentions("ALV", group)).toEqual([{ target: 30, name: "Jess Álvarez", hit: { start: 5, end: 8 } }]);
   });
 
   test("keeps matching across a space while some name still does", () => {
@@ -124,8 +124,8 @@ describe("mentions of the viewer", () => {
 });
 
 describe("the composer's draft", () => {
-  const tom: MentionCandidate = { target: 12, name: "Tom Bradley", role: "" };
-  const everyone: MentionCandidate = { target: "everyone", name: "everyone", role: "6 Members" };
+  const tom: MentionCandidate = { target: 12, name: "Tom Bradley" };
+  const everyone: MentionCandidate = { target: "everyone", name: "everyone", note: "6 Members" };
   const typed = (text: string): Draft => ({ text, picked: [] });
 
   test("opens the picker on an @ at the start or after a space, read at the caret", () => {

@@ -12,7 +12,7 @@ import {
   DrawerTitle,
 } from "@saturday-slate/design-system";
 import { Pennant } from "@/components/pennant";
-import { GONE_LABELS, type ChatMessageJson, type ChatStateJson, type MentionPersonJson } from "@/lib/chat/json";
+import { GONE_LABELS, type ChatMessageJson, type ChatStateJson } from "@/lib/chat/json";
 import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
 import {
   editDraft,
@@ -109,7 +109,7 @@ export function ChatThread({
   groupId: number;
   groupName: string;
   /** Who the composer can mention: the Group's active Members, the viewer among them. */
-  people: MentionPersonJson[];
+  people: MemberJson[];
 }) {
   const { state, gone, setGone, accept, revise } = useChatState(initial, groupId);
   /** The message whose reaction tray is open: one at a time. */
@@ -145,11 +145,11 @@ export function ChatThread({
   const [unseen, setUnseen] = useState(() => unreadMentions(initial.messages, viewer.id, initial.readId));
 
   // Everyone who wrote, reacted or is mentioned, then the Group's Members, for names and pennants.
-  const senders = new Map([...people.map((p) => [p.member.id, p.member] as const), ...state.senders.map((s) => [s.id, s] as const)]);
+  const senders = new Map([...people.map((p) => [p.id, p] as const), ...state.senders.map((s) => [s.id, s] as const)]);
   const query = gone ? null : pickerQuery(draft, caret);
   const candidates: MentionCandidate[] = [
-    { target: "everyone", name: "everyone", role: plural(people.length, "Member") },
-    ...people.filter((p) => p.member.id !== viewer.id).map((p) => ({ target: p.member.id, name: p.member.displayName, role: p.role })),
+    { target: "everyone", name: "everyone", note: plural(people.length, "Member") },
+    ...people.filter((p) => p.id !== viewer.id).map((p) => ({ target: p.id, name: p.displayName })),
   ];
   const matches = query && query.start !== dismissedAt ? matchMentions(query.query, candidates) : [];
   const pickerOpen = matches.length > 0;

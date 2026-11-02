@@ -59,12 +59,6 @@ export function toChatStateJson(thread: Thread, now: Date): ChatStateJson {
   };
 }
 
-/** Someone the composer's picker can mention (#525), with the role it shows beside them. */
-export interface MentionPersonJson {
-  member: MemberJson;
-  role: "Organizer" | "Commissioner" | "";
-}
-
 /** What the badge's poll answers. */
 export interface ChatUnreadJson {
   unread: number;

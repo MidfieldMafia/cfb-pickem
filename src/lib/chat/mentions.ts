@@ -105,8 +105,8 @@ export interface MentionCandidate {
   target: MentionTarget;
   /** The name as written, `everyone` for the Group. */
   name: string;
-  /** "Organizer", "Commissioner", "N Members" for everyone, or empty. */
-  role: string;
+  /** What shows at the row's right: "N Members" for everyone. A Member shows their name alone. */
+  note?: string;
 }
 
 export interface MentionMatch extends MentionCandidate {

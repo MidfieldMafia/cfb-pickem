@@ -30,7 +30,6 @@ import { manageGroup, NotOrganizer } from "@/lib/groups/manage";
 import { groupRoster, memberGroups, type RosterEntry } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import { toMemberJson, type MemberJson } from "@/lib/slate/json";
-import type { MentionPersonJson } from "./json";
 import { MAX_CHAT_TEXT } from "./limits";
 import { mentionedIds, mentionSegments, mentionsOf, mentionToken, renderMentions, UNTOKEN } from "./mentions";
 import { countReactions, type ChatReactionKind, type Reactor } from "./reactions";
@@ -258,15 +257,12 @@ export async function chatThread(db: Db, member: Member, groupId: number): Promi
 
 /**
  * Who the composer's picker can mention (#525): the Group's Members now,
- * active, the reader among them, each with the role the picker shows. The
- * same people `postMessage` keeps a mention of.
+ * active, the reader among them. The same people `postMessage` keeps a
+ * mention of. No roles: the picker shows names alone.
  */
-export async function mentionPeople(db: Db, member: Member, groupId: number): Promise<MentionPersonJson[]> {
+export async function mentionPeople(db: Db, member: Member, groupId: number): Promise<MemberJson[]> {
   await requireInGroup(db, member.id, groupId);
-  return (await mentionable(db, groupId)).map((entry) => ({
-    member: toMemberJson(entry.member),
-    role: entry.member.isCommissioner ? "Commissioner" : entry.role === "organizer" ? "Organizer" : "",
-  }));
+  return (await mentionable(db, groupId)).map((entry) => toMemberJson(entry.member));
 }
 
 /**

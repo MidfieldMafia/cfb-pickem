@@ -5,7 +5,7 @@
  */
 import { asc, eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
-import { chatMentions, chatMessages, memberships } from "@/db/schema";
+import { chatMentions, chatMessages } from "@/db/schema";
 import { deleteGroup } from "@/lib/groups/console";
 import { manageGroup, removeFromGroup } from "@/lib/groups/manage";
 import { removeMember, setMemberActive } from "@/lib/members/members";
@@ -153,21 +153,16 @@ describe("the thread", () => {
 });
 
 describe("the picker's people", () => {
-  test("are the Group's active Members now, with Commissioner or Organizer beside them", async () => {
-    const { db, jonah, grandma, family, tom } = await seed();
+  test("are the Group's active Members now, removed and deactivated ones left out", async () => {
+    const { db, jonah, grandma, family } = await seed();
     const gone = await joinAt(db, jonah, "Gone", TUESDAY);
     await removeFromGroup(db, await manageGroup(db, jonah, family.id), gone.id, TUESDAY);
     const asleep = await joinAt(db, jonah, "Asleep", TUESDAY);
     await setMemberActive(db, jonah, asleep.id, false);
-    await db.update(memberships).set({ role: "organizer" }).where(eq(memberships.memberId, tom.id));
 
     const people = await mentionPeople(db, grandma, family.id);
 
-    expect(people.map((p) => [p.member.displayName, p.role]).sort()).toEqual([
-      ["Grandma", ""],
-      ["Jonah", "Commissioner"],
-      ["Tom Bradley", "Organizer"],
-    ]);
+    expect(people.map((p) => p.displayName).sort()).toEqual(["Grandma", "Jonah", "Tom Bradley"]);
   });
 });
 

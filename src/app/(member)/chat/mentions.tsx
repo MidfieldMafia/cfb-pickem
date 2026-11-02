@@ -61,7 +61,7 @@ export function MentionPicker({
               <b>{match.name.slice(start, end)}</b>
               {match.name.slice(end)}
             </span>
-            {match.role ? <span className="text-[13px] leading-[18px] text-muted-foreground">{match.role}</span> : null}
+            {match.note ? <span className="text-[13px] leading-[18px] text-muted-foreground">{match.note}</span> : null}
           </button>
         );
       })}
