@@ -31,12 +31,14 @@ QStash sends POST.
 | `slate-live-weeknight-evening` | `* 23 * * 2-5` | 60 |
 | `slate-live-weeknight-late` | `* 0-4 * * 3-6` | 300 |
 
-The busiest UTC day is Saturday, 540 + 300 = 840, under the free plan's 1,000 messages a day
-and 10 schedules. Retries are off (`Upstash-Retries: 0`): a retry counts against the cap, and
-the next minute's ping is the retry.
+The busiest UTC day is Saturday, 540 + 300 = 840. QStash is on **Pay as You Go** ($1 per
+100,000 messages, no daily cap; about $0.12 a month at this volume): the Free plan sold
+through the Vercel Marketplace allows only 500 a day, not the 1,000 Upstash's own pricing page
+lists. Retries are off (`Upstash-Retries: 0`): each delivery is billed, and the next minute's
+ping is the retry.
 
 **Keep the pings inside game windows.** Each ping reads Neon, and one a minute all week would
-spend about 180 CU-hours a month against the free plan's 100. A game outside the windows still
+spend about 180 CU-hours a month against Neon Free's 100. A game outside the windows still
 updates from member traffic, as before.
 
 ### Creating or changing the schedules
@@ -48,12 +50,19 @@ Running it twice leaves four.
 
 ```bash
 # .env.qstash (gitignored by .env*):
-#   QSTASH_TOKEN=...          from the Upstash console or the Marketplace integration
-#   CRON_SECRET=...           the Production value, not .env.local's
+#   QSTASH_TOKEN=...          Vercel env vars (the Marketplace integration) or the Upstash console
 #   QSTASH_URL=...            optional; the regional endpoint the integration sets
+#   CRON_SECRET=...           copy the line from .env.local, see below
 #   HEARTBEAT_BASE_URL=...    optional; defaults to https://slate.midfield-mafia.com
+grep '^CRON_SECRET=' .env.local >> .env.qstash
 npx tsx --env-file=.env.qstash scripts/qstash-schedules.mts
+rm .env.qstash
 ```
+
+`CRON_SECRET` is stored in Vercel as Sensitive, so the dashboard never shows it. Production,
+Preview and Development share one value (`scripts/provision-infra.sh`), so the copy in
+`.env.local` is the production secret. Prove it first: the `curl` under
+[Checking it](#checking-it) with that value answers 200, not 401.
 
 It forwards the secret as `Upstash-Forward-Authorization`, which QStash delivers as the
 `Authorization` header `authorized()` checks, and never prints it. **Re-run it after rotating

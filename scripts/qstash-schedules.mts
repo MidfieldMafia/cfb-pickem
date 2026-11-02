@@ -13,7 +13,7 @@
  * never prints the secret. Plain `fetch` against the REST API: no SDK.
  */
 
-/** UTC windows covering every Eastern kickoff on both sides of DST. The busiest day is 840 pings, under the free plan's 1,000. */
+/** UTC windows covering every Eastern kickoff on both sides of DST. The busiest day is 840 pings, past the Marketplace Free plan's 500, so QStash is on Pay as You Go. */
 const WINDOWS = [
   { id: "slate-live-saturday-day", cron: "* 15-23 * * 6" },
   { id: "slate-live-saturday-night", cron: "* 0-8 * * 0" },
