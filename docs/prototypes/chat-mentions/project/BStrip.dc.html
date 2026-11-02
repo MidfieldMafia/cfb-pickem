@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mentions B: a strip of pennants</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--background); font-family: var(--font-sans); color: var(--foreground); display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 12px 16px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
+    <div style="min-width: 0; flex: 1;">
+      <h1 style="margin: 0; font: 900 22px/28px var(--font-display);">Chat</h1>
+      <div style="font-size: 14px; line-height: 20px; color: var(--muted-foreground);">Tailgate Twelve</div>
+    </div>
+  </header>
+
+  <div ref="{{setBox}}" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+    <ol aria-label="Messages" style="margin: auto 0 0; list-style: none; padding: 8px 16px 12px; display: flex; flex-direction: column; gap: 4px;">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+        <li style="{{r.liStyle}}">
+          <sc-if value="{{r.notMine}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; gap: 6px; align-items: baseline; padding-left: 36px; font-size: 12px; line-height: 16px;">
+              <span style="font-weight: 700;">{{r.name}}</span>
+              <span style="color: var(--muted-foreground);">{{r.at}}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{r.mine}}" hint-placeholder-val="{{false}}">
+            <span style="padding-right: 12px; font-size: 12px; line-height: 16px; color: var(--muted-foreground);">{{r.at}}</span>
+          </sc-if>
+          <div style="display: flex; align-items: flex-end; gap: 8px; max-width: 100%;">
+            <sc-if value="{{r.notMine}}" hint-placeholder-val="{{true}}">
+              <div style="width: 28px; flex-shrink: 0; display: flex;">
+                <x-import component-from-global-scope="SaturdaySlateDesignSystem.Pennant" avatar="{{r.avatar}}" size="{{r.size}}"></x-import>
+              </div>
+            </sc-if>
+            <div style="{{r.bubbleStyle}}"><sc-for list="{{r.segs}}" as="s" hint-placeholder-count="1"><sc-if value="{{s.plain}}" hint-placeholder-val="{{true}}"><span>{{s.text}}</span></sc-if><sc-if value="{{s.chip}}" hint-placeholder-val="{{false}}"><span style="{{s.style}}"><sc-if value="{{s.hasAvatar}}" hint-placeholder-val="{{false}}"><span style="display: inline-flex; width: 18px; height: 18px;"><x-import component-from-global-scope="SaturdaySlateDesignSystem.Pennant" avatar="{{s.avatar}}" size="{{s.size}}"></x-import></span></sc-if>{{s.label}}</span></sc-if></sc-for></div>
+          </div>
+        </li>
+      </sc-for>
+    </ol>
+  </div>
+
+  <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{false}}">
+    <div role="listbox" aria-label="Mention a Member" style="flex-shrink: 0; display: flex; gap: 8px; overflow-x: auto; padding: 6px 16px; border-top: 1px solid var(--border); background: var(--background);">
+      <sc-for list="{{cands}}" as="c" hint-placeholder-count="4">
+        <button type="button" role="option" onMouseDown="{{keep}}" onClick="{{c.pick}}" style="flex-shrink: 0; height: 44px; max-width: 168px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 14px 0 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); cursor: pointer; color: var(--foreground); font: 600 15px/20px var(--font-sans);">
+          <sc-if value="{{c.isEveryone}}" hint-placeholder-val="{{false}}">
+            <span style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; background: var(--muted); display: grid; place-items: center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </span>
+          </sc-if>
+          <sc-if value="{{c.isMember}}" hint-placeholder-val="{{true}}">
+            <span style="width: 28px; flex-shrink: 0; display: flex;">
+              <x-import component-from-global-scope="SaturdaySlateDesignSystem.Pennant" avatar="{{c.avatar}}" size="{{c.size}}"></x-import>
+            </span>
+          </sc-if>
+          <span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{c.label}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <form onSubmit="{{send}}" style="flex-shrink: 0; border-top: 1px solid var(--border); background: var(--background); padding: 8px 16px; display: flex; flex-direction: column; gap: 4px;">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <label for="msg-b" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Message</label>
+      <input id="msg-b" ref="{{setInput}}" type="text" autoComplete="off" value="{{draft}}" onChange="{{onDraft}}" placeholder="Message Tailgate Twelve" style="height: 44px; min-width: 0; flex: 1; box-sizing: border-box; border: 1px solid var(--input); border-radius: 6px; background: var(--card); padding: 0 12px; font: 400 16px/22px var(--font-sans); color: var(--foreground); outline: none;">
+      <button type="submit" aria-label="Send" style="width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 0; border-radius: 6px; background: var(--primary); color: var(--primary-foreground); cursor: pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg>
+      </button>
+    </div>
+    <sc-if value="{{showStored}}" hint-placeholder-val="{{true}}">
+      <div style="font: 400 11px/14px ui-monospace, Menlo, monospace; color: var(--muted-foreground); border: 1px dashed var(--border); border-radius: 4px; padding: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{stored}}</div>
+    </sc-if>
+  </form>
+
+  <sc-if value="{{kbd}}" hint-placeholder-val="{{true}}">
+    <div aria-hidden="true" style="height: 291px; flex-shrink: 0; background: var(--muted); border-top: 1px dashed var(--border); display: grid; place-items: center; font-size: 13px; color: var(--muted-foreground);">iPhone keyboard</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"everyone":{"editor":"enum","options":["Organizers and Commissioners","Anyone","Nobody"],"default":"Organizers and Commissioners"},"viewerOrganizer":{"editor":"boolean","default":true},"renamed":{"editor":"boolean","default":false},"kbd":{"editor":"boolean","default":true},"showStored":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+var VIEWER = 3;
+var BASE = [
+  { id: 3, name: 'Priya', flag: 'teal', pattern: 'star', mark: 'cream' },
+  { id: 7, name: 'Marcus Webb', flag: 'maroon', pattern: 'bars', mark: 'gold' },
+  { id: 9, name: 'Sarah K', flag: 'plum', pattern: 'dot', mark: 'cream' },
+  { id: 12, name: 'Tom Bradley', flag: 'slate', pattern: 'chevron', mark: 'gold' },
+  { id: 14, name: 'Tommy', flag: 'sky', pattern: 'pips', mark: 'ink' },
+  { id: 15, name: 'Coach Ray', flag: 'pine', pattern: 'cross', mark: 'gold', role: 'Organizer' },
+  { id: 18, name: 'Danny', flag: 'copper', pattern: 'ring', mark: 'cream' },
+  { id: 21, name: 'Danny', flag: 'moss', pattern: 'diamond', mark: 'cream' },
+  { id: 24, name: 'Grandma', flag: 'pink', pattern: 'star', mark: 'cream' },
+  { id: 26, name: 'Lou', flag: 'gold', pattern: 'chevrons', mark: 'ink' },
+  { id: 30, name: 'Jess Álvarez', flag: 'sage', pattern: 'block', mark: 'ink' },
+  { id: 31, name: 'Dale', flag: 'tan', pattern: 'cross', mark: 'ink', role: 'Commissioner' }
+];
+var SEED = [
+  { id: 1, from: 7, at: '10:42 AM', text: 'Who had Vanderbilt +7? Asking for a friend' },
+  { id: 2, from: 9, at: '10:44 AM', text: '<@3> called it on Thursday. I have receipts' },
+  { id: 3, from: 3, at: '10:45 AM', text: 'Lucky guess. <@12> you are on the hook next week' },
+  { id: 4, from: 15, at: '11:02 AM', text: '<@everyone> picks lock Saturday at 11 AM. Get them in' },
+  { id: 5, from: 18, at: '11:05 AM', text: '<@21> wrong Danny again, my guy' }
+];
+var AV = {};
+function fold(s) { return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function avatarOf(m) {
+  if (AV[m.id]) return AV[m.id];
+  try {
+    var DS = window.SaturdaySlateDesignSystem;
+    var d = { flag: m.flag, pattern: m.pattern, patternColor: m.mark, pole: DS.PENNANT_POLES[0].slug, bg: 'auto' };
+    AV[m.id] = { name: m.name, file: DS.pennantDataUri(d), color: DS.pennantTint(d), kind: 'flag' };
+  } catch (e) { return undefined; }
+  return AV[m.id];
+}
+var BUBBLE = 'max-width: 270px; min-width: 0; box-sizing: border-box; border-radius: 14px; padding: 8px 12px; font-size: 16px; line-height: 24px; white-space: pre-wrap; overflow-wrap: anywhere;';
+var CHIP = 'display: inline-flex; align-items: center; gap: 4px; vertical-align: bottom; height: 22px; box-sizing: border-box; border-radius: 999px; font-weight: 700; white-space: nowrap; ';
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { draft: '', picked: [], sent: [] };
+    this.inputEl = null;
+    this.boxEl = null;
+    this.setInput = (el) => { this.inputEl = el; };
+    this.setBox = (el) => { this.boxEl = el; };
+  }
+  componentDidMount() { if (this.boxEl) this.boxEl.scrollTop = this.boxEl.scrollHeight; }
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState && prevState.sent !== this.state.sent && this.boxEl) this.boxEl.scrollTop = this.boxEl.scrollHeight;
+  }
+  members() {
+    var renamed = this.props.renamed ?? false;
+    return BASE.map((m) => (m.id === 12 && renamed ? Object.assign({}, m, { name: 'Big Tom' }) : m));
+  }
+  everyoneAllowed() {
+    var rule = this.props.everyone ?? 'Organizers and Commissioners';
+    if (rule === 'Nobody') return false;
+    if (rule === 'Anyone') return true;
+    return this.props.viewerOrganizer ?? true;
+  }
+  query() {
+    var d = this.state.draft, i = d.lastIndexOf('@');
+    if (i < 0) return null;
+    if (i > 0 && !/\s/.test(d[i - 1])) return null;
+    if (this.state.picked.some((p) => p.start === i)) return null;
+    var q = d.slice(i + 1);
+    if (q.length > 24 || /^\s/.test(q)) return null;
+    return { start: i, q: q };
+  }
+  candidates(q, start) {
+    var f = fold(q), out = [];
+    var pick = (c) => () => {
+      var d = this.state.draft.slice(0, start) + '@' + c.name + ' ';
+      this.setState({ draft: d, picked: this.state.picked.concat([{ id: c.id, name: c.name, start: start }]) });
+      if (this.inputEl) this.inputEl.focus();
+    };
+    if (this.everyoneAllowed() && 'everyone'.indexOf(f) === 0) {
+      out.push({ id: 'everyone', name: 'everyone', label: '@everyone', isEveryone: true, isMember: false, rank: 0 });
+    }
+    this.members().forEach((m) => {
+      if (m.id === VIEWER) return;
+      var n = fold(m.name), at = -1;
+      if (n.indexOf(f) === 0) at = 0;
+      else if (f) {
+        var pos = 0;
+        n.split(' ').some((w) => { if (w.indexOf(f) === 0) { at = pos; return true; } pos += w.length + 1; return false; });
+      }
+      if (at < 0) return;
+      out.push({ id: m.id, name: m.name, label: m.name, isEveryone: false, isMember: true, avatar: avatarOf(m), size: 28, rank: at === 0 ? 1 : 2 });
+    });
+    out.sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
+    return out.map((c) => Object.assign(c, { pick: pick(c) }));
+  }
+  encode() {
+    var out = this.state.draft;
+    this.state.picked.slice().sort((a, b) => b.start - a.start).forEach((p) => {
+      out = out.slice(0, p.start) + '<@' + p.id + '>' + out.slice(p.start + p.name.length + 1);
+    });
+    return out.trim();
+  }
+  segs(text) {
+    var byId = {};
+    this.members().forEach((m) => { byId[m.id] = m; });
+    var out = [], you = false;
+    text.split(/<@(\w+)>/).forEach((p, i) => {
+      if (i % 2 === 0) { if (p) out.push({ kind: 'text', text: p }); return; }
+      if (p === 'everyone') { out.push({ kind: 'everyone', text: '@everyone' }); return; }
+      var m = byId[p], isYou = Number(p) === VIEWER;
+      if (isYou) you = true;
+      out.push({ kind: isYou ? 'you' : 'member', text: '@' + (m ? m.name : 'former member'), name: m ? m.name : 'former member', avatar: m ? avatarOf(m) : undefined });
+    });
+    return { segs: out, you: you };
+  }
+  /* Variant B: a mention is a chip with the pennant in it; a mention of you is a pine chip. */
+  chip(s, mine) {
+    if (s.kind === 'text') return { plain: true, chip: false, text: s.text };
+    var fill;
+    if (s.kind === 'you') fill = mine ? 'background: var(--primary-foreground); color: var(--primary);' : 'background: var(--primary); color: var(--primary-foreground);';
+    else fill = mine ? 'background: rgba(251, 246, 236, 0.18); color: var(--primary-foreground);' : 'background: var(--muted); color: var(--foreground);';
+    var hasAvatar = s.kind !== 'everyone';
+    return {
+      plain: false, chip: true, hasAvatar: hasAvatar, avatar: s.avatar, size: 18,
+      label: hasAvatar ? s.name : '@everyone',
+      style: CHIP + fill + (hasAvatar ? ' padding: 0 8px 0 2px;' : ' padding: 0 8px;')
+    };
+  }
+  bubbleStyle(mine) {
+    if (mine) return BUBBLE + ' background: var(--primary); color: var(--primary-foreground);';
+    return BUBBLE + ' border: 1px solid var(--settled-border); background: var(--card); color: var(--foreground);';
+  }
+  renderVals() {
+    var byId = {};
+    this.members().forEach((m) => { byId[m.id] = m; });
+    var rows = SEED.concat(this.state.sent).map((msg) => {
+      var mine = msg.from === VIEWER, m = byId[msg.from], r = this.segs(msg.text);
+      return {
+        mine: mine, notMine: !mine, name: m ? m.name : 'Someone', at: msg.at, avatar: m ? avatarOf(m) : undefined, size: 28,
+        liStyle: 'display: flex; flex-direction: column; gap: 2px; padding-top: 8px; align-items: ' + (mine ? 'flex-end' : 'flex-start') + ';',
+        bubbleStyle: this.bubbleStyle(mine),
+        segs: r.segs.map((s) => this.chip(s, mine))
+      };
+    });
+    var q = this.query();
+    var cands = q ? this.candidates(q.q, q.start) : [];
+    var enc = this.encode();
+    var ids = this.state.picked.map((p) => p.id);
+    return {
+      rows: rows,
+      cands: cands,
+      pickerOpen: cands.length > 0,
+      draft: this.state.draft,
+      stored: 'stored: ' + (enc ? JSON.stringify(enc) : '""') + (ids.length ? '  mentions: [' + ids.join(', ') + ']' : ''),
+      showStored: this.props.showStored ?? true,
+      kbd: this.props.kbd ?? true,
+      setBox: this.setBox,
+      setInput: this.setInput,
+      keep: (e) => e.preventDefault(),
+      onDraft: (e) => {
+        var v = e.target.value;
+        this.setState({ draft: v, picked: this.state.picked.filter((p) => v.substr(p.start, p.name.length + 1) === '@' + p.name) });
+      },
+      send: (e) => {
+        e.preventDefault();
+        var text = this.encode();
+        if (!text) return;
+        this.setState({ sent: this.state.sent.concat([{ id: 100 + this.state.sent.length, from: VIEWER, at: 'Now', text: text }]), draft: '', picked: [] });
+        if (this.inputEl) this.inputEl.focus();
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
