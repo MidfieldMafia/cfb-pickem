@@ -43,7 +43,7 @@ Managed in Vercel (Production, Preview, Development). Pull them locally with `ve
 | `DATABASE_URL` | Neon integration (Production, Preview); set by hand for Development | Pooled connection for request-time queries (`drizzle-orm/neon-http`) |
 | `DATABASE_URL_UNPOOLED` | Neon integration (Production, Preview); set by hand for Development | Direct connection for migrations |
 | `CFBD_API_KEY` | CollegeFootballData account | Game schedules and scores |
-| `CRON_SECRET` | Generated | Bearer token required by scheduled route handlers |
+| `CRON_SECRET` | Generated | Bearer token required by scheduled route handlers. QStash holds a copy for the live heartbeat; re-run `scripts/qstash-schedules.mts` after rotating it (`docs/agents/heartbeat.md`) |
 | `NEXT_PUBLIC_APP_URL` | Set by hand | Absolute URL used in magic links and texts. Production: `https://slate.midfield-mafia.com`. Development: `http://localhost:3000`. Unset in Preview; code should fall back to `https://${VERCEL_URL}` |
 | `PINGRAM_API_KEY` | Pingram dashboard | Sends text messages (free tier, 100 SMS a month) |
 | `PINGRAM_WEBHOOK_SECRET` | Pingram dashboard, Webhooks | Verifies the Events Webhook at `/api/pingram/events`, which records a member's STOP and START. Production only; unset, every delivery is refused |
