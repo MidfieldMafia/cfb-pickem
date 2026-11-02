@@ -48,7 +48,10 @@ async function call(method: string, path: string, headers: Record<string, string
     headers: { authorization: `Bearer ${token}`, ...headers },
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(`${method} /v2/schedules${path.startsWith("/http") ? "/<destination>" : path}: ${response.status} ${text}`);
+  if (!response.ok) {
+    const shown = path.startsWith("/http") ? "/<destination>" : path;
+    throw new Error(`${method} /v2/schedules${shown}: ${response.status} ${text}`);
+  }
   return text ? JSON.parse(text) : null;
 }
 
