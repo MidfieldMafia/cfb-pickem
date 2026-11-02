@@ -179,7 +179,7 @@ class Component extends DCLogic {
     const p = st.prefs;
     const can = s.device === 'app' && st.perm !== 'denied';
     const live = can && st.dev;
-    const shown = (k) => p[k];
+    const shown = (k) => (live ? p[k] : (k === 'chat' ? 'off' : false));
     const chat = shown('chat');
     const opts = [
       { id: 'all', label: 'All' },
