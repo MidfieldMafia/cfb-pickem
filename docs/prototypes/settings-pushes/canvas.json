@@ -1,21 +1,82 @@
 {
   "v": 3,
-  "createdOnFiles": { "v": 1, "at": "2026-11-02T23:40:00Z" },
-  "title": "Settings, a row per push (#494)",
-  "launch": { "view": "canvas" },
-  "pages": [],
+  "attachments": {},
   "boards": {
-    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 1040, "title": "A · One card under a master Notifications switch", "is_interactive": true },
-    "Cards.dc.html": { "x": 470, "y": 0, "w": 390, "h": 1040, "title": "B · A one-line card per push, behind one Turn on button", "is_interactive": true },
-    "Choices.dc.html": { "x": 940, "y": 0, "w": 390, "h": 1040, "title": "C · This phone apart from your choices, editable anywhere", "is_interactive": true }
+    "Cards.dc.html": {
+      "h": 1040,
+      "is_interactive": true,
+      "title": "B · A one-line card per push, behind one Turn on button",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Choices.dc.html": {
+      "h": 1040,
+      "is_interactive": true,
+      "title": "C · This phone apart from your choices, editable anywhere",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 1040,
+      "is_interactive": true,
+      "title": "A · One card under a master Notifications switch",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    }
   },
-  "order": ["Main.dc.html", "Cards.dc.html", "Choices.dc.html"],
-  "notes": {
-    "row1": { "x": 0, "y": -260, "text": "Settings: a row for each new push", "kind": "title1", "maxW": 1330 },
-    "how": { "x": 1410, "y": 0, "w": 320, "fill": "orange", "size": "s", "text": "Press Play, then use the Scenario picker above each phone; tick Commissioner to see the New Feedback row. Rows: Pick reminder, Weekly Win, Close games and New Feedback start on; Chat (All / @mentions / Off) starts at @mentions. Nothing arrives until this phone allows push. The grey line under the picker shows what is saved for the member and what this phone holds. Turning on anything on a phone with no device walks the iPhone prompt." },
-    "open": { "x": 1410, "y": 480, "w": 320, "fill": "blue", "size": "s", "text": "What differs: (1) a member with no device on this phone: A shows every row off and greyed under one master Notifications switch in the card's header, and turning it on brings back the saved choices; B shows the saved choices greyed behind one Turn on button, C shows the choices live and lets them change anywhere, a computer included. (2) Where the device problem goes: under the card (A), in the gate card (B), in its own This iPhone card (C). Shared on all three: Pick reminder stays first; turning every row off deletes the member's devices (#493)." }
+  "createdOnFiles": {
+    "at": "2026-11-02T23:40:00Z",
+    "v": 1
   },
   "designSystems": [
-    { "title": "Saturday Slate Design System", "namespace": "saturdayslatedesignsystem", "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU", "version": "1792811404-d4d4", "copiedAt": "2026-11-02T23:40:00Z" }
-  ]
+    {
+      "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU",
+      "copiedAt": "2026-11-02T23:40:00Z",
+      "namespace": "saturdayslatedesignsystem",
+      "title": "Saturday Slate Design System",
+      "version": "1792811404-d4d4"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "row1",
+    "how",
+    "open"
+  ],
+  "notes": {
+    "how": {
+      "fill": "orange",
+      "text": "Press Play, then use the Scenario picker above each phone; tick Commissioner to see the New Feedback row. Rows: Pick reminder, Weekly Win, Close games and New Feedback start on; Chat (All / @mentions / Off) starts at @mentions. Nothing arrives until this phone allows push. The grey line under the picker shows what is saved for the member and what this phone holds. Turning on anything on a phone with no device walks the iPhone prompt.",
+      "w": 320,
+      "x": 1410,
+      "y": 0
+    },
+    "open": {
+      "fill": "blue",
+      "text": "What differs: (1) a member with no device on this phone: A shows every row off and greyed under one master Notifications switch in the card's header, and turning it on brings back the saved choices; B shows the saved choices greyed behind one Turn on button, C shows the choices live and lets them change anywhere, a computer included. (2) Where the device problem goes: under the card (A), in the gate card (B), in its own This iPhone card (C). Shared on all three: Pick reminder stays first; turning every row off deletes the member's devices (#493).",
+      "w": 320,
+      "x": 1410,
+      "y": 480
+    },
+    "row1": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Settings: a row for each new push",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Cards.dc.html",
+    "Choices.dc.html"
+  ],
+  "pages": [],
+  "title": "Settings, a row per push (#494)"
 }

@@ -40,7 +40,7 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
 
         <div style="min-height: 72px; box-sizing: border-box; padding: 12px 4px 12px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border);">
           <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-            <h2 id="a-all" style="margin: 0; font-family: var(--font-display, 'Chivo', sans-serif); font-weight: 900; font-size: 22px; line-height: 28px; letter-spacing: -0.01em; color: var(--foreground);">Notifications</h2>
+            <h2 id="a-all" style="margin: 0; font-family: var(--font-display, 'Chivo', sans-serif); font-weight: 900; font-size: 20px; line-height: 24px; letter-spacing: -0.01em; color: var(--foreground)">Notifications</h2>
             <p style="margin: 0; font: 400 14px/20px var(--font-sans); color: var(--muted-foreground);">{{masterLine}}</p>
           </div>
           <x-import component-from-global-scope="SaturdaySlateDesignSystem.Switch" checked="{{masterOn}}" on-checked-change="{{flipMaster}}" disabled="{{masterDim}}" aria-labelledby="a-all"></x-import>
@@ -117,11 +117,11 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
       <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center;">
         <div role="alertdialog" aria-label="iPhone permission prompt" style="width: 270px; border-radius: 14px; background: rgba(242, 242, 247, 0.98); font-family: -apple-system, system-ui, sans-serif; color: #000; text-align: center; overflow: hidden;">
           <div style="padding: 20px 16px 16px; display: flex; flex-direction: column; gap: 4px;">
-            <p style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 600;">&#8220;Saturday Slate&#8221; Would Like to Send You Notifications</p>
+            <p style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 600;">“Saturday Slate” Would Like to Send You Notifications</p>
             <p style="margin: 0; font-size: 13px; line-height: 18px;">Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.</p>
           </div>
           <div style="display: flex; border-top: 0.5px solid rgba(60, 60, 67, 0.36);">
-            <button type="button" onClick="{{dontAllow}}" style="flex: 1 1 0; height: 44px; border: 0; border-right: 0.5px solid rgba(60, 60, 67, 0.36); background: transparent; color: #007aff; font-size: 17px; font-family: inherit;">Don&#8217;t Allow</button>
+            <button type="button" onClick="{{dontAllow}}" style="flex: 1 1 0; height: 44px; border: 0; border-right: 0.5px solid rgba(60, 60, 67, 0.36); background: transparent; color: #007aff; font-size: 17px; font-family: inherit;">Don’t Allow</button>
             <button type="button" onClick="{{allow}}" style="flex: 1 1 0; height: 44px; border: 0; background: transparent; color: #007aff; font-size: 17px; font-weight: 600; font-family: inherit;">Allow</button>
           </div>
         </div>
