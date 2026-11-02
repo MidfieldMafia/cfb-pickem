@@ -20,7 +20,7 @@ import {
   uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { MAX_CHAT_TEXT } from "@/lib/chat/limits";
+import { MAX_STORED_CHAT_TEXT } from "@/lib/chat/limits";
 import { chatReactionKinds } from "@/lib/chat/reactions";
 import type { CfbdLiveDrive } from "@/lib/cfbd/types";
 import type { GameDetail } from "@/lib/detail";
@@ -636,7 +636,10 @@ export const chatMessages = pgTable(
   },
   (t) => [
     index("chat_messages_thread_idx").on(t.groupId, t.seasonId, t.id),
-    check("chat_messages_text_length", sql`char_length(${t.text}) between 1 and ${sql.raw(String(MAX_CHAT_TEXT))}`),
+    // The stored length, which mention tokens (#525) can make longer than what
+    // anyone reads: `<@1234>` shows as a name. The real limit, on the rendered
+    // text, is `MAX_CHAT_TEXT` in `postMessage`; this only stops a runaway row.
+    check("chat_messages_text_length", sql`char_length(${t.text}) between 1 and ${sql.raw(String(MAX_STORED_CHAT_TEXT))}`),
   ],
 );
 
@@ -658,6 +661,25 @@ export const chatReactions = pgTable(
     createdAt: utc("created_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.messageId, t.memberId] }), index("chat_reactions_member_idx").on(t.memberId)],
+);
+
+/**
+ * A Member mentioned in a Chat message (#525): one row per mentioned Member,
+ * written in the same batch as the message. `@everyone` writes one for every
+ * Member of the Group at send time except the sender. The thread renders
+ * mentions from the tokens in the text; these rows are for the pushes.
+ */
+export const chatMentions = pgTable(
+  "chat_mentions",
+  {
+    messageId: integer("message_id")
+      .notNull()
+      .references(() => chatMessages.id),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.memberId] }), index("chat_mentions_member_idx").on(t.memberId)],
 );
 
 /**
@@ -704,3 +726,4 @@ export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type ChatReaction = typeof chatReactions.$inferSelect;
+export type ChatMention = typeof chatMentions.$inferSelect;

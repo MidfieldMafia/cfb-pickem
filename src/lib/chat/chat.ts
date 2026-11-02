@@ -15,17 +15,23 @@
  * Group or a Commissioner removes anyone's. Either way the row stays, with
  * `deletedAt` set and, for a removal, `removedBy`, and the thread keeps a
  * one-line placeholder where it was without serving its text.
+ *
+ * Mentions (#525) are tokens in the text (`./mentions.ts`), checked against
+ * the Group as a message is posted, with a `chat_mentions` row for each Member
+ * mentioned beside it for the pushes to read.
  */
 import "server-only";
 import { and, asc, count, desc, eq, gt, inArray, isNull, ne, notExists, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { chatMessages, chatReactions, membershipRemovals, memberships, members, seasons, type Member } from "@/db/schema";
+import { inOneBatch } from "@/db/batch";
+import { chatMentions, chatMessages, chatReactions, membershipRemovals, memberships, members, seasons, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { manageGroup, NotOrganizer } from "@/lib/groups/manage";
-import { memberGroups } from "@/lib/groups/memberships";
+import { groupRoster, memberGroups, type RosterEntry } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import { toMemberJson, type MemberJson } from "@/lib/slate/json";
 import { MAX_CHAT_TEXT } from "./limits";
+import { mentionedIds, mentionSegments, mentionsOf, mentionToken, renderMentions, UNTOKEN } from "./mentions";
 import { countReactions, type ChatReactionKind, type Reactor } from "./reactions";
 
 export class InvalidChat extends Refusal {}
@@ -77,10 +83,17 @@ export interface ThreadEntry extends ThreadMessage {
 export interface Thread {
   /** Oldest first. */
   messages: ThreadEntry[];
-  /** Everyone who wrote or reacted to one of `messages`, for the names and pennants. Removed members included. */
+  /** Everyone who wrote, reacted to or is mentioned in one of `messages`, for the names and pennants. Removed members included. */
   senders: MemberJson[];
   /** The reader may remove other people's messages here (`canRemoveIn`). */
   canRemove: boolean;
+  /**
+   * The reader's marker as it stood before this read, which `markRead` is
+   * about to move: the mention pill counts from it (#525). For a reader who
+   * has never opened the thread, the last message from before they joined
+   * the Group, as `unreadCount` counts; 0 when there is none.
+   */
+  readId: number;
 }
 
 async function activeSeasonId(db: Db): Promise<number | null> {
@@ -94,27 +107,95 @@ async function requireInGroup(db: Db, memberId: number, groupId: number): Promis
 }
 
 /**
- * The text as it will be kept: trimmed, then held to 1 to `MAX_CHAT_TEXT`
- * characters. Counted in code points, as Postgres' `char_length` counts them,
- * so an emoji is one character on both sides of the check.
+ * The text as people will read it, trimmed, then held to 1 to `MAX_CHAT_TEXT`
+ * characters: `postMessage` hands it the text with each mention as its name.
+ * Counted in code points, as the composer counts them, so an emoji is one.
  */
 export function cleanChatText(raw: string): string {
   const text = raw.trim();
   if (text === "") throw new InvalidChat("Say something first.");
-  if ([...text].length > MAX_CHAT_TEXT) throw new InvalidChat(`A message is at most ${MAX_CHAT_TEXT} characters.`);
+  if ([...text.replaceAll(UNTOKEN, "")].length > MAX_CHAT_TEXT) throw new InvalidChat(`A message is at most ${MAX_CHAT_TEXT} characters.`);
   return text;
 }
 
-/** Posts one message to the Group's thread for the active Season. */
+/**
+ * Who can be mentioned in the Group's Chat: its Members now (not removed, not
+ * left) and active. The picker lists these and `postMessage` keeps a mention
+ * of these alone, so both read them here.
+ */
+async function mentionable(db: Db, groupId: number): Promise<RosterEntry[]> {
+  const roster = await groupRoster(db, groupId);
+  return roster.filter((entry) => entry.member.active && entry.removals.every((period) => period.restoredAt !== null));
+}
+
+/**
+ * The text as it will be stored, with its mentions checked against the Group
+ * (#525): a token for a Member of the Group now, active, stays; a token for
+ * anyone else becomes their name as text, or goes if nobody has the id. The
+ * limit is on the text as it reads, each token as its `@Name`.
+ *
+ * Also who it mentions: each named Member, or for `@everyone` every Member of
+ * the Group, never the sender.
+ */
+async function resolveMentions(db: Db, sender: Member, groupId: number, raw: string): Promise<{ text: string; mentioned: number[] }> {
+  const segments = mentionSegments(raw);
+  const roster = await mentionable(db, groupId);
+  const inGroup = new Map(roster.map((entry) => [entry.member.id, entry.member.displayName]));
+  const strangers = [
+    ...new Set(segments.flatMap((s) => (s.kind === "mention" && s.target !== "everyone" && !inGroup.has(s.target) ? [s.target] : []))),
+  ];
+  const strangerNames = new Map(
+    strangers.length === 0
+      ? []
+      : (await db.select({ id: members.id, name: members.displayName }).from(members).where(inArray(members.id, strangers))).map(
+          (m) => [m.id, m.name] as const,
+        ),
+  );
+  const text = segments
+    .map((s) => {
+      if (s.kind === "text") return s.text;
+      if (s.target === "everyone" || inGroup.has(s.target)) return mentionToken(s.target);
+      const name = strangerNames.get(s.target);
+      return name === undefined ? "" : `@${name}`;
+    })
+    .join("")
+    .trim();
+  // Run for its refusals alone: the rendered text is only measured, and the tokens are what is kept.
+  cleanChatText(renderMentions(text, (id) => inGroup.get(id)));
+  const mentioned = mentionsOf(text).includes("everyone") ? roster.map((entry) => entry.member.id) : mentionedIds(text);
+  return { text, mentioned: [...new Set(mentioned)].filter((id) => id !== sender.id).sort((a, b) => a - b) };
+}
+
+/**
+ * Posts one message to the Group's thread for the active Season, with a
+ * `chat_mentions` row for each Member it mentions, written in the same batch.
+ */
 export async function postMessage(db: Db, member: Member, groupId: number, raw: string, now: Date = new Date()): Promise<ThreadMessage> {
-  const text = cleanChatText(raw);
+  if (raw.trim() === "") throw new InvalidChat("Say something first.");
   await requireInGroup(db, member.id, groupId);
   const seasonId = await activeSeasonId(db);
   if (seasonId === null) throw new InvalidChat("Chat opens when the season does.");
-  const [row] = await db
-    .insert(chatMessages)
-    .values({ groupId, memberId: member.id, seasonId, text, createdAt: now })
-    .returning({ id: chatMessages.id, memberId: chatMessages.memberId, text: chatMessages.text, createdAt: chatMessages.createdAt });
+  const { text, mentioned } = await resolveMentions(db, member, groupId, raw);
+  const insert = (tx: Db) =>
+    tx
+      .insert(chatMessages)
+      .values({ groupId, memberId: member.id, seasonId, text, createdAt: now })
+      .returning({ id: chatMessages.id, memberId: chatMessages.memberId, text: chatMessages.text, createdAt: chatMessages.createdAt });
+  if (mentioned.length === 0) {
+    const [row] = await insert(db);
+    return row;
+  }
+  // The message's id is not back yet inside one batch, so the mentions take
+  // it from the sequence the insert just drew on, in the same transaction.
+  const [[row]] = await inOneBatch(db, (tx) => [
+    insert(tx),
+    tx.insert(chatMentions).select(
+      tx
+        .select({ messageId: sql<number>`currval(pg_get_serial_sequence('chat_messages', 'id'))::int`.as("message_id"), memberId: members.id })
+        .from(members)
+        .where(inArray(members.id, mentioned)),
+    ),
+  ]);
   return row;
 }
 
@@ -130,7 +211,12 @@ const remover = alias(members, "remover");
 export async function chatThread(db: Db, member: Member, groupId: number): Promise<Thread> {
   await requireInGroup(db, member.id, groupId);
   const seasonId = await activeSeasonId(db);
-  if (seasonId === null) return { messages: [], senders: [], canRemove: false };
+  if (seasonId === null) return { messages: [], senders: [], canRemove: false, readId: 0 };
+  const [marker] = await db
+    .select({ chatReadId: memberships.chatReadId, joinedAt: memberships.joinedAt })
+    .from(memberships)
+    .where(and(eq(memberships.groupId, groupId), eq(memberships.memberId, member.id)))
+    .limit(1);
   const newestFirst = await db
     .select({
       id: chatMessages.id,
@@ -156,12 +242,27 @@ export async function chatThread(db: Db, member: Member, groupId: number): Promi
     }
     return { ...base, text: m.text, gone: null, ...(reactions.get(m.id) ?? { reactions: [], mine: null, reactors: [] }) };
   });
-  const ids = [...new Set(messages.flatMap((m) => [m.memberId, ...m.reactors.map((r) => r.memberId)]))];
+  const ids = [
+    ...new Set(messages.flatMap((m) => [m.memberId, ...m.reactors.map((r) => r.memberId), ...mentionedIds(m.text)])),
+  ];
   const senders =
     ids.length === 0
       ? []
       : (await db.select().from(members).where(inArray(members.id, ids)).orderBy(asc(members.id))).map(toMemberJson);
-  return { messages, senders, canRemove: await canRemoveIn(db, member, groupId) };
+  const joinedAt = marker?.joinedAt.getTime() ?? 0;
+  const readId =
+    marker?.chatReadId ?? messages.findLast((m) => m.createdAt.getTime() <= joinedAt)?.id ?? 0;
+  return { messages, senders, canRemove: await canRemoveIn(db, member, groupId), readId };
+}
+
+/**
+ * Who the composer's picker can mention (#525): the Group's Members now,
+ * active, the reader among them. The same people `postMessage` keeps a
+ * mention of. No roles: the picker shows names alone.
+ */
+export async function mentionPeople(db: Db, member: Member, groupId: number): Promise<MemberJson[]> {
+  await requireInGroup(db, member.id, groupId);
+  return (await mentionable(db, groupId)).map((entry) => toMemberJson(entry.member));
 }
 
 /**

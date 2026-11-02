@@ -227,7 +227,7 @@ describe("the thread", () => {
     const family = await familyGroup(db);
     await db.update(seasons).set({ active: false });
 
-    expect(await chatThread(db, grandma, family.id)).toEqual({ messages: [], senders: [], canRemove: false });
+    expect(await chatThread(db, grandma, family.id)).toEqual({ messages: [], senders: [], canRemove: false, readId: 0 });
   });
 });
 

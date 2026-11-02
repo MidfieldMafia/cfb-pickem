@@ -127,6 +127,13 @@
       "when": 1792977845071,
       "tag": "0017_reminder-push-only",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793659652682,
+      "tag": "0018_chat-mentions",
+      "breakpoints": true
     }
   ]
 }

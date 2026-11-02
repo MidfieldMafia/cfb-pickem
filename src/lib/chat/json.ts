@@ -26,10 +26,16 @@ export interface ChatMessageJson {
 export interface ChatStateJson {
   /** Oldest first. */
   messages: ChatMessageJson[];
-  /** Everyone who wrote or reacted to one of `messages`. */
+  /** Everyone who wrote, reacted to or is mentioned in one of `messages`. */
   senders: MemberJson[];
   /** The viewer may remove other people's messages: an Organizer of the Group, or a Commissioner. */
   canRemove: boolean;
+  /**
+   * The viewer's read marker before this answer moved it (#525). The mention
+   * pill counts from the first answer's alone, the one the screen opened on;
+   * later polls carry it but nothing reads it, and the ETag leaves it out.
+   */
+  readId: number;
   /** The server's clock, ISO 8601: what "today" means for the times over each run. */
   serverNow: string;
 }
@@ -48,6 +54,7 @@ export function toChatStateJson(thread: Thread, now: Date): ChatStateJson {
     })),
     senders: thread.senders,
     canRemove: thread.canRemove,
+    readId: thread.readId,
     serverNow: now.toISOString(),
   };
 }

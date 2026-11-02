@@ -6,3 +6,9 @@
 
 /** The most characters one message may say. */
 export const MAX_CHAT_TEXT = 280;
+/**
+ * The most characters the stored text may hold. A mention is kept as a token
+ * (`<@1234>`, `<@everyone>`) that can be longer than the name it shows, so the
+ * column gets headroom; `MAX_CHAT_TEXT` is still the limit, on the rendered text.
+ */
+export const MAX_STORED_CHAT_TEXT = 1000;

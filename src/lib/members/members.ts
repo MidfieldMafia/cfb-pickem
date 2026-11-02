@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { and, asc, count, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { inOneBatch } from "@/db/batch";
 import {
+  chatMentions,
   chatMessages,
   chatReactions,
   feedback,
@@ -252,7 +253,8 @@ export async function pickCountByMember(db: Db, _actor: Commissioner): Promise<M
  * Every row that names them goes in one batch with the member, so a failure
  * leaves them whole rather than half deleted. That includes their Feedback
  * and its screenshots (#237), their Chat messages (#248), their reactions and
- * everyone's reactions to their messages (#249), and the Tours they dismissed (#429).
+ * everyone's reactions to their messages (#249), their mentions and the
+ * mentions in their messages (#525), and the Tours they dismissed (#429).
  */
 export async function removeMember(db: Db, actor: Commissioner, memberId: number): Promise<Member> {
   if (memberId === actor.id) throw new InvalidMember("You cannot delete yourself.");
@@ -280,6 +282,8 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     tx.delete(feedback).where(eq(feedback.memberId, memberId)),
     tx.delete(chatReactions).where(eq(chatReactions.memberId, memberId)),
     tx.delete(chatReactions).where(inArray(chatReactions.messageId, theirMessages)),
+    tx.delete(chatMentions).where(eq(chatMentions.memberId, memberId)),
+    tx.delete(chatMentions).where(inArray(chatMentions.messageId, theirMessages)),
     tx.delete(chatMessages).where(eq(chatMessages.memberId, memberId)),
     tx.delete(tourDismissals).where(eq(tourDismissals.memberId, memberId)),
     tx.delete(pushSubscriptions).where(eq(pushSubscriptions.memberId, memberId)),
@@ -288,7 +292,7 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     tx.update(chatMessages).set({ removedBy: null }).where(eq(chatMessages.removedBy, memberId)),
     tx.delete(members).where(eq(members.id, memberId)).returning(),
   ]);
-  const [deleted] = writes[18];
+  const [deleted] = writes[20];
   return deleted;
 }
 
