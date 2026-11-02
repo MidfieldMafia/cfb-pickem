@@ -1,31 +1,114 @@
 {
   "v": 3,
-  "createdOnFiles": { "v": 1, "at": "2026-11-02T17:37:44Z" },
-  "title": "Chat @mentions (#495)",
-  "launch": { "view": "canvas" },
-  "pages": [],
+  "attachments": {},
   "boards": {
-    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 844, "title": "A · A list above the composer", "is_interactive": true },
-    "BStrip.dc.html": { "x": 470, "y": 0, "w": 390, "h": 844, "title": "B · A strip of pennants, mentions as chips", "is_interactive": true },
-    "CPanel.dc.html": { "x": 940, "y": 0, "w": 390, "h": 844, "title": "C · An @ button and a full roster", "is_interactive": true }
+    "BStrip.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "B · A strip of pennants, mentions as chips",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "CPanel.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "C · An @ button and a full roster",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "A · A list above the composer",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    }
   },
-  "order": ["Main.dc.html", "BStrip.dc.html", "CPanel.dc.html"],
-  "notes": {
-    "row1": { "kind": "title1", "text": "Chat @mentions: the picker and how a mention shows", "x": 0, "y": -300, "maxW": 1330 },
-    "a": { "fill": "gray", "w": 390, "x": 0, "y": -150, "text": "A · Typing @ opens up to four rows above the composer, filtered as you type. A mention is bold pine text. A message that mentions you gets the accent fill, a pine edge and a rust MENTIONED YOU label." },
-    "b": { "fill": "gray", "w": 390, "x": 470, "y": -150, "text": "B · Typing @ swaps in a single row of pennants above the composer, about as tall as the QuickType bar, so the thread keeps its room. A mention is a chip with the pennant in it. A mention of you is a pine chip." },
-    "c": { "fill": "gray", "w": 390, "x": 940, "y": -150, "text": "C · An @ button in the composer (typing @ works too) swaps the thread for the whole roster, @everyone first. A mention is rust bold text. A mention of you is highlighted, and a '1 mention' pill jumps to it." },
-    "how": { "fill": "orange", "w": 360, "x": 1420, "y": 0, "text": "Press Play on a board, then type @ in the composer. Try 'to' (Tom Bradley and Tommy), 'br' (the start of a later word), 'dan' (two members both named Danny, told apart by pennant), and 'tom b' (the query runs past a space while a name still matches). Send to see the message in the thread. The dashed line under the composer is the stored text, live: a mention is kept as <@id>, so a rename never breaks it. The 'Renamed' tweak renames Tom Bradley to Big Tom, and every old mention follows. The grey block is the iPhone keyboard, there to judge the room left (Tweaks: Keyboard)." },
-    "store": { "fill": "teal", "w": 360, "x": 1420, "y": 480, "text": "Storage, the same for all three: chat_messages.text keeps <@memberId> (and <@everyone>) in place of the name. The send route checks each id is a current Member of the Group and drops any that isn't to plain text. A chat_mentions (message_id, member_id) row per mentioned Member, written in the same batch, is the 'which members does this message mention' the push ticket reads. @everyone expands to rows for the whole Group at send. The 280-character limit counts the message as members see it (@Tom Bradley = 12), not the token. A removed Member's mention renders as @former member. Editing inside a picked name turns it back into plain text." },
-    "open": { "fill": "blue", "w": 360, "x": 1420, "y": 980, "text": "Calls for Jonah: (1) A, B or C, or a mix (e.g. A's picker with B's chips). (2) @everyone: Organizers and Commissioners only (drawn), anyone, or not at all (Tweaks: Everyone, Viewer is Organizer). (3) No @commissioners: a Commissioner who plays in the Group is mentioned by name like anyone, and one who doesn't can't read this Chat anyway. Feedback is how a Member reaches them. (4) Does @everyone count as 'mentions you' for the highlight, or only for the push? Drawn: only for the push." }
+  "createdOnFiles": {
+    "at": "2026-11-02T17:37:44Z",
+    "v": 1
   },
   "designSystems": [
     {
-      "title": "Saturday Slate Design System",
-      "namespace": "saturdayslatedesignsystem",
       "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU",
-      "version": "1792811404-d4d4",
-      "copiedAt": "2026-11-02T17:37:44Z"
+      "copiedAt": "2026-11-02T17:37:44Z",
+      "namespace": "saturdayslatedesignsystem",
+      "title": "Saturday Slate Design System",
+      "version": "1792811404-d4d4"
     }
-  ]
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "row1",
+    "a",
+    "b",
+    "c",
+    "how",
+    "store",
+    "open"
+  ],
+  "notes": {
+    "a": {
+      "fill": "gray",
+      "text": "A · Typing @ opens up to four rows above the composer, filtered as you type. A mention is bold pine text. A message that mentions you gets the accent fill, a pine edge and a rust MENTIONED YOU label.",
+      "w": 390,
+      "x": 0,
+      "y": -150
+    },
+    "b": {
+      "fill": "gray",
+      "text": "B · Typing @ swaps in a single row of pennants above the composer, about as tall as the QuickType bar, so the thread keeps its room. A mention is a chip with the pennant in it. A mention of you is a pine chip.",
+      "w": 390,
+      "x": 470,
+      "y": -150
+    },
+    "c": {
+      "fill": "gray",
+      "text": "C · An @ button in the composer (typing @ works too) swaps the thread for the whole roster, @everyone first. A mention is rust bold text. A mention of you is highlighted, and a '1 mention' pill jumps to it.",
+      "w": 390,
+      "x": 940,
+      "y": -150
+    },
+    "how": {
+      "fill": "orange",
+      "text": "Press Play on a board, then type @ in the composer. Try 'to' (Tom Bradley and Tommy), 'br' (the start of a later word), 'dan' (two members both named Danny, told apart by pennant), and 'tom b' (the query runs past a space while a name still matches). Send to see the message in the thread. The dashed line under the composer is the stored text, live: a mention is kept as <@id>, so a rename never breaks it. The 'Renamed' tweak renames Tom Bradley to Big Tom, and every old mention follows. The grey block is the iPhone keyboard, there to judge the room left (Tweaks: Keyboard).",
+      "w": 360,
+      "x": 1420,
+      "y": 0
+    },
+    "open": {
+      "fill": "blue",
+      "text": "Calls for Jonah: (1) A, B or C, or a mix (e.g. A's picker with B's chips). (2) @everyone: Organizers and Commissioners only (drawn), anyone, or not at all (Tweaks: Everyone, Viewer is Organizer). (3) No @commissioners: a Commissioner who plays in the Group is mentioned by name like anyone, and one who doesn't can't read this Chat anyway. Feedback is how a Member reaches them. (4) Does @everyone count as 'mentions you' for the highlight, or only for the push? Drawn: only for the push.",
+      "w": 360,
+      "x": 1420,
+      "y": 980
+    },
+    "row1": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Chat @mentions: the picker and how a mention shows",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "store": {
+      "fill": "teal",
+      "text": "Storage, the same for all three: chat_messages.text keeps <@memberId> (and <@everyone>) in place of the name. The send route checks each id is a current Member of the Group and drops any that isn't to plain text. A chat_mentions (message_id, member_id) row per mentioned Member, written in the same batch, is the 'which members does this message mention' the push ticket reads. @everyone expands to rows for the whole Group at send. The 280-character limit counts the message as members see it (@Tom Bradley = 12), not the token. A removed Member's mention renders as @former member. Editing inside a picked name turns it back into plain text.",
+      "w": 360,
+      "x": 1420,
+      "y": 480
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "BStrip.dc.html",
+    "CPanel.dc.html"
+  ],
+  "pages": [],
+  "title": "Chat @mentions (#495)"
 }

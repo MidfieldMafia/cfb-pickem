@@ -25,21 +25,22 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
     </div>
   </header>
 
+  <div style="position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column;">
   <div ref="{{setBox}}" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
     <ol aria-label="Messages" style="margin: auto 0 0; list-style: none; padding: 8px 16px 12px; display: flex; flex-direction: column; gap: 4px;">
       <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
-        <li style="{{r.liStyle}}">
+        <li id="{{r.domId}}" style="{{r.liStyle}}">
           <sc-if value="{{r.notMine}}" hint-placeholder-val="{{true}}">
             <div style="display: flex; gap: 6px; align-items: baseline; padding-left: 36px; font-size: 12px; line-height: 16px;">
               <span style="font-weight: 700;">{{r.name}}</span>
               <span style="color: var(--muted-foreground);">{{r.at}}</span>
+              <sc-if value="{{r.youLabel}}" hint-placeholder-val="{{false}}">
+                <span style="margin-left: 4px; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Mentioned you</span>
+              </sc-if>
             </div>
           </sc-if>
           <sc-if value="{{r.mine}}" hint-placeholder-val="{{false}}">
             <span style="padding-right: 12px; font-size: 12px; line-height: 16px; color: var(--muted-foreground);">{{r.at}}</span>
-          </sc-if>
-          <sc-if value="{{r.youLabel}}" hint-placeholder-val="{{false}}">
-            <span style="padding-left: 36px; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Mentioned you</span>
           </sc-if>
           <div style="display: flex; align-items: flex-end; gap: 8px; max-width: 100%;">
             <sc-if value="{{r.notMine}}" hint-placeholder-val="{{true}}">
@@ -52,6 +53,13 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
         </li>
       </sc-for>
     </ol>
+  </div>
+  <sc-if value="{{showJump}}" hint-placeholder-val="{{true}}">
+    <button type="button" onClick="{{jump}}" style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 14px 0 10px; border: 0; border-radius: 999px; background: var(--secondary); color: var(--secondary-foreground); font: 700 14px/20px var(--font-sans); cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 7.94"></path></svg>
+      {{jumpLabel}}
+    </button>
+  </sc-if>
   </div>
 
   <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{false}}">
@@ -93,7 +101,7 @@ a{color:var(--foreground)}a:hover{color:var(--primary)}
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"everyone":{"editor":"enum","options":["Organizers and Commissioners","Anyone","Nobody"],"default":"Organizers and Commissioners"},"viewerOrganizer":{"editor":"boolean","default":true},"renamed":{"editor":"boolean","default":false},"kbd":{"editor":"boolean","default":true},"showStored":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props="{&quot;everyone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Organizers and Commissioners&quot;,&quot;Anyone&quot;,&quot;Nobody&quot;],&quot;default&quot;:&quot;Anyone&quot;},&quot;viewerOrganizer&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true},&quot;renamed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false},&quot;kbd&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true},&quot;showStored&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true},&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
 var VIEWER = 3;
 var BASE = [
   { id: 3, name: 'Priya', flag: 'teal', pattern: 'star', mark: 'cream' },
@@ -132,7 +140,7 @@ var BUBBLE = 'max-width: 270px; min-width: 0; box-sizing: border-box; border-rad
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { draft: '', picked: [], sent: [] };
+    this.state = { draft: '', picked: [], sent: [], seen: 0 };
     this.inputEl = null;
     this.boxEl = null;
     this.setInput = (el) => { this.inputEl = el; };
@@ -198,7 +206,7 @@ class Component extends DCLogic {
     var out = [], you = false;
     text.split(/<@(\w+)>/).forEach((p, i) => {
       if (i % 2 === 0) { if (p) out.push({ kind: 'text', text: p }); return; }
-      if (p === 'everyone') { out.push({ kind: 'everyone', text: '@everyone' }); return; }
+      if (p === 'everyone') { you = true; out.push({ kind: 'everyone', text: '@everyone' }); return; }
       var m = byId[p], isYou = Number(p) === VIEWER;
       if (isYou) you = true;
       out.push({ kind: isYou ? 'you' : 'member', text: '@' + (m ? m.name : 'former member'), avatar: m ? avatarOf(m) : undefined });
@@ -218,9 +226,12 @@ class Component extends DCLogic {
   renderVals() {
     var byId = {};
     this.members().forEach((m) => { byId[m.id] = m; });
+    var unseen = [];
     var rows = SEED.concat(this.state.sent).map((msg) => {
       var mine = msg.from === VIEWER, m = byId[msg.from], r = this.segs(msg.text), you = r.you && !mine;
+      if (you && msg.id > this.state.seen) unseen.push(msg.id);
       return {
+        domId: 'a-msg-' + msg.id,
         mine: mine, notMine: !mine, name: m ? m.name : 'Someone', at: msg.at, avatar: m ? avatarOf(m) : undefined, size: 28,
         youLabel: you,
         liStyle: 'display: flex; flex-direction: column; gap: 2px; padding-top: 8px; align-items: ' + (mine ? 'flex-end' : 'flex-start') + ';',
@@ -235,6 +246,13 @@ class Component extends DCLogic {
     return {
       rows: rows,
       cands: cands,
+      showJump: unseen.length > 0,
+      jumpLabel: unseen.length === 1 ? '1 mention' : unseen.length + ' mentions',
+      jump: () => {
+        var el = document.getElementById('a-msg-' + unseen[0]);
+        if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        this.setState({ seen: unseen[unseen.length - 1] });
+      },
       pickerOpen: cands.length > 0,
       draft: this.state.draft,
       stored: 'stored: ' + (enc ? JSON.stringify(enc) : '""') + (ids.length ? '  mentions: [' + ids.join(', ') + ']' : ''),
