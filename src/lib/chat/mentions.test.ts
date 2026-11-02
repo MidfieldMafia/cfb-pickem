@@ -171,6 +171,8 @@ describe("the composer's draft", () => {
     expect(before.picked).toEqual([{ target: 12, name: "Tom Bradley", start: 6 }]);
     expect(editDraft(before, "oh hi @Tom Bradley see").picked).toEqual([{ target: 12, name: "Tom Bradley", start: 6 }]);
     expect(editDraft(draft, "hi @Tom Bradly ").picked).toEqual([]);
+    expect(editDraft(editDraft(draft, "hi @Tom Bradley"), "hi @Tom Bradleymy").picked).toEqual([]);
+    expect(editDraft(editDraft(draft, "hi @Tom Bradley"), "hi @Tom Bradley!").picked).toEqual([{ target: 12, name: "Tom Bradley", start: 3 }]);
     expect(editDraft(draft, "").picked).toEqual([]);
   });
 

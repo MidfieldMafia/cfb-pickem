@@ -125,7 +125,7 @@ export function ChatThread({
   /** The `@` the member closed the picker on with Escape: it stays shut until they start another. */
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   /** The picker row the arrow keys are on. */
-  const [activeOption, setActiveOption] = useState(0);
+  const [activeOption, setActiveOption] = useState(-1);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -153,7 +153,8 @@ export function ChatThread({
   ];
   const matches = query && query.start !== dismissedAt ? matchMentions(query.query, candidates) : [];
   const pickerOpen = matches.length > 0;
-  const active = Math.min(activeOption, Math.max(matches.length - 1, 0));
+  /** -1 until an arrow key moves onto a row. */
+  const active = Math.min(activeOption, matches.length - 1);
   const byId = new Map(state.messages.map((m) => [m.id, m]));
   const pill = unseen.filter((id) => {
     const message = byId.get(id);
@@ -220,7 +221,7 @@ export function ChatThread({
     const next = editDraft(draft, text);
     setDraft(next);
     setCaret(at);
-    setActiveOption(0);
+    setActiveOption(-1);
     if (pickerQuery(next, at) === null) setDismissedAt(null);
   };
 
@@ -241,11 +242,13 @@ export function ChatThread({
       setDismissedAt(query.start);
     } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
+      const from = active < 0 ? (event.key === "ArrowDown" ? -1 : 0) : active;
       const step = event.key === "ArrowDown" ? 1 : -1;
-      setActiveOption((active + step + matches.length) % matches.length);
-    } else if (event.key === "Enter" || event.key === "Tab") {
+      setActiveOption((from + step + matches.length) % matches.length);
+    } else if (event.key === "Tab" || (event.key === "Enter" && active >= 0)) {
+      // Enter picks only a row the arrow keys chose: the iOS keyboard's Send is Enter, and it must still send.
       event.preventDefault();
-      pick(matches[active]);
+      pick(matches[Math.max(active, 0)]);
     }
   };
 
@@ -396,7 +399,7 @@ export function ChatThread({
             aria-autocomplete="list"
             aria-expanded={pickerOpen}
             aria-controls={MENTION_LIST_ID}
-            aria-activedescendant={pickerOpen ? mentionOptionId(active) : undefined}
+            aria-activedescendant={pickerOpen && active >= 0 ? mentionOptionId(active) : undefined}
             value={draft.text}
             onChange={(e) => onDraft(e.target.value, e.target.selectionStart ?? e.target.value.length)}
             onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? e.currentTarget.value.length)}

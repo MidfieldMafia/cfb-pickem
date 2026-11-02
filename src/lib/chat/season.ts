@@ -1,8 +1,8 @@
 /**
  * Chat keeps one Season (#177, #251). Once the next Season is active, every
  * Group's messages from earlier ones are deleted, not archived: the rows go,
- * deleted and removed ones with them, and so do their reactions and mentions. Nobody can
- * read them afterwards.
+ * deleted and removed ones with them, and so do their reactions and mentions.
+ * Nobody can read them afterwards.
  */
 import "server-only";
 import { and, eq, inArray, isNotNull, ne, notExists } from "drizzle-orm";

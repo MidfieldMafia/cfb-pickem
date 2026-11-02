@@ -3,6 +3,7 @@
 import { AtSign, Users } from "lucide-react";
 import { Pennant } from "@/components/pennant";
 import { mentionLabel, mentionSegments, type MentionMatch } from "@/lib/chat/mentions";
+import { plural } from "@/lib/plural";
 import type { MemberJson } from "@/lib/slate/json";
 
 /** The picker's list, for the composer's `aria-controls`. */
@@ -101,7 +102,7 @@ export function MentionPill({ count, onJump }: { count: number; onJump: () => vo
     <button type="button" onClick={onJump} className="absolute bottom-2 left-1/2 flex h-11 -translate-x-1/2 items-center">
       <span className="flex h-9 items-center gap-1.5 rounded-full bg-secondary pr-3.5 pl-2.5 text-sm font-bold whitespace-nowrap text-secondary-foreground">
         <AtSign size={16} aria-hidden />
-        {count === 1 ? "1 mention" : `${count} mentions`}
+        {plural(count, "mention")}
       </span>
     </button>
   );

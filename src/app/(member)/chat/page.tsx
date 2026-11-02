@@ -6,7 +6,6 @@ import { NoGroup } from "@/components/no-group";
 import { chatThread, markRead, mentionPeople } from "@/lib/chat/chat";
 import { toChatStateJson } from "@/lib/chat/json";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
-import { groupBoard } from "@/lib/groups/memberships";
 import { requireMember } from "@/lib/members/current";
 import { plural } from "@/lib/plural";
 import { toMemberJson } from "@/lib/slate/json";
@@ -27,13 +26,10 @@ export default async function Chat() {
   if (choice === null) return <NoGroup member={member} />;
   const group = choice.current;
   const now = new Date();
-  const [thread, board, people] = await Promise.all([
-    chatThread(db(), member, group.id),
-    groupBoard(db(), group.id),
-    mentionPeople(db(), member, group.id),
-  ]);
+  // `people` is the Group's active Members now, the same count the header has always shown.
+  const [thread, people] = await Promise.all([chatThread(db(), member, group.id), mentionPeople(db(), member, group.id)]);
   await markRead(db(), member.id, group.id, thread);
-  const members = board.filter((entry) => entry.active).length;
+  const members = people.length;
 
   return (
     <main data-own-scroll className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col">

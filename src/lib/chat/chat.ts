@@ -27,12 +27,12 @@ import { inOneBatch } from "@/db/batch";
 import { chatMentions, chatMessages, chatReactions, membershipRemovals, memberships, members, seasons, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { manageGroup, NotOrganizer } from "@/lib/groups/manage";
-import { groupBoard, groupRoster, memberGroups } from "@/lib/groups/memberships";
+import { groupRoster, memberGroups, type RosterEntry } from "@/lib/groups/memberships";
 import { Refusal } from "@/lib/refusal";
 import { toMemberJson, type MemberJson } from "@/lib/slate/json";
 import type { MentionPersonJson } from "./json";
 import { MAX_CHAT_TEXT } from "./limits";
-import { mentionSegments, mentionsOf, mentionToken, renderMentions } from "./mentions";
+import { mentionedIds, mentionSegments, mentionsOf, mentionToken, renderMentions, UNTOKEN } from "./mentions";
 import { countReactions, type ChatReactionKind, type Reactor } from "./reactions";
 
 export class InvalidChat extends Refusal {}
@@ -115,8 +115,18 @@ async function requireInGroup(db: Db, memberId: number, groupId: number): Promis
 export function cleanChatText(raw: string): string {
   const text = raw.trim();
   if (text === "") throw new InvalidChat("Say something first.");
-  if ([...text].length > MAX_CHAT_TEXT) throw new InvalidChat(`A message is at most ${MAX_CHAT_TEXT} characters.`);
+  if ([...text.replaceAll(UNTOKEN, "")].length > MAX_CHAT_TEXT) throw new InvalidChat(`A message is at most ${MAX_CHAT_TEXT} characters.`);
   return text;
+}
+
+/**
+ * Who can be mentioned in the Group's Chat: its Members now (not removed, not
+ * left) and active. The picker lists these and `postMessage` keeps a mention
+ * of these alone, so both read them here.
+ */
+async function mentionable(db: Db, groupId: number): Promise<RosterEntry[]> {
+  const roster = await groupRoster(db, groupId);
+  return roster.filter((entry) => entry.member.active && entry.removals.every((period) => period.restoredAt !== null));
 }
 
 /**
@@ -130,8 +140,8 @@ export function cleanChatText(raw: string): string {
  */
 async function resolveMentions(db: Db, sender: Member, groupId: number, raw: string): Promise<{ text: string; mentioned: number[] }> {
   const segments = mentionSegments(raw);
-  const roster = (await groupBoard(db, groupId)).filter((entry) => entry.active);
-  const inGroup = new Map(roster.map((entry) => [entry.id, entry.member.displayName]));
+  const roster = await mentionable(db, groupId);
+  const inGroup = new Map(roster.map((entry) => [entry.member.id, entry.member.displayName]));
   const strangers = [
     ...new Set(segments.flatMap((s) => (s.kind === "mention" && s.target !== "everyone" && !inGroup.has(s.target) ? [s.target] : []))),
   ];
@@ -151,11 +161,9 @@ async function resolveMentions(db: Db, sender: Member, groupId: number, raw: str
     })
     .join("")
     .trim();
+  // Run for its refusals alone: the rendered text is only measured, and the tokens are what is kept.
   cleanChatText(renderMentions(text, (id) => inGroup.get(id)));
-  const targets = mentionsOf(text);
-  const mentioned = targets.includes("everyone")
-    ? roster.map((entry) => entry.id)
-    : targets.filter((target): target is number => target !== "everyone");
+  const mentioned = mentionsOf(text).includes("everyone") ? roster.map((entry) => entry.member.id) : mentionedIds(text);
   return { text, mentioned: [...new Set(mentioned)].filter((id) => id !== sender.id).sort((a, b) => a - b) };
 }
 
@@ -235,9 +243,8 @@ export async function chatThread(db: Db, member: Member, groupId: number): Promi
     }
     return { ...base, text: m.text, gone: null, ...(reactions.get(m.id) ?? { reactions: [], mine: null, reactors: [] }) };
   });
-  const mentioned = (text: string) => mentionsOf(text).filter((target): target is number => target !== "everyone");
   const ids = [
-    ...new Set(messages.flatMap((m) => [m.memberId, ...m.reactors.map((r) => r.memberId), ...mentioned(m.text)])),
+    ...new Set(messages.flatMap((m) => [m.memberId, ...m.reactors.map((r) => r.memberId), ...mentionedIds(m.text)])),
   ];
   const senders =
     ids.length === 0
@@ -256,14 +263,10 @@ export async function chatThread(db: Db, member: Member, groupId: number): Promi
  */
 export async function mentionPeople(db: Db, member: Member, groupId: number): Promise<MentionPersonJson[]> {
   await requireInGroup(db, member.id, groupId);
-  const [roster, board] = await Promise.all([groupRoster(db, groupId), groupBoard(db, groupId)]);
-  const current = new Set(board.filter((entry) => entry.active).map((entry) => entry.id));
-  return roster
-    .filter((entry) => current.has(entry.member.id))
-    .map((entry) => ({
-      member: toMemberJson(entry.member),
-      role: entry.member.isCommissioner ? "Commissioner" : entry.role === "organizer" ? "Organizer" : "",
-    }));
+  return (await mentionable(db, groupId)).map((entry) => ({
+    member: toMemberJson(entry.member),
+    role: entry.member.isCommissioner ? "Commissioner" : entry.role === "organizer" ? "Organizer" : "",
+  }));
 }
 
 /**

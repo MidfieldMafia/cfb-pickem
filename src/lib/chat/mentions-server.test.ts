@@ -93,6 +93,15 @@ describe("posting a mention", () => {
     );
   });
 
+  test("does not count the zero-width space that keeps a typed-out token plain, as the composer does not", async () => {
+    const { db, grandma, family } = await seed();
+    const typed = "<​@everyone>";
+
+    const message = await postMessage(db, grandma, family.id, `${"a".repeat(MAX_CHAT_TEXT - 11)}${typed}`, THURSDAY);
+
+    expect(message.text.endsWith(typed)).toBe(true);
+  });
+
   test("keeps a message whose tokens make it longer than it reads", async () => {
     const { db, grandma, family } = await seed();
     const text = "<@everyone>".repeat(30);

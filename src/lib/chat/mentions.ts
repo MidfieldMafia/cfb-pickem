@@ -13,6 +13,12 @@ export type MentionTarget = number | "everyone";
 
 export type MentionSegment = { kind: "text"; text: string } | { kind: "mention"; target: MentionTarget };
 
+/**
+ * The zero-width space that keeps a typed-out `<@…>` from reading as a token.
+ * The composer never shows or counts it, so the server's limit skips it too.
+ */
+export const UNTOKEN = "​";
+
 /** How a mention of someone no longer anywhere reads. */
 export const FORMER_MEMBER = "former member";
 
@@ -57,6 +63,10 @@ export function mentionsOf(text: string): MentionTarget[] {
   }
   return seen;
 }
+
+/** The Members a message names, once each; `@everyone` left out. */
+export const mentionedIds = (text: string): number[] =>
+  mentionsOf(text).filter((target): target is number => target !== "everyone");
 
 /** How a mention reads: `@` and the current name, `@everyone`, or `@former member`. */
 export function mentionLabel(target: MentionTarget, nameOf: (id: number) => string | undefined): string {
@@ -229,6 +239,12 @@ export function pickMention(draft: Draft, at: PickerQuery, candidate: MentionCan
   };
 }
 
+/** The picked name is still there as picked: whole, and not run on into a longer word (`@Tommy` from `@Tom`). */
+function stillPicked(text: string, pick: PickedMention): boolean {
+  const end = pick.start + pickedText(pick).length;
+  return text.startsWith(pickedText(pick), pick.start) && !/[\p{L}\p{N}_]/u.test(text.charAt(end));
+}
+
 /**
  * The draft after the member typed or deleted: each picked name moves with
  * the text around it, and one whose own text changed is no longer a mention.
@@ -239,7 +255,7 @@ export function editDraft(draft: Draft, text: string): Draft {
   const delta = text.length - draft.text.length;
   const picked = draft.picked
     .map((pick) => (pick.start + pickedText(pick).length <= prefix ? pick : { ...pick, start: pick.start + delta }))
-    .filter((pick) => pick.start >= 0 && text.startsWith(pickedText(pick), pick.start));
+    .filter((pick) => pick.start >= 0 && stillPicked(text, pick));
   return { text, picked };
 }
 
@@ -248,7 +264,7 @@ export function editDraft(draft: Draft, text: string): Draft {
  * is broken with a zero-width space, so typing `<@everyone>` mentions nobody.
  */
 export function encodeDraft(draft: Draft): string {
-  const plain = (text: string) => text.replaceAll("<@", "<​@");
+  const plain = (text: string) => text.replaceAll("<@", `<${UNTOKEN}@`);
   let out = "";
   let from = 0;
   for (const pick of [...draft.picked].sort((a, b) => a.start - b.start)) {
