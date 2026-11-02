@@ -152,7 +152,7 @@ class Component extends DCLogic {
   fresh(id, commish) {
     const s = this.scenarioList().find((x) => x.id === id);
     return { sc: id, commish: commish, perm: s.perm, dev: s.dev, fell: !!s.fell, prompt: false, pending: null,
-      prefs: { reminder: s.rem, chat: 'mentions', win: true, close: true, feedback: true } };
+      prefs: { reminder: true, chat: 'mentions', win: true, close: true, feedback: true } };
   }
   anyOn(p, commish) {
     return p.reminder || p.chat !== 'off' || p.win || p.close || (commish && p.feedback);
