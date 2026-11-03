@@ -34,6 +34,7 @@ import type { Db } from "@/db/types";
 import type { CfbdClient, CfbdGame, CfbdScoreboardGame } from "@/lib/cfbd/types";
 import type { Commissioner } from "@/lib/members/authority";
 import { noteError } from "@/lib/notes";
+import { newlyClose, type CloseGameSink } from "@/lib/push/close-game";
 import { Refusal } from "@/lib/refusal";
 import { applyGamePatches, gameWithWeek, slateFor, type Slate } from "@/lib/slate/slate";
 import { toLiveFeed, type LiveFeed } from "./live-feed";
@@ -272,12 +273,17 @@ async function ingestPlays(db: Db, cfbd: CfbdClient, live: Game[], now: Date): P
  * brand, and `refreshResults` runs it for a commissioner's own "Check the
  * feed now" over the same call — one writer, reached by both, would refuse
  * a `Commissioner` parameter it could not always supply.
+ *
+ * Once the rows are written, the games this update made close (#531) go to
+ * `closeGames`, judged on each row as it walked in against what the update
+ * wrote. The sink only schedules the push, so the pass never waits on it.
  */
 export async function ingestResults(
   db: Db,
   cfbd: CfbdClient,
   slate: Slate,
   now: Date = new Date(),
+  closeGames?: CloseGameSink,
 ): Promise<{ changed: number }> {
   const board = new Map((await cfbd.scoreboard()).map((g) => [g.id, g]));
   const unlisted = new Set(
@@ -301,20 +307,23 @@ export async function ingestResults(
     (game) => nextOf.get(game.id)?.status === "in_progress" && !settled(effectiveResult(game, now)),
   );
   const plays = await ingestPlays(db, cfbd, live, now);
-  return {
-    changed: await applyGamePatches(
-      db,
-      slate.games,
-      (game) => {
-        const next = nextOf.get(game.id);
-        if (next === undefined) return null;
-        const read = plays.get(game.id);
-        const withPlays = read ? { ...next, liveFeed: read.ok ? read.feed : game.liveFeed } : next;
-        return sameColumns(withPlays, game) ? null : withPlays;
-      },
-      now,
-    ),
-  };
+  const changed = await applyGamePatches(
+    db,
+    slate.games,
+    (game) => {
+      const next = nextOf.get(game.id);
+      if (next === undefined) return null;
+      const read = plays.get(game.id);
+      const withPlays = read ? { ...next, liveFeed: read.ok ? read.feed : game.liveFeed } : next;
+      return sameColumns(withPlays, game) ? null : withPlays;
+    },
+    now,
+  );
+  if (closeGames) {
+    const closes = newlyClose(slate.games, (game) => nextOf.get(game.id), now);
+    if (closes.length > 0) closeGames(db, closes);
+  }
+  return { changed };
 }
 
 /**
@@ -369,13 +378,15 @@ export interface RefreshedSlate {
  * first kickoff or once every game is final. The claim is one atomic update
  * of `weeks.scoreboard_fetched_at`, so concurrent requests across Vercel
  * instances elect a single caller; the in-process cache in `@/lib/cfbd` is
- * per instance and could not hold this bound on its own.
+ * per instance and could not hold this bound on its own. The pass that
+ * claims it hands its close games to `closeGames` (`ingestResults`).
  */
 export async function refreshResultsIfStale(
   db: Db,
   cfbd: CfbdClient,
   slate: Slate,
   now: Date = new Date(),
+  closeGames?: CloseGameSink,
 ): Promise<RefreshedSlate> {
   const weekId = slate.week.id;
   if (!slate.week.published) return { outcome: "idle", slate };
@@ -388,7 +399,7 @@ export async function refreshResultsIfStale(
     .where(and(eq(weeks.id, weekId), or(isNull(weeks.scoreboardFetchedAt), lte(weeks.scoreboardFetchedAt, cutoff))))
     .returning({ id: weeks.id });
   if (claimed.length === 0) return { outcome: "fresh", slate };
-  await ingestResults(db, cfbd, slate, now);
+  await ingestResults(db, cfbd, slate, now, closeGames);
   return { outcome: "refreshed", slate: await slateFor(db, weekId) };
 }
 

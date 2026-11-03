@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, MessageCircle } from "lucide-react";
+import { Bell, MessageCircle, Timer } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { LINK, Switch } from "@saturday-slate/design-system";
@@ -27,13 +27,15 @@ const unknown = () => "unknown" as const;
  * one kind of push each, for the member on every phone, and never add or
  * delete a device. While the switch is off, every row shows off, greyed and
  * locked, so no row claims a push this phone won't get. Chat (#530) is three
- * segments rather than a switch, and shows Off while locked.
+ * segments rather than a switch, and shows Off while locked. Close games
+ * (#531) comes after it; Weekly Win, when it ships, goes between them.
  */
 export function NotificationsCard({
   endpoints,
   stopped: savedStopped,
   reminder: savedReminder,
   chat: savedChat,
+  closeGames: savedCloseGames,
   publicKey,
 }: {
   /** The member's saved devices. */
@@ -41,6 +43,7 @@ export function NotificationsCard({
   stopped: boolean;
   reminder: boolean;
   chat: ChatNotification;
+  closeGames: boolean;
   publicKey: string | null;
 }) {
   const block = useSyncExternalStore(noChange, readBlock, unknown);
@@ -51,6 +54,7 @@ export function NotificationsCard({
   const [deniedNow, setDeniedNow] = useState(false);
   const [reminder, setReminder] = useState(savedReminder);
   const [chat, setChat] = useState(savedChat);
+  const [closeGames, setCloseGames] = useState(savedCloseGames);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,13 +106,14 @@ export function NotificationsCard({
     }
   }
 
-  async function flipReminder(next: boolean) {
+  /** One switch row: shows the change at once, saves it, and puts it back if the save is refused. */
+  async function flipRow(kind: "reminder" | "closeGames", set: (on: boolean) => void, next: boolean) {
     if (!view.rowsLive) return;
     setError(null);
-    setReminder(next);
-    const result = await saveNotificationAction("reminder", next);
+    set(next);
+    const result = await saveNotificationAction(kind, next);
     if (result.error) {
-      setReminder(!next);
+      set(!next);
       setError(result.error);
     }
   }
@@ -156,7 +161,7 @@ export function NotificationsCard({
             </div>
             <Switch
               checked={view.rowsLive && reminder}
-              onCheckedChange={flipReminder}
+              onCheckedChange={(next) => void flipRow("reminder", setReminder, next)}
               disabled={!view.rowsLive}
               aria-labelledby="reminder-label"
             />
@@ -188,6 +193,21 @@ export function NotificationsCard({
               })}
             </div>
             <p className="text-sm leading-5 text-muted-foreground">{chatView.line}</p>
+          </div>
+          <div className="flex min-h-14 items-center gap-3 border-t border-border py-1.5 pr-1 pl-3">
+            <Timer size={20} className="shrink-0 text-primary" aria-hidden />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <p id="close-games-label" className="text-base leading-6 font-semibold">
+                Close games
+              </p>
+              <p className="text-sm leading-5 text-muted-foreground">Two minutes left, one score apart.</p>
+            </div>
+            <Switch
+              checked={view.rowsLive && closeGames}
+              onCheckedChange={(next) => void flipRow("closeGames", setCloseGames, next)}
+              disabled={!view.rowsLive}
+              aria-labelledby="close-games-label"
+            />
           </div>
         </div>
       </div>

@@ -24,6 +24,7 @@ export default async function Settings() {
         stopped={pushStopped(member, endpoints.length)}
         reminder={settings.reminder}
         chat={settings.chat}
+        closeGames={settings.closeGames}
         publicKey={pushConfigFromEnv()?.publicKey ?? null}
       />
     </main>

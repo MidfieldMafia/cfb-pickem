@@ -1217,3 +1217,15 @@ describe("the freshness line (#95)", () => {
     expect(screen.queryByText(/Updated/)).toBeNull();
   });
 });
+
+describe("opening on a game's sheet (#531)", () => {
+  test("?game= opens that game's sheet with the screen, as a Close game push links to it; an id not on the board opens nothing", () => {
+    const initial = state({ complete: false, games: [game(LIVE)] });
+    render(<LiveBoard initial={initial} viewer={VIEWER} openGameId={initial.games[0].game.id} />);
+    expect(screen.queryByRole("dialog")).not.toBeNull();
+    cleanup();
+
+    render(<LiveBoard initial={initial} viewer={VIEWER} openGameId={999_999} />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});

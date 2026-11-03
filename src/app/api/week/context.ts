@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { cfbd } from "@/lib/cfbd";
 import { currentGroup } from "@/lib/groups/current";
 import { currentMember } from "@/lib/members/current";
+import { closeGamesAfter } from "@/lib/push/close-game-after";
 import type { PickRoute } from "@/lib/picks/http";
 
 /**
@@ -12,5 +13,5 @@ import type { PickRoute } from "@/lib/picks/http";
  * everything above it takes this as an argument.
  */
 export function pickRoute(): PickRoute {
-  return { db: db(), currentMember, currentGroup, cfbd };
+  return { db: db(), currentMember, currentGroup, cfbd, closeGames: closeGamesAfter };
 }

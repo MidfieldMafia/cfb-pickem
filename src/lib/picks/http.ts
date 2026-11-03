@@ -7,6 +7,7 @@
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
+import type { CloseGameSink } from "@/lib/push/close-game";
 import { integerField } from "@/lib/parse";
 import { publishedSlate, type Slate } from "@/lib/slate/slate";
 import { toSheetJson, type SheetJson } from "./json";
@@ -47,6 +48,8 @@ export interface PickRoute {
    * is not about the feed.
    */
   cfbd?: () => CfbdClient;
+  /** Where that route's feed pull hands the games it just made close (#531). */
+  closeGames?: CloseGameSink;
 }
 
 /**

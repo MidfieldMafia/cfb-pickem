@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { AppHeader, LINK } from "@saturday-slate/design-system";
 
 import { cfbd } from "@/lib/cfbd";
+import { closeGamesAfter } from "@/lib/push/close-game-after";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
@@ -42,7 +43,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
   const choice = await currentGroupChoice();
   if (choice === null) return <NoGroup member={member} />;
   const now = new Date();
-  const slate = await freshSlate(db(), cfbd, now);
+  const slate = await freshSlate(db(), cfbd, now, closeGamesAfter);
   const season = await seasonResult(db(), choice.current.id, now);
   const played = season.weeks;
   const latest = played[played.length - 1];

@@ -7,6 +7,7 @@ import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 import { RevealList } from "@/components/reveal";
 import { cfbd } from "@/lib/cfbd";
+import { closeGamesAfter } from "@/lib/push/close-game-after";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { pickBreakdown, tiebreakerGuesses, weeklyWinSentence } from "@/lib/results/summary";
@@ -32,7 +33,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
   const choice = await currentGroupChoice();
   if (choice === null) return <NoGroup member={member} />;
   const params = await searchParams;
-  const review = await weekInReview(db(), choice.current.id, weekParam(params.week), new Date(), { cfbd });
+  const review = await weekInReview(db(), choice.current.id, weekParam(params.week), new Date(), { cfbd, closeGames: closeGamesAfter });
   const menu = <MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />;
 
   if (!review) {
