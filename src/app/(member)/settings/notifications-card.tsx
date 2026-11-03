@@ -106,24 +106,14 @@ export function NotificationsCard({
     }
   }
 
-  async function flipReminder(next: boolean) {
+  /** One switch row: shows the change at once, saves it, and puts it back with the error if the save fails. */
+  async function flipRow(kind: "reminder" | "weeklyWin", next: boolean, show: (on: boolean) => void) {
     if (!view.rowsLive) return;
     setError(null);
-    setReminder(next);
-    const result = await saveNotificationAction("reminder", next);
+    show(next);
+    const result = await saveNotificationAction(kind, next);
     if (result.error) {
-      setReminder(!next);
-      setError(result.error);
-    }
-  }
-
-  async function flipWeeklyWin(next: boolean) {
-    if (!view.rowsLive) return;
-    setError(null);
-    setWeeklyWin(next);
-    const result = await saveNotificationAction("weeklyWin", next);
-    if (result.error) {
-      setWeeklyWin(!next);
+      show(!next);
       setError(result.error);
     }
   }
@@ -171,7 +161,7 @@ export function NotificationsCard({
             </div>
             <Switch
               checked={view.rowsLive && reminder}
-              onCheckedChange={flipReminder}
+              onCheckedChange={(next) => void flipRow("reminder", next, setReminder)}
               disabled={!view.rowsLive}
               aria-labelledby="reminder-label"
             />
@@ -214,7 +204,7 @@ export function NotificationsCard({
             </div>
             <Switch
               checked={view.rowsLive && weeklyWin}
-              onCheckedChange={flipWeeklyWin}
+              onCheckedChange={(next) => void flipRow("weeklyWin", next, setWeeklyWin)}
               disabled={!view.rowsLive}
               aria-labelledby="weekly-win-label"
             />
