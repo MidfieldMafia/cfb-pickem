@@ -1,23 +1,29 @@
 import { AppHeader } from "@saturday-slate/design-system";
+import { db } from "@/db";
 import { MemberMenu } from "@/components/member-menu";
 import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { pushConfigFromEnv } from "@/lib/push/sender";
-import { reminderSwitch } from "@/lib/push/settings";
-import { ReminderSwitch } from "./reminder-switch";
+import { notificationSettings, pushStopped, savedEndpoints } from "@/lib/push/settings";
+import { NotificationsCard } from "./notifications-card";
 
 /**
- * Settings (#454): how the app behaves for the member, where Your profile is
- * who they are. One row for now, the Pick reminder by push, on or off. Opened
- * from the member menu.
+ * Settings (#454, #529): how the app behaves for the member, where Your
+ * profile is who they are. One card for now, Notifications: a switch for this
+ * phone and a row per push. Opened from the member menu.
  */
 export default async function Settings() {
   const member = await requireMember();
-  const { on, stopped } = reminderSwitch(member);
+  const endpoints = await savedEndpoints(db(), member.id);
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader title="Settings" right={<MemberMenu member={member} manage={await currentManageHref()} />} />
-      <ReminderSwitch on={on} stopped={stopped} publicKey={pushConfigFromEnv()?.publicKey ?? null} />
+      <NotificationsCard
+        endpoints={endpoints}
+        stopped={pushStopped(member, endpoints.length)}
+        reminder={notificationSettings(member).reminder}
+        publicKey={pushConfigFromEnv()?.publicKey ?? null}
+      />
     </main>
   );
 }

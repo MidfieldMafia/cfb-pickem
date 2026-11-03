@@ -29,7 +29,10 @@ export function onboardingApplies(welcomedAt: Date | null, now: Date): boolean {
 export type Ask = "step" | "sheet" | "banner" | null;
 
 export interface AskFacts {
-  /** The member's reminder is already on. */
+  /**
+   * Nothing to ask: the member's Pick reminder already reaches one of their
+   * devices, or they turned the reminder off in Settings.
+   */
   reminderOn: boolean;
   /** The app has a public key to subscribe with. */
   hasKey: boolean;

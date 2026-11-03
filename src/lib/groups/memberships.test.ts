@@ -36,7 +36,16 @@ import { groupRoster, memberGroups, MABRY_FAMILY } from "./memberships";
 import { ingestResults } from "@/lib/results/writes";
 
 /** Member columns later migrations added. */
-const ADDED_SINCE = ["smsOptedOut", "reminderChannel", "pushStoppedAt"] as const;
+const ADDED_SINCE = [
+  "smsOptedOut",
+  "reminderChannel",
+  "pushStoppedAt",
+  "notifyReminder",
+  "notifyChat",
+  "notifyWeeklyWin",
+  "notifyCloseGames",
+  "notifyFeedback",
+] as const;
 
 /** The member columns that existed before groups; later migrations only add to them. */
 const columnsThen = Object.fromEntries(
@@ -91,7 +100,17 @@ async function familyBeforeGroups() {
       returning id`)) as unknown as { rows: { id: number }[] };
     const [{ id }] = rows;
     const [row] = await db.select(columnsThen).from(members).where(eq(members.id, id));
-    return { ...row, smsOptedOut: false, reminderChannel: "off" as const, pushStoppedAt: null };
+    return {
+      ...row,
+      smsOptedOut: false,
+      reminderChannel: "off" as const,
+      pushStoppedAt: null,
+      notifyReminder: true,
+      notifyChat: "mentions" as const,
+      notifyWeeklyWin: true,
+      notifyCloseGames: true,
+      notifyFeedback: true,
+    };
   };
   const jonah = (await add("Jonah", TUESDAY, { isCommissioner: true })) as Commissioner;
   const alex = await add("Alex", TUESDAY, { isCommissioner: true, phone: "+12565550100" });

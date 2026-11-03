@@ -16,13 +16,19 @@ import { NOOP, senderFromEnv } from "@/lib/messaging/sender";
 import { recentTexts, textBudget } from "@/lib/messaging/texts";
 import { listMembers, magicLinkFor, pickCountByMember } from "@/lib/members/members";
 import { plural } from "@/lib/plural";
-import { reminderSwitch } from "@/lib/push/settings";
+import { membersWithDevices } from "@/lib/push/settings";
 import { relativeTime } from "@/lib/relative-time";
 import { clearPhotoAction, deleteMemberAction, editPhoneAction, optOutAction, regenerateAction, setActiveAction, textMagicLinkAction } from "./actions";
 import { AddMemberForm } from "./add-member-form";
 import { ActionForm } from "../action-form";
 
 const TEXT_KINDS = { magic_link: "sign-in link", reminder: "reminder", scheduled_reminder: "scheduled reminder" };
+
+/** Whether the Pick reminder reaches a member: it goes by push only, to a member with it on and a device (#529). */
+function reminderReach(member: { notifyReminder: boolean }, hasDevice: boolean): string {
+  if (!member.notifyReminder) return "Off";
+  return hasDevice ? "Push" : "on, no phone";
+}
 
 function maskedLink(link: string): string {
   const url = new URL(link);
@@ -32,13 +38,14 @@ function maskedLink(link: string): string {
 export default async function Members() {
   const commissioner = await requireConsole();
   const sender = senderFromEnv();
-  const [roster, pickCounts, groups, groupsOf, texts, budget] = await Promise.all([
+  const [roster, pickCounts, groups, groupsOf, texts, budget, devices] = await Promise.all([
     listMembers(db(), commissioner),
     pickCountByMember(db(), commissioner),
     listGroups(db(), commissioner),
     groupsByMember(db(), commissioner),
     recentTexts(db(), commissioner),
     textBudget(db(), sender, new Date()),
+    membersWithDevices(db()),
   ]);
   const base = appUrl();
   const commissioners = roster.filter((m) => m.isCommissioner).length;
@@ -78,7 +85,7 @@ export default async function Members() {
                         <p className="text-xs text-muted-foreground">
                           {member.phone ?? "No phone yet"}
                           {member.smsOptedOut ? " · opted out of texts" : ""}
-                          {` · Reminder: ${reminderSwitch(member).on ? "Push" : "Off"}`}
+                          {` · Reminder: ${reminderReach(member, devices.has(member.id))}`}
                         </p>
                       </div>
                     </div>

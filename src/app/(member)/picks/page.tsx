@@ -4,7 +4,7 @@ import { requireMember } from "@/lib/members/current";
 import { toSheetJson } from "@/lib/picks/json";
 import { onboardingApplies } from "@/lib/push/ask";
 import { pushConfigFromEnv } from "@/lib/push/sender";
-import { reminderSwitch } from "@/lib/push/settings";
+import { savedEndpoints } from "@/lib/push/settings";
 import type { WalkPage } from "@/lib/picks/walk";
 import { currentWeek } from "@/lib/week/week";
 import { NoSlate } from "./no-slate";
@@ -31,9 +31,11 @@ export default async function Picks({
   if (step === "lock" && !week.sheet.progress.lockApplies) redirect("/picks/review");
   const startGameId = typeof game === "string" ? Number(game) : undefined;
   const startPage: WalkPage | undefined = step === "lock" || step === "guess" ? step : undefined;
-  // What the browser can't know for the Pick reminder ask (#482).
+  // What the browser can't know for the Pick reminder ask (#482). Nothing to
+  // ask when the reminder already reaches a device of the member's, or when
+  // they turned the reminder itself off (#529).
   const reminder = {
-    on: reminderSwitch(member).on,
+    on: !member.notifyReminder || (await savedEndpoints(db(), member.id)).length > 0,
     publicKey: pushConfigFromEnv()?.publicKey ?? null,
     onboarding: onboardingApplies(member.welcomedAt, new Date()),
   };

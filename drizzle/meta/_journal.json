@@ -134,6 +134,13 @@
       "when": 1793659652682,
       "tag": "0018_chat-mentions",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793664383362,
+      "tag": "0019_notification-settings",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 /**
- * The browser side of push (#454): whether this device can take the Pick
- * reminder, and the subscribe and unsubscribe steps the Settings switch runs.
+ * The browser side of push (#454, #529): whether this device can take a push,
+ * which subscription it holds, and the subscribe and unsubscribe steps the
+ * Notifications switch runs.
  * Push reaches an iPhone only in the Home Screen app (iOS 16.4+), an Android
  * phone in Chrome itself, and never a computer: the reminder is for the phone.
  */
@@ -63,6 +64,16 @@ export async function subscribeDevice(publicKey: string): Promise<Subscribed> {
     return { ok: true, subscription: subscription.toJSON() };
   } catch {
     return { ok: false, why: "failed" };
+  }
+}
+
+/** This browser's push subscription endpoint, or null when it holds none or cannot say. */
+export async function thisDeviceEndpoint(): Promise<string | null> {
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration(SERVICE_WORKER_URL);
+    return (await registration?.pushManager.getSubscription())?.endpoint ?? null;
+  } catch {
+    return null;
   }
 }
 

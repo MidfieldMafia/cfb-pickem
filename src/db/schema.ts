@@ -230,6 +230,10 @@ export const seasonRosters = pgTable("season_rosters", {
 export const reminderChannels = ["push", "off"] as const;
 export type ReminderChannel = (typeof reminderChannels)[number];
 
+/** How much of Chat a member is pushed (#493): every first message since they last read it, only mentions, or none. */
+export const chatNotifications = ["all", "mentions", "off"] as const;
+export type ChatNotification = (typeof chatNotifications)[number];
+
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   displayName: text("display_name").notNull(),
@@ -254,17 +258,30 @@ export const members = pgTable("members", {
    */
   smsOptedOut: boolean("sms_opted_out").notNull().default(false),
   /**
-   * How the member's Pick reminder reaches them (#454). Everyone starts `off`:
-   * `text` stays a value so texts can come back without a migration, but while
-   * texting is paused the Settings page offers only Push, on or off, and shows
-   * anything else as off.
+   * How the member's Pick reminder was to reach them by text (#454). Texting is
+   * paused, and nothing reads it for push since #529: a Reminder by push goes
+   * by `notifyReminder` and the member's devices. Kept so texts can come back
+   * without a migration.
    */
   reminderChannel: text("reminder_channel", { enum: reminderChannels }).notNull().default("off"),
   /**
-   * When push stopped reaching every one of the member's devices and the reminder
-   * turned itself off. Settings says so until the member next flips the switch.
+   * When push stopped reaching the member's last device (the push service
+   * answered 404 or 410) and it was deleted. Settings says so until the member
+   * next turns Notifications on.
    */
   pushStoppedAt: utc("push_stopped_at"),
+  /*
+   * Which pushes the member wants (#529), one value per kind, the same on every
+   * phone. Nothing is sent to a member with no device, so a kind that is on
+   * only takes effect once Notifications is on for a phone.
+   */
+  /** The Pick reminder. On for everyone, existing members included (#494). */
+  notifyReminder: boolean("notify_reminder").notNull().default(true),
+  notifyChat: text("notify_chat", { enum: chatNotifications }).notNull().default("mentions"),
+  notifyWeeklyWin: boolean("notify_weekly_win").notNull().default(true),
+  notifyCloseGames: boolean("notify_close_games").notNull().default(true),
+  /** New Feedback; read only for commissioners. */
+  notifyFeedback: boolean("notify_feedback").notNull().default(true),
   /** Set when the member finishes the welcome page for the first time. */
   welcomedAt: utc("welcomed_at"),
   lastSeenAt: utc("last_seen_at"),
@@ -529,8 +546,9 @@ export const textMessages = pgTable(
 /**
  * One device a member has turned push on for (#454): its push service endpoint
  * and keys. The endpoint is the device, so it is unique, and a device that
- * changes hands moves to whoever subscribed it last. A Reminder goes to every
- * row a member has; turning the reminder off deletes them all.
+ * changes hands moves to whoever subscribed it last. A push goes to every row
+ * a member has. A row is deleted only by the Notifications switch on that
+ * device, or when the push service answers that it is gone (#529).
  */
 export const pushSubscriptions = pgTable(
   "push_subscriptions",
@@ -547,14 +565,24 @@ export const pushSubscriptions = pgTable(
   (t) => [index("push_subscriptions_member_idx").on(t.memberId)],
 );
 
+/**
+ * One row per push the app is about to send (#529), inserted before the send:
+ * the key is unique, so a second try at the same push conflicts and sends
+ * nothing. Keys are built by `pushKey` (`@/lib/push/reservations`).
+ */
+export const pushReservations = pgTable("push_reservations", {
+  key: text("key").primaryKey(),
+  createdAt: utc("created_at").notNull().defaultNow(),
+});
+
 export const pushKinds = ["reminder", "scheduled_reminder"] as const;
 export type PushKind = (typeof pushKinds)[number];
 
 /**
  * One row per Reminder the app pushed to a member, across all their devices:
  * how many took it, how many the push service said are gone, and how many
- * failed otherwise. The daily run reads it so a member is pushed a Week's
- * scheduled reminder once.
+ * failed otherwise: the outcome log. A Week's scheduled reminder is sent once
+ * through `push_reservations`, not this.
  */
 export const pushMessages = pgTable(
   "push_messages",

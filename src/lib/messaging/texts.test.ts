@@ -6,10 +6,12 @@
  */
 import { describe, expect, test } from "vitest";
 import { eq, sql } from "drizzle-orm";
-import { members, pushMessages, pushSubscriptions, textMessages, type ReminderChannel } from "@/db/schema";
+import { members, pushMessages, pushReservations, pushSubscriptions, textMessages } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { setMemberActive, setPhone, setSmsOptedOut, removeMember } from "@/lib/members/members";
 import { pickReport } from "@/lib/picks/console";
+import { pushKey } from "@/lib/push/reservations";
+import { membersWithDevices } from "@/lib/push/settings";
 import { guessAs, joinAt, lockAs, pickAs, publishWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { toE164 } from "./phone";
 import type { Pusher, PushTarget, SendOutcome } from "@/lib/push/sender";
@@ -40,20 +42,20 @@ const APP = "https://slate.example";
 const by = (push: Pusher | null) => ({ push });
 
 /** A push sender that records each send; an endpoint in `answers` gets that outcome instead of `sent`. */
-function pusher(answers: Record<string, SendOutcome> = {}): Pusher & { sent: { endpoint: string; payload: unknown }[] } {
-  const sent: { endpoint: string; payload: unknown }[] = [];
+function pusher(answers: Record<string, SendOutcome> = {}): Pusher & { sent: { endpoint: string; payload: unknown; ttl: number }[] } {
+  const sent: { endpoint: string; payload: unknown; ttl: number }[] = [];
   return {
     sent,
-    async send(target: PushTarget, payload) {
+    async send(target: PushTarget, payload, { ttl }) {
       const answer = answers[target.endpoint] ?? "sent";
-      if (answer === "sent") sent.push({ endpoint: target.endpoint, payload });
+      if (answer === "sent") sent.push({ endpoint: target.endpoint, payload, ttl });
       return answer;
     },
   };
 }
 
-async function channel(db: Db, memberId: number, to: ReminderChannel) {
-  await db.update(members).set({ reminderChannel: to }).where(eq(members.id, memberId));
+async function reminderOff(db: Db, memberId: number) {
+  await db.update(members).set({ notifyReminder: false }).where(eq(members.id, memberId));
 }
 
 async function device(db: Db, memberId: number, endpoint: string) {
@@ -88,9 +90,7 @@ async function setup() {
   await lockAs(db, jonah, slate, texas.id, THURSDAY);
   await guessAs(db, jonah, slate, 70, THURSDAY);
   await pickAs(db, grandma, slate, michigan, michigan.homeTeamId, THURSDAY);
-  // Everyone starts with the reminder off; Grandma and Em turned it on, each with a phone that takes a push.
-  await channel(db, grandma.id, "push");
-  await channel(db, em.id, "push");
+  // Everyone starts with the reminder on; Grandma and Em turned Notifications on, each for a phone that takes a push.
   await device(db, grandma.id, "https://push.example/grandma");
   await device(db, em.id, "https://push.example/em");
   return { ...fixture, grandma, em, gone };
@@ -218,9 +218,8 @@ describe("the monthly budget", () => {
 });
 
 describe("the Pick reminder by push", () => {
-  test("pushes each member on Push who is behind, once, and nobody who is done or deactivated, and texts nobody", async () => {
+  test("pushes each member with a device who is behind, once, and nobody who is done or deactivated, and texts nobody", async () => {
     const { db, jonah, week } = await setup();
-    await channel(db, jonah.id, "push");
     await device(db, jonah.id, "https://push.example/jonah");
     const push = pusher();
 
@@ -236,7 +235,7 @@ describe("the Pick reminder by push", () => {
     expect(reminderSummary(result)).toBe("Pushed Grandma, Cousin Em.");
   });
 
-  test("a member on Push gets it on every device, opted out of texts or not, opening the Picks step still owed", async () => {
+  test("a member with the reminder on gets it on every device, opted out of texts or not, opening the Picks step still owed", async () => {
     const { db, jonah, grandma, em, week } = await setup();
     await device(db, em.id, "https://push.example/em-tablet");
     await setSmsOptedOut(db, jonah, grandma.id, true);
@@ -259,9 +258,11 @@ describe("the Pick reminder by push", () => {
       url: "/picks",
       tag: "reminder-week-2",
     });
+    // Stale once the Deadline has passed, and the daily run sends it within a day of it.
+    expect(push.sent.every((s) => s.ttl === 24 * 60 * 60)).toBe(true);
   });
 
-  test("when every device is gone, the subscriptions are deleted and the reminder turns off", async () => {
+  test("when every device is gone, the subscriptions are deleted and Settings says push stopped; the setting stays", async () => {
     const { db, jonah, em, week } = await setup();
     await device(db, em.id, "https://push.example/em-old-phone");
     const push = pusher({ "https://push.example/em": "gone", "https://push.example/em-old-phone": "gone" });
@@ -274,15 +275,15 @@ describe("the Pick reminder by push", () => {
     ]);
     expect((await db.select().from(pushSubscriptions)).map((d) => d.endpoint)).toEqual(["https://push.example/grandma"]);
     const [after] = await db.select().from(members).where(eq(members.id, em.id));
-    expect(after).toMatchObject({ reminderChannel: "off", pushStoppedAt: THURSDAY });
+    expect(after).toMatchObject({ notifyReminder: true, pushStoppedAt: THURSDAY });
     expect(reminderSummary(result)).toBe(
-      "Pushed Grandma. Failed: Cousin Em (push stopped reaching their phone, so their reminder turned off).",
+      "Pushed Grandma. Failed: Cousin Em (push stopped reaching their phone, so Notifications turned off).",
     );
   });
 
-  test("one gone device among working ones is dropped and the reminder stays on; a service that fails keeps its row", async () => {
+  test("one gone device among working ones is dropped and push has not stopped; a service that fails keeps its row", async () => {
     const { db, jonah, grandma, em, week } = await setup();
-    await channel(db, grandma.id, "off");
+    await reminderOff(db, grandma.id);
     await device(db, em.id, "https://push.example/old");
     await device(db, em.id, "https://push.example/flaky");
     const push = pusher({ "https://push.example/old": "gone", "https://push.example/flaky": "failed" });
@@ -296,13 +297,13 @@ describe("the Pick reminder by push", () => {
       "https://push.example/grandma",
     ]);
     const [after] = await db.select().from(members).where(eq(members.id, em.id));
-    expect(after.reminderChannel).toBe("push");
+    expect(after.pushStoppedAt).toBeNull();
     expect(await db.select().from(pushMessages)).toMatchObject([{ memberId: em.id, kind: "reminder", sent: 1, gone: 1, failed: 1 }]);
   });
 
-  test("Off is skipped and named, and with no push on the server a member on Push is named, not silently dropped", async () => {
+  test("Off is skipped and named, and with no push on the server a member with it on is named, not silently dropped", async () => {
     const { db, jonah, grandma, week } = await setup();
-    await channel(db, grandma.id, "off");
+    await reminderOff(db, grandma.id);
 
     const off = await remindEveryone(db, by(pusher()), jonah, week.id, THURSDAY);
     expect(off.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Grandma", "reminder_off"]]);
@@ -319,26 +320,42 @@ describe("the Pick reminder by push", () => {
     );
   });
 
-  test("a channel left on Text by a hand edit counts as Off", async () => {
+  test("a member with the reminder on but no device is named, not pushed, and push is not marked stopped", async () => {
+    const { db, jonah, grandma, week } = await setup();
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.memberId, grandma.id));
+
+    const result = await remindEveryone(db, by(pusher()), jonah, week.id, THURSDAY);
+
+    expect(result.pushed.map((p) => p.member.displayName)).toEqual(["Cousin Em"]);
+    expect(result.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Grandma", "no_device"]]);
+    expect(reminderSummary(result)).toBe("Pushed Cousin Em. Not reminded: Grandma (notifications are off on their phones).");
+    const [after] = await db.select().from(members).where(eq(members.id, grandma.id));
+    expect(after.pushStoppedAt).toBeNull();
+    expect(await db.select().from(textMessages)).toEqual([]);
+  });
+
+  test("the reminder_channel texting left behind no longer decides anything", async () => {
     const { db, jonah, grandma, week } = await setup();
     await db.execute(sql`update ${members} set reminder_channel = 'text' where id = ${grandma.id}`);
 
     const result = await remindEveryone(db, by(pusher()), jonah, week.id, THURSDAY);
 
-    expect(result.skipped.map((s) => [s.row.member.displayName, s.why])).toEqual([["Grandma", "reminder_off"]]);
+    expect(result.pushed.map((p) => p.member.displayName)).toEqual(["Grandma", "Cousin Em"]);
     expect(await db.select().from(textMessages)).toEqual([]);
   });
 
   test("the plan the console reads names the same people the button reaches", async () => {
     const { db, grandma, em, week } = await setup();
-    await channel(db, grandma.id, "off");
+    await reminderOff(db, grandma.id);
     const report = await pickReport(db, week.id, THURSDAY);
+    const devices = await membersWithDevices(db);
 
-    const plan = planReminders(report);
+    const plan = planReminders(report, devices);
     expect(plan.push.map((r) => r.member.displayName)).toEqual(["Cousin Em"]);
     expect(plan.skip.map((s) => s.why)).toEqual(["reminder_off"]);
-    expect(planReminders(report, new Set([em.id])).push).toEqual([]);
-    expect(planReminders(report, undefined, { push: false }).skip.map((s) => s.why)).toEqual(["reminder_off", "push_not_set_up"]);
+    expect(planReminders(report, devices, new Set([em.id])).push).toEqual([]);
+    expect(planReminders(report, devices, undefined, { push: false }).skip.map((s) => s.why)).toEqual(["reminder_off", "push_not_set_up"]);
+    expect(planReminders(report, new Set()).skip.map((s) => s.why)).toEqual(["reminder_off", "no_device"]);
   });
 
   test("a push tap opens the first Picks step still owed", () => {
@@ -426,6 +443,21 @@ describe("the scheduled reminder", () => {
     const again = await runScheduledReminder(db, by(healthy), new Date(now.getTime() + HOUR));
     expect(again.ran && again.pushed.map((p) => p.member.displayName)).toEqual(["Grandma"]);
     expect(healthy.sent.map((s) => s.endpoint)).toEqual(["https://push.example/grandma"]);
+  });
+
+  test("reserves each member's push before sending it, so a run that finds it reserved sends nothing", async () => {
+    const { db, grandma, em, week, deadline } = await setup();
+    // Another run, mid-send, already holds Grandma's.
+    await db.insert(pushReservations).values({ key: pushKey.reminder(week.id, grandma.id) });
+    const push = pusher();
+
+    const run = await runScheduledReminder(db, by(push), new Date(deadline.getTime() - HOUR));
+
+    expect(run.ran && run.pushed.map((p) => p.member.displayName)).toEqual(["Cousin Em"]);
+    expect(push.sent.map((s) => s.endpoint)).toEqual(["https://push.example/em"]);
+    expect((await db.select().from(pushReservations)).map((r) => r.key).sort()).toEqual(
+      [`reminder:${week.id}:${grandma.id}`, `reminder:${week.id}:${em.id}`].sort(),
+    );
   });
 
   test("a text sent before push-only does not stand in for this Week's push", async () => {
