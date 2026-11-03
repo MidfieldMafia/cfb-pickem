@@ -9,6 +9,7 @@ import { reminderSendersFromEnv } from "@/lib/messaging/reminder-senders";
 import { reminderPlan, UNREACHED } from "@/lib/messaging/texts";
 import { owed, pickAuditsFor, reminderText, whoHasntPicked, type MemberProgress, type PickAudit } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
+import { membersWithDevices } from "@/lib/push/settings";
 import { consoleWeek, isPublished } from "@/lib/slate/slate";
 import { ActionForm } from "../action-form";
 import { remindAction } from "./actions";
@@ -87,12 +88,16 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
   const database = db();
   const { week, slate } = await consoleWeek(database, commissioner, params.week);
   const weekNumber = week.weekNumber;
-  const [report, log] = isPublished(slate.week)
-    ? await Promise.all([whoHasntPicked(database, commissioner, week.id), pickAuditsFor(database, commissioner, week.id)])
-    : [null, []];
+  const [report, log, devices] = isPublished(slate.week)
+    ? await Promise.all([
+        whoHasntPicked(database, commissioner, week.id),
+        pickAuditsFor(database, commissioner, week.id),
+        membersWithDevices(database),
+      ])
+    : [null, [], new Set<number>()];
   // What the Remind button will do, planned from the same rows it sends from, so
   // the people it cannot reach are named here before anyone presses it.
-  const plan = report ? reminderPlan(reminderSendersFromEnv(), report) : null;
+  const plan = report ? reminderPlan(reminderSendersFromEnv(), report, devices) : null;
   const reached = plan ? plan.push.length : 0;
   const gameName = new Map(slate.games.map((g) => [g.id, `${g.awayTeam} at ${g.homeTeam}`]));
 
@@ -224,8 +229,8 @@ export default async function WhoHasntPicked({ searchParams }: { searchParams: P
                     className="space-y-2"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Reminders go by push to members who turned them on in Settings, and also go out on their own the
-                    day the Deadline is within 24 hours.
+                    Reminders go by push to members with the reminder on and Notifications on for a phone in Settings,
+                    and also go out on their own the day the Deadline is within 24 hours.
                   </p>
                   {plan.skip.length > 0 ? (
                     <div className="space-y-2 border-t border-border pt-2">

@@ -113,8 +113,12 @@ The Saturday view of the slate with live scores and the picks of every member of
 _Avoid_: Scoreboard, dashboard
 
 **Reminder**:
-The message sent before the Deadline to a member whose picks, Lock or Tiebreaker Guess are unfinished, delivered by push and never by text. Each member turns it on or off in Settings, and it starts off; when push stops reaching every one of the member's devices, it turns itself off.
+The message sent before the Deadline to a member whose picks, Lock or Tiebreaker Guess are unfinished, delivered by push and never by text. It is one row under Notifications in Settings, and it starts on for every member; it reaches only the phones where they turned Notifications on.
 _Avoid_: Notification, nudge, alert
+
+**Notifications**:
+The Settings card that decides what the app pushes to a member. Its header switch is per phone: on means this phone takes pushes, and turning it off forgets this phone only; the push service saying a phone is gone forgets it too. Each row below is one kind of push, on or off for the member on every phone, and changes no phone.
+_Avoid_: Alerts, push settings
 
 **Feedback**:
 A Member's bug report or idea, sent from the app to the Commissioners: either a Bug or an Idea, in the member's words, with an optional screenshot. Only commissioners read it, and the member hears nothing back beyond the thanks on sending.

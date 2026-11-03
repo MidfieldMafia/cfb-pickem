@@ -3,10 +3,11 @@
  * says, who may get it, what a text costs against the month's budget, and the
  * logs that record each try.
  *
- * The Pick reminder goes by push or not at all (#475): a member with it on is
- * pushed on every device they subscribed, and a member with it off is skipped.
- * It is never texted. When every device answers that it is gone, the
- * subscriptions are deleted and the reminder turns itself off.
+ * The Pick reminder goes by push or not at all (#475): a member with it on
+ * (`notify_reminder`, #529) is pushed on every device they subscribed, and a
+ * member with it off, or with no device, is skipped. It is never texted. When
+ * every device answers that it is gone, the subscriptions are deleted and
+ * Settings says push stopped reaching them.
  *
  * A reminder is planned before it is sent. `planReminders` decides who is
  * reached and who is not, and why, from plain rows; the console reads the same
@@ -20,8 +21,8 @@
  * either side of the Deadline and either side of a month's end.
  */
 import "server-only";
-import { and, desc, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
-import { members, pushMessages, pushSubscriptions, textMessages, type Member, type PushKind, type TextKind } from "@/db/schema";
+import { and, desc, eq, gte, ne, sql } from "drizzle-orm";
+import { members, pushMessages, textMessages, type Member, type PushKind, type TextKind } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { formatterFor } from "@/lib/intl-time";
 import type { Commissioner } from "@/lib/members/authority";
@@ -29,7 +30,10 @@ import { InvalidMember, magicLinkFor, memberByNumber } from "@/lib/members/membe
 import { pickReport, type MemberProgress, type PickReport } from "@/lib/picks/console";
 import { plural } from "@/lib/plural";
 import { Refusal } from "@/lib/refusal";
-import type { Pusher, PushPayload, SendOutcome } from "@/lib/push/sender";
+import { pushToMember } from "@/lib/push/deliver";
+import { pushKey, release, reserve } from "@/lib/push/reservations";
+import { REMINDER_TTL, type Pusher, type PushPayload } from "@/lib/push/sender";
+import { membersWithDevices } from "@/lib/push/settings";
 import { publishedSlate } from "@/lib/slate/slate";
 import { toE164 } from "./phone";
 import { NOOP, type SmsSender } from "./sender";
@@ -75,12 +79,13 @@ export const REMINDER_WINDOW_MS = 24 * 3600_000;
 export class TextRefused extends Refusal {}
 
 /** Why the app did not remind someone. */
-export type Unreached = "deactivated" | "reminder_off" | "push_not_set_up";
+export type Unreached = "deactivated" | "reminder_off" | "push_not_set_up" | "no_device";
 
 export const UNREACHED: Record<Unreached, string> = {
   deactivated: "deactivated",
   reminder_off: "reminder is off",
   push_not_set_up: "push is not set up on this server",
+  no_device: "notifications are off on their phones",
 };
 
 /** Why the app would not text someone their Magic Link. */
@@ -219,7 +224,7 @@ interface PlannedText {
 }
 
 export interface ReminderPlan {
-  /** Members with the reminder on, pushed to every device they have. */
+  /** Members with the reminder on and a device, pushed to every device they have. */
   push: MemberProgress[];
   skip: { row: MemberProgress; why: Unreached }[];
 }
@@ -232,13 +237,14 @@ export interface ReminderReach {
 
 /**
  * Who is reminded, in the order the members joined: everyone behind with the
- * reminder on, by push. Everyone else who is behind is listed with the reason. A
- * member who is complete is in no list. `already` are members not to remind
- * again. Any channel but Push counts as Off, so a row left on Text by hand is
- * skipped, never texted.
+ * reminder on and a device (`devices`, the members who have one), by push.
+ * Everyone else who is behind is listed with the reason. A member who is
+ * complete is in no list. `already` are members not to remind again.
+ * `reminder_channel` is texting's and decides nothing here.
  */
 export function planReminders(
   report: PickReport,
+  devices: ReadonlySet<number>,
   already: ReadonlySet<number> = new Set(),
   can: ReminderReach = { push: true },
 ): ReminderPlan {
@@ -246,9 +252,10 @@ export function planReminders(
   for (const row of report.members) {
     if (row.complete || already.has(row.member.id)) continue;
     if (!row.member.active) plan.skip.push({ row, why: "deactivated" });
-    else if (row.member.reminderChannel !== "push") plan.skip.push({ row, why: "reminder_off" });
-    else if (can.push) plan.push.push(row);
-    else plan.skip.push({ row, why: "push_not_set_up" });
+    else if (!row.member.notifyReminder) plan.skip.push({ row, why: "reminder_off" });
+    else if (!can.push) plan.skip.push({ row, why: "push_not_set_up" });
+    else if (!devices.has(row.member.id)) plan.skip.push({ row, why: "no_device" });
+    else plan.push.push(row);
   }
   return plan;
 }
@@ -359,7 +366,7 @@ export interface PushOutcome {
   member: Member;
   /** At least one device took it. */
   ok: boolean;
-  /** Push stopped reaching every device, so the member's reminder turned off. */
+  /** Push stopped reaching every device, so Notifications turned off on them. */
   stopped: boolean;
   detail: string;
 }
@@ -380,16 +387,18 @@ export async function remindEveryone(
   return sendReminders(db, senders, "reminder", await pickReport(db, weekId, now), now);
 }
 
-/** The reminder plan for these senders: the console reads it to show who a press would reach. */
-export function reminderPlan(senders: ReminderSenders, report: PickReport, already?: ReadonlySet<number>): ReminderPlan {
-  return planReminders(report, already, { push: senders.push !== null });
+/**
+ * The reminder plan for these senders and the members with a device: the
+ * console reads it to show who a press would reach.
+ */
+export function reminderPlan(senders: ReminderSenders, report: PickReport, devices: ReadonlySet<number>): ReminderPlan {
+  return planReminders(report, devices, undefined, { push: senders.push !== null });
 }
 
 /**
- * Pushes one member's reminder to every device they have and logs it. Devices
- * the push service says are gone are deleted; when none is left (or there were
- * none to begin with), the member's reminder turns off and Settings says push
- * stopped reaching them. A device that failed otherwise keeps its row.
+ * Pushes one member's reminder to every device they have and logs it in
+ * `push_messages`. Devices the push service says are gone are deleted; when
+ * none is left, Settings says push stopped reaching them.
  */
 async function pushTo(
   db: Db,
@@ -400,40 +409,40 @@ async function pushTo(
   now: Date,
 ): Promise<PushOutcome> {
   const { member } = row;
-  const devices = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.memberId, member.id));
-  const payload = reminderPush(report, row);
-  const outcomes = await Promise.all(
-    devices.map(async (d): Promise<[number, SendOutcome]> => [d.id, await pusher.send(d, payload)]),
-  );
-  const count = (o: SendOutcome) => outcomes.filter(([, outcome]) => outcome === o).length;
-  const gone = outcomes.filter(([, outcome]) => outcome === "gone").map(([id]) => id);
-  const sent = count("sent");
-  const failed = count("failed");
-  if (gone.length) await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone));
-  const stopped = gone.length === devices.length;
-  if (stopped) {
-    await db.update(members).set({ reminderChannel: "off", pushStoppedAt: now }).where(eq(members.id, member.id));
-  }
-  await db.insert(pushMessages).values({ memberId: member.id, kind, weekId: report.week.id, sent, gone: gone.length, failed });
+  const { sent, gone, failed, stopped } = await pushToMember(db, pusher, member.id, reminderPush(report, row), { ttl: REMINDER_TTL }, now);
+  await db.insert(pushMessages).values({ memberId: member.id, kind, weekId: report.week.id, sent, gone, failed });
   const detail = stopped
-    ? "push stopped reaching their phone, so their reminder turned off"
+    ? "push stopped reaching their phone, so Notifications turned off"
     : sent === 0
       ? "the push service did not answer"
       : plural(sent, "device");
   return { member, ok: sent > 0, stopped, detail };
 }
 
+/**
+ * Walks the plan. With `reserveFirst` (the scheduled run), each member's push
+ * is reserved before it is sent and skipped when another run holds it; a push
+ * no device took gives its key back, so the next run tries again. A
+ * commissioner's press reserves nothing: they asked for this send.
+ */
 async function sendReminders(
   db: Db,
   senders: ReminderSenders,
   kind: PushKind,
   report: PickReport,
   now: Date,
-  already?: ReadonlySet<number>,
+  reserveFirst = false,
 ): Promise<ReminderResult> {
-  const plan = reminderPlan(senders, report, already);
+  const plan = reminderPlan(senders, report, await membersWithDevices(db));
   const pushed: PushOutcome[] = [];
-  if (senders.push) for (const row of plan.push) pushed.push(await pushTo(db, senders.push, kind, report, row, now));
+  if (!senders.push) return { pushed, skipped: plan.skip };
+  for (const row of plan.push) {
+    const key = pushKey.reminder(report.week.id, row.member.id);
+    if (reserveFirst && !(await reserve(db, key))) continue;
+    const outcome = await pushTo(db, senders.push, kind, report, row, now);
+    if (reserveFirst && !outcome.ok) await release(db, key);
+    pushed.push(outcome);
+  }
   return { pushed, skipped: plan.skip };
 }
 
@@ -444,9 +453,10 @@ export type ScheduledRun =
 /**
  * The daily cron's work: when the latest published Week's Deadline is within
  * the next day, remind whoever is still behind. Cron is best effort and can fire
- * twice, so a member already sent this Week's scheduled reminder by a push that
- * reached a device is not sent it again; the once-a-day schedule makes sure each
- * Deadline falls in exactly one window.
+ * twice, even at once, so each member's push is reserved under
+ * `reminder:<week>:<member>` before it is sent and a member already holding one
+ * is not sent it again; the once-a-day schedule makes sure each Deadline falls
+ * in exactly one window.
  */
 export async function runScheduledReminder(
   db: Db,
@@ -458,21 +468,8 @@ export async function runScheduledReminder(
   const { deadline } = slate.week;
   if (deadline <= now) return { ran: false, why: "deadline has passed" };
   if (deadline.getTime() - now.getTime() > REMINDER_WINDOW_MS) return { ran: false, why: "deadline is more than a day away" };
-  const pushedEarlier = await db
-    .select({ memberId: pushMessages.memberId })
-    .from(pushMessages)
-    .where(
-      and(eq(pushMessages.weekId, slate.week.id), eq(pushMessages.kind, "scheduled_reminder"), gt(pushMessages.sent, 0)),
-    );
   const report = await pickReport(db, slate.week.id, now);
-  const result = await sendReminders(
-    db,
-    senders,
-    "scheduled_reminder",
-    report,
-    now,
-    new Set(pushedEarlier.map((r) => r.memberId)),
-  );
+  const result = await sendReminders(db, senders, "scheduled_reminder", report, now, true);
   return { ran: true, weekNumber: slate.week.weekNumber, ...result };
 }
 

@@ -21,9 +21,22 @@ export interface PushPayload {
   body: string;
   /** A path in the app. */
   url: string;
-  /** Collapses repeats: a second push with the same tag replaces the first banner. */
+  /** Collapses repeats: a second push with the same tag replaces the first banner (`public/sw.js`). Each kind picks its own. */
   tag: string;
 }
+
+/** How one send is delivered, chosen per kind of push (#529). */
+export interface SendOptions {
+  /**
+   * Seconds the push service keeps trying a phone that is off or out of
+   * reach, after which the push is dropped: a Pick reminder is good for a
+   * day, a close game for ten minutes (#493).
+   */
+  ttl: number;
+}
+
+/** The Pick reminder's: stale once its Deadline has passed, and the daily run sends it within a day of it. */
+export const REMINDER_TTL = 24 * 60 * 60;
 
 /**
  * What one send came to. `gone` is the push service answering 404 or 410: the
@@ -35,7 +48,7 @@ export type SendOutcome = "sent" | "gone" | "failed";
 
 export interface Pusher {
   /** Never throws. */
-  send(target: PushTarget, payload: PushPayload): Promise<SendOutcome>;
+  send(target: PushTarget, payload: PushPayload, options: SendOptions): Promise<SendOutcome>;
 }
 
 /** The three VAPID settings; all or nothing. */
@@ -62,15 +75,14 @@ export function pushConfigFromEnv(env: Record<string, string | undefined> = proc
 /** A Pusher on the real push services, signed with the app's VAPID key. */
 export function webPusher(config: PushConfig): Pusher {
   return {
-    async send(target, payload) {
+    async send(target, payload, { ttl }) {
       try {
         await webPush.sendNotification(
           { endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } },
           JSON.stringify(payload),
           {
             vapidDetails: config,
-            // A reminder is stale once its Deadline has passed, and the daily run sends it within a day of it.
-            TTL: 24 * 60 * 60,
+            TTL: ttl,
             urgency: "high",
             timeout: 10_000,
           },
