@@ -17,6 +17,7 @@ import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { pickSheet, type PickSheet } from "@/lib/picks/picks";
 import { picksComplete } from "@/lib/picks/progress";
+import type { CloseGameSink } from "@/lib/push/close-game";
 import { weekSettled } from "@/lib/results/engine";
 import { groupPlayedWeeks, weekResult, type GradedWeekResult } from "@/lib/results/results";
 import { refreshStatsIfStale } from "@/lib/results/box-scores";
@@ -60,6 +61,8 @@ export interface WeekOptions {
    * throws without a key — a failure the page has to survive like any other.
    */
   cfbd?: () => CfbdClient;
+  /** Where a feed pull hands the games it just made close (#531): `closeGamesAfter` in the app. Absent, nothing is pushed. */
+  closeGames?: CloseGameSink;
 }
 
 /**
@@ -68,10 +71,16 @@ export interface WeekOptions {
  * gate of their own and a catch of their own, so a stats call that fails or
  * times out never costs the scores or the live plays.
  */
-async function refreshQuietly(db: Db, cfbd: () => CfbdClient, slate: Slate, now: Date): Promise<Slate> {
+async function refreshQuietly(
+  db: Db,
+  cfbd: () => CfbdClient,
+  slate: Slate,
+  now: Date,
+  closeGames?: CloseGameSink,
+): Promise<Slate> {
   let fresh = slate;
   try {
-    fresh = (await refreshResultsIfStale(db, cfbd(), slate, now)).slate;
+    fresh = (await refreshResultsIfStale(db, cfbd(), slate, now, closeGames)).slate;
   } catch (error) {
     console.warn("Results refresh skipped:", error instanceof Error ? error.message : error);
   }
@@ -89,10 +98,15 @@ async function refreshQuietly(db: Db, cfbd: () => CfbdClient, slate: Slate, now:
  * pulls the feed here first, so the standings it grades next see the same rows.
  * Null when no Week is published.
  */
-export async function freshSlate(db: Db, cfbd: () => CfbdClient, now: Date = new Date()): Promise<Slate | null> {
+export async function freshSlate(
+  db: Db,
+  cfbd: () => CfbdClient,
+  now: Date = new Date(),
+  closeGames?: CloseGameSink,
+): Promise<Slate | null> {
   const published = await publishedSlate(db);
   if (!published) return null;
-  return deadlinePassed(published.week, now) ? refreshQuietly(db, cfbd, published, now) : published;
+  return deadlinePassed(published.week, now) ? refreshQuietly(db, cfbd, published, now, closeGames) : published;
 }
 
 function stateOf(slate: Slate, now: Date): WeekState {
@@ -133,7 +147,7 @@ export async function scoredWeek(
   now: Date = new Date(),
   options: WeekOptions = {},
 ): Promise<ScoredWeek | null> {
-  const slate = options.cfbd ? await freshSlate(db, options.cfbd, now) : await publishedSlate(db);
+  const slate = options.cfbd ? await freshSlate(db, options.cfbd, now, options.closeGames) : await publishedSlate(db);
   if (!slate) return null;
   const state = stateOf(slate, now);
   const [sheet, result] = await Promise.all([
@@ -214,7 +228,7 @@ export async function weekInReview(
   const loaded = await slateFor(db, chosen.id);
   // A member landing here straight after a game ends drives the feed too, on
   // the same stale gate `/week` uses; grading then reads the rows it left.
-  const slate = options.cfbd ? await refreshQuietly(db, options.cfbd, loaded, now) : loaded;
+  const slate = options.cfbd ? await refreshQuietly(db, options.cfbd, loaded, now, options.closeGames) : loaded;
   return {
     slate,
     result: await weekResult(db, group, slate, now),

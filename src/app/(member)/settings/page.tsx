@@ -25,6 +25,7 @@ export default async function Settings() {
         reminder={settings.reminder}
         chat={settings.chat}
         weeklyWin={settings.weeklyWin}
+        closeGames={settings.closeGames}
         publicKey={pushConfigFromEnv()?.publicKey ?? null}
       />
     </main>

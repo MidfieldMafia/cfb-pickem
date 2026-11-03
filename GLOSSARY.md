@@ -117,7 +117,7 @@ The message sent before the Deadline to a member whose picks, Lock or Tiebreaker
 _Avoid_: Notification, nudge, alert
 
 **Notifications**:
-The Settings card that decides what the app pushes to a member. Its header switch is per phone: on means this phone takes pushes, and turning it off forgets this phone only; the push service saying a phone is gone forgets it too. Each row below is one kind of push, on or off for the member on every phone (Chat picks All messages, @mentions or Off), and changes no phone. A Chat push skips a member who read the thread in the last 15 seconds, and under All messages only the first message since they last read it pushes. The Weekly Win push goes to each group once its Week is settled, from the 16:00 UTC daily job, and never again for that Week.
+The Settings card that decides what the app pushes to a member. Its header switch is per phone: on means this phone takes pushes, and turning it off forgets this phone only; the push service saying a phone is gone forgets it too. Each row below is one kind of push, on or off for the member on every phone (Chat picks All messages, @mentions or Off), and changes no phone. A Chat push skips a member who read the thread in the last 15 seconds, and under All messages only the first message since they last read it pushes. The Weekly Win push goes to each group once its Week is settled, from the 16:00 UTC daily job, and never again for that Week. Close games pushes once per Game, to every member with it on whatever their group, the first time a slate Game is in the 4th quarter with 2:00 or less left and the team down 8 or less has the ball.
 _Avoid_: Alerts, push settings
 
 **Feedback**:

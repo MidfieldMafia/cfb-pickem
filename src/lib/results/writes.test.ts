@@ -19,6 +19,7 @@ import {
   THURSDAY,
 } from "@/test/week-2";
 import { AFTER_KICKOFF, BEFORE_KICKOFF, gameRow, KICKOFF } from "@/test/game";
+import type { CloseGame } from "@/lib/push/close-game";
 import { effectiveResult } from "./result";
 import { needsReview, resultAuditsFor, REVIEW_AFTER_MS } from "./results";
 import {
@@ -417,6 +418,49 @@ describe("results ingest", () => {
     // the commissioner's. The stamp inside the ingest used to push it out,
     // which is exactly the five minutes of member traffic it cost.
     expect(await refresh(feed, new Date(friday.getTime() + 5 * 60_000))).toBe("refreshed");
+  });
+});
+
+describe("close games, on each update's edge (#531)", () => {
+  /** Ohio State at Texas under way at `[away, home]`, `period` and `clock`, Texas (home) with the ball. */
+  const texasBall = (score: [number, number], period: number, clock: string) =>
+    feedWith({}, { [OHIO_STATE_AT_TEXAS]: [...score, period, clock, { possession: "home" }] });
+  /** Runs one update through the stale gate's ingest, and says which games it handed on as newly close. */
+  async function closesOf(setupResult: Awaited<ReturnType<typeof setup>>, feed: CfbdClient, at: Date) {
+    const handed: CloseGame[][] = [];
+    const { db, week } = setupResult;
+    await ingestResults(db, feed, await slateFor(db, week.id), at, (_db, closes) => handed.push(closes));
+    return handed.flat().map((close) => ({ gameId: close.game.id, homeScore: close.homeScore, awayScore: close.awayScore, seconds: close.seconds }));
+  }
+
+  test("hands on the game the update made close, with the update's score and clock, and not again on the next", async () => {
+    const fixture = await setup();
+    const { texas } = fixture;
+
+    expect(await closesOf(fixture, texasBall([24, 21], 3, "02:10"), SUNDAY)).toEqual([]);
+    expect(await closesOf(fixture, texasBall([24, 21], 4, "01:48"), SUNDAY)).toEqual([
+      { gameId: texas.id, homeScore: 21, awayScore: 24, seconds: 108 },
+    ]);
+    expect(await closesOf(fixture, texasBall([24, 21], 4, "01:20"), SUNDAY)).toEqual([]);
+  });
+
+  test("never a game that went final in the same update", async () => {
+    const fixture = await setup();
+
+    await closesOf(fixture, feedWith({}, { [OHIO_STATE_AT_TEXAS]: [24, 21, 4, "02:30", { possession: "away" }] }), SUNDAY);
+    expect(await closesOf(fixture, feedWith({ [OHIO_STATE_AT_TEXAS]: [24, 21] }), SUNDAY)).toEqual([]);
+  });
+
+  test("the stale gate hands them on too, and a pass it does not claim hands on nothing", async () => {
+    const { db, week, texas } = await setup();
+    const handed: number[] = [];
+    const sink = (_db: unknown, closes: CloseGame[]) => handed.push(...closes.map((close) => close.game.id));
+    const feed = texasBall([24, 21], 4, "01:48");
+
+    await refreshResultsIfStale(db, feed, await slateFor(db, week.id), SUNDAY, sink);
+    await refreshResultsIfStale(db, feed, await slateFor(db, week.id), new Date(SUNDAY.getTime() + 1000), sink);
+
+    expect(handed).toEqual([texas.id]);
   });
 });
 

@@ -99,7 +99,7 @@ export async function getWeekState(request: Request, route: PickRoute): Promise<
   const actor = await route.currentMember();
   if (!actor) return Response.json({ error: "Open your Magic Link to sign in." } satisfies ApiError, { status: 401 });
   const group = (await route.currentGroup?.()) ?? null;
-  const week = await scoredWeek(route.db, actor, group, route.now?.() ?? new Date(), { cfbd: route.cfbd });
+  const week = await scoredWeek(route.db, actor, group, route.now?.() ?? new Date(), { cfbd: route.cfbd, closeGames: route.closeGames });
   if (!week) return Response.json({ error: "The slate is not posted yet." } satisfies ApiError, { status: 404 });
   const state = toWeekStateJson(week);
   return conditionalJson(request, state, weekStateEtag(state, group));

@@ -9,6 +9,7 @@ import { consoleEdit, type ConsoleRoute } from "@/lib/console/route";
 import type { ActionState } from "@/lib/console/state";
 import { integerField, type Fields } from "@/lib/parse";
 import { plural } from "@/lib/plural";
+import type { CloseGameSink } from "@/lib/push/close-game";
 import { SLATE_PATH } from "@/lib/slate/console-edits";
 import { slateFor } from "@/lib/slate/slate";
 import { clearOverride, ingestResults, InvalidResult, MAX_SCORE, overrideResult, restoreGame, voidGame } from "./writes";
@@ -38,10 +39,15 @@ const score = (fields: Fields, name: string) =>
  */
 const shown: string[] = [RESULTS_PATH, SLATE_PATH, "/leaderboard"];
 
-export function refreshResults(route: ConsoleRoute, form: FormData, client: CfbdClient): Promise<ActionState> {
-  return consoleEdit(route, async ({ db }) => {
+export function refreshResults(
+  route: ConsoleRoute,
+  form: FormData,
+  client: CfbdClient,
+  closeGames?: CloseGameSink,
+): Promise<ActionState> {
+  return consoleEdit(route, async ({ db, now }) => {
     const slate = await slateFor(db, num(form, "weekId"));
-    const { changed } = await ingestResults(db, client, slate);
+    const { changed } = await ingestResults(db, client, slate, now, closeGames);
     return {
       done:
         changed === 0 ? "Checked the feed; nothing changed." : `Checked the feed; ${plural(changed, "game")} updated.`,
