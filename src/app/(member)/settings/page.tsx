@@ -15,13 +15,15 @@ import { NotificationsCard } from "./notifications-card";
 export default async function Settings() {
   const member = await requireMember();
   const endpoints = await savedEndpoints(db(), member.id);
+  const settings = notificationSettings(member);
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader title="Settings" right={<MemberMenu member={member} manage={await currentManageHref()} />} />
       <NotificationsCard
         endpoints={endpoints}
         stopped={pushStopped(member, endpoints.length)}
-        reminder={notificationSettings(member).reminder}
+        reminder={settings.reminder}
+        chat={settings.chat}
         publicKey={pushConfigFromEnv()?.publicKey ?? null}
       />
     </main>

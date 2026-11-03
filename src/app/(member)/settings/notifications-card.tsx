@@ -1,12 +1,13 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { LINK, Switch } from "@saturday-slate/design-system";
 import { track } from "@/lib/analytics/analytics";
 import { readBrowser } from "@/lib/install/install";
-import { NOTE, notificationsCard } from "@/lib/push/card";
+import type { ChatNotification } from "@/db/schema";
+import { CHAT_CHOICES, chatRow, NOTE, notificationsCard } from "@/lib/push/card";
 import { deviceFacts, pushBlock, thisDeviceEndpoint, unsubscribeDevice } from "@/lib/push/device";
 import { turnOnReminder } from "@/components/push/turn-on-reminder";
 import { saveNotificationAction, turnOffNotificationsAction } from "./actions";
@@ -25,18 +26,21 @@ const unknown = () => "unknown" as const;
  * blocked note. Turning it off deletes this device only. The rows below save
  * one kind of push each, for the member on every phone, and never add or
  * delete a device. While the switch is off, every row shows off, greyed and
- * locked, so no row claims a push this phone won't get.
+ * locked, so no row claims a push this phone won't get. Chat (#530) is three
+ * segments rather than a switch, and shows Off while locked.
  */
 export function NotificationsCard({
   endpoints,
   stopped: savedStopped,
   reminder: savedReminder,
+  chat: savedChat,
   publicKey,
 }: {
   /** The member's saved devices. */
   endpoints: string[];
   stopped: boolean;
   reminder: boolean;
+  chat: ChatNotification;
   publicKey: string | null;
 }) {
   const block = useSyncExternalStore(noChange, readBlock, unknown);
@@ -46,6 +50,7 @@ export function NotificationsCard({
   const [stopped, setStopped] = useState(savedStopped);
   const [deniedNow, setDeniedNow] = useState(false);
   const [reminder, setReminder] = useState(savedReminder);
+  const [chat, setChat] = useState(savedChat);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,6 +113,20 @@ export function NotificationsCard({
     }
   }
 
+  async function pickChat(next: ChatNotification) {
+    if (!view.rowsLive || next === chat) return;
+    const was = chat;
+    setError(null);
+    setChat(next);
+    const result = await saveNotificationAction("chat", next);
+    if (result.error) {
+      setChat(was);
+      setError(result.error);
+    }
+  }
+
+  const chatView = chatRow(view.rowsLive, chat);
+
   return (
     <div className="mx-4 flex flex-col gap-2">
       <div className="flex flex-col overflow-hidden rounded-[14px] border border-border bg-card">
@@ -141,6 +160,34 @@ export function NotificationsCard({
               disabled={!view.rowsLive}
               aria-labelledby="reminder-label"
             />
+          </div>
+          <div className="flex flex-col gap-2 border-t border-border px-3 pt-2.5 pb-3">
+            <div className="flex items-center gap-3">
+              <MessageCircle size={20} className="shrink-0 text-primary" aria-hidden />
+              <p id="chat-label" className="text-base leading-6 font-semibold">
+                Chat
+              </p>
+            </div>
+            <div role="group" aria-labelledby="chat-label" className="grid grid-cols-3 gap-[3px] rounded-[6px] border border-border bg-muted p-[3px]">
+              {CHAT_CHOICES.map((choice) => {
+                const picked = chatView.shown === choice.value;
+                return (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    aria-pressed={picked}
+                    disabled={!view.rowsLive}
+                    onClick={() => void pickChat(choice.value)}
+                    className={`h-10 rounded-[4px] text-sm leading-5 ${
+                      picked ? "bg-primary font-bold text-primary-foreground" : "font-semibold text-foreground"
+                    }`}
+                  >
+                    {choice.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-sm leading-5 text-muted-foreground">{chatView.line}</p>
           </div>
         </div>
       </div>

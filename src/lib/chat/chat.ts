@@ -123,7 +123,7 @@ export function cleanChatText(raw: string): string {
  * left) and active. The picker lists these and `postMessage` keeps a mention
  * of these alone, so both read them here.
  */
-async function mentionable(db: Db, groupId: number): Promise<RosterEntry[]> {
+export async function mentionable(db: Db, groupId: number): Promise<RosterEntry[]> {
   const roster = await groupRoster(db, groupId);
   return roster.filter((entry) => entry.member.active && entry.removals.every((period) => period.restoredAt !== null));
 }
@@ -369,20 +369,25 @@ export async function setReaction(
  * Moves the member's marker in this Group to the newest message of `thread`,
  * the thread they have just been shown. Never backwards: two requests from the
  * same phone can land out of order, and the older must not undo the newer.
+ *
+ * Stamps the read's time too, on every read, so Chat pushes can tell someone
+ * watching the thread (#530): the open thread re-reads every 4 s.
  */
-export async function markRead(db: Db, memberId: number, groupId: number, thread: Pick<Thread, "messages">): Promise<void> {
+export async function markRead(
+  db: Db,
+  memberId: number,
+  groupId: number,
+  thread: Pick<Thread, "messages">,
+  now: Date = new Date(),
+): Promise<void> {
   const newest = thread.messages.at(-1);
-  if (!newest) return;
+  const readId = newest
+    ? sql`case when ${memberships.chatReadId} is null or ${memberships.chatReadId} < ${newest.id} then ${newest.id} else ${memberships.chatReadId} end`
+    : memberships.chatReadId;
   await db
     .update(memberships)
-    .set({ chatReadId: newest.id })
-    .where(
-      and(
-        eq(memberships.groupId, groupId),
-        eq(memberships.memberId, memberId),
-        or(isNull(memberships.chatReadId), sql`${memberships.chatReadId} < ${newest.id}`),
-      ),
-    );
+    .set({ chatReadId: readId, chatReadAt: sql`greatest(${memberships.chatReadAt}, ${now.toISOString()}::timestamptz)` })
+    .where(and(eq(memberships.groupId, groupId), eq(memberships.memberId, memberId)));
 }
 
 /**

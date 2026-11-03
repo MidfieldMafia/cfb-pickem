@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { notificationsCard, type CardFacts } from "./card";
+import { chatRow, notificationsCard, type CardFacts } from "./card";
 
 const iphoneApp: CardFacts = { phone: "ios", block: null, hasKey: true, on: false, stopped: false };
 
@@ -40,5 +40,14 @@ describe("the Notifications card", () => {
       note: null,
       rowsLive: true,
     });
+  });
+});
+
+describe("the Chat row", () => {
+  test("shows the saved choice while the rows are live, and Off while they are locked", () => {
+    expect(chatRow(true, "all")).toEqual({ shown: "all", line: "The first new message since you last read Chat." });
+    expect(chatRow(true, "mentions")).toEqual({ shown: "mentions", line: "When someone mentions you or @everyone." });
+    expect(chatRow(true, "off")).toEqual({ shown: "off", line: "Nothing from Chat." });
+    expect(chatRow(false, "all")).toEqual({ shown: "off", line: "Nothing from Chat." });
   });
 });
