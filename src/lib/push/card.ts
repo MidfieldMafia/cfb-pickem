@@ -4,6 +4,7 @@
  * rows below show the member's choices, and the one note under the card. No
  * server or browser import, so the card's rules are tested without either.
  */
+import type { ChatNotification } from "@/db/schema";
 import type { Phone } from "@/lib/install/install";
 import type { PushBlock } from "./device";
 
@@ -52,4 +53,23 @@ export function notificationsCard(facts: CardFacts): CardView {
   const line = facts.phone === "other" ? "Off on this computer" : `Off for this ${device}`;
   const blocked: CardNote | null = !facts.hasKey ? "no_key" : facts.block;
   return { line, masterDisabled: blocked !== null, rowsLive: false, note: blocked ?? (facts.stopped ? "stopped" : null) };
+}
+
+/** The Chat row's three segments, in order, for the choices `members.notify_chat` saves (#530). */
+export const CHAT_CHOICES: { value: ChatNotification; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "mentions", label: "@mentions" },
+  { value: "off", label: "Off" },
+];
+
+const CHAT_LINE: Record<ChatNotification, string> = {
+  all: "The first new message since you last read Chat.",
+  mentions: "When someone mentions you or @everyone.",
+  off: "Nothing from Chat.",
+};
+
+/** The segment the Chat row shows and the line under it: Off, like every other row, while the rows are locked. */
+export function chatRow(rowsLive: boolean, saved: ChatNotification): { shown: ChatNotification; line: string } {
+  const shown = rowsLive ? saved : "off";
+  return { shown, line: CHAT_LINE[shown] };
 }

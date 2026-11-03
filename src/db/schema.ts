@@ -340,6 +340,18 @@ export const memberships = pgTable(
      * first open the thread.
      */
     chatReadId: integer("chat_read_id"),
+    /**
+     * When this member last read the thread here (#530), moved on every read,
+     * the open thread's 4 s poll included, even when no message is new: a read
+     * in the last 15 s counts as watching, and Chat pushes skip them.
+     */
+    chatReadAt: utc("chat_read_at"),
+    /**
+     * The message behind this member's last Chat or @mention push here (#530).
+     * Under All messages only the first message since they last read pushes:
+     * one goes while this is null or at or before `chatReadId`.
+     */
+    chatPushedId: integer("chat_pushed_id"),
   },
   (t) => [primaryKey({ columns: [t.groupId, t.memberId] }), index("memberships_member_idx").on(t.memberId)],
 );

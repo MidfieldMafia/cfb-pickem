@@ -117,7 +117,7 @@ The message sent before the Deadline to a member whose picks, Lock or Tiebreaker
 _Avoid_: Notification, nudge, alert
 
 **Notifications**:
-The Settings card that decides what the app pushes to a member. Its header switch is per phone: on means this phone takes pushes, and turning it off forgets this phone only; the push service saying a phone is gone forgets it too. Each row below is one kind of push, on or off for the member on every phone, and changes no phone.
+The Settings card that decides what the app pushes to a member. Its header switch is per phone: on means this phone takes pushes, and turning it off forgets this phone only; the push service saying a phone is gone forgets it too. Each row below is one kind of push, on or off for the member on every phone (Chat picks All messages, @mentions or Off), and changes no phone. A Chat push skips a member who read the thread in the last 15 seconds, and under All messages only the first message since they last read it pushes.
 _Avoid_: Alerts, push settings
 
 **Feedback**:

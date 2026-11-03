@@ -6,7 +6,7 @@ import { describe, expect, test } from "vitest";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { eq } from "drizzle-orm";
-import { chatMessages } from "@/db/schema";
+import { chatMessages, pushSubscriptions } from "@/db/schema";
 import { demoteInGroup, manageGroup, promoteInGroup, removeFromGroup } from "@/lib/groups/manage";
 import { addGroup, familyGroup, joinGroup, seedWeek2, THURSDAY, TUESDAY } from "@/test/week-2";
 import { postMessage } from "./chat";
@@ -80,6 +80,33 @@ describe("POST /api/chat", () => {
     const state = (await response.json()) as ChatStateJson;
     expect(state.messages).toEqual([expect.objectContaining({ memberId: grandma.id, text: "Roll Tide" })]);
     expect(state.senders.map((s) => s.id)).toEqual([grandma.id]);
+  });
+
+  test("sends the message's pushes after the response, and none for a refused post", async () => {
+    const { db, jonah, grandma } = await seedWeek2();
+    const family = await familyGroup(db);
+    await db.insert(pushSubscriptions).values({ memberId: jonah.id, endpoint: "https://web.push.apple.com/jonah", p256dh: "k", auth: "a" });
+    const later: (() => Promise<unknown>)[] = [];
+    const titles: string[] = [];
+    const route: ChatRoute = {
+      ...routeFor(db, grandma, family.id),
+      pusher: () => ({
+        async send(_, payload) {
+          titles.push(payload.title);
+          return "sent";
+        },
+      }),
+      afterResponse: (task) => later.push(task),
+    };
+
+    await postChat(post({ group: family.id, text: " " }), route);
+    expect(later).toEqual([]);
+
+    const response = await postChat(post({ group: family.id, text: `<@${jonah.id}> Roll Tide` }), route);
+    expect(response.status).toBe(200);
+    expect(titles).toEqual([]);
+    await Promise.all(later.map((task) => task()));
+    expect(titles).toEqual(["Grandma mentioned you in Mabry Family"]);
   });
 
   test.each([

@@ -21,9 +21,11 @@ import { createHash } from "node:crypto";
 import type { Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { conditionalJson } from "@/lib/conditional";
+import type { Pusher } from "@/lib/push/sender";
 import { Refusal } from "@/lib/refusal";
 import { chatThread, markRead, NotInGroup, postMessage, setReaction, takeDown, unreadCount } from "./chat";
 import { toChatStateJson, type ChatStateJson, type ChatUnreadJson } from "./json";
+import { pushChatMessage } from "./push";
 import { isChatReactionKind } from "./reactions";
 
 export interface ChatRoute {
@@ -33,6 +35,10 @@ export interface ChatRoute {
   currentGroup: () => Promise<number | null>;
   /** The wall clock unless given. */
   now?: () => Date;
+  /** The push sender, or null while push is not configured (#530). Without it a post sends no pushes. */
+  pusher?: () => Pusher | null;
+  /** Runs `task` once the response has gone: Next's `after()` in the app (#530). */
+  afterResponse?: (task: () => Promise<unknown>) => void;
 }
 
 interface ApiError {
@@ -90,7 +96,7 @@ async function withChatContext(
 /** The thread, marked read, with an ETag; `If-None-Match` on an unchanged thread gets a 304. */
 async function answerThread(request: Request | null, { db, member, group, now }: Context): Promise<Response> {
   const thread = await chatThread(db, member, group);
-  await markRead(db, member.id, group, thread);
+  await markRead(db, member.id, group, thread, now);
   const state = toChatStateJson(thread, now);
   return conditionalJson(request, state, chatEtag(state, group));
 }
@@ -101,7 +107,10 @@ export function getChat(request: Request, route: ChatRoute): Promise<Response> {
   return withChatContext(route, () => group, (context) => answerThread(request, context));
 }
 
-/** `POST /api/chat` with `{ group, text }`: posts, then answers the thread it is now part of. */
+/**
+ * `POST /api/chat` with `{ group, text }`: posts, then answers the thread it
+ * is now part of. The message's pushes (`./push.ts`) go after the response.
+ */
 export async function postChat(request: Request, route: ChatRoute): Promise<Response> {
   let body: { group?: unknown; text?: unknown } = {};
   try {
@@ -112,7 +121,12 @@ export async function postChat(request: Request, route: ChatRoute): Promise<Resp
   const group = groupParam(body.group);
   return withChatContext(route, () => group, async (context) => {
     if (typeof body.text !== "string") return refuse("Say something first.", 400);
-    await postMessage(context.db, context.member, context.group, body.text, context.now);
+    const message = await postMessage(context.db, context.member, context.group, body.text, context.now);
+    const pusher = route.pusher?.() ?? null;
+    if (pusher && route.afterResponse) {
+      const { db, group, now } = context;
+      route.afterResponse(() => pushChatMessage(db, pusher, { ...message, groupId: group }, now));
+    }
     return answerThread(null, context);
   });
 }
