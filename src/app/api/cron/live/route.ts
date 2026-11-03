@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { cfbd } from "@/lib/cfbd";
+import { closeGamesAfter } from "@/lib/push/close-game-after";
 import { liveHeartbeat } from "@/lib/results/heartbeat";
 import { authorized } from "../auth";
 
@@ -10,9 +11,9 @@ import { authorized } from "../auth";
  * here for a manual `curl` or any other cron.
  */
 export async function POST(request: Request) {
-  return liveHeartbeat(request, { db: db(), cfbd, authorized });
+  return liveHeartbeat(request, { db: db(), cfbd, authorized, closeGames: closeGamesAfter });
 }
 
 export async function GET(request: Request) {
-  return liveHeartbeat(request, { db: db(), cfbd, authorized });
+  return liveHeartbeat(request, { db: db(), cfbd, authorized, closeGames: closeGamesAfter });
 }

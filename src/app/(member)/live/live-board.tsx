@@ -423,6 +423,7 @@ export function LiveBoard({
   viewer,
   manage,
   switcher,
+  openGameId: startGameId = null,
 }: {
   initial: WeekStateJson;
   viewer: MemberJson;
@@ -433,9 +434,11 @@ export function LiveBoard({
    * is `server-only` and importing it here would put it in the browser bundle.
    */
   switcher?: ReactNode;
+  /** The game whose sheet opens with the screen: `?game=<id>`, which a Close game push links to (#531). */
+  openGameId?: number | null;
 }) {
   const { state, nextPollAt } = useWeekState(initial);
-  const [openGameId, setOpenGameId] = useState<number | null>(null);
+  const [openGameId, setOpenGameId] = useState<number | null>(startGameId);
   const members = new Map(state.members.map((m) => [m.id, m]));
   const weekNumber = state.week.weekNumber;
   const sub = state.locked

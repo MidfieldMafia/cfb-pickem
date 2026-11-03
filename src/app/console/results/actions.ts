@@ -2,6 +2,7 @@
 
 import { freshCfbd } from "@/lib/cfbd";
 import type { ActionState } from "@/lib/console/state";
+import { closeGamesAfter } from "@/lib/push/close-game-after";
 import {
   dropOverride,
   editResult,
@@ -13,7 +14,7 @@ import { consoleRoute } from "../context";
 
 /** Pulls the week's scores from CollegeFootballData now, through the cache, whatever the stale gate thinks. */
 export async function refreshResultsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  return refreshResults(consoleRoute(), formData, freshCfbd());
+  return refreshResults(consoleRoute(), formData, freshCfbd(), closeGamesAfter);
 }
 
 export async function overrideResultAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
