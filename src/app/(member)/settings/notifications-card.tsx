@@ -49,6 +49,7 @@ export function NotificationsCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // As one string, so the effect runs again only when the saved devices change, not on every new array.
   const saved = endpoints.join("\n");
   useEffect(() => {
     let live = true;
@@ -112,7 +113,7 @@ export function NotificationsCard({
       <div className="flex flex-col overflow-hidden rounded-[14px] border border-border bg-card">
         <div className="flex min-h-18 items-center gap-3 border-b border-border py-3 pr-1 pl-3">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h2 id="notifications-label" className="text-[20px] leading-6 text-foreground">
+            <h2 id="notifications-label" className="text-[20px] leading-6 font-black text-foreground">
               Notifications
             </h2>
             <p className="text-sm leading-5 text-muted-foreground">{view.line}</p>

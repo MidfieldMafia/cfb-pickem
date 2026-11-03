@@ -32,8 +32,8 @@ import { plural } from "@/lib/plural";
 import { Refusal } from "@/lib/refusal";
 import { pushToMember } from "@/lib/push/deliver";
 import { pushKey, release, reserve } from "@/lib/push/reservations";
-import { membersWithDevices } from "@/lib/push/settings";
 import { REMINDER_TTL, type Pusher, type PushPayload } from "@/lib/push/sender";
+import { membersWithDevices } from "@/lib/push/settings";
 import { publishedSlate } from "@/lib/slate/slate";
 import { toE164 } from "./phone";
 import { NOOP, type SmsSender } from "./sender";
@@ -420,9 +420,10 @@ async function pushTo(
 }
 
 /**
- * Walks the plan. With `reserve` (the scheduled run), each member's push is
- * reserved before it is sent and skipped when another run holds it; a push no
- * device took gives its key back, so the next run tries again.
+ * Walks the plan. With `reserveFirst` (the scheduled run), each member's push
+ * is reserved before it is sent and skipped when another run holds it; a push
+ * no device took gives its key back, so the next run tries again. A
+ * commissioner's press reserves nothing: they asked for this send.
  */
 async function sendReminders(
   db: Db,
@@ -430,16 +431,16 @@ async function sendReminders(
   kind: PushKind,
   report: PickReport,
   now: Date,
-  reserved = false,
+  reserveFirst = false,
 ): Promise<ReminderResult> {
   const plan = reminderPlan(senders, report, await membersWithDevices(db));
   const pushed: PushOutcome[] = [];
   if (!senders.push) return { pushed, skipped: plan.skip };
   for (const row of plan.push) {
     const key = pushKey.reminder(report.week.id, row.member.id);
-    if (reserved && !(await reserve(db, key))) continue;
+    if (reserveFirst && !(await reserve(db, key))) continue;
     const outcome = await pushTo(db, senders.push, kind, report, row, now);
-    if (reserved && !outcome.ok) await release(db, key);
+    if (reserveFirst && !outcome.ok) await release(db, key);
     pushed.push(outcome);
   }
   return { pushed, skipped: plan.skip };

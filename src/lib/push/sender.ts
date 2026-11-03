@@ -30,15 +30,13 @@ export interface SendOptions {
   /**
    * Seconds the push service keeps trying a phone that is off or out of
    * reach, after which the push is dropped: a Pick reminder is good for a
-   * day, a close game for minutes.
+   * day, a close game for ten minutes (#493).
    */
   ttl: number;
 }
 
 /** The Pick reminder's: stale once its Deadline has passed, and the daily run sends it within a day of it. */
 export const REMINDER_TTL = 24 * 60 * 60;
-/** A close game's (#493): two minutes left on the clock is over soon after. */
-export const CLOSE_GAME_TTL = 10 * 60;
 
 /**
  * What one send came to. `gone` is the push service answering 404 or 410: the
