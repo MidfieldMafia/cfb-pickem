@@ -20,7 +20,7 @@
  */
 import "server-only";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
-import { chatMentions, groups, memberships, members } from "@/db/schema";
+import { chatMentions, groups, memberships, members, type ChatNotification } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { pushToMember } from "@/lib/push/deliver";
 import { pushKey, reserve } from "@/lib/push/reservations";
@@ -127,7 +127,7 @@ export async function pushChatMessage(db: Db, pusher: Pusher, message: PostedMes
   const link = chatLink(groupId);
 
   /** What the member is owed, reserved and claimed; null for nothing. */
-  async function owed(memberId: number, setting: string): Promise<{ kind: ChatPushSent["kind"]; payload: PushPayload } | null> {
+  async function owed(memberId: number, setting: ChatNotification): Promise<{ kind: ChatPushSent["kind"]; payload: PushPayload } | null> {
     if (mentioned.has(memberId)) {
       if (!(await reserve(db, pushKey.mention(id, memberId)))) return null;
       await markPushed(db, groupId, memberId, id);
