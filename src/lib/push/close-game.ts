@@ -46,7 +46,7 @@ export interface CloseGame {
 export type CloseGameSink = (db: Db, closes: CloseGame[]) => void;
 
 /** The feed's game clock, "08:42" (or "0:08:42"), as seconds; null for anything else. */
-export function clockSeconds(clock: string | null): number | null {
+function clockSeconds(clock: string | null): number | null {
   const match = clock?.trim().match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/);
   if (!match) return null;
   return Number(match[1] ?? 0) * 3600 + Number(match[2]) * 60 + Number(match[3]);
@@ -116,15 +116,18 @@ export interface CloseGameSent {
  */
 export async function pushCloseGames(db: Db, pusher: Pusher, closes: CloseGame[], now: Date = new Date()): Promise<CloseGameSent[]> {
   const sent: CloseGameSent[] = [];
+  const [wanting, devices] = await Promise.all([
+    db.select({ id: members.id }).from(members).where(eq(members.notifyCloseGames, true)),
+    membersWithDevices(db),
+  ]);
+  const recipients = wanting.filter((m) => devices.has(m.id));
   for (const close of closes) {
     if (!(await reserve(db, pushKey.close(close.game.id)))) continue;
-    const [wanting, devices, pickRows] = await Promise.all([
-      db.select({ id: members.id }).from(members).where(eq(members.notifyCloseGames, true)),
-      membersWithDevices(db),
-      db.select({ memberId: picks.memberId, teamId: picks.teamId }).from(picks).where(eq(picks.gameId, close.game.id)),
-    ]);
+    const pickRows = await db
+      .select({ memberId: picks.memberId, teamId: picks.teamId })
+      .from(picks)
+      .where(eq(picks.gameId, close.game.id));
     const pickOf = new Map(pickRows.map((p) => [p.memberId, p.teamId]));
-    const recipients = wanting.filter((m) => devices.has(m.id));
     sent.push(
       ...(await Promise.all(
         recipients.map(async (m): Promise<CloseGameSent> => {
