@@ -24,6 +24,7 @@ export default async function Settings() {
         stopped={pushStopped(member, endpoints.length)}
         reminder={settings.reminder}
         chat={settings.chat}
+        weeklyWin={settings.weeklyWin}
         publicKey={pushConfigFromEnv()?.publicKey ?? null}
       />
     </main>
