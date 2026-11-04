@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, MessageCircle, Timer } from "lucide-react";
+import { Bell, MessageCircle, Timer, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { LINK, Switch } from "@saturday-slate/design-system";
@@ -27,14 +27,15 @@ const unknown = () => "unknown" as const;
  * one kind of push each, for the member on every phone, and never add or
  * delete a device. While the switch is off, every row shows off, greyed and
  * locked, so no row claims a push this phone won't get. Chat (#530) is three
- * segments rather than a switch, and shows Off while locked. Close games
- * (#531) comes after it; Weekly Win, when it ships, goes between them.
+ * segments rather than a switch, and shows Off while locked. Weekly Win (#532)
+ * is a switch, third; Close games (#531) comes after it.
  */
 export function NotificationsCard({
   endpoints,
   stopped: savedStopped,
   reminder: savedReminder,
   chat: savedChat,
+  weeklyWin: savedWeeklyWin,
   closeGames: savedCloseGames,
   publicKey,
 }: {
@@ -43,6 +44,7 @@ export function NotificationsCard({
   stopped: boolean;
   reminder: boolean;
   chat: ChatNotification;
+  weeklyWin: boolean;
   closeGames: boolean;
   publicKey: string | null;
 }) {
@@ -54,6 +56,7 @@ export function NotificationsCard({
   const [deniedNow, setDeniedNow] = useState(false);
   const [reminder, setReminder] = useState(savedReminder);
   const [chat, setChat] = useState(savedChat);
+  const [weeklyWin, setWeeklyWin] = useState(savedWeeklyWin);
   const [closeGames, setCloseGames] = useState(savedCloseGames);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +110,7 @@ export function NotificationsCard({
   }
 
   /** One switch row: shows the change at once, saves it, and puts it back if the save is refused. */
-  async function flipRow(kind: "reminder" | "closeGames", set: (on: boolean) => void, next: boolean) {
+  async function flipRow(kind: "reminder" | "weeklyWin" | "closeGames", set: (on: boolean) => void, next: boolean) {
     if (!view.rowsLive) return;
     setError(null);
     set(next);
@@ -193,6 +196,21 @@ export function NotificationsCard({
               })}
             </div>
             <p className="text-sm leading-5 text-muted-foreground">{chatView.line}</p>
+          </div>
+          <div className="flex min-h-14 items-center gap-3 border-t border-border py-1.5 pr-1 pl-3">
+            <Trophy size={20} className="shrink-0 text-primary" aria-hidden />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <p id="weekly-win-label" className="text-base leading-6 font-semibold">
+                Weekly Win
+              </p>
+              <p className="text-sm leading-5 text-muted-foreground">Who won your group&rsquo;s Week.</p>
+            </div>
+            <Switch
+              checked={view.rowsLive && weeklyWin}
+              onCheckedChange={(next) => void flipRow("weeklyWin", setWeeklyWin, next)}
+              disabled={!view.rowsLive}
+              aria-labelledby="weekly-win-label"
+            />
           </div>
           <div className="flex min-h-14 items-center gap-3 border-t border-border py-1.5 pr-1 pl-3">
             <Timer size={20} className="shrink-0 text-primary" aria-hidden />

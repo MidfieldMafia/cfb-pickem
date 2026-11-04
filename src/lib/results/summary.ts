@@ -64,7 +64,7 @@ function andJoin(items: string[]): string {
 }
 
 /** "Grandma", "Grandma and Jonah", "Grandma, Jonah and Alex". */
-function listNames(members: ScoredMember[]): string {
+export function listNames(members: Pick<ScoredMember, "displayName">[]): string {
   return andJoin(members.map((m) => m.displayName));
 }
 
