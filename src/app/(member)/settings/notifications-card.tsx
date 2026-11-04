@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, MessageCircle, Timer, Trophy } from "lucide-react";
+import { Bell, MessageCircle, MessageSquare, Timer, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { LINK, Switch } from "@saturday-slate/design-system";
@@ -28,7 +28,8 @@ const unknown = () => "unknown" as const;
  * delete a device. While the switch is off, every row shows off, greyed and
  * locked, so no row claims a push this phone won't get. Chat (#530) is three
  * segments rather than a switch, and shows Off while locked. Weekly Win (#532)
- * is a switch, third; Close games (#531) comes after it.
+ * is a switch, third; Close games (#531) comes after it. New Feedback (#533)
+ * is last, and drawn only for a commissioner.
  */
 export function NotificationsCard({
   endpoints,
@@ -37,6 +38,7 @@ export function NotificationsCard({
   chat: savedChat,
   weeklyWin: savedWeeklyWin,
   closeGames: savedCloseGames,
+  feedback: savedFeedback,
   publicKey,
 }: {
   /** The member's saved devices. */
@@ -46,6 +48,8 @@ export function NotificationsCard({
   chat: ChatNotification;
   weeklyWin: boolean;
   closeGames: boolean;
+  /** New Feedback; null for a member who is not a commissioner, who gets no row. */
+  feedback: boolean | null;
   publicKey: string | null;
 }) {
   const block = useSyncExternalStore(noChange, readBlock, unknown);
@@ -58,6 +62,7 @@ export function NotificationsCard({
   const [chat, setChat] = useState(savedChat);
   const [weeklyWin, setWeeklyWin] = useState(savedWeeklyWin);
   const [closeGames, setCloseGames] = useState(savedCloseGames);
+  const [feedback, setFeedback] = useState(savedFeedback ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,7 +115,7 @@ export function NotificationsCard({
   }
 
   /** One switch row: shows the change at once, saves it, and puts it back if the save is refused. */
-  async function flipRow(kind: "reminder" | "weeklyWin" | "closeGames", set: (on: boolean) => void, next: boolean) {
+  async function flipRow(kind: "reminder" | "weeklyWin" | "closeGames" | "feedback", set: (on: boolean) => void, next: boolean) {
     if (!view.rowsLive) return;
     setError(null);
     set(next);
@@ -227,6 +232,23 @@ export function NotificationsCard({
               aria-labelledby="close-games-label"
             />
           </div>
+          {savedFeedback !== null ? (
+            <div className="flex min-h-14 items-center gap-3 border-t border-border py-1.5 pr-1 pl-3">
+              <MessageSquare size={20} className="shrink-0 text-primary" aria-hidden />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <p id="feedback-label" className="text-base leading-6 font-semibold">
+                  New Feedback
+                </p>
+                <p className="text-sm leading-5 text-muted-foreground">A bug or idea from a member. Commissioners only.</p>
+              </div>
+              <Switch
+                checked={view.rowsLive && feedback}
+                onCheckedChange={(next) => void flipRow("feedback", setFeedback, next)}
+                disabled={!view.rowsLive}
+                aria-labelledby="feedback-label"
+              />
+            </div>
+          ) : null}
         </div>
       </div>
       {view.note ? <p className="px-3 text-sm leading-5 text-muted-foreground">{NOTE[view.note]}</p> : null}
