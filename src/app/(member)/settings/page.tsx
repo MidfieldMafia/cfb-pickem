@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { MemberMenu } from "@/components/member-menu";
 import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
+import { isCommissioner } from "@/lib/members/members";
 import { pushConfigFromEnv } from "@/lib/push/sender";
 import { notificationSettings, pushStopped, savedEndpoints } from "@/lib/push/settings";
 import { NotificationsCard } from "./notifications-card";
@@ -26,6 +27,7 @@ export default async function Settings() {
         chat={settings.chat}
         weeklyWin={settings.weeklyWin}
         closeGames={settings.closeGames}
+        feedback={isCommissioner(member) ? settings.feedback : null}
         publicKey={pushConfigFromEnv()?.publicKey ?? null}
       />
     </main>
