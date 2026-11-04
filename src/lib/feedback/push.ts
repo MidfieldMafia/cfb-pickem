@@ -13,6 +13,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { feedback, members, type FeedbackKind } from "@/db/schema";
 import type { Db } from "@/db/types";
+import { clipText } from "@/lib/chat/push";
 import { isCommissioner } from "@/lib/members/members";
 import { pushToMember } from "@/lib/push/deliver";
 import { pushKey, reserve } from "@/lib/push/reservations";
@@ -25,19 +26,14 @@ export const FEEDBACK_TTL = 24 * 60 * 60;
 /** Where every New Feedback push opens. */
 export const FEEDBACK_LINK = "/console/feedback";
 
-/** About how much of the first line a banner carries. */
-const FIRST_LINE = 120;
-
 const KIND: Record<FeedbackKind, string> = { bug: "a bug", idea: "an idea" };
 
 /** `Grandma sent a bug`, or `an idea`. */
 export const feedbackTitle = (sender: string, kind: FeedbackKind) => `${sender} sent ${KIND[kind]}`;
 
-/** The Feedback's first line that says anything, cut at about 120 characters. */
+/** The Feedback's first line that says anything, cut at about 120 characters as a Chat banner is. */
 export function firstLine(text: string): string {
-  const line = text.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
-  const chars = [...line];
-  return chars.length <= FIRST_LINE ? line : `${chars.slice(0, FIRST_LINE - 1).join("").trimEnd()}…`;
+  return clipText(text.split("\n").find((line) => line.trim()) ?? "");
 }
 
 export interface FeedbackPushSent {
