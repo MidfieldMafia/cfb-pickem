@@ -102,9 +102,10 @@ npx tsx --conditions=react-server --env-file=.env.qstash scripts/qstash-schedule
 rm .env.qstash
 ```
 
-Run these in a terminal, not as one pasted `! ...` block in Claude Code. A line that starts with `!`
-inside the block negates that command's result, so the `grep` after it is skipped and
-`.env.prod.tmp`, which holds production's `DATABASE_URL`, is never removed.
+Run these in a terminal, or one line at a time with Claude Code's `!`. Don't paste them as one
+block with a `!` before each line: inside the block, a leading `!` negates that command's result,
+so anything chained after it with `&&` is skipped. On 2026-11-06 that skipped the `rm` and left
+`.env.prod.tmp`, which holds production's `DATABASE_URL`, behind.
 
 `CRON_SECRET` is stored in Vercel as Sensitive, so the dashboard never shows it. Production,
 Preview and Development share one value (`scripts/provision-infra.sh`), so the copy in
