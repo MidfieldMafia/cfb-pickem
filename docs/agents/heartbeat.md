@@ -79,17 +79,32 @@ session that publishes a slate would rewrite production's schedules. It needs `Q
 it after rotating `CRON_SECRET`**, or every ping answers 401, and after a failed sync (the Vercel
 logs say `Heartbeat sync failed`).
 
+**`vercel env pull` can't supply most of it.** `QSTASH_TOKEN`, `QSTASH_URL`, both QStash signing
+keys and `CRON_SECRET` are Sensitive on Production, so the pull writes `[SENSITIVE]` in place of
+each value. Only `DATABASE_URL` comes through. A placeholder passed to the script fails as a bad
+token, or as `CRON_SECRET is not set`. Take each value from where it really lives:
+
+| Variable | From |
+|---|---|
+| `DATABASE_URL` | `npx vercel env pull --environment=production`, the one real value it writes |
+| `QSTASH_TOKEN`, `QSTASH_URL` | the Upstash console: Vercel → Storage → cfb-pickem-qstash → Open in Upstash → QStash, the token and URL on its details page |
+| `CRON_SECRET` | `.env.local`, see below |
+| `HEARTBEAT_BASE_URL` | optional; defaults to `https://slate.midfield-mafia.com` |
+
 ```bash
-# .env.qstash (gitignored by .env*):
-#   DATABASE_URL=...          production's, from `npx vercel env pull --environment=production`
-#   QSTASH_TOKEN=...          Vercel env vars (the Marketplace integration) or the Upstash console
-#   QSTASH_URL=...            optional; the regional endpoint the integration sets
-#   CRON_SECRET=...           copy the line from .env.local, see below
-#   HEARTBEAT_BASE_URL=...    optional; defaults to https://slate.midfield-mafia.com
+npx vercel env pull --environment=production .env.prod.tmp
+grep '^DATABASE_URL=' .env.prod.tmp > .env.qstash   # gitignored by .env*
+rm .env.prod.tmp
 grep '^CRON_SECRET=' .env.local >> .env.qstash
+# Add QSTASH_TOKEN=... and QSTASH_URL=... from the Upstash console, then check none is a placeholder:
+grep -c SENSITIVE .env.qstash   # must print 0
 npx tsx --conditions=react-server --env-file=.env.qstash scripts/qstash-schedules.mts
 rm .env.qstash
 ```
+
+Run these in a terminal, not as one pasted `! ...` block in Claude Code. A line that starts with `!`
+inside the block negates that command's result, so the `grep` after it is skipped and
+`.env.prod.tmp`, which holds production's `DATABASE_URL`, is never removed.
 
 `CRON_SECRET` is stored in Vercel as Sensitive, so the dashboard never shows it. Production,
 Preview and Development share one value (`scripts/provision-infra.sh`), so the copy in
