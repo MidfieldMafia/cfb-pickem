@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Megaphone, MessageSquareOff, X, type LucideIcon } from "lucide-react";
+import { AtSign, Bell, Megaphone, Timer, Trophy, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -12,18 +12,28 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-10-18",
-  label: "What's new · Oct 18–24",
+  id: "2026-11-01",
+  label: "What's new · Nov 1–7",
   items: [
     {
       icon: Bell,
-      title: "Reminders by push",
-      body: "Turn on Remind me before picks lock in Settings, from the Profile menu, and your phone gets a push before the Deadline. It works from the app on your Home Screen.",
+      title: "Notifications in Settings",
+      body: "Settings has one switch for pushes on this phone, and a row for each kind of push. Remind me before picks lock now starts on.",
     },
     {
-      icon: MessageSquareOff,
-      title: "Texts are paused",
-      body: "The app sends no texts for now, so the sign-in screens can't text you your link. Open it from an earlier text, or ask a commissioner.",
+      icon: AtSign,
+      title: "Mentions in Chat",
+      body: "Type @ in Chat to mention someone, or @everyone. You get a push when you're mentioned, or for every message if you choose All in Settings.",
+    },
+    {
+      icon: Timer,
+      title: "Close games",
+      body: "A push when a game on the Slate is one score apart in its last two minutes. Tap it to open that game on the Live Board.",
+    },
+    {
+      icon: Trophy,
+      title: "Who won the Week",
+      body: "Once your Group's Week is settled, a push tells you who took the Weekly Win.",
     },
   ],
 };

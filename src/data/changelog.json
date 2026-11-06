@@ -1,6 +1,20 @@
 {
-  "generatedAt": "2026-10-29T13:19:38.064Z",
+  "generatedAt": "2026-11-05T13:14:35.779Z",
   "entries": [
+    {
+      "from": "2026-11-01",
+      "to": "2026-11-07",
+      "items": [
+        "Settings has a Notifications card. Its switch turns pushes on or off for this phone, and a row for each kind of push decides what reaches you on every phone.",
+        "Remind me before picks lock now starts on. It reaches you once the Notifications switch is on in the app on your Home Screen.",
+        "In Chat, type @ to mention someone in your Group, or @everyone. Messages that mention you stand out, and a pill takes you to them.",
+        "Chat can push you every new message, only when you're mentioned, or never. It starts on @mentions; change it in Settings.",
+        "Once your Group's Week is settled, you get a push saying who took the Weekly Win.",
+        "When a game on the Slate is one score apart in its last two minutes, you get a push. Tap it to open that game on the Live Board.",
+        "Commissioners get a push when a member sends Feedback. The New Feedback row in Settings turns it off."
+      ],
+      "through": "2026-11-05T13:14:00Z"
+    },
     {
       "from": "2026-10-25",
       "to": "2026-10-31",
