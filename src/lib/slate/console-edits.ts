@@ -10,10 +10,10 @@
  * logged here and never fails the edit.
  */
 import "server-only";
+import type { Db } from "@/db/types";
 import { consoleAction, consoleEdit, type ConsoleRoute } from "@/lib/console/route";
 import type { ActionState, EditOutcome } from "@/lib/console/state";
 import type { CfbdClient } from "@/lib/cfbd/types";
-import type { Db } from "@/db/types";
 import { integerField, type Fields } from "@/lib/parse";
 import type { RainChanceSource } from "@/lib/weather/open-meteo";
 import {
@@ -34,7 +34,8 @@ const num = (fields: Fields, name: string) =>
 /** The slate console is the only screen a slate edit shows on until publish. */
 const slateOnly: string[] = [SLATE_PATH];
 
-function syncHeartbeat(route: ConsoleRoute, db: Db): void {
+/** Asks the route for a heartbeat re-sync, and logs rather than throws when even that fails. */
+function resyncHeartbeat(route: ConsoleRoute, db: Db): void {
   try {
     route.syncHeartbeat(db);
   } catch (error) {
@@ -55,7 +56,7 @@ export function editPublish(route: ConsoleRoute, form: FormData): Promise<Action
     // that has already passed, so this is the one rule here a test can only
     // reach by pinning the moment.
     await publishSlate(db, actor, num(form, "weekId"), now);
-    syncHeartbeat(route, db);
+    resyncHeartbeat(route, db);
     return { done: "Published. Members can see the slate now.", revalidate: slateOnly };
   });
 }
@@ -68,7 +69,7 @@ export function addGame(
 ): Promise<EditOutcome> {
   return consoleAction(route, async ({ db, actor }) => {
     await addGameFromFeed(db, actor, client, num(form, "weekId"), num(form, "cfbdGameId"), rain);
-    syncHeartbeat(route, db);
+    resyncHeartbeat(route, db);
     return { revalidate: slateOnly };
   });
 }
@@ -76,7 +77,7 @@ export function addGame(
 export function dropGame(route: ConsoleRoute, form: FormData): Promise<EditOutcome> {
   return consoleAction(route, async ({ db, actor }) => {
     await removeGame(db, actor, num(form, "gameId"));
-    syncHeartbeat(route, db);
+    resyncHeartbeat(route, db);
     return { revalidate: slateOnly };
   });
 }
@@ -105,7 +106,7 @@ export function refreshSlate(
 ): Promise<ActionState> {
   return consoleEdit(route, async ({ db, actor, now }) => {
     await refreshFromFeed(db, actor, client, num(form, "weekId"), rain, now);
-    syncHeartbeat(route, db);
+    resyncHeartbeat(route, db);
     return { revalidate: slateOnly };
   });
 }
