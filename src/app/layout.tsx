@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Chivo, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import { LaunchScreen } from "@/components/launch-screen";
 import { LAUNCH_GUARD } from "@/lib/launch";
 import { SPLASH_SCREENS, splashMedia, splashUrl } from "@/lib/splash";
@@ -7,16 +7,17 @@ import "./globals.css";
 
 const PAPER = "#F7F1E3";
 
-const chivo = Chivo({
+// Served from the repo, so a build never fetches from Google: `src/app/fonts/README.md`.
+const chivo = localFont({
+  src: "./fonts/Chivo-wght.woff2",
+  weight: "100 900",
   variable: "--font-chivo",
-  subsets: ["latin"],
-  weight: ["700", "900"],
 });
 
-const manrope = Manrope({
+const manrope = localFont({
+  src: "./fonts/Manrope-wght.woff2",
+  weight: "200 800",
   variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
