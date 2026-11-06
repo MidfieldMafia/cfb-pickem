@@ -3,8 +3,14 @@
  * injected `ConsoleRoute`. The `"use server"` file above this is one line per
  * edit; the rules, the messages, and the cache invalidations are here, where a
  * test can reach them.
+ *
+ * Publish, add, remove and Refresh also re-sync the live heartbeat's
+ * schedules (#546), since each can change the published Slate's kickoffs. The
+ * route defers that to `after()`; a sync that cannot even be scheduled is
+ * logged here and never fails the edit.
  */
 import "server-only";
+import type { Db } from "@/db/types";
 import { consoleAction, consoleEdit, type ConsoleRoute } from "@/lib/console/route";
 import type { ActionState, EditOutcome } from "@/lib/console/state";
 import type { CfbdClient } from "@/lib/cfbd/types";
@@ -28,6 +34,15 @@ const num = (fields: Fields, name: string) =>
 /** The slate console is the only screen a slate edit shows on until publish. */
 const slateOnly: string[] = [SLATE_PATH];
 
+/** Asks the route for a heartbeat re-sync, and logs rather than throws when even that fails. */
+function resyncHeartbeat(route: ConsoleRoute, db: Db): void {
+  try {
+    route.syncHeartbeat(db);
+  } catch (error) {
+    console.warn("Heartbeat sync not scheduled:", error instanceof Error ? error.message : error);
+  }
+}
+
 export function editDeadline(route: ConsoleRoute, form: FormData): Promise<ActionState> {
   return consoleEdit(route, async ({ db, actor }) => {
     await setDeadline(db, actor, num(form, "weekId"), new Date(String(form.get("deadline") ?? "")));
@@ -41,6 +56,7 @@ export function editPublish(route: ConsoleRoute, form: FormData): Promise<Action
     // that has already passed, so this is the one rule here a test can only
     // reach by pinning the moment.
     await publishSlate(db, actor, num(form, "weekId"), now);
+    resyncHeartbeat(route, db);
     return { done: "Published. Members can see the slate now.", revalidate: slateOnly };
   });
 }
@@ -53,6 +69,7 @@ export function addGame(
 ): Promise<EditOutcome> {
   return consoleAction(route, async ({ db, actor }) => {
     await addGameFromFeed(db, actor, client, num(form, "weekId"), num(form, "cfbdGameId"), rain);
+    resyncHeartbeat(route, db);
     return { revalidate: slateOnly };
   });
 }
@@ -60,6 +77,7 @@ export function addGame(
 export function dropGame(route: ConsoleRoute, form: FormData): Promise<EditOutcome> {
   return consoleAction(route, async ({ db, actor }) => {
     await removeGame(db, actor, num(form, "gameId"));
+    resyncHeartbeat(route, db);
     return { revalidate: slateOnly };
   });
 }
@@ -88,6 +106,7 @@ export function refreshSlate(
 ): Promise<ActionState> {
   return consoleEdit(route, async ({ db, actor, now }) => {
     await refreshFromFeed(db, actor, client, num(form, "weekId"), rain, now);
+    resyncHeartbeat(route, db);
     return { revalidate: slateOnly };
   });
 }

@@ -15,6 +15,8 @@ export interface TestRoute {
   route: ConsoleRoute;
   /** Every path the edit invalidated, in the order it asked for them. */
   revalidated: string[];
+  /** How many times the edit asked for the heartbeat's schedules to be re-synced. */
+  heartbeat: { syncs: number };
 }
 
 /**
@@ -24,14 +26,19 @@ export interface TestRoute {
  */
 export function routeFor(db: Db, actor: Commissioner, now: Date): TestRoute {
   const revalidated: string[] = [];
+  const heartbeat = { syncs: 0 };
   return {
     route: {
       db,
       requireConsole: async () => actor,
       revalidate: (path) => revalidated.push(path),
+      syncHeartbeat: () => {
+        heartbeat.syncs++;
+      },
       now: () => now,
     },
     revalidated,
+    heartbeat,
   };
 }
 
