@@ -176,17 +176,24 @@ describe("a tap on a team", () => {
 
 /**
  * Pick entry draws its own header rather than `AppHeader`, so it has to carry
- * the header icons itself — it once shipped without them, leaving the Picks
- * tab the one place a member couldn't reach How to play.
+ * the top-right control itself. That is the pennant menu now, as on every other
+ * member screen (#514), in place of the How to play icon: beside the status
+ * chip there is no room at 360px for both. The page builds the menu on the
+ * server; the flow only places what it is given.
  */
 describe("the header", () => {
-  const link = (name: string) => screen.queryByRole("link", { name });
+  const menu = <button type="button">Pennant menu</button>;
+  const header = () => document.querySelector("header");
 
-  test("links every member to How to play, and carries no Manage icon — that lives in the avatar menu", () => {
-    render(<PickFlow sheet={sheet()} />);
+  test.each([
+    ["a game", undefined],
+    ["the Lock page", "lock"],
+    ["the Guess page", "guess"],
+  ] as const)("carries the menu it is given on %s, in place of How to play", (_, startPage) => {
+    render(<PickFlow sheet={sheet()} startPage={startPage} menu={menu} />);
 
-    expect(link("How to play")?.getAttribute("href")).toBe("/rules");
-    expect(link("Manage")).toBeNull();
+    expect(header()?.querySelector("button")?.textContent).toBe("Pennant menu");
+    expect(header()?.querySelector('a[href="/rules"]')).toBeNull();
   });
 });
 

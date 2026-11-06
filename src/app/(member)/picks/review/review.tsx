@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock, Scale } from "lucide-react";
 import type { ReactNode } from "react";
-import { HEADER_TOP, HeaderLinks, Badge, Card, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
+import { HEADER_TOP, Badge, Card, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
@@ -111,7 +111,14 @@ function SummaryCard({
  * — though a Dropped Lock can still be moved. The countdown runs on the server
  * clock, and at zero the screen flips to its locked state without a reload.
  */
-export function Review({ initial }: { initial: SheetJson }) {
+export function Review({
+  initial,
+  menu,
+}: {
+  initial: SheetJson;
+  /** The pennant menu, built by the server page: it reaches `server-only` modules (#514). */
+  menu?: ReactNode;
+}) {
   const router = useRouter();
   // Re-read on arrival so the countdown starts from a fresh server clock.
   const { sheet, progress, locked, remainingMs } = usePickSheet(initial, { refetch: true });
@@ -195,7 +202,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             <h1 className="m-0 font-display text-[22px] leading-7">Review picks</h1>
             <div className="truncate text-sm leading-5 text-muted-foreground">Week {sheet.weekNumber}</div>
           </div>
-          <HeaderLinks />
+          {menu}
           <Badge variant={progress.remaining ? "outline" : "default"}>
             {stepsDone} of {steps}
           </Badge>
