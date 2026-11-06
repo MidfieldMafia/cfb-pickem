@@ -1,79 +1,36 @@
 /**
- * Creates the four Upstash QStash schedules that ping `/api/cron/live` once a
- * minute in game windows (see `docs/agents/heartbeat.md`). Idempotent: it lists
- * the schedules already there and replaces one with the same destination and
- * cron in place, so running it twice still leaves four. A schedule on the same
- * destination with a cron not listed here (an old window) is deleted.
+ * Runs the live heartbeat's schedule sync by hand (#546): the same sync the
+ * daily `refresh-slates` cron and the slate console's edits run, against
+ * production's published Slate. It fits the QStash schedules on
+ * `/api/cron/live` to that Slate's Game windows (see `docs/agents/heartbeat.md`)
+ * and deletes every other schedule there. Use it to repair the schedules after
+ * a `CRON_SECRET` rotation or a failed sync.
  *
- *   npx tsx --env-file=.env.qstash scripts/qstash-schedules.mts
+ *   npx tsx --conditions=react-server --env-file=.env.qstash scripts/qstash-schedules.mts
  *
- * Reads `QSTASH_TOKEN`, the production `CRON_SECRET`, and optionally
- * `QSTASH_URL` (the Marketplace sets it; defaults to the global endpoint) and
- * `HEARTBEAT_BASE_URL` (defaults to production). It prints what it did and
- * never prints the secret. Plain `fetch` against the REST API: no SDK.
+ * Reads production's `DATABASE_URL`, `QSTASH_TOKEN` and `CRON_SECRET`, and
+ * optionally `QSTASH_URL` (the Marketplace sets it; defaults to the global
+ * endpoint) and `HEARTBEAT_BASE_URL` (defaults to production). It prints what
+ * it did and never prints the secret or the token. Exits 1 on a failed sync,
+ * having deleted nothing after the call that failed.
  */
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import * as schema from "../src/db/schema";
+import { requireEnv } from "../src/lib/env";
+import { heartbeatConfig, PRODUCTION_ORIGIN, syncSchedules } from "../src/lib/results/heartbeat-sync";
+import { publishedSlate } from "../src/lib/slate/slate";
 
-/** UTC windows covering every Eastern kickoff on both sides of DST. The busiest day is 840 pings, past the Marketplace Free plan's 500, so QStash is on Pay as You Go. */
-const WINDOWS = [
-  { id: "slate-live-saturday-day", cron: "* 15-23 * * 6" },
-  { id: "slate-live-saturday-night", cron: "* 0-8 * * 0" },
-  { id: "slate-live-weeknight-evening", cron: "* 23 * * 2-5" },
-  { id: "slate-live-weeknight-late", cron: "* 0-4 * * 3-6" },
-] as const;
-
-interface Schedule {
-  scheduleId: string;
-  cron: string;
-  destination: string;
+const config = heartbeatConfig(process.env, process.env.HEARTBEAT_BASE_URL?.trim() || PRODUCTION_ORIGIN);
+if (typeof config === "string") {
+  console.error(`${config}.`);
+  process.exit(1);
 }
 
-function required(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    console.error(`${name} is not set.`);
-    process.exit(1);
-  }
-  return value;
-}
+const db = drizzle({ client: neon(requireEnv("DATABASE_URL")), schema });
+const slate = await publishedSlate(db);
+console.log(slate ? `Week ${slate.week.weekNumber} is published, ${slate.games.length} games.` : "No Week is published.");
 
-const token = required("QSTASH_TOKEN");
-const secret = required("CRON_SECRET");
-const qstash = (process.env.QSTASH_URL?.trim() || "https://qstash.upstash.io").replace(/\/+$/, "");
-const base = (process.env.HEARTBEAT_BASE_URL?.trim() || "https://slate.midfield-mafia.com").replace(/\/+$/, "");
-const destination = `${base}/api/cron/live`;
-
-async function call(method: string, path: string, headers: Record<string, string> = {}): Promise<unknown> {
-  const response = await fetch(`${qstash}/v2/schedules${path}`, {
-    method,
-    headers: { authorization: `Bearer ${token}`, ...headers },
-  });
-  const text = await response.text();
-  if (!response.ok) {
-    const shown = path.startsWith("/http") ? "/<destination>" : path;
-    throw new Error(`${method} /v2/schedules${shown}: ${response.status} ${text}`);
-  }
-  return text ? JSON.parse(text) : null;
-}
-
-const existing = ((await call("GET", "")) as Schedule[]).filter((s) => s.destination === destination);
-const kept = new Set<string>();
-
-for (const window of WINDOWS) {
-  const match = existing.find((s) => s.cron === window.cron && !kept.has(s.scheduleId));
-  const scheduleId = match?.scheduleId ?? window.id;
-  await call("POST", `/${destination}`, {
-    "Upstash-Schedule-Id": scheduleId,
-    "Upstash-Cron": window.cron,
-    "Upstash-Retries": "0",
-    "Upstash-Forward-Authorization": `Bearer ${secret}`,
-  });
-  kept.add(scheduleId);
-  console.log(`${match ? "replaced" : "created "} ${scheduleId}  ${window.cron}`);
-}
-
-for (const stale of existing.filter((s) => !kept.has(s.scheduleId))) {
-  await call("DELETE", `/${stale.scheduleId}`);
-  console.log(`deleted  ${stale.scheduleId}  ${stale.cron}`);
-}
-
-console.log(`${WINDOWS.length} schedules ping ${destination}.`);
+const result = await syncSchedules(slate?.games ?? [], config, { log: console.log });
+if (result.status !== "synced") process.exit(1);
+console.log(`${result.created.length + result.replaced.length} schedules ping ${config.destination}.`);

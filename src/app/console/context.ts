@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import type { ConsoleRoute } from "@/lib/console/route";
 import { requireConsole } from "@/lib/members/current";
+import { syncHeartbeatAfter } from "@/lib/results/heartbeat-sync-after";
 
 /**
  * The real request-scoped glue behind every console edit: Neon, the session
@@ -11,5 +12,5 @@ import { requireConsole } from "@/lib/members/current";
  * takes this as an argument.
  */
 export function consoleRoute(): ConsoleRoute {
-  return { db: db(), requireConsole, revalidate: revalidatePath };
+  return { db: db(), requireConsole, revalidate: revalidatePath, syncHeartbeat: syncHeartbeatAfter };
 }

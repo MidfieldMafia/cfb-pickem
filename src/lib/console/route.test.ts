@@ -33,6 +33,7 @@ function routeFor(): { route: ConsoleRoute; revalidated: string[] } {
       db: {} as Db,
       requireConsole: async () => ACTOR,
       revalidate: (path) => revalidated.push(path),
+      syncHeartbeat: () => {},
       now: () => new Date("2026-09-13T12:00:00Z"),
     },
     revalidated,

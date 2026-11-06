@@ -1,9 +1,10 @@
 /**
  * The live heartbeat: an outside scheduler (Upstash QStash, see
- * `scripts/qstash-schedules.mts`) pings `/api/cron/live` once a minute during
- * game windows, so the scores move when no member has the app open. Member
- * traffic schedules the feed otherwise, and this rides the same stale gate:
- * a ping inside the 30 s claim loses it and does nothing but one read.
+ * `heartbeat-sync.ts`) pings `/api/cron/live` once a minute during each
+ * published Game's window, so the scores move when no member has the app
+ * open. Member traffic schedules the feed otherwise, and this rides the same
+ * stale gate: a ping inside the 30 s claim loses it and does nothing but one
+ * read.
  *
  * The `route.ts` binds the real database, feed and `authorized()` and exports
  * this under `GET` and `POST`; a route file may export nothing else, which is

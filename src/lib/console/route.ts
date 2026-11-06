@@ -24,6 +24,12 @@ export interface ConsoleRoute {
   db: Db;
   requireConsole: () => Promise<Commissioner>;
   revalidate: (path: string) => void;
+  /**
+   * Re-fits the live heartbeat's schedules to the published Slate after an
+   * edit that can move its kickoffs (#546). Production defers it to `after()`,
+   * so it never holds up or fails the edit; a test counts the calls.
+   */
+  syncHeartbeat: (db: Db) => void;
   /** The wall clock unless given; a test pins it to a moment inside the fixture's Week. */
   now?: () => Date;
 }
