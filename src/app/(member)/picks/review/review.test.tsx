@@ -69,3 +69,14 @@ describe("a wholly Void slate", () => {
     expect(picksRow().hasAttribute("disabled")).toBe(true);
   });
 });
+
+// #514: the pennant menu sits top right, as on every other member screen.
+describe("the header", () => {
+  test("carries the menu it is given, in place of How to play", () => {
+    render(<Review initial={sheet()} menu={<button type="button">Pennant menu</button>} />);
+
+    const header = document.querySelector("header");
+    expect(header?.querySelector("button")?.textContent).toBe("Pennant menu");
+    expect(header?.querySelector('a[href="/rules"]')).toBeNull();
+  });
+});

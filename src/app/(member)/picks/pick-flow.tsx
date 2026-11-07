@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { HEADER_TOP, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
 
 import { HomeScreenNudge } from "@/components/picks/home-screen-nudge";
 import { PickReminderAsk } from "@/components/push/pick-reminder-ask";
@@ -179,12 +179,15 @@ export function PickFlow({
   startGameId,
   startPage,
   reminder,
+  menu,
 }: {
   sheet: SheetJson;
   startGameId?: number;
   startPage?: WalkPage;
   /** The Pick reminder ask's server-side facts (#482); none, none shown. */
   reminder?: { on: boolean; publicKey: string | null; onboarding: boolean };
+  /** The pennant menu, built by the server page: it reaches `server-only` modules (#514). */
+  menu?: ReactNode;
 }) {
   const router = useRouter();
   // Only a saved Pick counts as picked: an in-flight or failed save leaves its
@@ -323,7 +326,7 @@ export function PickFlow({
               : `Game ${index + 1} of ${games.length}`}
           </div>
         </div>
-        <HeaderLinks />
+        {menu}
         {page ? null : <StatusChip pick={pick} />}
       </header>
 

@@ -9,6 +9,7 @@ import type { WalkPage } from "@/lib/picks/walk";
 import { currentWeek } from "@/lib/week/week";
 import { NoSlate } from "./no-slate";
 import { PickFlow } from "./pick-flow";
+import { PicksMenu } from "./picks-menu";
 
 /**
  * Pick entry: one game per screen. Opens at the first unpicked game, or at
@@ -39,5 +40,13 @@ export default async function Picks({
     publicKey: pushConfigFromEnv()?.publicKey ?? null,
     onboarding: onboardingApplies(member.welcomedAt, new Date()),
   };
-  return <PickFlow sheet={toSheetJson(week.sheet)} startGameId={startGameId} startPage={startPage} reminder={reminder} />;
+  return (
+    <PickFlow
+      sheet={toSheetJson(week.sheet)}
+      startGameId={startGameId}
+      startPage={startPage}
+      reminder={reminder}
+      menu={<PicksMenu member={member} />}
+    />
+  );
 }
