@@ -275,7 +275,7 @@ export function FieldCard({
   const pinLogo = side === "away" ? logoSrc(awayTeam) : side === "home" ? logoSrc(homeTeam) : undefined;
   const chevron = playing === null && at.unmoved && side !== null;
   const who = at.side === "away" ? awayTeam : at.side === "home" ? homeTeam : null;
-  const aria = [callout?.label ?? null, who ? `${who} has the ball` : null, `${at.down.replace("&", "and")}`, at.spot === "–" ? null : `ball on ${at.spot}`, `this drive: ${at.drive}`]
+  const aria = [callout?.label ?? null, who ? `${who} has the ball` : null, `${at.down.replaceAll("&", "and")}`, at.spot === "–" ? null : `ball on ${at.spot}`, `this drive: ${at.drive}`]
     .filter(Boolean)
     .join(", ");
 
