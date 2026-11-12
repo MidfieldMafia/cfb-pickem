@@ -9,6 +9,11 @@
 /** `before--picks.png` and `after--picks.png` share the key `picks`. */
 export const SHOT_NAME = /^(before|after)--([a-z0-9-]+)\.png$/;
 
+/** A local session's link, `![picks](./before--picks.png)`, which `gh --attach ./before--picks.png` rewrites. */
+export function attachLink(name: string): string {
+  return `![${name.match(SHOT_NAME)?.[2] ?? name}](./${name})`;
+}
+
 export interface Caption {
   /** CSS px the shots were taken at. */
   width: number;

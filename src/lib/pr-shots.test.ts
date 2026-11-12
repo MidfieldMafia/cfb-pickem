@@ -1,12 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { pngWidth, screenshotsSection } from "./pr-shots";
+import { attachLink, pngWidth, screenshotsSection } from "./pr-shots";
 
 const names = ["after--leaderboard.png", "after--picks.png", "before--picks.png", "before--you.png"];
 
 describe("screenshotsSection", () => {
   test("local links, with _new_ and _gone_ for a missing side", () => {
-    const local = (name: string) => `![${name.replace(/\.png$/, "")}](./${name})`;
-    expect(screenshotsSection(names, local, { width: 390 })).toBe(
+    expect(screenshotsSection(names, attachLink, { width: 390 })).toBe(
       [
         "## Screenshots",
         "",
@@ -14,9 +13,9 @@ describe("screenshotsSection", () => {
         "",
         "| Screen | Before | After |",
         "|---|---|---|",
-        "| `leaderboard` | _new_ | ![after--leaderboard](./after--leaderboard.png) |",
-        "| `picks` | ![before--picks](./before--picks.png) | ![after--picks](./after--picks.png) |",
-        "| `you` | ![before--you](./before--you.png) | _gone_ |",
+        "| `leaderboard` | _new_ | ![leaderboard](./after--leaderboard.png) |",
+        "| `picks` | ![picks](./before--picks.png) | ![picks](./after--picks.png) |",
+        "| `you` | ![you](./before--you.png) | _gone_ |",
       ].join("\n"),
     );
   });

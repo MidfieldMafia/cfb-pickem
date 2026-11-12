@@ -89,6 +89,8 @@ const keyOf = (target) => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+  // pngWidth in src/lib/pr-shots.ts halves a shot's pixels for the caption, so
+  // a change to this scale factor changes that too.
   await page.setViewport({ width, height: 844, deviceScaleFactor: 2 });
   if (iphone) {
     await page.setUserAgent(

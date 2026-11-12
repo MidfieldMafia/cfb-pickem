@@ -20,9 +20,10 @@ below puts its table first so a cut loses prose, not findings.
 ## Rules for the run
 
 Change no files, commit nothing, open no PR or issue. The one push allowed is
-`pr-shots --branch` to `agent-screenshots` in check 6. Print no connection string,
-key or cookie: lengths and status codes only. Run every check named even after
-one fails, and run `npm run agent-db -- down` at the end whatever happened.
+`pr-shots --branch` to `agent-screenshots` in check 6. Print no connection
+string, key or cookie: lengths and status codes only. Run every check named
+even after one fails, and run `npm run agent-db -- down` at the end whatever
+happened.
 
 ## Checks
 
@@ -42,8 +43,8 @@ one fails, and run `npm run agent-db -- down` at the end whatever happened.
    `/live`, the Liberty game's newest play reads seconds or minutes ago.
    Read both PNGs and say in one sentence each what they show, whether
    anything covers the screen, and whether the bottom nav sits at the bottom.
-6. **Publish.** `npm run pr-shots -- 9999 /tmp/shots --branch` exits 0 and each
-   printed image URL answers `200 image/png`.
+6. **Publish.** `npm run pr-shots -- 9999 /tmp/shots --branch` exits 0 and
+   each printed image URL answers `200 image/png`.
 
 ## Report
 

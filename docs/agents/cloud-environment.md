@@ -80,8 +80,7 @@ in this repo.
 - **Screens that cannot render:** `/console/slate` calls CollegeFootballData
   as it renders, and there is no key. Member screens catch the same failure.
 - **What covers a screenshot:** the What's new modal (a fresh browser has not
-  seen the entry) and `next dev`'s badge. `scripts/shoot.cjs` clears
-  both.
+  seen the entry) and `next dev`'s badge. `scripts/shoot.cjs` clears both.
 
 ## Subagents and Jev
 

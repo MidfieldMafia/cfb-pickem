@@ -27,7 +27,8 @@ import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { pngWidth, SHOT_NAME, screenshotsSection } from "../src/lib/pr-shots";
+import { parseArgs } from "node:util";
+import { attachLink, pngWidth, SHOT_NAME, screenshotsSection } from "../src/lib/pr-shots";
 
 const BRANCH = "agent-screenshots";
 const MAX_BYTES = 3 * 1024 * 1024;
@@ -87,26 +88,20 @@ function commitShots(files: string[], prefix: string, message: string): string {
   }
 }
 
-/** Removes `--<name> <value>` from args and returns the value. */
-function option(args: string[], name: string): string | undefined {
-  const i = args.indexOf(`--${name}`);
-  if (i === -1) return undefined;
-  const value = args[i + 1];
-  if (value === undefined || value.startsWith("--")) throw new Error(`--${name} needs a value.\n${USAGE}`);
-  args.splice(i, 2);
-  return value;
-}
-
 function main() {
-  const args = process.argv.slice(2);
-  const branch = args.includes("--branch");
-  if (branch) args.splice(args.indexOf("--branch"), 1);
-  const body = option(args, "body");
-  const member = option(args, "member");
-  const state = option(args, "state");
-  const [issue, dir, ...rest] = args;
+  const { positionals, values } = parseArgs({
+    allowPositionals: true,
+    options: {
+      branch: { type: "boolean", default: false },
+      body: { type: "string" },
+      member: { type: "string" },
+      state: { type: "string" },
+    },
+  });
+  const { branch: toBranch, body, member, state } = values;
+  const [issue, dir, ...rest] = positionals;
   if (!issue || !/^\d+$/.test(issue) || !dir || rest.length > 0) throw new Error(USAGE);
-  if (branch && body) throw new Error("--body is for a local session; --branch links the committed copies instead.");
+  if (toBranch && body) throw new Error("--body is for a local session; --branch links the committed copies instead.");
   if (!existsSync(".agent-db.json")) {
     throw new Error("No agent-db branch is up here. Screenshots are public: take them only on `npm run agent-db -- up`.");
   }
@@ -127,8 +122,11 @@ function main() {
     throw new Error(`The shots in ${dir} are at different widths (${[...widths].join(", ")}px): take them all at one.`);
   }
   const caption = { width: [...widths][0], member, state };
+  if (!member || !state) {
+    console.error("No --member or --state: the caption will not say who is signed in or what the screens show.\n");
+  }
 
-  if (branch) {
+  if (toBranch) {
     const prefix = `${issue}/${new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "")}`;
     const commit = commitShots(files, prefix, `Screenshots for #${issue}`);
     const url = (name: string) => `https://raw.githubusercontent.com/${repoSlug()}/${commit}/${prefix}/${name}`;
@@ -142,7 +140,7 @@ function main() {
     mkdirSync(bodyDir, { recursive: true });
     for (const file of files) copyFileSync(file, path.join(bodyDir, path.basename(file)));
   }
-  console.log(screenshotsSection(names, (name) => `![${name.replace(/\.png$/, "")}](./${name})`, caption));
+  console.log(screenshotsSection(names, attachLink, caption));
   const attach = names.map((name) => `--attach ./${name}`).join(" ");
   console.error(
     `\nPut the section in ${bodyFile}, then from ${bodyDir}:\n` +
