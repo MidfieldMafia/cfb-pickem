@@ -70,13 +70,16 @@ describe("a wholly Void slate", () => {
   });
 });
 
-// #514: the pennant menu sits top right, as on every other member screen.
+// #514: How to play then the pennant menu, top right, as on every other member screen.
 describe("the header", () => {
-  test("carries the menu it is given, in place of How to play", () => {
+  test("carries How to play and then the menu it is given", () => {
     render(<Review initial={sheet()} menu={<button type="button">Pennant menu</button>} />);
 
     const header = document.querySelector("header");
-    expect(header?.querySelector("button")?.textContent).toBe("Pennant menu");
-    expect(header?.querySelector('a[href="/rules"]')).toBeNull();
+    const rules = header?.querySelector('a[href="/rules"]');
+    const menu = header?.querySelector("button");
+    expect(menu?.textContent).toBe("Pennant menu");
+    expect(rules?.getAttribute("aria-label")).toBe("How to play");
+    expect(rules?.compareDocumentPosition(menu!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

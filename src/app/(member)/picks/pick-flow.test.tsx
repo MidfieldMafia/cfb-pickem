@@ -190,9 +190,9 @@ describe("a tap on a team", () => {
 
 /**
  * Pick entry draws its own header rather than `AppHeader`, so it has to carry
- * the top-right control itself. That is the pennant menu now, as on every other
- * member screen (#514), in place of the How to play icon, and alone: the save
- * state moved to the hint line under the tiles. The page builds the menu on the
+ * the top-right controls itself: How to play, then the pennant menu, in
+ * `AppHeader`'s order (#514). There is room for both because the save state
+ * moved to the hint line under the tiles. The page builds the menu on the
  * server; the flow only places what it is given.
  */
 describe("the header", () => {
@@ -203,11 +203,14 @@ describe("the header", () => {
     ["a game", undefined],
     ["the Lock page", "lock"],
     ["the Guess page", "guess"],
-  ] as const)("carries the menu it is given on %s, in place of How to play", (_, startPage) => {
+  ] as const)("carries How to play and then the menu it is given on %s", (_, startPage) => {
     render(<PickFlow sheet={sheet()} startPage={startPage} menu={menu} />);
 
-    expect(header()?.querySelector("button")?.textContent).toBe("Pennant menu");
-    expect(header()?.querySelector('a[href="/rules"]')).toBeNull();
+    const rules = header()?.querySelector('a[href="/rules"]');
+    const button = header()?.querySelector("button");
+    expect(button?.textContent).toBe("Pennant menu");
+    expect(rules?.getAttribute("aria-label")).toBe("How to play");
+    expect(rules?.compareDocumentPosition(button!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(header()?.querySelector("[aria-live]")).toBeNull();
   });
 });

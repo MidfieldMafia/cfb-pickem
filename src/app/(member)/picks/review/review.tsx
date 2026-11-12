@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Clock, Lock, Scale } from "lucide-react";
 import type { ReactNode } from "react";
-import { HEADER_TOP, Badge, Card, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
+import { HEADER_TOP, HeaderLinks, Badge, Card, Progress, LocalTime, SECTION_LABEL as LABEL, LINK } from "@saturday-slate/design-system";
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
@@ -189,8 +189,8 @@ export function Review({
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8">
       {/*
-        The pennant menu sits alone at the end of the title's row, as on every
-        other member screen, and the deadline line below keeps the full width.
+        How to play and the pennant menu end the title's row, in `AppHeader`'s
+        order, as on every other member screen, and the deadline line below keeps the full width.
         There is no count badge: the bar and the summary card already say how
         much is left (#514).
       */}
@@ -201,6 +201,7 @@ export function Review({
             <h1 className="m-0 font-display text-[22px] leading-7">Review picks</h1>
             <div className="truncate text-sm leading-5 text-muted-foreground">Week {sheet.weekNumber}</div>
           </div>
+          <HeaderLinks />
           {menu}
         </div>
         <p className="flex items-center gap-1 text-sm text-muted-foreground">

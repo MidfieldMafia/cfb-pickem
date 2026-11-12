@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, LoaderCircle, Lock, Scale } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { HEADER_TOP, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
+import { HEADER_TOP, HeaderLinks, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
 
 import { HomeScreenNudge } from "@/components/picks/home-screen-nudge";
 import { PickReminderAsk } from "@/components/push/pick-reminder-ask";
@@ -283,8 +283,9 @@ export function PickFlow({
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
       {/*
-        The mark, the title over its progress line, then the pennant menu alone
-        at the top right, as on every other member screen. The save state lives
+        The mark, the title over its progress line, then How to play and the
+        pennant menu at the top right, in `AppHeader`'s order, as on every other
+        member screen. The save state lives
         in the hint line under the tiles, not here (#514). The progress line
         truncates rather than wrapping, so it stays one line at any slate size
         and the tiles below don't jump from game to game.
@@ -299,6 +300,7 @@ export function PickFlow({
               : `Game ${index + 1} of ${games.length}`}
           </div>
         </div>
+        <HeaderLinks />
         {menu}
       </header>
 

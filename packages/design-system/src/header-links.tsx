@@ -5,9 +5,8 @@ const ICON_LINK = "grid size-8 shrink-0 place-items-center rounded-full text-mut
 
 /**
  * The header icon `AppHeader` carries: a link to How to play. The two pick
- * screens draw headers of their own and carry the member menu there instead
- * (#514). Manage lives
- * in the avatar menu, not here.
+ * screens draw headers of their own and place it there too, before the member
+ * menu (#514). Manage lives in the avatar menu, not here.
  *
  * A fragment, so the icons sit in whatever flex row the header already lays out.
  * The How to play link is the Welcome Tour's `rules` target.
