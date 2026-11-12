@@ -221,10 +221,9 @@ export function route(response: unknown, tiers: readonly Tier[], call?: JevCall)
     ...("probabilities" in reach && { reach: reach.probabilities }),
   };
   const kept = Object.keys(scored).length ? { probabilities: scored } : {};
-  const error = risk === null ? "Jev's answer could not be read" : "error" in open ? open.error : "error" in reach ? reach.error : null;
-  if (risk === null || "error" in open || "error" in reach) {
-    return { ...routeOnError(error ?? "Jev's answer could not be read", tiers), ...kept, ...logged };
-  }
+  if (risk === null) return { ...routeOnError("Jev's answer could not be read", tiers), ...kept, ...logged };
+  if ("error" in open) return { ...routeOnError(open.error, tiers), ...kept, ...logged };
+  if ("error" in reach) return { ...routeOnError(reach.error, tiers), ...kept, ...logged };
 
   const { base, level, reason } = combine(risk, open, reach);
   const jev: JevVerdict = {
