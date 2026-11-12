@@ -36,7 +36,7 @@ describe("a slate with games to pick", () => {
   test("counts a Pick per game, the Lock and the Guess, and offers the Lock", () => {
     render(<Review initial={sheet()} />);
 
-    expect(screen.getByText("0 of 5")).toBeTruthy();
+    expect(screen.getByText("3 things left before the deadline")).toBeTruthy();
     expect(lockOffers().length).toBeGreaterThan(0);
     expect(barFill()).toBe("translateX(-100%)");
   });
@@ -46,13 +46,13 @@ describe("a wholly Void slate", () => {
   test("leaves the Picks and the Lock out of the count", () => {
     render(<Review initial={sheet({ games: ALL_VOID })} />);
 
-    expect(screen.getByText("0 of 1")).toBeTruthy();
+    expect(screen.getByText("1 thing left before the deadline")).toBeTruthy();
   });
 
   test("reaches done once the Guess is in", () => {
     render(<Review initial={sheet({ games: ALL_VOID, tiebreakerGuess: 52 })} />);
 
-    expect(screen.getByText("1 of 1")).toBeTruthy();
+    expect(screen.getByText(/You're all set for Week/)).toBeTruthy();
   });
 
   test("offers no Lock, not even to move a Dropped one", () => {
@@ -67,5 +67,19 @@ describe("a wholly Void slate", () => {
     expect(barFill()).toBe("translateX(-0%)");
     expect(picksRow().textContent).toContain("Every game is void");
     expect(picksRow().hasAttribute("disabled")).toBe(true);
+  });
+});
+
+// #514: How to play then the pennant menu, top right, as on every other member screen.
+describe("the header", () => {
+  test("carries How to play and then the menu it is given", () => {
+    render(<Review initial={sheet()} menu={<button type="button">Pennant menu</button>} />);
+
+    const header = document.querySelector("header");
+    const rules = header?.querySelector('a[href="/rules"]');
+    const menu = header?.querySelector("button");
+    expect(menu?.textContent).toBe("Pennant menu");
+    expect(rules?.getAttribute("aria-label")).toBe("How to play");
+    expect(rules?.compareDocumentPosition(menu!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

@@ -111,7 +111,14 @@ function SummaryCard({
  * — though a Dropped Lock can still be moved. The countdown runs on the server
  * clock, and at zero the screen flips to its locked state without a reload.
  */
-export function Review({ initial }: { initial: SheetJson }) {
+export function Review({
+  initial,
+  menu,
+}: {
+  initial: SheetJson;
+  /** The pennant menu, built by the server page: it reaches `server-only` modules (#514). */
+  menu?: ReactNode;
+}) {
   const router = useRouter();
   // Re-read on arrival so the countdown starts from a fresh server clock.
   const { sheet, progress, locked, remainingMs } = usePickSheet(initial, { refetch: true });
@@ -126,8 +133,6 @@ export function Review({ initial }: { initial: SheetJson }) {
   const tiebreakerGame = tiebreakerView(sheet)?.game;
   // A wholly Void slate has nothing to pick and nowhere to put a Lock, so neither is a step.
   const nothingToPick = progress.countingGames === 0;
-  const steps = progress.countingGames + (progress.lockApplies ? 1 : 0) + 1;
-  const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
   const groups = groupByKickoff(sheet.games);
   const tiebreakerLine = tiebreakerGame
@@ -184,9 +189,10 @@ export function Review({ initial }: { initial: SheetJson }) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8">
       {/*
-        The header icons sit beside the badge on the title's row, so the
-        deadline line below keeps the full width — beside a commissioner's two
-        icons and the badge it wrapped at phone width.
+        How to play and the pennant menu end the title's row, in `AppHeader`'s
+        order, as on every other member screen, and the deadline line below keeps the full width.
+        There is no count badge: the bar and the summary card already say how
+        much is left (#514).
       */}
       <header className={`space-y-1 ${HEADER_TOP}`}>
         <div className="flex items-center gap-3">
@@ -196,9 +202,7 @@ export function Review({ initial }: { initial: SheetJson }) {
             <div className="truncate text-sm leading-5 text-muted-foreground">Week {sheet.weekNumber}</div>
           </div>
           <HeaderLinks />
-          <Badge variant={progress.remaining ? "outline" : "default"}>
-            {stepsDone} of {steps}
-          </Badge>
+          {menu}
         </div>
         <p className="flex items-center gap-1 text-sm text-muted-foreground">
           <Clock size={14} />

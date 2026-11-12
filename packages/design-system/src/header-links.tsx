@@ -4,9 +4,9 @@ import { CircleHelp } from "lucide-react";
 const ICON_LINK = "grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground";
 
 /**
- * The header icon every member screen carries: a link to How to play. `AppHeader`
- * renders it, and so do the two pick screens, which draw headers of their own.
- * Manage lives in the avatar menu, not here.
+ * The header icon `AppHeader` carries: a link to How to play. The two pick
+ * screens draw headers of their own and place it there too, before the member
+ * menu (#514). Manage lives in the avatar menu, not here.
  *
  * A fragment, so the icons sit in whatever flex row the header already lays out.
  * The How to play link is the Welcome Tour's `rules` target.

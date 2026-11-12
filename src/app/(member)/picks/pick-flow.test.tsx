@@ -161,6 +161,20 @@ describe("a tap on a team", () => {
     expect(pressed("Michigan")).toBe("false");
   });
 
+  /**
+   * The header has no save chip (#514): the hint line under the tiles is the
+   * live region that says a save is in flight.
+   */
+  test("says the save is in flight in the hint line", async () => {
+    vi.stubGlobal("fetch", () => new Promise<Response>(() => {}));
+    render(<PickFlow sheet={sheet()} startGameId={TEXAS.game.id} />);
+
+    tile("Texas").click();
+
+    await waitFor(() => expect(screen.getByText("Saving your pick…")).toBeTruthy());
+    expect(screen.getByText("Saving your pick…").closest("[aria-live]")).toBeTruthy();
+  });
+
   test("a plain failure keeps its message on the game rather than advancing", async () => {
     answering(Response.json({ error: "That didn't save. Try again." }, { status: 500 }));
     render(<PickFlow sheet={sheet()} startGameId={TEXAS.game.id} />);
@@ -176,17 +190,28 @@ describe("a tap on a team", () => {
 
 /**
  * Pick entry draws its own header rather than `AppHeader`, so it has to carry
- * the header icons itself — it once shipped without them, leaving the Picks
- * tab the one place a member couldn't reach How to play.
+ * the top-right controls itself: How to play, then the pennant menu, in
+ * `AppHeader`'s order (#514). There is room for both because the save state
+ * moved to the hint line under the tiles. The page builds the menu on the
+ * server; the flow only places what it is given.
  */
 describe("the header", () => {
-  const link = (name: string) => screen.queryByRole("link", { name });
+  const menu = <button type="button">Pennant menu</button>;
+  const header = () => document.querySelector("header");
 
-  test("links every member to How to play, and carries no Manage icon — that lives in the avatar menu", () => {
-    render(<PickFlow sheet={sheet()} />);
+  test.each([
+    ["a game", undefined],
+    ["the Lock page", "lock"],
+    ["the Guess page", "guess"],
+  ] as const)("carries How to play and then the menu it is given on %s", (_, startPage) => {
+    render(<PickFlow sheet={sheet()} startPage={startPage} menu={menu} />);
 
-    expect(link("How to play")?.getAttribute("href")).toBe("/rules");
-    expect(link("Manage")).toBeNull();
+    const rules = header()?.querySelector('a[href="/rules"]');
+    const button = header()?.querySelector("button");
+    expect(button?.textContent).toBe("Pennant menu");
+    expect(rules?.getAttribute("aria-label")).toBe("How to play");
+    expect(rules?.compareDocumentPosition(button!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(header()?.querySelector("[aria-live]")).toBeNull();
   });
 });
 
