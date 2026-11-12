@@ -69,50 +69,56 @@ npm run -s agent-route -- <issue number>
 builds Jev's state from the issue (its title, body and labels, whether it has
 an Agent Brief, the comments that are a brief or spec, the parent map's title,
 and each path the brief names with its line count; no file contents), asks the
-question below, applies the table, and prints the route as one JSON line, saved
-to `/tmp/agent-go-route-<issue number>.json`. The key is a network secret the
+three questions below, combines the answers into a level, applies the table,
+and prints the route as one JSON line, saved to
+`/tmp/agent-go-route-<issue number>.json`. The key is a network secret the
 proxy adds, so the run never sees it. It asks the pinned `jev-1.14.0`, and
 retries a 429, a 529 or a network error up to three tries with backoff,
 honouring `retry-after`; an answer is never asked again, however unsure. It
 never stops the run over Jev: on a refused key, a network error, a non-200 or
 an answer it cannot read, it prints the routine's default (level 1, Sonnet
 medium) with `"reason":"jev-error"` and the `error`. Confidence 0 is no error:
-TypeSafe floors it at 0 for a wide spread, so it takes the 0.7 floor to level 4;
-only probabilities that do not sum to about 1 are "Jev's answer was empty". The
-JSON also keeps Jev's five `probabilities`, its `jevModel` and the `call`'s
-status, time and tries. If the command itself fails, build on that default and
-say so.
+TypeSafe floors it at 0 for a wide spread, so it is the low-confidence rule's
+level 4; only a Score whose probabilities do not sum to about 1 is "Jev's
+answer was empty". The JSON keeps every answer under `jev` (the `risk` Noul,
+and each Score's `score`, `confidence`, `probabilities` and the 0 to 2 it
+counted for), the `reason` that set the level, Jev's `jevModel` and the
+`call`'s status, time and tries. If the command itself fails, build on that
+default and say so.
 
 Then comment on the issue that the build has started, and on what:
-`Build started on opus / medium: Jev level 2, confidence 0.55, below 0.7 so level 4.`
+`Build started on opus / medium: Jev level 4 by risk, risk 0.82, open 0.4 at 0.7, reach 1.1 at 0.65.`
 On an error: `Build started on sonnet / medium, the routine's default: <error>.`
 
 ### Jev's question
 
-`npm run agent-route` reads the question, the five levels and the table from
-this section, and the tests in `src/lib/agent-go/route.test.ts` hold it to
-five of each. Retune the levels here after about ten `Built on:` lines (#463
-decision 10). The 0.7 floor and its level 4 live in `src/lib/agent-go/route.ts`;
-change them there and in this section's wording together.
+Jev answers three narrow questions in one request (#548): `risk`, a Noul (how
+likely the answer is yes), and `open` and `reach`, Scores on three levels each.
+`npm run agent-route` reads each question, the Scores' levels and the table
+from this section, and the tests in `src/lib/agent-go/route.test.ts` hold it to
+those three questions, three levels each and five rows. Retune the wording here
+after about ten `Built on:` lines (#463 decision 10); the thresholds below live
+in `src/lib/agent-go/route.ts`, so change them there and in this section's
+wording together.
 
-Question: How much judgment and risk does building this ticket carry, for a coding agent working alone from the ticket to an open PR with nobody to ask?
+Question `risk` (noul): Does building this ticket touch grading or scoring, what members can see before the Deadline or Reveal, a database migration, sending messages or the limits on how many are sent, or production infrastructure and secrets outside the database (QStash schedules, webhooks, env vars, `CRON_SECRET`)? Asking members to turn reminders on is not sending messages (#486); rewriting production schedules is a yes (#547).
 
-1. Mechanical. A full Agent Brief names the files and the exact change, with
-   nothing left to decide, and the diff stays in a few files of presentation or
-   copy, like #334 (the Your pick card: a logo disc, a Lock badge and the
-   viewer's Tiebreaker Guess, built in PR #459 with no failed step).
-2. Routine. A full brief, but the build makes small calls of its own: a new
-   component or helper, a test seam to choose, or several screens touched in the
-   same way.
-3. Involved. A brief that leaves real decisions open, or a change across server
-   and client: a new route handler or server action, a new table read, or shared
-   logic that several screens rely on.
-4. Risky. It touches grading or scoring, what members can see before the
-   Deadline or Reveal, a database migration, or money and messaging limits; or
-   the brief is thin and the build has to work out what is meant.
-5. Open. No Agent Brief, or open design questions the build must settle itself,
-   or several of the level 4 risks at once. A ticket with What to build and
-   Acceptance sections is a full brief, with or without that heading.
+Question `open` (score): How much does a coding agent building this ticket alone, from the ticket to an open PR with nobody to ask, have to decide for itself?
+
+1. Nothing left to decide. The ticket names the files and the exact change.
+2. Small calls of its own: a new component or helper, a name, a test seam to
+   choose.
+3. Design questions the build must settle itself, or a brief so thin the build
+   has to work out what is meant.
+
+Question `reach` (score): How far across the app does the change reach?
+
+1. One layer: presentation, copy or the helper behind one screen, a script, or
+   a doc.
+2. Server and client together: a new route handler, server action or table
+   read, and the screen that uses it.
+3. Shared logic that several screens rely on: a change one screen makes reaches
+   the others.
 
 | Level | `model` | `effort` |
 |---|---|---|
@@ -122,9 +128,21 @@ Question: How much judgment and risk does building this ticket carry, for a codi
 | 4 | `opus` | `medium` |
 | 5 | `opus` | `high` |
 
-Jev's most probable level picks the row; confidence below 0.7 builds at level 4
-whatever it leaned to, because an under-powered build of a hard ticket costs a
-bad PR and an over-powered one only tokens.
+The answers pick the row in three steps, and the route's `reason` names the
+one that set the level:
+
+1. **`base`**: each Score's `score` rounded half up, counted 0 to 2 (never its
+   top probability), `open + reach + 1`, at most 5.
+2. **`risk`**: a `risk` Noul of 0.7 or more raises the level to at least 4.
+3. **`low-confidence`**: a level below 4 needs confidence 0.6 or more on both
+   Scores, and either below 0.3 builds at level 4 whatever the rest said.
+   Between the two, a level of 4 or 5 stands. The thresholds are lopsided
+   because an under-powered build of a hard ticket costs a bad PR and an
+   over-powered one only tokens.
+
+Level 5 is reached only by `open` and `reach` both at 2. A risky ticket that
+reaches across the app with small calls of its own stays at 4: in #548's
+hindsight grading every such build was fine on Opus medium.
 
 ### Hand off
 
@@ -360,19 +378,20 @@ format and nowhere else in the skill:
 
 `Built on: <legs> (<Jev>) · build <tokens> tokens, <tool calls> tool calls, orchestrator not counted · <minutes> min claim→PR`
 
-for example `Built on: claude-opus-5-5 / medium (Jev level 4, confidence 0.82, 1.2k tokens) · build 1.9M tokens, 41 tool calls, orchestrator not counted · 26 min claim→PR`.
+for example `Built on: claude-opus-5-5 / medium (Jev level 4 by risk, risk 0.82, open 0.4 at 0.7 (0.6/0.4/0), reach 1.1 at 0.65 (0.1/0.7/0.2), 1.2k tokens, jev-1.14.0, HTTP 200 in 2.3 s) · build 1.9M tokens, 41 tool calls, orchestrator not counted · 26 min claim→PR`.
 
 - **Legs**: `<model id> / <effort>` for each build leg, joined by ` → `, with
   ` (escalated)` after a second: `claude-sonnet-5-5 / medium → claude-opus-5-5 / low (escalated)`.
   The model id is the one the build session reports for itself; the effort is
   the one its hand-off named. A run that cannot tell its effort writes
   `effort unknown`, never a guess.
-- **Jev**: `Jev level <n>, confidence <c>, <input + output> tokens`, adding
-  `, below 0.7 so level 4` when the floor moved it; on an error,
-  `Jev error: <error>, routine default`. Either is followed by what Jev
-  answered and how the call went, each part when known:
-  `, levels 0.1/0.1/0.15/0.25/0.4, jev-1.14.0, HTTP 200 in 2.3 s`, with
-  ` after <n> tries` when it was retried. The levels are retuned from these.
+- **Jev**: `Jev level <n> by <base, risk or low confidence>, risk <noul>,
+  open <score> at <confidence> (<probabilities>), reach <score> at
+  <confidence> (<probabilities>), <input + output> tokens`; on an error,
+  `Jev error: <error>, routine default`, followed by each Score's
+  probabilities when Jev scored it (`, open 0/0/0`). Either is followed by how
+  the call went, each part when known: `, jev-1.14.0, HTTP 200 in 2.3 s`, with
+  ` after <n> tries` when it was retried. The questions are retuned from these.
   All of it comes from the saved route.
 - **Tokens and tool calls**: each leg's `subagent_tokens` and `tool_uses`,
   summed, as `640k` or `1.9M`. The orchestrator's own are not visible to it,

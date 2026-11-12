@@ -1,9 +1,10 @@
 /**
  * Which model and effort an agent:go build runs on (#463). Jev, TypeSafe's
- * classifier, scores the ticket's difficulty on five levels and a table maps
- * each level to a tier. Both the levels Jev reads and that table live in
- * `.claude/skills/agent-go/SKILL.md`, where they are retuned, so this reads
- * them from there rather than keeping a copy.
+ * classifier, answers three narrow questions about the ticket (#548): `risk`,
+ * a Noul, and `open` and `reach`, Scores on three levels. `combine` turns them
+ * into a level 1 to 5, and a table maps each level to a tier. The questions and
+ * that table live in `.claude/skills/agent-go/SKILL.md`, where they are
+ * retuned, so this reads them from there rather than keeping a copy.
  *
  * `npm run agent-route` (`scripts/agent-route.ts`) does the calling; this
  * holds the rules, which are what a wrong tier would be blamed on.
@@ -19,11 +20,27 @@ export interface Tier {
   effort: "low" | "medium" | "high";
 }
 
+/** One Score's answer, kept for retuning the questions (#548). */
+export interface ScoreVerdict {
+  /** Jev's position along the three levels, 0 to 2. */
+  score: number;
+  confidence: number;
+  /** Level 0 first. */
+  probabilities: number[];
+  /** What the base level counted it as: `score` rounded half up. */
+  counted: 0 | 1 | 2;
+}
+
 /** What Jev said, kept for the issue comment and the PR's `Built on:` line. */
 export interface JevVerdict {
-  /** The level Jev put the most probability on, before any rule moved it. */
+  /** The `risk` Noul: how likely the answer is yes. */
+  risk: number;
+  open: ScoreVerdict;
+  reach: ScoreVerdict;
+  /** `open + reach + 1`, before the risk or confidence rule moved it. */
+  base: Level;
+  /** The level the rules set, which an escalation leaves as it was. */
   level: Level;
-  confidence: number;
   inputTokens: number;
   outputTokens: number;
 }
@@ -36,33 +53,38 @@ export interface JevCall {
 }
 
 export interface Route extends Tier {
-  /** `jev`: Jev's level; `low-confidence`: moved to level 4; `jev-error`: the routine's default. */
-  reason: "jev" | "low-confidence" | "jev-error";
+  /**
+   * The rule that set the level: `base`, the two Scores; `risk`, the risk Noul
+   * raised it to 4; `low-confidence`, a Score too unsure moved it to 4;
+   * `jev-error`, the routine's default.
+   */
+  reason: "base" | "risk" | "low-confidence" | "jev-error";
   jev: JevVerdict | null;
   error?: string;
-  /**
-   * Jev's five probabilities, level 1 first, whenever it scored all five, even
-   * on an answer called empty: the levels are retuned from these (#516).
-   */
-  probabilities?: number[];
+  /** Each Score's probabilities on an error, when Jev scored it, even on an answer called empty (#516). */
+  probabilities?: { open?: number[]; reach?: number[] };
   /** The model that answered, as Jev names it. */
   jevModel?: string;
   call?: JevCall;
 }
 
-/** Below this, Jev's level is not trusted and the build runs at level 4. */
-const CONFIDENCE_FLOOR = 0.7;
+/** At or above this, the `risk` Noul is a yes, and the build runs at level 4 or more. */
+const RISK_THRESHOLD = 0.7;
+/** A level below 4 needs at least this confidence on both Scores. */
+const MOVE_DOWN_CONFIDENCE = 0.6;
+/** Below this on either Score, the build runs at level 4 whatever the rest said. */
+const UNSURE_CONFIDENCE = 0.3;
+/** Where a risky or unsure ticket builds, and what every build ran on before #548. */
 const UNSURE_LEVEL: Level = 4;
 /** The routine's own setting, Sonnet medium, which is level 1's tier. */
 const DEFAULT_LEVEL: Level = 1;
-const QUESTION_ID = "difficulty";
 /**
  * Pinned, not `jev-latest`: that alias moved on 2026-10-14, in the middle of the
  * runs the levels are retuned from (#516).
  */
 const JEV_MODEL = "jev-1.14.0";
 
-/** The section of the skill that holds Jev's question, its levels and the table. */
+/** The section of the skill that holds Jev's questions, their levels and the table. */
 function routingSection(skill: string): string {
   const heading = /^### Jev's question$/m.exec(skill);
   if (!heading) throw new Error("agent-go SKILL.md has no \"### Jev's question\" section");
@@ -71,23 +93,56 @@ function routingSection(skill: string): string {
   return end < 0 ? rest : rest.slice(0, end);
 }
 
+/** The three questions Jev answers, by the id its answer comes back under. */
+export interface Questions {
+  risk: { instructions: string };
+  open: { instructions: string; levels: string[] };
+  reach: { instructions: string; levels: string[] };
+}
+
+const QUESTION_TYPES = { risk: "noul", open: "score", reach: "score" } as const;
+type QuestionId = keyof typeof QUESTION_TYPES;
+const SCORE_LEVELS = 3;
+
 /**
- * Jev's question, its five levels easiest first, and the tier for each, from
- * the skill. A list item may wrap onto indented lines; they are joined.
+ * Jev's three questions, each Score's levels easiest first, and the tier for
+ * each level, from the skill. A question is one line,
+ * ``Question `<id>` (<type>): <instructions>``; a Score's numbered levels follow
+ * it, and one may wrap onto indented lines, which are joined.
  */
-export function readSkill(skill: string): { question: string; levels: string[]; tiers: Tier[] } {
+export function readSkill(skill: string): { questions: Questions; tiers: Tier[] } {
   const section = routingSection(skill);
 
-  const question = /^Question: (.+)$/m.exec(section)?.[1]?.trim();
-  if (!question) throw new Error("agent-go SKILL.md states no \"Question:\" for Jev");
-
-  const levels: string[] = [];
+  const found = new Map<string, { type: string; instructions: string; levels: string[] }>();
+  let current: { levels: string[] } | null = null;
   for (const line of section.split("\n")) {
-    const item = /^([1-5])\. (.+)$/.exec(line);
-    if (item) levels.push(item[2].trim());
-    else if (/^ {3}\S/.test(line) && levels.length) levels[levels.length - 1] += ` ${line.trim()}`;
+    const question = /^Question `(\w+)` \((\w+)\): (.+)$/.exec(line);
+    const item = /^([1-9])\. (.+)$/.exec(line);
+    if (question) {
+      current = { levels: [] };
+      found.set(question[1], { type: question[2], instructions: question[3].trim(), levels: current.levels });
+    } else if (item && current) current.levels.push(item[2].trim());
+    else if (/^ {3}\S/.test(line) && current?.levels.length) current.levels[current.levels.length - 1] += ` ${line.trim()}`;
+    // Any other text ends a question's levels, so a later numbered list is not read as more of them.
+    else if (line.trim()) current = null;
   }
-  if (levels.length !== 5) throw new Error(`agent-go SKILL.md gives Jev ${levels.length} levels, not 5`);
+  for (const id of Object.keys(QUESTION_TYPES)) {
+    if (!found.has(id)) throw new Error(`agent-go SKILL.md asks Jev no \`${id}\` question`);
+  }
+  for (const [id, type] of Object.entries(QUESTION_TYPES)) {
+    const q = found.get(id)!;
+    if (q.type !== type) throw new Error(`agent-go SKILL.md asks \`${id}\` as a ${q.type}, not a ${type}`);
+    const want = type === "score" ? SCORE_LEVELS : 0;
+    if (q.levels.length !== want) {
+      throw new Error(`agent-go SKILL.md gives Jev's \`${id}\` ${q.levels.length} levels, not ${want}`);
+    }
+  }
+  const get = (id: QuestionId) => found.get(id)!;
+  const questions: Questions = {
+    risk: { instructions: get("risk").instructions },
+    open: { instructions: get("open").instructions, levels: get("open").levels },
+    reach: { instructions: get("reach").instructions, levels: get("reach").levels },
+  };
 
   const tiers: Tier[] = [];
   for (const row of section.matchAll(/^\| ([1-5]) \| `(sonnet|opus)` \| `(low|medium|high)` \|/gm)) {
@@ -97,7 +152,7 @@ export function readSkill(skill: string): { question: string; levels: string[]; 
     throw new Error(`agent-go SKILL.md's tier table has ${tiers.length} rows, not levels 1 to 5 in order`);
   }
 
-  return { question, levels, tiers };
+  return { questions, tiers };
 }
 
 function tierAt(level: Level, tiers: readonly Tier[]): Tier {
@@ -118,40 +173,70 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** How far Jev's probabilities may sum from 1 before the answer counts as empty: they come rounded. */
 const SUM_TOLERANCE = 0.02;
 
-/** Jev's response to the difficulty question as a tier, or the default when it cannot be read. */
-export function route(response: unknown, tiers: readonly Tier[], call?: JevCall): Route {
-  const answer = isRecord(response) && isRecord(response.answers) ? response.answers[QUESTION_ID] : undefined;
-  const usage = isRecord(response) && isRecord(response.usage) ? response.usage : {};
-  const jevModel = isRecord(response) && typeof response.model === "string" ? response.model : undefined;
-  const logged = { ...(jevModel && { jevModel }), ...(call && { call }) };
-  if (!isRecord(answer) || !isRecord(answer.probabilities) || typeof answer.confidence !== "number") {
-    return { ...routeOnError("Jev's answer could not be read", tiers), ...logged };
+/** A Score answer read, or why it could not be. */
+function readScore(answer: unknown, id: "open" | "reach"): ScoreVerdict | { error: string; probabilities?: number[] } {
+  if (!isRecord(answer) || !isRecord(answer.probabilities)) return { error: "Jev's answer could not be read" };
+  if (typeof answer.score !== "number" || typeof answer.confidence !== "number") {
+    return { error: "Jev's answer could not be read" };
   }
-
-  // Levels are 0-based in Jev's answer. The most probable wins; a tie goes to the harder level.
-  const probabilities = [0, 1, 2, 3, 4].map((i) => (answer.probabilities as Record<string, unknown>)[String(i)]);
-  if (probabilities.some((p) => typeof p !== "number")) {
-    return { ...routeOnError("Jev's answer did not score five levels", tiers), ...logged };
+  const raw = answer.probabilities;
+  const probabilities = Array.from({ length: SCORE_LEVELS }, (_, i) => raw[String(i)]);
+  if (probabilities.some((p) => typeof p !== "number") || Object.keys(raw).length !== SCORE_LEVELS) {
+    return { error: `Jev's answer did not score three levels for ${id}` };
   }
   const scores = probabilities as number[];
   // TypeSafe's probabilities sum to 1, so one that does not, all zeros say, is an
   // empty answer. Confidence 0 is not: Score confidence is floored at 0 whenever
-  // the spread is as wide as an even one, which is "unsure", the floor's job (#516).
+  // the spread is as wide as an even one, which is "unsure", the low-confidence rule's job (#516).
   const sum = scores.reduce((total, p) => total + p, 0);
-  if (Math.abs(sum - 1) > SUM_TOLERANCE) {
-    return { ...routeOnError("Jev's answer was empty", tiers), probabilities: scores, ...logged };
-  }
-  const top = scores.reduce((best, p, i) => (p >= scores[best] ? i : best), 0);
+  if (Math.abs(sum - 1) > SUM_TOLERANCE) return { error: "Jev's answer was empty", probabilities: scores };
+  // Half up, from Jev's position along the levels: never its most probable level (#548).
+  const counted = Math.min(SCORE_LEVELS - 1, Math.max(0, Math.floor(answer.score + 0.5))) as 0 | 1 | 2;
+  return { score: answer.score, confidence: answer.confidence, probabilities: scores, counted };
+}
 
+/** The level the three answers set, and the rule that set it (`.claude/skills/agent-go/SKILL.md`). */
+function combine(risk: number, open: ScoreVerdict, reach: ScoreVerdict): { base: Level; level: Level; reason: Route["reason"] } {
+  const base = Math.min(5, open.counted + reach.counted + 1) as Level;
+  const confidence = Math.min(open.confidence, reach.confidence);
+  if (risk >= RISK_THRESHOLD && base < UNSURE_LEVEL) return { base, level: UNSURE_LEVEL, reason: "risk" };
+  if (confidence < UNSURE_CONFIDENCE && base !== UNSURE_LEVEL) return { base, level: UNSURE_LEVEL, reason: "low-confidence" };
+  if (confidence < MOVE_DOWN_CONFIDENCE && base < UNSURE_LEVEL) return { base, level: UNSURE_LEVEL, reason: "low-confidence" };
+  return { base, level: base, reason: "base" };
+}
+
+/** Jev's answers to the three questions as a tier, or the default when they cannot be read. */
+export function route(response: unknown, tiers: readonly Tier[], call?: JevCall): Route {
+  const answers = isRecord(response) && isRecord(response.answers) ? response.answers : {};
+  const usage = isRecord(response) && isRecord(response.usage) ? response.usage : {};
+  const jevModel = isRecord(response) && typeof response.model === "string" ? response.model : undefined;
+  const logged = { ...(jevModel && { jevModel }), ...(call && { call }) };
+
+  const riskAnswer = answers.risk;
+  const risk = isRecord(riskAnswer) && typeof riskAnswer.noul === "number" ? riskAnswer.noul : null;
+  const open = readScore(answers.open, "open");
+  const reach = readScore(answers.reach, "reach");
+  const scored = {
+    ...("probabilities" in open && { open: open.probabilities }),
+    ...("probabilities" in reach && { reach: reach.probabilities }),
+  };
+  const kept = Object.keys(scored).length ? { probabilities: scored } : {};
+  const error = risk === null ? "Jev's answer could not be read" : "error" in open ? open.error : "error" in reach ? reach.error : null;
+  if (risk === null || "error" in open || "error" in reach) {
+    return { ...routeOnError(error ?? "Jev's answer could not be read", tiers), ...kept, ...logged };
+  }
+
+  const { base, level, reason } = combine(risk, open, reach);
   const jev: JevVerdict = {
-    level: (top + 1) as Level,
-    confidence: answer.confidence,
+    risk,
+    open,
+    reach,
+    base,
+    level,
     inputTokens: typeof usage.input_tokens === "number" ? usage.input_tokens : 0,
     outputTokens: typeof usage.output_tokens === "number" ? usage.output_tokens : 0,
   };
-  const reason = jev.confidence < CONFIDENCE_FLOOR ? "low-confidence" : "jev";
-  const tier = tierAt(reason === "jev" ? jev.level : UNSURE_LEVEL, tiers);
-  return { ...tier, reason, jev, probabilities: scores, ...logged };
+  return { ...tierAt(level, tiers), reason, jev, ...logged };
 }
 
 /** The statuses TypeSafe says to retry: rate limited, and overloaded. */
@@ -285,11 +370,15 @@ export function jevState(input: {
   };
 }
 
-/** The request body for Jev's System One endpoint: one Score question on the skill's levels. */
-export function jevRequest(state: JevState, question: string, levels: string[]) {
+/** The request body for Jev's System One endpoint: the skill's three questions in one request. */
+export function jevRequest(state: JevState, questions: Questions) {
   return {
     model: JEV_MODEL,
     state,
-    questions: { [QUESTION_ID]: { type: "score", instructions: question, criteria: levels } },
+    questions: {
+      risk: { type: "noul", instructions: questions.risk.instructions },
+      open: { type: "score", instructions: questions.open.instructions, criteria: questions.open.levels },
+      reach: { type: "score", instructions: questions.reach.instructions, criteria: questions.reach.levels },
+    },
   };
 }

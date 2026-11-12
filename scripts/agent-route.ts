@@ -1,8 +1,9 @@
 /**
  * Picks the model and effort an agent:go build runs on (#463): builds Jev's
- * state from the issue, asks Jev the difficulty question in
- * `.claude/skills/agent-go/SKILL.md`, and maps the answer to a tier with that
- * skill's table. The rules are in `src/lib/agent-go/route.ts`.
+ * state from the issue, asks Jev the three questions in
+ * `.claude/skills/agent-go/SKILL.md` in one request (#548), combines the
+ * answers into a level and maps it to a tier with that skill's table. The rules
+ * are in `src/lib/agent-go/route.ts`.
  *
  *   npm run -s agent-route -- <issue>              # route a claimed ticket
  *   npm run -s agent-route -- <issue> --escalate   # one level up, after a failed build
@@ -12,8 +13,8 @@
  * fails the run over Jev: a 401, a network error, another non-200 or an answer
  * it cannot read all route to the routine's default, with the error in the JSON.
  * A 429, a 529 or a network error is first retried with backoff. The JSON also
- * carries Jev's five probabilities, its model, the status and the elapsed time,
- * which the `Built on:` line prints (#516).
+ * carries every answer, the rule that set the level, Jev's model, the status
+ * and the elapsed time, which the `Built on:` line prints (#516, #548).
  *
  * The key: in the cloud, the TypeSafe network secret adds it on the way out;
  * anywhere else, `TYPESAFE_API_KEY` in the environment.
@@ -67,7 +68,7 @@ function lineCount(file: string): number | null {
 }
 
 async function askJev(issue: number): Promise<Route> {
-  const { question, levels, tiers } = readSkill(readFileSync(SKILL, "utf8"));
+  const { questions, tiers } = readSkill(readFileSync(SKILL, "utf8"));
   // In the cloud the key is a network secret: the proxy adds it, and it is
   // never in the VM. Only a run elsewhere sends its own, from the environment.
   const key = process.env.TYPESAFE_API_KEY;
@@ -87,7 +88,7 @@ async function askJev(issue: number): Promise<Route> {
     return routeOnError(`could not read the issue: ${error instanceof Error ? error.message : String(error)}`, tiers);
   }
 
-  const body = JSON.stringify(jevRequest(state, question, levels));
+  const body = JSON.stringify(jevRequest(state, questions));
   const sent = await sendWithRetry(() =>
     fetch(JEV_URL, {
       method: "POST",
