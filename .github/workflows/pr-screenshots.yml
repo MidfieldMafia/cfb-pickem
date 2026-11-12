@@ -1,0 +1,53 @@
+# Fails a PR whose diff touches a screen and whose body says nothing about it
+# (#537, decided in #513).
+#
+# A PR whose diff from main touches src/app/ or src/components/ carries a
+# `## Screenshots` section, or one line saying why not: `Screenshots: none,
+# <reason>` or `Screenshots: before not taken, <reason>`. Checking the body
+# covers every author and every route to a PR: a local session, the agent:go
+# routine, or a body edited by hand. Editing the body re-runs it.
+#
+# The path rule and the body rule live in src/lib/pr-shots-check.mjs, plain
+# JavaScript so the runner's own Node runs it with no install.
+#
+# Required in main's ruleset under the job's name, "screenshots".
+name: PR screenshots
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/pr-shots-check.mjs
+            src/lib/pr-shots-check.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Check the PR body
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # The body as the event saw it: on `edited`, the new one.
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          # Every path the diff touches, a rename's old path included, so a
+          # screen moved out of src/components/ still counts.
+          gh api --paginate "repos/$GH_REPO/pulls/$PR_NUMBER/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)' |
+            node scripts/pr-shots-check.mjs

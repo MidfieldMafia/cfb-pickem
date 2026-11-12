@@ -250,7 +250,7 @@ change, in the state that shows the change, as the member who would see it:
 node scripts/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 ```
 
-`/tmp/shots` is where `npm run preflight` looks. Add `--width 360` for the
+`/tmp/shots` is where `npm run pr-shots` reads them in step 6. Add `--width 360` for the
 phone width a ticket names, and `--open "<text>"` to click a Live Board row so
 its Game sheet is on screen (`--scroll "<heading>"` brings a card into view).
 The app has one theme, light: a ticket that asks for dark gets one note in the
@@ -267,9 +267,9 @@ same key. A screen the ticket creates has no before. Write down the keys,
 member and state: step 6 repeats them exactly. Run `npm run agent-db -- dev stop`,
 and keep the database: it lives until step 6.
 
-A ticket whose diff changes no rendered output, or only creates screens, has no
-before: write the reason to `/tmp/shots/skipped.txt`, which is what
-`npm run preflight` accepts in place of shots.
+A ticket whose diff changes no rendered output has no shots: the PR body says
+so in one line in step 7, `Screenshots: none, <reason>`. One that only creates
+screens has no before, and its new screens show as `_new_` in step 6's table.
 
 **Done when** `/tmp/shots` holds a `before--<key>.png` for every existing
 screen the ticket changes, or the ticket changes none.
@@ -348,10 +348,12 @@ before and after are in the PR, and the branch is deleted.
 
 ## 7. Ship
 
-Commit, run `npm run preflight` (it fails an agent build whose diff touches
-`src/app` or `src/components` and has no before and after shots), push the branch, and open a PR that closes the
+Commit, run `npm run preflight`, push the branch, and open a PR that closes the
 issue, written with `/mattpocock-skills:pr`, with its `Members see:` line and
-the Screenshots section from step 6. Never merge.
+the Screenshots section from step 6. Never merge. The PR screenshots check
+(`.github/workflows/pr-screenshots.yml`) fails a PR whose diff touches
+`src/app/` or `src/components/` and whose body has neither that section nor a
+`Screenshots: none, <reason>` or `Screenshots: before not taken, <reason>` line.
 
 Directly under `Members see:` the body carries one evidence line, in this
 format and nowhere else in the skill:
@@ -389,5 +391,5 @@ if it is still up, and end with `FAILED: <why>`. Step 2b decides whether a
 second leg follows, and comments on the issue.
 
 **Done when** the branch's PR is open, its body has a `## Screenshots` section
-(or `Screenshots: none, <reason>` when `/tmp/shots/skipped.txt` says why), and
+or one of the two `Screenshots:` reason lines, and
 the subagent has ended with its URL; or it has ended with `FAILED`.
