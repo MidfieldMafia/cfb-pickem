@@ -34,8 +34,6 @@ import { newestPlay, toLiveFeed } from "../src/lib/results/live-feed";
 const ENV_FILE = ".env.local";
 const STATE_FILE = ".agent-db.json";
 const LIVE_FIXTURE = "src/lib/cfbd/fixtures/live-plays/401869941-q2.json";
-/** Left behind by `up` and kept by `down`: preflight reads it to ask for screenshots. */
-const RUN_FILE = ".agent-run";
 const DEV_PORT = 3200;
 const DEV_LOG = "/tmp/agent-dev.log";
 const MARKER = "# Written by scripts/agent-db.ts: a throwaway slate-agents branch.";
@@ -96,7 +94,6 @@ async function up(name: string, live: boolean) {
   if (!url) throw new Error("Neon returned no connection string for the new branch.");
   writeFileSync(STATE_FILE, JSON.stringify({ branchId: created.branch.id, branchName } satisfies State));
   writeFileSync(ENV_FILE, `${MARKER}\nDATABASE_URL=${url}\nDATABASE_URL_UNPOOLED=${url}\n`);
-  writeFileSync(RUN_FILE, `${branchName}\n`);
   console.log(`Created branch ${branchName}.`);
 
   await waitForDatabase(url);

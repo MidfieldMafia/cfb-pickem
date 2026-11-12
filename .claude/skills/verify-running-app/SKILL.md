@@ -218,9 +218,11 @@ npm run agent-db -- down
 cp "$(git rev-parse --git-common-dir)/../.env.local" .   # the shared one back
 ```
 
-`up` also leaves an `.agent-run` file, which turns on preflight's shots check:
-the push gate wants `/tmp/shots` to hold the befores and afters, or a reason
-in `/tmp/shots/skipped.txt`.
+Nothing local checks the shots. The PR screenshots check
+(`.github/workflows/pr-screenshots.yml`) reads the PR body instead: a diff that
+touches `src/app/` or `src/components/` fails it without a `## Screenshots`
+section or a `Screenshots: none, <reason>` or `Screenshots: before not taken,
+<reason>` line, and editing the body re-runs it.
 
 `pr-shots` prints the Screenshots section with `![key](./before--key.png)`
 links and leaves the PNGs next to `/tmp/shots/body.md` (`--body <file>` puts
