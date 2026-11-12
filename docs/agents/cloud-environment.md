@@ -43,8 +43,8 @@ in this repo.
   > one level up if the first fails; pushing a branch, opening a PR and editing
   > its body; `npm run agent-db` may create, seed and delete throwaway branches
   > in the agent-only `slate-agents` Neon project (fake data, no production or
-  > shared database); and `npm run agent-shots` may push screenshots to the
-  > `agent-screenshots` branch.
+  > shared database); and `npm run pr-shots -- --branch` may push screenshots
+  > to the `agent-screenshots` branch.
 
   The build subagent gets the same sentence in its hand-off (`agent-go`
   step 2b): the classifier reads the prompt it was given.
@@ -64,7 +64,13 @@ in this repo.
   `next dev` or any other Node script that calls out needs it on its own
   command line. Each command runs in a fresh shell, so an `export` never
   reaches the next one. `curl`, `git` and `gh` need nothing.
-- **`gh api` works**; `gh auth status` reports an invalid token regardless.
+- **`gh api` works, `gh issue …` and `gh pr …` do not.** The GitHub proxy
+  answers REST but refuses GraphQL with a 403, which is what those commands
+  use, so read and write issues and PRs with `gh api repos/…` instead. It also
+  refuses non-JSON bodies (415), and the cloud's `gh` is 2.89, so `--attach`
+  cannot upload screenshots: `npm run pr-shots -- --branch` commits them to
+  `agent-screenshots` instead (#534). `gh auth status` reports an invalid
+  token regardless.
 - **The database** is a throwaway `slate-agents` branch from
   `npm run agent-db` (`scripts/agent-db.ts`). There is no `.env.local`
   otherwise; build and tests need none.
@@ -74,8 +80,8 @@ in this repo.
 - **Screens that cannot render:** `/console/slate` calls CollegeFootballData
   as it renders, and there is no key. Member screens catch the same failure.
 - **What covers a screenshot:** the What's new modal (a fresh browser has not
-  seen the entry) and `next dev`'s badge. `.claude/skills/agent-go/shoot.cjs`
-  clears both.
+  seen the entry) and `next dev`'s badge. `scripts/shoot.cjs` clears
+  both.
 
 ## Subagents and Jev
 

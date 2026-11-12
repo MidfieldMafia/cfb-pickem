@@ -159,3 +159,61 @@ drive a real browser: [browser.md](browser.md).
 
 **Done when** every client-side behaviour the diff touched has a measurement
 that passes, not only a screenshot that looks right.
+
+## 6. Screenshots for the PR
+
+A PR whose diff touches `src/app/` or `src/components/` shows each screen it
+changed, before and after, or says `Screenshots: none, <reason>` (the PR
+template has the section). The repository is public, so the shots come only
+from the fake league of a throwaway `agent-db` branch, never from a Magic Link
+session: `pr-shots` refuses to run without one. The agent:go routine follows
+its own steps 4 and 6 for this; this is the same thing from a local session.
+
+**Before the first edit**, when you expect the diff to touch those folders:
+
+```bash
+rm .env.local                       # warm.sh's copy of the shared one; agent-db refuses it
+npm run agent-db -- up <issue number>
+npm run agent-db -- dev             # next dev on :3200
+npm run -s agent-db -- session Casey
+node scripts/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
+```
+
+`agent-db` needs `NEON_PROJECT_ID` and `NEON_API_KEY` (a key for
+`slate-agents`) in your shell. `up` prints the fake members and their states;
+pick the member and state that show the change, set up anything else with
+`agent-db -- sql`, and write down the keys, member and state, since the after
+shots repeat them exactly. The agent-go skill's step 4 has the seeded states,
+`shoot.cjs`'s options and the rule for keys.
+
+**If you only find out after editing**, take the befores from `main` instead:
+a throwaway worktree on another port, against the same branch.
+
+```bash
+git worktree add ../before-shots origin/main
+cp .env.local ../before-shots/      # agent-db's, pointing at the fake league
+(cd ../before-shots && npm ci && npx next dev -p 3201)    # in the background
+BASE=http://localhost:3201 node scripts/shoot.cjs --label before --out /tmp/shots /picks
+git worktree remove --force ../before-shots                # once it is stopped
+```
+
+**After the change**, shoot the same keys on your branch, read every shot (an
+error page or a half-loaded screen is a finding, not an illustration), print
+the section, then open the PR:
+
+```bash
+node scripts/shoot.cjs --label after --out /tmp/shots /picks /leaderboard
+npm run pr-shots -- <issue number> /tmp/shots --member Casey --state "Week 7 open"
+npm run agent-db -- down
+```
+
+`pr-shots` prints the Screenshots section with `![key](./before--key.png)`
+links and leaves the PNGs next to `/tmp/shots/body.md` (`--body <file>` puts
+them next to another body file). Put the section in the body, and run
+`gh pr create --body-file body.md --attach ./before--picks.png …` from that
+directory, as it prints: `--attach` uploads each image and rewrites its link.
+Nothing is committed. The cloud cannot `--attach`, so agent-go runs
+`pr-shots --branch` instead, which commits the PNGs to `agent-screenshots`.
+
+**Done when** the PR body carries the Screenshots section, or the line saying
+why it has none.

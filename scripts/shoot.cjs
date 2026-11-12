@@ -1,9 +1,9 @@
 // Screenshots of signed-in screens at phone width, for the before/after pair
-// in an agent:go PR. One file per path, named `<label>--<key>.png`, so
-// `npm run agent-shots` can pair a before with its after by key.
+// in a PR. One file per path, named `<label>--<key>.png`, so
+// `npm run pr-shots` can pair a before with its after by key.
 //
-//   node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
-//   node .claude/skills/agent-go/shoot.cjs --label after --out /tmp/shots field-card=/live?game=3
+//   node scripts/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
+//   node scripts/shoot.cjs --label after --out /tmp/shots field-card=/live?game=3
 //
 // Options, applied to every path in the call:
 //   --width 360              viewport width in CSS px (default 390)

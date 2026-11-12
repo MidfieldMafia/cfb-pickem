@@ -95,7 +95,7 @@ shots_check() {
   local dir=/tmp/shots
   [ -s "$dir/skipped.txt" ] && return 0
   ls "$dir"/after--*.png >/dev/null 2>&1 || {
-    echo "no after shots in $dir: run shoot.cjs --label after for each screen the diff touched (agent-go step 6), or write the reason to $dir/skipped.txt"
+    echo "no after shots in $dir: run scripts/shoot.cjs --label after for each screen the diff touched (agent-go step 6), or write the reason to $dir/skipped.txt"
     return 1
   }
   ls "$dir"/before--*.png >/dev/null 2>&1 || {
