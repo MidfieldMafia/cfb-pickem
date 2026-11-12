@@ -250,8 +250,8 @@ change, in the state that shows the change, as the member who would see it:
 node scripts/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 ```
 
-`/tmp/shots` is where `npm run pr-shots` reads them in step 6. Add `--width 360` for the
-phone width a ticket names, and `--open "<text>"` to click a Live Board row so
+`/tmp/shots` is where `npm run pr-shots` reads them in step 6. Add
+`--width 360` for the phone width a ticket names, and `--open "<text>"` to click a Live Board row so
 its Game sheet is on screen (`--scroll "<heading>"` brings a card into view).
 The app has one theme, light: a ticket that asks for dark gets one note in the
 PR, "no dark mode", and no screenshot.
