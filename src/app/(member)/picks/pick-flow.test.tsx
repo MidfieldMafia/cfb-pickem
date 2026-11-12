@@ -161,6 +161,20 @@ describe("a tap on a team", () => {
     expect(pressed("Michigan")).toBe("false");
   });
 
+  /**
+   * The header has no save chip (#514): the hint line under the tiles is the
+   * live region that says a save is in flight.
+   */
+  test("says the save is in flight in the hint line", async () => {
+    vi.stubGlobal("fetch", () => new Promise<Response>(() => {}));
+    render(<PickFlow sheet={sheet()} startGameId={TEXAS.game.id} />);
+
+    tile("Texas").click();
+
+    await waitFor(() => expect(screen.getByText("Saving your pick…")).toBeTruthy());
+    expect(screen.getByText("Saving your pick…").closest("[aria-live]")).toBeTruthy();
+  });
+
   test("a plain failure keeps its message on the game rather than advancing", async () => {
     answering(Response.json({ error: "That didn't save. Try again." }, { status: 500 }));
     render(<PickFlow sheet={sheet()} startGameId={TEXAS.game.id} />);
@@ -177,8 +191,8 @@ describe("a tap on a team", () => {
 /**
  * Pick entry draws its own header rather than `AppHeader`, so it has to carry
  * the top-right control itself. That is the pennant menu now, as on every other
- * member screen (#514), in place of the How to play icon: beside the status
- * chip there is no room at 360px for both. The page builds the menu on the
+ * member screen (#514), in place of the How to play icon, and alone: the save
+ * state moved to the hint line under the tiles. The page builds the menu on the
  * server; the flow only places what it is given.
  */
 describe("the header", () => {
@@ -194,6 +208,7 @@ describe("the header", () => {
 
     expect(header()?.querySelector("button")?.textContent).toBe("Pennant menu");
     expect(header()?.querySelector('a[href="/rules"]')).toBeNull();
+    expect(header()?.querySelector("[aria-live]")).toBeNull();
   });
 });
 

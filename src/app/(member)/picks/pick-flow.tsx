@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, CircleDashed, LoaderCircle, Lock, Scale, TriangleAlert } from "lucide-react";
+import { ChevronRight, LoaderCircle, Lock, Scale } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { HEADER_TOP, Badge, Button, LocalTime, LINK } from "@saturday-slate/design-system";
 
@@ -24,7 +24,7 @@ import { isVoid, voidNote } from "@/lib/slate/json";
 import { GuessStep } from "./guess-step";
 import { LockStep } from "./lock-step";
 
-/** How long the Saved chip shows before the flow moves on. */
+/** How long the hint line's "Saved" shows before the flow moves on. */
 const ADVANCE_DELAY_MS = 400;
 
 const isSaved = (pick: ShownPick | undefined) => pick?.state === "saved";
@@ -136,37 +136,9 @@ function LockedNote({ deadline }: { deadline: string }) {
 }
 
 /**
- * How each save state reads: its Badge, its icon, and its word. `win` draws its
- * own check; the outline states tint `pending`'s border and text.
- */
-const CHIP = {
-  pending: { variant: "pending", look: "", Icon: CircleDashed, iconProps: {}, label: "Pending" },
-  saving: {
-    variant: "pending",
-    look: "text-muted-foreground",
-    Icon: LoaderCircle,
-    iconProps: { className: "animate-spin" },
-    label: "Saving",
-  },
-  failed: { variant: "pending", look: "border-destructive text-destructive", Icon: TriangleAlert, iconProps: {}, label: "Not saved" },
-  saved: { variant: "win", look: "", Icon: null, iconProps: {}, label: "Saved" },
-} as const;
-
-/** One live region whose text changes, so screen readers announce the transition. */
-function StatusChip({ pick }: { pick: ShownPick | undefined }) {
-  const { variant, look, Icon, iconProps, label } = CHIP[pick?.state ?? "pending"];
-  return (
-    <Badge aria-live="polite" variant={variant} className={`min-h-7 px-2.5 font-semibold ${look}`}>
-      {Icon ? <Icon aria-hidden {...iconProps} /> : null}
-      {label}
-    </Badge>
-  );
-}
-
-/**
  * One game per screen. Tapping a team saves the pick and advances; the strip
  * on top shows where you are and jumps anywhere. Saving is optimistic: the
- * tile fills at once, the chip reports the server's answer, and a failure
+ * tile fills at once, the hint line reports the server's answer, and a failure
  * leaves the tile marked with a retry. Each game tracks its own in-flight
  * save, so jumping ahead mid-request never loses the earlier answer.
  *
@@ -311,8 +283,9 @@ export function PickFlow({
     // `flex-1` rather than `min-h-dvh`: the bottom nav has the last rows of the viewport now.
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
       {/*
-        The mark, the title over its progress line, then the help icon and the
-        save chip, all centered on the row's midline. The progress line
+        The mark, the title over its progress line, then the pennant menu alone
+        at the top right, as on every other member screen. The save state lives
+        in the hint line under the tiles, not here (#514). The progress line
         truncates rather than wrapping, so it stays one line at any slate size
         and the tiles below don't jump from game to game.
       */}
@@ -327,7 +300,6 @@ export function PickFlow({
           </div>
         </div>
         {menu}
-        {page ? null : <StatusChip pick={pick} />}
       </header>
 
       <HomeScreenNudge open={!locked} banner={page === null} />
@@ -472,16 +444,24 @@ export function PickFlow({
             ) : null}
 
             <div className="flex min-h-tap items-center gap-2 pt-1">
-              <span className="flex-1 text-sm text-muted-foreground">
-                {flash
-                  ? flash
-                  : locked
-                    ? "Nothing more to enter this week."
-                    : voided
-                      ? "This game is void: it scores zero for everyone."
-                      : // Shorter than it was: with Review beside it, the old wording ran to a
-                        // third line at 375px whichever way the forward button read.
-                        "Tap a team — it saves as you go, no submit step."}
+              {/* The one live region for a save: "Saving…", then the flash that moves on. */}
+              <span aria-live="polite" className="flex-1 text-sm text-muted-foreground">
+                {flash ? (
+                  flash
+                ) : pick?.state === "saving" ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <LoaderCircle aria-hidden size={14} className="animate-spin" />
+                    Saving your pick…
+                  </span>
+                ) : locked ? (
+                  "Nothing more to enter this week."
+                ) : voided ? (
+                  "This game is void: it scores zero for everyone."
+                ) : (
+                  // Shorter than it was: with Review beside it, the old wording ran to a
+                  // third line at 375px whichever way the forward button read.
+                  "Tap a team — it saves as you go, no submit step."
+                )}
               </span>
               {/*
                 Review is reachable from every game, not only the last one: it is

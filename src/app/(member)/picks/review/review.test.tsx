@@ -36,7 +36,7 @@ describe("a slate with games to pick", () => {
   test("counts a Pick per game, the Lock and the Guess, and offers the Lock", () => {
     render(<Review initial={sheet()} />);
 
-    expect(screen.getByText("0 of 5")).toBeTruthy();
+    expect(screen.getByText("3 things left before the deadline")).toBeTruthy();
     expect(lockOffers().length).toBeGreaterThan(0);
     expect(barFill()).toBe("translateX(-100%)");
   });
@@ -46,13 +46,13 @@ describe("a wholly Void slate", () => {
   test("leaves the Picks and the Lock out of the count", () => {
     render(<Review initial={sheet({ games: ALL_VOID })} />);
 
-    expect(screen.getByText("0 of 1")).toBeTruthy();
+    expect(screen.getByText("1 thing left before the deadline")).toBeTruthy();
   });
 
   test("reaches done once the Guess is in", () => {
     render(<Review initial={sheet({ games: ALL_VOID, tiebreakerGuess: 52 })} />);
 
-    expect(screen.getByText("1 of 1")).toBeTruthy();
+    expect(screen.getByText(/You're all set for Week/)).toBeTruthy();
   });
 
   test("offers no Lock, not even to move a Dropped one", () => {

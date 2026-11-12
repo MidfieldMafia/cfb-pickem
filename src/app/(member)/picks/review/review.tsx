@@ -133,8 +133,6 @@ export function Review({
   const tiebreakerGame = tiebreakerView(sheet)?.game;
   // A wholly Void slate has nothing to pick and nowhere to put a Lock, so neither is a step.
   const nothingToPick = progress.countingGames === 0;
-  const steps = progress.countingGames + (progress.lockApplies ? 1 : 0) + 1;
-  const stepsDone = progress.picksMade + (progress.lockSet ? 1 : 0) + (progress.guessSet ? 1 : 0);
   const firstOpen = firstOpenGame(sheet.games, picked);
   const groups = groupByKickoff(sheet.games);
   const tiebreakerLine = tiebreakerGame
@@ -191,9 +189,10 @@ export function Review({
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 pb-8">
       {/*
-        The header icons sit beside the badge on the title's row, so the
-        deadline line below keeps the full width — beside a commissioner's two
-        icons and the badge it wrapped at phone width.
+        The pennant menu sits alone at the end of the title's row, as on every
+        other member screen, and the deadline line below keeps the full width.
+        There is no count badge: the bar and the summary card already say how
+        much is left (#514).
       */}
       <header className={`space-y-1 ${HEADER_TOP}`}>
         <div className="flex items-center gap-3">
@@ -203,9 +202,6 @@ export function Review({
             <div className="truncate text-sm leading-5 text-muted-foreground">Week {sheet.weekNumber}</div>
           </div>
           {menu}
-          <Badge variant={progress.remaining ? "outline" : "default"}>
-            {stepsDone} of {steps}
-          </Badge>
         </div>
         <p className="flex items-center gap-1 text-sm text-muted-foreground">
           <Clock size={14} />
