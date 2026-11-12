@@ -247,7 +247,7 @@ Before writing any code, screenshot every existing screen the ticket will
 change, in the state that shows the change, as the member who would see it:
 
 ```bash
-node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
+node scripts/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
 ```
 
 `/tmp/shots` is where `npm run preflight` looks. Add `--width 360` for the
@@ -315,14 +315,17 @@ under way, a void) is rendered through a throwaway route, as
 `verify-running-app/browser.md` describes; screenshot it there, then delete it.
 
 ```bash
-node .claude/skills/agent-go/shoot.cjs --label after --out /tmp/shots /picks /leaderboard
-npm run agent-shots -- <issue number> /tmp/shots   # prints the PR's Screenshots section
+node scripts/shoot.cjs --label after --out /tmp/shots /picks /leaderboard
+npm run pr-shots -- <issue number> /tmp/shots --branch --member Casey --state "Week 7 open"
 ```
 
 Read every after shot before publishing it: a screenshot of an error page or a
-half-loaded screen is a finding, not an illustration. `agent-shots` commits the
-PNGs to the `agent-screenshots` branch, which never merges, and prints a
-before/after table to paste into the PR. The repository is public and so are
+half-loaded screen is a finding, not an illustration. `pr-shots --branch`
+commits the PNGs to the `agent-screenshots` branch, which never merges, and
+prints the PR's Screenshots section: a before/after table to paste into the
+PR, under a line naming the member and state step 4 wrote down. The cloud
+needs `--branch`: its `gh` cannot `--attach`, which is how a local session
+uploads them instead. The repository is public and so are
 these images, which is why it refuses to run without an `agent-db` branch:
 never screenshot any other database.
 

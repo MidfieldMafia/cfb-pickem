@@ -1,5 +1,9 @@
 <!-- What changed and why, for someone who hasn't read the ticket. Closes #… -->
 
+## Screenshots
+
+<!-- A diff that touches src/app/ or src/components/ shows each screen it changed, before and after, in the fake agent-db league: take them with scripts/shoot.cjs and print this section with `npm run pr-shots` (verify-running-app, step 6). Otherwise replace this section with `Screenshots: none, <reason>`. -->
+
 ## Tests
 
 <!-- What covers it, and the checks you ran. -->

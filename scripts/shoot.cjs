@@ -1,9 +1,9 @@
 // Screenshots of signed-in screens at phone width, for the before/after pair
-// in an agent:go PR. One file per path, named `<label>--<key>.png`, so
-// `npm run agent-shots` can pair a before with its after by key.
+// in a PR. One file per path, named `<label>--<key>.png`, so
+// `npm run pr-shots` can pair a before with its after by key.
 //
-//   node .claude/skills/agent-go/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
-//   node .claude/skills/agent-go/shoot.cjs --label after --out /tmp/shots field-card=/live?game=3
+//   node scripts/shoot.cjs --label before --out /tmp/shots /picks /leaderboard
+//   node scripts/shoot.cjs --label after --out /tmp/shots field-card=/live?game=3
 //
 // Options, applied to every path in the call:
 //   --width 360              viewport width in CSS px (default 390)
@@ -89,6 +89,8 @@ const keyOf = (target) => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+  // pngWidth in src/lib/pr-shots.ts halves a shot's pixels for the caption, so
+  // a change to this scale factor changes that too.
   await page.setViewport({ width, height: 844, deviceScaleFactor: 2 });
   if (iphone) {
     await page.setUserAgent(
