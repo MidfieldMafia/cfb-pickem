@@ -14,7 +14,7 @@ leaderboard for each group.
   <img src="docs/readme/leaderboard.png" width="200" alt="A group's Week 7 leaderboard">
 </p>
 
-<p align="center"><sub>Screenshots from the fake league the test database seeds; no real members appear.</sub></p>
+<p align="center"><sub>Screenshots from the fake group the test database seeds; no real members appear.</sub></p>
 
 - **Picks**: one game per screen, saved on tap with no submit step. Each week a member also
   picks a Lock of the Week, which counts double, and a Tiebreaker Guess.
