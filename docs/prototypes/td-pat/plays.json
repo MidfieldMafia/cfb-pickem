@@ -1,0 +1,331 @@
+{
+ "cases": [
+  {
+   "key": "good",
+   "name": "Extra point good",
+   "source": "Recorded: Liberty at Coastal, play …153",
+   "text": "(03:20) No Huddle-Shotgun #5 D.Purdie pass complete short middle to #2 M.Jackson caught at CCU41, for 58 yards to the CCU00 TOUCHDOWN, clock 03:13, 1ST DOWN #42 C.Reeves kick attempt good (H: #49 S.Crossan, LS: #41 G.Rivera)",
+   "away": 10,
+   "description": {
+    "id": "401869941153",
+    "start": 42,
+    "side": "away",
+    "segments": [
+     {
+      "kind": "arc",
+      "from": 42,
+      "to": 59
+     },
+     {
+      "kind": "ground",
+      "from": 59,
+      "to": 100
+     },
+     {
+      "kind": "flash",
+      "label": "Touchdown"
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 9
+     },
+     {
+      "kind": "arc",
+      "from": 97,
+      "to": 110
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 10
+     }
+    ],
+    "rest": {
+     "spot": 35,
+     "side": "away",
+     "down": null,
+     "distance": null
+    }
+   },
+   "line": {
+    "steps": [
+     {
+      "kind": "arc",
+      "from": 42,
+      "to": 59,
+      "t0": 0,
+      "ms": 820.6896551724138
+     },
+     {
+      "kind": "ground",
+      "from": 59,
+      "to": 100,
+      "t0": 820.6896551724138,
+      "ms": 1979.3103448275863
+     },
+     {
+      "kind": "flash",
+      "label": "Touchdown",
+      "t0": 2800,
+      "ms": 0
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 9,
+      "t0": 2800,
+      "ms": 870
+     },
+     {
+      "kind": "arc",
+      "from": 97,
+      "to": 110,
+      "t0": 3670,
+      "ms": 1400
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 10,
+      "t0": 5070,
+      "ms": 0
+     }
+    ],
+    "ms": 5070,
+    "loss": false
+   },
+   "was": {
+    "home": 3,
+    "away": 3
+   }
+  },
+  {
+   "key": "two",
+   "name": "Two-point try",
+   "source": "Composed: …153 with the kick swapped for a two-point try (no two-point play is recorded)",
+   "text": "(03:20) No Huddle-Shotgun #5 D.Purdie pass complete short middle to #2 M.Jackson caught at CCU41, for 58 yards to the CCU00 TOUCHDOWN, clock 03:13, 1ST DOWN #5 D.Purdie run for two-point conversion good",
+   "away": 11,
+   "description": {
+    "id": "401869941153",
+    "start": 42,
+    "side": "away",
+    "segments": [
+     {
+      "kind": "arc",
+      "from": 42,
+      "to": 59
+     },
+     {
+      "kind": "ground",
+      "from": 59,
+      "to": 100
+     },
+     {
+      "kind": "flash",
+      "label": "Touchdown"
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 9
+     },
+     {
+      "kind": "ground",
+      "from": 97,
+      "to": 100
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 11
+     }
+    ],
+    "rest": {
+     "spot": 35,
+     "side": "away",
+     "down": null,
+     "distance": null
+    }
+   },
+   "line": {
+    "steps": [
+     {
+      "kind": "arc",
+      "from": 42,
+      "to": 59,
+      "t0": 0,
+      "ms": 820.6896551724138
+     },
+     {
+      "kind": "ground",
+      "from": 59,
+      "to": 100,
+      "t0": 820.6896551724138,
+      "ms": 1979.3103448275863
+     },
+     {
+      "kind": "flash",
+      "label": "Touchdown",
+      "t0": 2800,
+      "ms": 0
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 9,
+      "t0": 2800,
+      "ms": 870
+     },
+     {
+      "kind": "ground",
+      "from": 97,
+      "to": 100,
+      "t0": 3670,
+      "ms": 1400
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 11,
+      "t0": 5070,
+      "ms": 0
+     }
+    ],
+    "ms": 5070,
+    "loss": false
+   },
+   "was": {
+    "home": 3,
+    "away": 3
+   }
+  },
+  {
+   "key": "miss",
+   "name": "Kick blocked",
+   "source": "…153 with the recorded wording of a blocked try (Eastern Washington at Cal Poly)",
+   "text": "(03:20) No Huddle-Shotgun #5 D.Purdie pass complete short middle to #2 M.Jackson caught at CCU41, for 58 yards to the CCU00 TOUCHDOWN, clock 03:13, 1ST DOWN #42 C.Reeves kick attempt failed ( blocked by #94 J.Njelita) (H: #49 S.Crossan, LS: #41 G.Rivera)",
+   "away": 9,
+   "description": {
+    "id": "401869941153",
+    "start": 42,
+    "side": "away",
+    "segments": [
+     {
+      "kind": "arc",
+      "from": 42,
+      "to": 59
+     },
+     {
+      "kind": "ground",
+      "from": 59,
+      "to": 100
+     },
+     {
+      "kind": "flash",
+      "label": "Touchdown"
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 9
+     },
+     {
+      "kind": "arc",
+      "from": 97,
+      "to": 110
+     },
+     {
+      "kind": "miss",
+      "at": 110
+     }
+    ],
+    "rest": {
+     "spot": 35,
+     "side": "away",
+     "down": null,
+     "distance": null
+    }
+   },
+   "line": {
+    "steps": [
+     {
+      "kind": "arc",
+      "from": 42,
+      "to": 59,
+      "t0": 0,
+      "ms": 820.6896551724138
+     },
+     {
+      "kind": "ground",
+      "from": 59,
+      "to": 100,
+      "t0": 820.6896551724138,
+      "ms": 1979.3103448275863
+     },
+     {
+      "kind": "flash",
+      "label": "Touchdown",
+      "t0": 2800,
+      "ms": 0
+     },
+     {
+      "kind": "score",
+      "home": 3,
+      "away": 9,
+      "t0": 2800,
+      "ms": 870
+     },
+     {
+      "kind": "arc",
+      "from": 97,
+      "to": 110,
+      "t0": 3670,
+      "ms": 1400
+     },
+     {
+      "kind": "miss",
+      "at": 110,
+      "t0": 5070,
+      "ms": 600
+     }
+    ],
+    "ms": 5670,
+    "loss": false
+   },
+   "was": {
+    "home": 3,
+    "away": 3
+   }
+  }
+ ],
+ "away": {
+  "fill": "#002d62",
+  "ink": "#FBF6EC",
+  "names": [
+   "LIBERTY",
+   "LIB"
+  ]
+ },
+ "home": {
+  "fill": "#16120F",
+  "ink": "#FBF6EC",
+  "names": [
+   "COASTAL CAROLINA",
+   "COASTAL",
+   "CCU"
+  ]
+ },
+ "field": {
+  "turf": "#0F5F62",
+  "numbers": 0.95,
+  "tens": 0.6,
+  "fives": 0.3,
+  "numberStep": 10,
+  "numberSize": 10,
+  "homeZone": {
+   "fill": "#16120F",
+   "ink": "#FBF6EC"
+  }
+ }
+}
