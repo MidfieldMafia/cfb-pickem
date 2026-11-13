@@ -8,7 +8,7 @@ the games play out live, and the app grades every pick from real scores and keep
 leaderboard for each group.
 
 <p align="center">
-  <img src="docs/readme/picks.png" width="200" alt="Picking a game: Texas A&amp;M at Missouri, one tap per team">
+  <img src="docs/readme/picks.png" width="200" alt="Picking a game: Auburn at Arkansas, with the spread, each side's season stats and win probability above one tap per team">
   <img src="docs/readme/live-board.png" width="200" alt="The Live Board during Week 7, with Liberty leading Coastal Carolina in the second quarter">
   <img src="docs/readme/game-sheet.png" width="200" alt="A game's sheet: the field, the down and distance, and who picked each side">
   <img src="docs/readme/leaderboard.png" width="200" alt="A group's Week 7 leaderboard">
