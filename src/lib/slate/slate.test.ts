@@ -284,7 +284,46 @@ describe("the daily refresh", () => {
     ]);
     expect((await slateFor(db, week2.id)).games[0].spread).toBe("Texas -1.5");
 
-    // Once every game has kicked off, there is nothing left to refresh.
+    // Once every game has been played, there is nothing left to refresh.
+    await db.update(games).set({ status: "final", homeScore: 24, awayScore: 21 });
     expect(await refreshUpcomingSlates(db, cfbd, rain, SUNDAY)).toEqual([]);
+  });
+
+  test("a game postponed past its stored kickoff takes its new time from the feed", async () => {
+    const { db, jonah, candidate, rain } = await setup();
+    const week = await openWeek(db, jonah, 2);
+    const texas = await addGame(db, jonah, week.id, candidate(OHIO_STATE_AT_TEXAS));
+    const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
+    await setTiebreaker(db, jonah, week.id, texas.id);
+    await publishSlate(db, jonah, week.id, TUESDAY_BEFORE);
+    // Texas was played Saturday night; Michigan never kicked off and moved to Sunday afternoon.
+    await db.update(games).set({ status: "final", homeScore: 24, awayScore: 21 }).where(eq(games.id, texas.id));
+    const sunday = "2026-09-13T18:00:00.000Z";
+    const moved = recordedCfbd("2026-week-2", {
+      games: recordings["2026-week-2"].games.map((g) => (g.id === OKLAHOMA_AT_MICHIGAN ? { ...g, startDate: sunday } : g)),
+    });
+
+    expect(await refreshUpcomingSlates(db, moved, rain, SUNDAY)).toEqual([{ weekNumber: 2, changed: 1 }]);
+    const rows = (await slateFor(db, week.id)).games;
+    expect(rows.find((g) => g.id === michigan.id)?.kickoff.toISOString()).toBe(sunday);
+    expect(rows.find((g) => g.id === texas.id)?.kickoff).toEqual(texas.kickoff);
+    // The Deadline stays where it was.
+    expect((await slateFor(db, week.id)).deadline?.toISOString()).toBe("2026-09-12T16:00:00.000Z");
+  });
+
+  test("a game past its kickoff that the feed has not moved stays frozen", async () => {
+    const { db, jonah, candidate, rain } = await setup();
+    const week = await openWeek(db, jonah, 2);
+    const michigan = await addGame(db, jonah, week.id, candidate(OKLAHOMA_AT_MICHIGAN));
+    await setTiebreaker(db, jonah, week.id, michigan.id);
+    await publishSlate(db, jonah, week.id, TUESDAY_BEFORE);
+    const unranked = recordedCfbd("2026-week-2", { rankings: [] });
+
+    // Michigan's kickoff has passed with no word from the feed, and the feed still has it then.
+    expect(await refreshFromFeed(db, jonah, unranked, week.id, rain, SATURDAY_EVENING)).toBe(0);
+    expect((await slateFor(db, week.id)).games[0]).toMatchObject({
+      homeRank: michigan.homeRank,
+      awayRank: michigan.awayRank,
+    });
   });
 });

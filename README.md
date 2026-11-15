@@ -1,12 +1,43 @@
 # Saturday Slate
 
-A private college football pick'em for friends and family. Each week the commissioner
-publishes a slate of games, members pick winners one game at a time, picks lock at the
-first kickoff, and the app grades them against real scores and keeps the season leaderboard.
+A college football pick'em for groups of friends and family, live at
+[slate.midfield-mafia.com](https://slate.midfield-mafia.com). Each week the commissioners
+post one slate of about ten games. Members pick straight-up winners on their phones, one
+game at a time, until the Deadline at the first kickoff. Then everyone's picks are revealed,
+the games play out live, and the app grades every pick from real scores and keeps a season
+leaderboard for each group.
+
+<p align="center">
+  <img src="docs/readme/picks.png" width="200" alt="Picking a game: Auburn at Arkansas, with the spread, each side's season stats and win probability above one tap per team">
+  <img src="docs/readme/live-board.png" width="200" alt="The Live Board during Week 7, with Liberty leading Coastal Carolina in the second quarter">
+  <img src="docs/readme/game-sheet.png" width="200" alt="A game's sheet: the field, the down and distance, and who picked each side">
+  <img src="docs/readme/leaderboard.png" width="200" alt="A group's Week 7 leaderboard">
+</p>
+
+<p align="center"><sub>Screenshots from the fake group the test database seeds; no real members appear.</sub></p>
+
+- **Picks**: one game per screen, saved on tap with no submit step. Each week a member also
+  picks a Lock of the Week, which counts double, and a Tiebreaker Guess.
+- **Live Board**: after the Deadline, every game on the slate with its score, the ball on the
+  field, and who in the group picked which side.
+- **Leaderboard**: the week and the season for each group, with ties broken by the
+  Tiebreaker Guess.
+- **Groups**: anyone can start one and share its Join Link. A member signs in with a
+  permanent Magic Link, with no password, and picks a Pennant to stand for them. Each group
+  has its own chat.
+- **Console**: commissioners build the slate from CollegeFootballData, publish it, and
+  correct picks and results; organizers run their own group.
+
+It is a web app built for phones, installable to the home screen, with push reminders before
+the Deadline.
+
+## For contributors
 
 - Domain terms: [`GLOSSARY.md`](GLOSSARY.md)
 - Roadmap and tickets: [issue #1](https://github.com/MidfieldMafia/cfb-pickem/issues/1)
 - Research and decisions: [`docs/research/`](docs/research/), [`docs/adr/`](docs/adr/)
+- What changed: [`CHANGELOG.md`](CHANGELOG.md)
+- Agent instructions: [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md)
 
 ## Stack
 

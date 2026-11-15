@@ -321,7 +321,9 @@ export async function removeGame(db: Db, actor: Commissioner, gameId: number): P
  * kickoff, pick-screen detail, spread and ranks, published or not: the spread
  * and ranks are display-only and nothing scores from them. A game freezes at
  * its own kickoff and is left alone after it, so a run on Sunday cannot put
- * the new poll's ranks or a closing line on Saturday's finals. Games stay on
+ * the new poll's ranks or a closing line on Saturday's finals — unless the
+ * feed has no word of it starting and now gives a later kickoff: a postponed
+ * game is upcoming again and refreshes whole. Games stay on
  * the slate whatever the feed says; the Deadline is never touched here.
  * Returns how many games changed.
  *
@@ -343,14 +345,27 @@ export async function refreshFromFeed(
   return refreshWeek(db, cfbd, await slateFor(db, weekId), rain, now);
 }
 
+/**
+ * A game the refresh still reads: not yet kicked off, or past its kickoff with
+ * no word from the feed (`due`), which is how a postponed game looks until its
+ * new time is read. A game the feed has started, finished or a commissioner
+ * has settled is frozen.
+ */
+function stillOpen(game: Game, now: Date): boolean {
+  return game.kickoff > now || effectiveResult(game, now).phase === "due";
+}
+
 async function refreshWeek(db: Db, cfbd: CfbdClient, slate: Slate, rain: RainChanceSource, now: Date): Promise<number> {
-  const upcoming = slate.games.filter((game) => game.kickoff > now);
-  if (upcoming.length === 0) return 0;
+  const open = slate.games.filter((game) => stillOpen(game, now));
+  if (open.length === 0) return 0;
   const feed = await weekCandidates(cfbd, { year: slate.season.year, week: slate.week.weekNumber }, rain);
   const byId = new Map(feed.map((c) => [c.cfbdGameId, c]));
-  return applyGamePatches(db, upcoming, (game) => {
+  return applyGamePatches(db, open, (game) => {
     const fresh = byId.get(game.cfbdGameId);
     if (!fresh) return null;
+    // Past its kickoff, a game is only refreshed when the feed has moved it
+    // later: rescheduled, it has not been played, so it is upcoming again.
+    if (game.kickoff <= now && fresh.kickoff <= now) return null;
     const patch: Partial<typeof games.$inferInsert> = {};
     if (fresh.kickoff.getTime() !== game.kickoff.getTime()) patch.kickoff = fresh.kickoff;
     if (canonical(fresh.detail) !== canonical(game.detail)) patch.detail = fresh.detail;
@@ -366,7 +381,8 @@ export type WeekRefresh = { weekNumber: number; changed: number } | { weekNumber
 
 /**
  * The daily cron's refresh: `refreshFromFeed` over every Week of the active
- * season that still has a game not yet kicked off, so a published slate's
+ * season that still has a game not yet kicked off, or one past its kickoff
+ * the feed has said nothing of (it may have been postponed), so a published slate's
  * detail, spread and ranks keep up with the feed until each game's kickoff
  * rather than showing the day the slate was built. One `weekCandidates`
  * fan-out per Week. Each Week fails alone: a feed error on one leaves the
@@ -387,7 +403,7 @@ export async function refreshUpcomingSlates(
     orderBy: [asc(weeks.weekNumber)],
     with: { season: true, games: true },
   });
-  const upcoming = all.map(toSlate).filter((slate) => slate.games.some((game) => game.kickoff > now));
+  const upcoming = all.map(toSlate).filter((slate) => slate.games.some((game) => stillOpen(game, now)));
   return Promise.all(
     upcoming.map(async (slate): Promise<WeekRefresh> => {
       const weekNumber = slate.week.weekNumber;
