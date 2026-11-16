@@ -119,6 +119,8 @@ const TOUCHBACK_DEPTH = 5;
 const SAFETY_DEPTH = 2;
 /** Where an extra point or a two-point try is snapped from, in yards from the goal line. */
 const TRY_DISTANCE = 3;
+/** How far short of the goal line a failed two-point try stops, at its X. */
+const TRY_SHORT = 1;
 /** How far past the line a blocked field goal is drawn going down, as the words never say: the canvas's three yards. */
 const BLOCK_DEPTH = 3;
 
@@ -289,6 +291,36 @@ export function ballSide(plays: readonly CfbdLivePlay[], teams: FieldTeams, head
   return describePlays(plays, teams, header).at(-1)?.rest.side ?? null;
 }
 
+/** How a two-point try was run and whether it was good: null where the words don't say. */
+type TwoPointTry = { by: "rush" | "pass" | null; good: boolean | null };
+/** Each wording that settles a try, and what it says. */
+const TRY_VERDICTS: [RegExp, (m: RegExpMatchArray) => TwoPointTry][] = [
+  [
+    /\b(rush|pass) attempt (successful|failed)\b/i,
+    (m) => ({ by: m[1].toLowerCase() as "rush" | "pass", good: /successful/i.test(m[2]) }),
+  ],
+  [/\bpass to\b.*?\bGOOD for two[- ]point\b/i, () => ({ by: "pass", good: true })],
+  [/\btwo[- ]point conversion failed\b/i, () => ({ by: null, good: false })],
+];
+
+/**
+ * A touchdown's two-point try, from the words after the TOUCHDOWN: how it was
+ * run and whether it was good, each null when the words don't say. Null when
+ * there is no try. The feed's wordings, from 2026 games:
+ * "#26 J.Lindsey rush attempt Successful", "#4 N.Minicucci pass attempt failed",
+ * "#5 R. Tisdale Jr. pass to L. Howard GOOD for Two-Point Conversion" and
+ * "(Two-point Conversion failed)". The first verdict counts: a review repeats
+ * it, and a defence running a failed try back is written after it.
+ */
+function twoPointTry(after: string): TwoPointTry | null {
+  const first = TRY_VERDICTS.flatMap(([pattern, read]) => {
+    const m = after.match(pattern);
+    return m ? [{ at: m.index!, ...read(m) }] : [];
+  }).sort((a, b) => a.at - b.at)[0];
+  if (first) return { by: first.by, good: first.good };
+  return /two[- ]point|2[- ]point|2pt/i.test(after) ? { by: null, good: null } : null;
+}
+
 /** The end spot when the words give none: the next play's start, else the header's. */
 function fallbackSpot(ctx: Context, holder: Side): Yard | null {
   if (ctx.next) return ctx.next.spot;
@@ -355,12 +387,16 @@ function describe(ctx: Context): PlayDescription {
     const tee = goalAttacked(scorer) - direction(scorer) * TRY_DISTANCE;
     const posts = goalAttacked(scorer) + direction(scorer) * 10;
     const kick = text.match(/kick attempt (good|failed|missed|no good|blocked)/i);
-    const two = text.match(/two[- ]point|2[- ]point|2pt/i);
+    const two = twoPointTry(text.slice(text.search(/\bTOUCHDOWN\b/)));
     if (kick) {
       segments.push({ kind: "arc", from: tee, to: posts });
       if (!/good/i.test(kick[1]) || /no good/i.test(kick[1])) segments.push({ kind: "miss", at: posts });
     } else if (two) {
-      segments.push({ kind: "ground", from: tee, to: goalAttacked(scorer) });
+      const kind = two.by === "pass" ? "arc" : "ground";
+      if (two.good === false) {
+        const short = goalAttacked(scorer) - direction(scorer) * TRY_SHORT;
+        segments.push({ kind, from: tee, to: short }, { kind: "miss", at: short });
+      } else segments.push({ kind, from: tee, to: goalAttacked(scorer) });
     }
   } else if (/\bSAFETY\b/i.test(text) && scorer) {
     scored = true;
