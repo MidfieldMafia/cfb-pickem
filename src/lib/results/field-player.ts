@@ -28,8 +28,8 @@ export const fieldX = (yard: Yard): number => Math.round((yard + 10) * 28) / 10;
 
 /**
  * How far inside the end lines the X's centre must sit to show whole: half the
- * card's 10-unit X plus its 3-unit stroke, rounded up. A kick missed at the
- * posts is at an end line, the drawing's own edge (#564).
+ * card's 10-unit X plus half its 3-unit stroke, rounded up. A kick missed at
+ * the posts is at an end line, the drawing's own edge (#564).
  */
 const MISS_INSET = 7;
 /** Where the X goes on the drawing: on the spot, held whole inside the end lines. */
