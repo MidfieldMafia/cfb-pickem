@@ -373,8 +373,8 @@ export function FieldCard({
 
         {trace && drawn ? (
           <>
-            {drawn.description.start !== null ? (
-              <circle cx={fieldX(drawn.description.start)} cy={BALL_Y} r="3" fill={drawn.line.loss ? LOSS : CHALK} />
+            {trace.start !== null ? (
+              <circle cx={fieldX(trace.start)} cy={BALL_Y} r="3" fill={drawn.line.loss ? LOSS : CHALK} />
             ) : null}
             {trace.trail ? (
               <path

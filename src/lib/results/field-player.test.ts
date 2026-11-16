@@ -166,10 +166,65 @@ describe("frame", () => {
     expect(frame(play, line, x.t0 - 1)).toMatchObject({ miss: null, turnover: null });
   });
 
-  test("the extra point starts a trail of its own", () => {
+  describe("a touchdown's try clears the touchdown's drawing when it starts (#562)", () => {
+    // …153: a 58-yard catch and run from the LIB42, then a good kick from the 97.
     const play = described("153");
-    const trail = frame(play, timeline(play), Infinity).trail;
-    expect(trail.match(/M/g)).toHaveLength(2);
+    const line = timeline(play);
+    const kick = line.steps.findLast((s) => s.kind === "arc")!;
+    const tee = `M${fieldX(97).toFixed(1)} ${BALL_Y.toFixed(1)}`;
+
+    test("until the try, the touchdown draws one line from the snap", () => {
+      const mid = frame(play, line, kick.t0 - 1);
+      expect(mid.trail.match(/M/g)).toHaveLength(1);
+      expect(mid.trail.startsWith(`M${fieldX(42).toFixed(1)} `)).toBe(true);
+      expect(mid.start).toBe(42);
+      expect(mid.flash).toBe("Touchdown");
+    });
+
+    test("once the try starts, its trail and its start dot are on the tee", () => {
+      const trying = frame(play, line, kick.t0 + kick.ms / 2);
+      expect(trying.trail.match(/M/g)).toHaveLength(1);
+      expect(trying.trail.startsWith(tee)).toBe(true);
+      expect(trying.start).toBe(97);
+      expect(trying.flash).toBe("Touchdown");
+    });
+
+    test("at rest, only the try is on the field, in white", () => {
+      const rest = frame(play, line, Infinity);
+      expect(rest.trail.match(/M/g)).toHaveLength(1);
+      expect(rest.trail.startsWith(tee)).toBe(true);
+      expect(rest.start).toBe(97);
+      expect(rest.flash).toBe("Touchdown");
+      expect(line.loss).toBe(false);
+    });
+
+    test("a blocked try keeps its X", () => {
+      // Eastern Washington at Cal Poly, respelled onto …153: "kick attempt failed ( blocked by #94 J.Njelita)".
+      const plays = DRIVES.flatMap((drive) => drive.plays);
+      const at = plays.findIndex((p) => p.id === id("153"));
+      const blocked = {
+        ...plays[at],
+        playText: plays[at].playText.replace("kick attempt good", "kick attempt failed ( blocked by #94 J.Njelita)"),
+      };
+      const missed = describePlays([...plays.slice(0, at), blocked], TEAMS).at(-1)!;
+      const rest = frame(missed, timeline(missed), Infinity);
+      expect(rest.miss).toBe(fieldX(110));
+      expect(rest.trail.match(/M/g)).toHaveLength(1);
+      expect(rest.trail.startsWith(tee)).toBe(true);
+      expect(rest.start).toBe(97);
+    });
+
+    test("the try takes no longer than it did", () => {
+      const scored = timeline(play, { was: { home: 3, away: 3 } });
+      expect(scored.steps.findLast((s) => s.kind === "arc")!.ms).toBe(1400);
+      expect(scored.ms).toBe(2800 + 6 * 145 + 1400);
+    });
+  });
+
+  test("a play without a later flight keeps its start dot on the snap", () => {
+    const play = described("21");
+    expect(frame(play, timeline(play), 0).start).toBe(59);
+    expect(frame(play, timeline(play), Infinity).start).toBe(59);
   });
 });
 

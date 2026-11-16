@@ -129,6 +129,8 @@ export interface Frame {
   ball: { x: number; y: number; angle: number };
   /** The trail drawn so far, as an SVG path. Empty before the first flight. */
   trail: string;
+  /** Where the trail's start dot sits: the snap's spot, until a touchdown's try moves it to the tee. */
+  start: Yard | null;
   /** Where the X is, once a pass has fallen incomplete or a kick has missed. */
   miss: number | null;
   /** Where the penalty flag lies, once thrown. */
@@ -151,6 +153,7 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
   const out: Frame = {
     ball: { x: fieldX(start), y: BALL_Y, angle: 0 },
     trail: "",
+    start: description.start,
     miss: null,
     flag: null,
     flash: null,
@@ -162,6 +165,7 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
   };
   const trail: string[] = [];
   let pen: number | null = null;
+  let trying = false;
   const draw = (x: number, y: number, move = false) => {
     trail.push(`${move ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`);
     pen = x;
@@ -173,7 +177,14 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
       case "arc":
       case "ground": {
         const n = Math.max(1, Math.ceil(24 * u));
-        // A flight that starts somewhere else, like the extra point after the touchdown, is a new line.
+        // A touchdown's try clears the touchdown's drawing as it starts and draws on its own from the tee (#562).
+        if (out.flash === "Touchdown" && !trying) {
+          trying = true;
+          trail.length = 0;
+          pen = null;
+          out.start = step.from;
+        }
+        // A flight that starts somewhere else is a new line.
         if (pen === null || Math.abs(pen - fieldX(step.from)) > 0.05) draw(fieldX(step.from), BALL_Y, true);
         for (let k = 1; k <= n; k++) {
           const p = along(step, (u * k) / n);
