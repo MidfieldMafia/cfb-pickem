@@ -208,10 +208,21 @@ describe("frame", () => {
       };
       const missed = describePlays([...plays.slice(0, at), blocked], TEAMS).at(-1)!;
       const rest = frame(missed, timeline(missed), Infinity);
-      expect(rest.miss).toBe(fieldX(110));
+      // The kick was at the posts, the end line; the X stands whole just inside it (#564).
+      expect(rest.miss).toBe(329);
       expect(rest.trail.match(/M/g)).toHaveLength(1);
       expect(rest.trail.startsWith(tee)).toBe(true);
       expect(rest.start).toBe(97);
+    });
+
+    test("a try blocked at the other end keeps its X whole inside that end line (#564)", () => {
+      // …306: Coastal's touchdown at the LIB00, its kick respelled as blocked: the posts are at -10, x 0.
+      const plays = DRIVES.flatMap((drive) => drive.plays);
+      const at = plays.findIndex((p) => p.id === id("306"));
+      const blocked = { ...plays[at], playText: plays[at].playText.replace("kick attempt good", "kick attempt failed ( blocked by #94 J.Njelita)") };
+      const missed = describePlays([...plays.slice(0, at), blocked], TEAMS).at(-1)!;
+      expect(missed.segments).toContainEqual({ kind: "miss", at: -10 });
+      expect(frame(missed, timeline(missed), Infinity).miss).toBe(7);
     });
 
     test("the try takes no longer than it did", () => {

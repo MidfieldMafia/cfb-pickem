@@ -26,6 +26,15 @@ const TOP_Y = 8;
 /** A yard line's x on the drawing: 0 is the away goal line, 100 the home one, -10 and 110 the end lines. */
 export const fieldX = (yard: Yard): number => Math.round((yard + 10) * 28) / 10;
 
+/**
+ * How far inside the end lines the X's centre must sit to show whole: half the
+ * card's 10-unit X plus its 3-unit stroke, rounded up. A kick missed at the
+ * posts is at an end line, the drawing's own edge (#564).
+ */
+const MISS_INSET = 7;
+/** Where the X goes on the drawing: on the spot, held whole inside the end lines. */
+const missX = (yard: Yard): number => Math.min(FIELD_WIDTH - MISS_INSET, Math.max(MISS_INSET, fieldX(yard)));
+
 /** The first flight of a play, however far it goes: the canvas's constant 2.8 s. */
 const FLIGHT_MS = 2800;
 /** Any later flight in the same play, such as the extra point after a touchdown. */
@@ -203,7 +212,7 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
         break;
       }
       case "miss":
-        out.miss = fieldX(step.at);
+        out.miss = missX(step.at);
         break;
       case "jump":
         out.ball = { x: fieldX(step.to), y: BALL_Y, angle: 0 };
