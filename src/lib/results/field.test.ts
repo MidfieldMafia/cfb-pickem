@@ -307,6 +307,72 @@ describe("each shape", () => {
   });
 });
 
+describe("two-point tries (#563)", () => {
+  // CFBD's own words for the try from 2026 games (ESPN's play-by-play, which /plays re-serves), respelled onto
+  // Liberty's touchdown …609: Liberty 20, Coastal 17 before, the snap from the CCU08, the try from the CCU03.
+  const TOUCHDOWN =
+    "(12:06) No Huddle-Shotgun #15 E.Vasko rush right for 8 yards gain to the CCU00 TOUCHDOWN, clock 12:06, 1ST DOWN ";
+  /** The touchdown with `try_` after it, Liberty on `away` once it is over. */
+  const tried = (try_: string, away: number) => {
+    const plays = upTo("609");
+    const changed = { ...plays.at(-1)!, awayScore: away, playText: TOUCHDOWN + try_ };
+    return describePlays([...plays.slice(0, -1), changed], TEAMS).at(-1)!.segments;
+  };
+  const touchdown = [
+    { kind: "ground", from: 92, to: 100 },
+    { kind: "flash", label: "Touchdown" },
+    { kind: "score", home: 17, away: 26 },
+  ];
+
+  test.each([
+    // LSU at Ole Miss.
+    ["a rush", "#26 J.Lindsey rush attempt Successful", "ground"],
+    // Kent State at South Carolina.
+    ["a pass", "#87 B.Hunt pass attempt Successful", "arc"],
+    // Western Kentucky at Middle Tennessee.
+    ["a pass named in full", "#5 R. Tisdale Jr. pass to L. Howard GOOD for Two-Point Conversion", "arc"],
+  ])("a good try by %s reaches the goal line and counts two", (_, words, kind) => {
+    expect(tried(words, 28)).toEqual([
+      ...touchdown,
+      { kind, from: 97, to: 100 },
+      { kind: "score", home: 17, away: 28 },
+    ]);
+  });
+
+  test.each([
+    // Oregon at Oklahoma State.
+    ["a rush", "#24 C.Hawkins rush attempt failed", "ground"],
+    // Furman at Tennessee: the feed wrote it twice.
+    ["a rush written twice", "rush attempt failed #4 N.Garcia rush attempt failed", "ground"],
+    // Delaware at Vanderbilt.
+    ["a pass", "#4 N.Minicucci pass attempt failed", "arc"],
+    // Baylor at Auburn: the try went to review and stood.
+    [
+      "a pass upheld on review",
+      '#2 D.Lagway pass attempt failed. The previous play is under automatic review - "". CALL UPHELD #2 D.Lagway pass attempt failed',
+      "arc",
+    ],
+    // Nevada at North Dakota State: failed, then the defence ran it back, which is the next play's two.
+    [
+      "a try the defence ran back",
+      "(Two-point Conversion failed) D. Morgan fumbled, M. Stenbroten returned (M. Stenbroten Run For Two-point Conversion)",
+      "ground",
+    ],
+  ])("a failed try by %s stops short of the goal line at the X", (_, words, kind) => {
+    const segments = tried(words, 26);
+    expect(segments).toEqual([...touchdown, { kind, from: 97, to: 99 }, { kind: "miss", at: 99 }]);
+    expect(segments.slice(3)).not.toContainEqual(expect.objectContaining({ to: 100 }));
+  });
+
+  test("a try the words name but give no result for is drawn as a run to the goal line, as before", () => {
+    expect(tried("two-point conversion attempt", 28)).toEqual([
+      ...touchdown,
+      { kind: "ground", from: 97, to: 100 },
+      { kind: "score", home: 17, away: 28 },
+    ]);
+  });
+});
+
 describe("turnover callouts (#435)", () => {
   // Each play is CFBD's own words from a 2026 game (/plays, weeks 4 to 6), respelled for Liberty (LIB, away) and Coastal (CCU, home).
   /** The play ending in `suffix` swapped for another, everything before it kept: its description. */
