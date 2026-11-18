@@ -26,6 +26,15 @@ const TOP_Y = 8;
 /** A yard line's x on the drawing: 0 is the away goal line, 100 the home one, -10 and 110 the end lines. */
 export const fieldX = (yard: Yard): number => Math.round((yard + 10) * 28) / 10;
 
+/**
+ * How far inside the end lines the X's centre must sit to show whole: half the
+ * card's 10-unit X plus half its 3-unit stroke, rounded up. A kick missed at
+ * the posts is at an end line, the drawing's own edge (#564).
+ */
+const MISS_INSET = 7;
+/** Where the X goes on the drawing: on the spot, held whole inside the end lines. */
+const missX = (yard: Yard): number => Math.min(FIELD_WIDTH - MISS_INSET, Math.max(MISS_INSET, fieldX(yard)));
+
 /** The first flight of a play, however far it goes: the canvas's constant 2.8 s. */
 const FLIGHT_MS = 2800;
 /** Any later flight in the same play, such as the extra point after a touchdown. */
@@ -111,10 +120,9 @@ export function rise(from: Yard, to: Yard): number {
   return Math.min(BALL_Y - TOP_Y, 14 + 0.85 * Math.abs(to - from));
 }
 
-/** A point on a flight, `u` of the way along it (0–1). */
-function along(step: Extract<Step, { kind: "arc" | "ground" }>, u: number) {
+/** A point on a flight, `u` of the way along it (0–1), ending at `x1` on the drawing. */
+function along(step: Extract<Step, { kind: "arc" | "ground" }>, u: number, x1 = fieldX(step.to)) {
   const x0 = fieldX(step.from);
-  const x1 = fieldX(step.to);
   const dx = x1 - x0;
   if (step.kind === "ground") return { x: x0 + dx * u, y: BALL_Y, angle: 0 };
   const h = rise(step.from, step.to);
@@ -170,7 +178,7 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
     trail.push(`${move ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`);
     pen = x;
   };
-  for (const step of line.steps) {
+  for (const [i, step] of line.steps.entries()) {
     if (ms < step.t0) break;
     const u = step.ms === 0 ? 1 : Math.min(1, (ms - step.t0) / step.ms);
     switch (step.kind) {
@@ -186,11 +194,14 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
         }
         // A flight that starts somewhere else is a new line.
         if (pen === null || Math.abs(pen - fieldX(step.from)) > 0.05) draw(fieldX(step.from), BALL_Y, true);
+        // A flight that ends in a miss lands on the X, which a kick at the posts keeps inside the end line (#564).
+        const next = line.steps[i + 1];
+        const x1 = next?.kind === "miss" && next.at === step.to ? missX(step.to) : fieldX(step.to);
         for (let k = 1; k <= n; k++) {
-          const p = along(step, (u * k) / n);
+          const p = along(step, (u * k) / n, x1);
           draw(p.x, p.y);
         }
-        const p = along(step, u);
+        const p = along(step, u, x1);
         out.ball = { ...p, angle: u >= 1 ? 0 : p.angle };
         out.moved = true;
         break;
@@ -203,7 +214,7 @@ export function frame(description: PlayDescription, line: Timeline, ms: number):
         break;
       }
       case "miss":
-        out.miss = fieldX(step.at);
+        out.miss = missX(step.at);
         break;
       case "jump":
         out.ball = { x: fieldX(step.to), y: BALL_Y, angle: 0 };
