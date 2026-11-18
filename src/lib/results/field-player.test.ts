@@ -193,6 +193,8 @@ describe("frame", () => {
       const rest = frame(play, line, Infinity);
       expect(rest.trail.match(/M/g)).toHaveLength(1);
       expect(rest.trail.startsWith(tee)).toBe(true);
+      // A good kick still reaches the posts at the end line.
+      expect(rest.trail.endsWith("L336.0 74.0")).toBe(true);
       expect(rest.start).toBe(97);
       expect(rest.flash).toBe("Touchdown");
       expect(line.loss).toBe(false);
@@ -210,6 +212,9 @@ describe("frame", () => {
       const rest = frame(missed, timeline(missed), Infinity);
       // The kick was at the posts, the end line; the X stands whole just inside it (#564).
       expect(rest.miss).toBe(329);
+      // The arc lands on the X, not past it at the end line.
+      expect(rest.trail.endsWith("L329.0 74.0")).toBe(true);
+      expect(rest.ball).toMatchObject({ x: 329, y: 74 });
       expect(rest.trail.match(/M/g)).toHaveLength(1);
       expect(rest.trail.startsWith(tee)).toBe(true);
       expect(rest.start).toBe(97);
@@ -222,7 +227,9 @@ describe("frame", () => {
       const blocked = { ...plays[at], playText: plays[at].playText.replace("kick attempt good", "kick attempt failed ( blocked by #94 J.Njelita)") };
       const missed = describePlays([...plays.slice(0, at), blocked], TEAMS).at(-1)!;
       expect(missed.segments).toContainEqual({ kind: "miss", at: -10 });
-      expect(frame(missed, timeline(missed), Infinity).miss).toBe(7);
+      const rest = frame(missed, timeline(missed), Infinity);
+      expect(rest.miss).toBe(7);
+      expect(rest.trail.endsWith("L7.0 74.0")).toBe(true);
     });
 
     test("the try takes no longer than it did", () => {
