@@ -464,6 +464,28 @@ describe("close games, on each update's edge (#531)", () => {
   });
 });
 
+describe("a refresh pass that throws (#566)", () => {
+  test("rethrows, and gives its claim back to the pass before it", async () => {
+    const { db, week, refresh } = await setup();
+    const friday = new Date("2026-09-11T01:00:00Z");
+    const fetchedAt = async () => (await db.query.weeks.findFirst({ where: eq(weeks.id, week.id) }))!.scoreboardFetchedAt;
+    const quiet = feedWith({});
+    const down: CfbdClient = {
+      ...quiet,
+      scoreboard: async () => {
+        throw new Error("CFBD /scoreboard answered 502");
+      },
+    };
+
+    expect(await refresh(quiet, friday)).toBe("refreshed");
+    const later = new Date(friday.getTime() + 60_000);
+    await expect(refresh(down, later)).rejects.toThrow("CFBD /scoreboard answered 502");
+    // The feed-checked time stays the last pass that worked, and the next request may claim at once.
+    expect(await fetchedAt()).toEqual(friday);
+    expect(await refresh(quiet, new Date(later.getTime() + 1000))).toBe("refreshed");
+  });
+});
+
 describe("how long a refresh claim holds", () => {
   test("the live interval from kickoff, before the feed has a score, and the idle one otherwise", () => {
     const scheduled = gameRow();

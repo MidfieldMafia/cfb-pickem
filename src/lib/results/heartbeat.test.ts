@@ -60,6 +60,41 @@ describe("the live heartbeat", () => {
     expect(feed.calls).toBe(2);
   });
 
+  test("answers a failed pass with a 500 that names it, logs it, and lets the next ping retry", async () => {
+    const { db } = await publishWeek2();
+    const feed = feedWith({});
+    let down = true;
+    const flaky = {
+      ...feed,
+      scoreboard: async () => {
+        if (down) throw new Error("CFBD /scoreboard answered 502");
+        return feed.scoreboard();
+      },
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const at = (ms: number): HeartbeatRoute => ({ db, cfbd: () => flaky, authorized, now: new Date(FRIDAY.getTime() + ms) });
+    const authorization = `Bearer ${SECRET}`;
+
+    const failed = await liveHeartbeat(ping(authorization), at(0));
+    expect(failed.status).toBe(500);
+    expect(await failed.json()).toEqual({
+      week: 2,
+      refreshed: false,
+      outcome: "failed",
+      error: "CFBD /scoreboard answered 502",
+    });
+    expect(warn).toHaveBeenCalledWith("Heartbeat refresh failed:", "CFBD /scoreboard answered 502");
+    expect(feed.reads.scoreboard).toBe(0);
+
+    // The failed pass gave its claim back, so a ping inside the interval pulls again.
+    down = false;
+    const retried = await liveHeartbeat(ping(authorization), at(10_000));
+    expect(retried.status).toBe(200);
+    expect(await retried.json()).toMatchObject({ outcome: "refreshed" });
+    expect(feed.reads.scoreboard).toBe(1);
+    warn.mockRestore();
+  });
+
   test("answers idle when no Week is published", async () => {
     const db = await createTestDb();
     const response = await liveHeartbeat(ping(`Bearer ${SECRET}`), { db, cfbd: () => feedWith({}), authorized });

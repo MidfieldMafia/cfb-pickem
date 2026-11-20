@@ -18,7 +18,8 @@ has an outside caller; the choice is in `docs/research/live-heartbeat.md` on the
 Without it, scores and Finals move only while a member has the app open: `refreshResultsIfStale`
 (`src/lib/results/writes.ts`) runs from `/api/week/state` and the Leaderboard. `/api/cron/live`
 runs the same gate for the published Week (`src/lib/results/heartbeat.ts`) and answers
-`{ week, refreshed, outcome }`. A ping inside the 30 s claim does nothing but one read, so
+`{ week, refreshed, outcome }`, or a 500 with `outcome: "failed"` and the `error` when the pass
+throws. A ping inside the 30 s claim does nothing but one read, so
 member polling and the heartbeat never pull the feed twice. It exports `GET` and `POST`:
 QStash sends POST.
 
@@ -119,7 +120,11 @@ The QStash console (Vercel → Storage → cfb-pickem-qstash → Open in Upstash
 schedules, which should be this week's `slate-live-<date>` ones and nothing else. Its delivery log
 shows each ping's status and duration only, not the response body. The body is in the reply to a
 ping by hand: `"refreshed": true` during a game means the heartbeat pulled the feed; `"fresh"`
-means a member (or the last ping) already had; `"idle"` means nothing was under way. By hand:
+means a member (or the last ping) already had; `"idle"` means nothing was under way; `"failed"`
+means the pass threw (a CFBD error, or Neon's), and the ping answers 500 with the message as
+`error`. Each failed delivery in the log has a matching `Heartbeat refresh failed:` line in the
+Vercel runtime logs, which this plan keeps for an hour. A failed pass gives its claim back, so the
+next ping, or the next member to load the app, pulls again (#566). By hand:
 
 ```bash
 curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://slate.midfield-mafia.com/api/cron/live

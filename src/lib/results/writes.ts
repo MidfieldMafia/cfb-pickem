@@ -380,6 +380,13 @@ export interface RefreshedSlate {
  * instances elect a single caller; the in-process cache in `@/lib/cfbd` is
  * per instance and could not hold this bound on its own. The pass that
  * claims it hands its close games to `closeGames` (`ingestResults`).
+ *
+ * A pass that throws gives the claim back before rethrowing (#566): the
+ * column returns to the value the Slate was read with, so the next request,
+ * a member's or the heartbeat's next minute, pulls again instead of reading
+ * "fresh" for a whole interval, and the feed-checked time stays the last pass
+ * that worked. The release only undoes this pass's own stamp, so a claim
+ * another request has taken since is left alone.
  */
 export async function refreshResultsIfStale(
   db: Db,
@@ -399,7 +406,17 @@ export async function refreshResultsIfStale(
     .where(and(eq(weeks.id, weekId), or(isNull(weeks.scoreboardFetchedAt), lte(weeks.scoreboardFetchedAt, cutoff))))
     .returning({ id: weeks.id });
   if (claimed.length === 0) return { outcome: "fresh", slate };
-  await ingestResults(db, cfbd, slate, now, closeGames);
+  try {
+    await ingestResults(db, cfbd, slate, now, closeGames);
+  } catch (error) {
+    // A release that fails too (Neon is down) must not hide the error that matters; the claim then lapses as before.
+    await db
+      .update(weeks)
+      .set({ scoreboardFetchedAt: slate.week.scoreboardFetchedAt })
+      .where(and(eq(weeks.id, weekId), eq(weeks.scoreboardFetchedAt, now)))
+      .catch(() => {});
+    throw error;
+  }
   return { outcome: "refreshed", slate: await slateFor(db, weekId) };
 }
 

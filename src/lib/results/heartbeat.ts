@@ -29,18 +29,30 @@ export interface HeartbeatRoute {
   now?: Date;
 }
 
-/** What one ping did, for the scheduler's delivery log. `week` is null when no Week is published. */
-export interface HeartbeatJson {
-  week: number | null;
-  refreshed: boolean;
-  outcome: RefreshOutcome;
-}
+/**
+ * What one ping did, for the scheduler's delivery log. `week` is null when no
+ * Week is published. `"failed"` is the heartbeat's own: the gate never returns
+ * it, it throws, and the ping answers 500 with the message as `error` (#566).
+ */
+export type HeartbeatJson =
+  | { week: number | null; refreshed: boolean; outcome: RefreshOutcome }
+  | { week: number; refreshed: false; outcome: "failed"; error: string };
 
 export async function liveHeartbeat(request: Request, route: HeartbeatRoute): Promise<Response> {
   if (!route.authorized(request)) return new Response("Unauthorized", { status: 401 });
   const now = route.now ?? new Date();
   const slate = await publishedSlate(route.db);
   if (!slate) return Response.json({ week: null, refreshed: false, outcome: "idle" } satisfies HeartbeatJson);
-  const { outcome } = await refreshResultsIfStale(route.db, route.cfbd(), slate, now, route.closeGames);
-  return Response.json({ week: slate.week.weekNumber, refreshed: outcome === "refreshed", outcome } satisfies HeartbeatJson);
+  const week = slate.week.weekNumber;
+  try {
+    const { outcome } = await refreshResultsIfStale(route.db, route.cfbd(), slate, now, route.closeGames);
+    return Response.json({ week, refreshed: outcome === "refreshed", outcome } satisfies HeartbeatJson);
+  } catch (error) {
+    // Non-2xx on purpose, so QStash's delivery log still counts it failed; the log line outlives the response.
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("Heartbeat refresh failed:", message);
+    return Response.json({ week, refreshed: false, outcome: "failed", error: message } satisfies HeartbeatJson, {
+      status: 500,
+    });
+  }
 }
