@@ -89,6 +89,11 @@ This repo is **public**, and filing is outward-facing. Show Alex the triage
 table (Feedback id, bucket, target issue or proposed title, owner) and file only
 after they approve it.
 
+A Feedback that shows something exploitable in production is never described in
+a public issue, PR or comment: record it in a private draft advisory instead, as
+`.claude/skills/security-scan/SKILL.md` says (in the cloud, a
+`security-scan finding` message to `#security`).
+
 Write each body to a scratchpad file and pass it with `-F`, per the global
 CLAUDE.md. For every issue and comment:
 
