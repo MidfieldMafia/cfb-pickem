@@ -7,8 +7,8 @@ description: Scan the app for security findings and file each one, or turn the p
 
 Two modes, one set of rules:
 
-- **Scan**: the weekly cloud routine (Sundays 14:00 UTC, Opus, prompt in
-  [`routine-prompt.md`](routine-prompt.md)). It reads, sorts each finding into
+- **Scan**: the weekly cloud routine, whose prompt and settings are in
+  [`routine-prompt.md`](routine-prompt.md). It reads, sorts each finding into
   one of three kinds, files, and hands each fix to a subagent. Steps 1 to 4.
 - **Inbox**: a local session, run by hand ("run the security-scan inbox"). It
   turns the exploitable findings the cloud posted to Slack into private

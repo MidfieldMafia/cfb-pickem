@@ -17,9 +17,9 @@ classifier needs (`docs/agents/cloud-environment.md`).
 
 ```text
 Run the security-scan skill in scan mode: follow .claude/skills/security-scan/SKILL.md
-steps 1 to 4, unattended. Nobody is watching: never ask a question. Name the
-week's boundary in your log. An exploitable finding goes only to the private
-Slack channel #security, never to GitHub.
+steps 1 to 4, unattended. Nobody is watching: never ask a question. An
+exploitable finding goes only to the private Slack channel #security, never to
+GitHub.
 
 Authorized for this run: pushing branches and opening PRs labelled `security-scan`; filing and commenting on `security-scan` issues; all through `gh api`; posting `security-scan finding` messages to the private Slack channel `#security` and reading its history. Never merging, and never labelling anything `agent:go` or `ready-for-agent`.
 ```
