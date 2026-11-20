@@ -88,6 +88,18 @@ in this repo.
     reached, so they are untested.
   - **Listing advisories** (`GET …/security-advisories?state=draft`) answers
     200, so a run can still search for an advisory a local session made.
+- **Slack works through the claude.ai connector** (probe 2026-11-20, #571).
+  A routine whose `mcp_connections` names the Slack connector gets
+  `mcp__Slack__*` tools: it found the private `#security` channel
+  (`C0CKDSF9JS2`, MidfieldMafia workspace), posted a 4,206-byte message, and
+  read it back whole with `slack_read_channel`. It posts as Jonah, with a
+  "Sent using Claude" footer, and no tool deletes a message. A routine
+  created with no `mcp_connections` gets every connector on the account, so
+  name the ones it needs.
+- **The run log cuts long text** (probe 2026-11-20, #571). Read from a local
+  session with `RemoteTrigger` `get_run_log`, an assistant message keeps about
+  its first 2,000 characters and a tool result about 400. Anything a local
+  session must read back in full goes somewhere else, such as Slack.
 - **The database** is a throwaway `slate-agents` branch from
   `npm run agent-db` (`scripts/agent-db.ts`). There is no `.env.local`
   otherwise; build and tests need none.
