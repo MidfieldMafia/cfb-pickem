@@ -71,6 +71,23 @@ in this repo.
   cannot upload screenshots: `npm run pr-shots -- --branch` commits them to
   `agent-screenshots` instead (#534). `gh auth status` reports an invalid
   token regardless.
+- **GitHub's security APIs are mostly closed** (probe run 2026-11-20, #570).
+  All four calls were plain `gh api` REST, and each answered 403 except the
+  last:
+  - **Dependabot and code-scanning alerts** (`GET …/dependabot/alerts`,
+    `…/code-scanning/alerts`): GitHub answers `Resource not accessible by
+    integration`. The session's GitHub app lacks `vulnerability_alerts=read`
+    and `security_events=read`, so `npm audit` is the only dependency check.
+  - **Secret-scanning alerts** (`GET …/secret-scanning/alerts`): the proxy
+    answers `Access to this GitHub API path is not permitted through this
+    proxy.`
+  - **Creating a draft security advisory** (`POST …/security-advisories`): the
+    proxy answers `Write access to this GitHub API path is not permitted
+    through this proxy.` With no advisory, its private fork (`POST
+    …/security-advisories/<ghsa_id>/forks`) and a push to that fork were never
+    reached, so they are untested.
+  - **Listing advisories** (`GET …/security-advisories?state=draft`) answers
+    200, so a run can still search for an advisory a local session made.
 - **The database** is a throwaway `slate-agents` branch from
   `npm run agent-db` (`scripts/agent-db.ts`). There is no `.env.local`
   otherwise; build and tests need none.
