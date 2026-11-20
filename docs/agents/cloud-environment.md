@@ -71,6 +71,35 @@ in this repo.
   cannot upload screenshots: `npm run pr-shots -- --branch` commits them to
   `agent-screenshots` instead (#534). `gh auth status` reports an invalid
   token regardless.
+- **GitHub's security APIs are mostly closed** (probe run 2026-11-20, #570).
+  All four calls were plain `gh api` REST, and each answered 403 except the
+  last:
+  - **Dependabot and code-scanning alerts** (`GET …/dependabot/alerts`,
+    `…/code-scanning/alerts`): GitHub answers `Resource not accessible by
+    integration`. The session's GitHub app lacks `vulnerability_alerts=read`
+    and `security_events=read`, so `npm audit` is the only dependency check.
+  - **Secret-scanning alerts** (`GET …/secret-scanning/alerts`): the proxy
+    answers `Access to this GitHub API path is not permitted through this
+    proxy.`
+  - **Creating a draft security advisory** (`POST …/security-advisories`): the
+    proxy answers `Write access to this GitHub API path is not permitted
+    through this proxy.` With no advisory, its private fork (`POST
+    …/security-advisories/<ghsa_id>/forks`) and a push to that fork were never
+    reached, so they are untested.
+  - **Listing advisories** (`GET …/security-advisories?state=draft`) answers
+    200, so a run can still search for an advisory a local session made.
+- **Slack works through the claude.ai connector** (probe 2026-11-20, #571).
+  A routine whose `mcp_connections` names the Slack connector gets
+  `mcp__Slack__*` tools: it found the private `#security` channel
+  (`C0CKDSF9JS2`, MidfieldMafia workspace), posted a 4,206-byte message, and
+  read it back whole with `slack_read_channel`. It posts as Jonah, with a
+  "Sent using Claude" footer, and no tool deletes a message. A routine
+  created with no `mcp_connections` gets every connector on the account, so
+  name the ones it needs.
+- **The run log cuts long text** (probe 2026-11-20, #571). Read from a local
+  session with `RemoteTrigger` `get_run_log`, an assistant message keeps about
+  its first 2,000 characters and a tool result about 400. Anything a local
+  session must read back in full goes somewhere else, such as Slack.
 - **The database** is a throwaway `slate-agents` branch from
   `npm run agent-db` (`scripts/agent-db.ts`). There is no `.env.local`
   otherwise; build and tests need none.
