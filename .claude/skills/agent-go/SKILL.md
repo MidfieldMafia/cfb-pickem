@@ -100,6 +100,8 @@ those three questions, three levels each and five rows. Retune the wording here
 after about ten `Built on:` lines (#463 decision 10); the thresholds below live
 in `src/lib/agent-go/route.ts`, so change them there and in this section's
 wording together.
+Grade each build by hand in `docs/agents/jev-routing-grades.md`, which holds
+every row so far and the bar a retune must clear (#549).
 
 Question `risk` (noul): Does building this ticket touch grading or scoring, what members can see before the Deadline or Reveal, a database migration, sending messages or the limits on how many are sent, or production infrastructure and secrets outside the database (QStash schedules, webhooks, env vars, `CRON_SECRET`)? Asking members to turn reminders on is not sending messages (#486); rewriting production schedules is a yes (#547).
 
