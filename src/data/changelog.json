@@ -1,6 +1,17 @@
 {
-  "generatedAt": "2026-11-15T16:24:51.934Z",
+  "generatedAt": "2026-11-19T13:16:46.948Z",
   "entries": [
+    {
+      "from": "2026-11-15",
+      "to": "2026-11-21",
+      "items": [
+        "A game moved to a later day after its original kickoff now shows its new kickoff time, instead of staying stuck on the old one.",
+        "On a game sheet's field, once a touchdown's try starts, the field clears the touchdown's line and draws the extra point or two-point try on its own.",
+        "A failed two-point try now ends at an X just short of the goal line, and a successful one is drawn as the run or pass it was.",
+        "A missed or blocked kick shows its whole X at the back of the end zone, where the kick's line ends."
+      ],
+      "through": "2026-11-19T13:16:34Z"
+    },
     {
       "from": "2026-11-08",
       "to": "2026-11-14",
