@@ -41,6 +41,15 @@ Running in a cloud session (any routine): what that environment can and cannot
 do is in `docs/agents/cloud-environment.md`, and `docs/agents/cloud-probe.md`
 re-checks it.
 
+### Security findings
+
+A session that finds something exploitable in production never describes it in
+a public issue, PR or comment. A local session records it in a private draft
+advisory and, if the fix is contained and in its scope, pushes the fix to that
+advisory's private fork; a cloud session posts it to `#security` as a
+`security-scan finding` instead. How, and what counts as exploitable or
+contained: `.claude/skills/security-scan/SKILL.md`.
+
 ### Changelog
 
 `CHANGELOG.md` is half generated and half written. `npm run changelog` rebuilds
