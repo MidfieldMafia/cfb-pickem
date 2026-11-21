@@ -73,8 +73,21 @@ export function monthStartDay(env: Env = process.env): number {
   return Number.isInteger(set) && set >= 1 && set <= 28 ? set : 1;
 }
 
-/** How far ahead of the Deadline the scheduled reminder looks. The cron runs once a day. */
+/** How far ahead of the Deadline the day-before reminder goes out. */
 export const REMINDER_WINDOW_MS = 24 * 3600_000;
+
+/** How far ahead of the Deadline the last-hour reminder goes out. */
+export const FINAL_REMINDER_MS = 3600_000;
+
+/**
+ * How late a scheduled run may land and still count as on time: QStash fires on
+ * the minute but delivers a moment later, so a run at exactly a day or an hour
+ * out reads as a little under it.
+ */
+export const REMINDER_GRACE_MS = 5 * 60_000;
+
+/** Which of a Week's two scheduled reminders a run sends: a day out, or in the last hour. */
+export type ScheduledReminder = "day" | "final";
 
 export class TextRefused extends Refusal {}
 
@@ -152,10 +165,11 @@ function reminderPath(row: Pick<MemberProgress, "progress">): string {
 export function reminderPush(
   report: Pick<PickReport, "week" | "deadline">,
   row: Pick<MemberProgress, "progress">,
+  which: ScheduledReminder = "day",
 ): PushPayload {
   return {
     title: `Week ${report.week.weekNumber} picks lock ${deadlineBriefly(report.deadline)}`,
-    body: `Still need ${owedBriefly(row)}.`,
+    body: `${which === "final" ? "Last call. " : ""}Still need ${owedBriefly(row)}.`,
     url: reminderPath(row),
     tag: `reminder-week-${report.week.weekNumber}`,
   };
@@ -407,9 +421,11 @@ async function pushTo(
   report: PickReport,
   row: MemberProgress,
   now: Date,
+  which: ScheduledReminder,
 ): Promise<PushOutcome> {
   const { member } = row;
-  const { sent, gone, failed, stopped } = await pushToMember(db, pusher, member.id, reminderPush(report, row), { ttl: REMINDER_TTL }, now);
+  const payload = reminderPush(report, row, which);
+  const { sent, gone, failed, stopped } = await pushToMember(db, pusher, member.id, payload, { ttl: REMINDER_TTL }, now);
   await db.insert(pushMessages).values({ memberId: member.id, kind, weekId: report.week.id, sent, gone, failed });
   const detail = stopped
     ? "push stopped reaching their phone, so Notifications turned off"
@@ -420,10 +436,10 @@ async function pushTo(
 }
 
 /**
- * Walks the plan. With `reserveFirst` (the scheduled run), each member's push
- * is reserved before it is sent and skipped when another run holds it; a push
- * no device took gives its key back, so the next run tries again. A
- * commissioner's press reserves nothing: they asked for this send.
+ * Walks the plan. Given `scheduled` (a scheduled run), each member's push is
+ * reserved under that reminder's key before it is sent and skipped when another
+ * run holds it; a push no device took gives its key back, so the next run
+ * tries again. A commissioner's press reserves nothing: they asked for this send.
  */
 async function sendReminders(
   db: Db,
@@ -431,16 +447,17 @@ async function sendReminders(
   kind: PushKind,
   report: PickReport,
   now: Date,
-  reserveFirst = false,
+  scheduled?: ScheduledReminder,
 ): Promise<ReminderResult> {
   const plan = reminderPlan(senders, report, await membersWithDevices(db));
   const pushed: PushOutcome[] = [];
   if (!senders.push) return { pushed, skipped: plan.skip };
+  const keyOf = scheduled === "final" ? pushKey.finalReminder : pushKey.reminder;
   for (const row of plan.push) {
-    const key = pushKey.reminder(report.week.id, row.member.id);
-    if (reserveFirst && !(await reserve(db, key))) continue;
-    const outcome = await pushTo(db, senders.push, kind, report, row, now);
-    if (reserveFirst && !outcome.ok) await release(db, key);
+    const key = keyOf(report.week.id, row.member.id);
+    if (scheduled && !(await reserve(db, key))) continue;
+    const outcome = await pushTo(db, senders.push, kind, report, row, now, scheduled ?? "day");
+    if (scheduled && !outcome.ok) await release(db, key);
     pushed.push(outcome);
   }
   return { pushed, skipped: plan.skip };
@@ -448,15 +465,18 @@ async function sendReminders(
 
 export type ScheduledRun =
   | { ran: false; why: string }
-  | ({ ran: true; weekNumber: number } & ReminderResult);
+  | ({ ran: true; weekNumber: number; which: ScheduledReminder } & ReminderResult);
 
 /**
- * The daily cron's work: when the latest published Week's Deadline is within
- * the next day, remind whoever is still behind. Cron is best effort and can fire
- * twice, even at once, so each member's push is reserved under
- * `reminder:<week>:<member>` before it is sent and a member already holding one
- * is not sent it again; the once-a-day schedule makes sure each Deadline falls
- * in exactly one window.
+ * A scheduled reminder run: each published Week has two reminders, one a day
+ * before its Deadline and one in the last hour, each to whoever is still behind
+ * when it goes. QStash calls this at both moments (`reminderSchedules`), and
+ * the 16:00 UTC daily cron calls it too as a backstop. A run in the last hour
+ * (plus grace) sends the last-hour reminder; a run earlier within the day sends
+ * the day-before one. Calls are best effort and can come twice, even at once,
+ * so each member's push is reserved under `reminder:<week>:<member>` or
+ * `reminder-final:<week>:<member>` before it is sent, and a member already
+ * holding that key is not sent it again.
  */
 export async function runScheduledReminder(
   db: Db,
@@ -465,12 +485,13 @@ export async function runScheduledReminder(
 ): Promise<ScheduledRun> {
   const slate = await publishedSlate(db);
   if (!slate?.week.deadline) return { ran: false, why: "no published week" };
-  const { deadline } = slate.week;
-  if (deadline <= now) return { ran: false, why: "deadline has passed" };
-  if (deadline.getTime() - now.getTime() > REMINDER_WINDOW_MS) return { ran: false, why: "deadline is more than a day away" };
+  const left = slate.week.deadline.getTime() - now.getTime();
+  if (left <= 0) return { ran: false, why: "deadline has passed" };
+  if (left > REMINDER_WINDOW_MS + REMINDER_GRACE_MS) return { ran: false, why: "deadline is more than a day away" };
+  const which: ScheduledReminder = left <= FINAL_REMINDER_MS + REMINDER_GRACE_MS ? "final" : "day";
   const report = await pickReport(db, slate.week.id, now);
-  const result = await sendReminders(db, senders, "scheduled_reminder", report, now, true);
-  return { ran: true, weekNumber: slate.week.weekNumber, ...result };
+  const result = await sendReminders(db, senders, "scheduled_reminder", report, now, which);
+  return { ran: true, weekNumber: slate.week.weekNumber, which, ...result };
 }
 
 export interface RecentText {

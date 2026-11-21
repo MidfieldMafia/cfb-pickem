@@ -7,8 +7,9 @@ import { runWeeklyWinPush } from "@/lib/results/weekly-win-push";
 import { authorized } from "../auth";
 
 /**
- * The 16:00 UTC daily job (see `vercel.json`): the scheduled reminder, then
- * the Weekly Win push (#532). An external cron can call it more often with the
+ * The 16:00 UTC daily job (see `vercel.json`): the scheduled reminder, as a
+ * backstop to the two QStash pings on `/api/cron/pick-reminder`, then the
+ * Weekly Win push (#532). An external cron can call it more often with the
  * same header, because each push is reserved before it is sent and never sent
  * twice. Only members with the kind on are reached, by push. The sends run
  * after the response, so the cron's request does not wait on the push services.
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     const run = await runScheduledReminder(db(), senders);
     console.info(
       run.ran
-        ? `Reminder for Week ${run.weekNumber}: pushed ${run.pushed.filter((p) => p.ok).length}, failed ` +
+        ? `Reminder (${run.which}) for Week ${run.weekNumber}: pushed ${run.pushed.filter((p) => p.ok).length}, failed ` +
             `${run.pushed.filter((p) => !p.ok).length}, skipped ${run.skipped.length}.`
         : `No reminder: ${run.why}.`,
     );

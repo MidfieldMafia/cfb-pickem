@@ -4,7 +4,7 @@
  * where they overlap and pinned to the date.
  */
 import { describe, expect, test } from "vitest";
-import { heartbeatWindows } from "./heartbeat-windows";
+import { heartbeatWindows, reminderSchedules } from "./heartbeat-windows";
 
 const at = (iso: string) => new Date(iso);
 const game = (kickoff: string, isVoid = false) => ({ kickoff: at(kickoff), void: isVoid });
@@ -74,5 +74,27 @@ describe("the heartbeat windows", () => {
 
   test("an empty slate pings nothing", () => {
     expect(heartbeatWindows([], TUESDAY)).toEqual([]);
+  });
+});
+
+describe("the Pick reminder schedules", () => {
+  const deadline = new Date("2026-11-21T17:00:00Z");
+
+  test("one a day before the Deadline and one an hour before, each pinned to its minute", () => {
+    expect(reminderSchedules(deadline, new Date("2026-11-18T12:00:00Z"))).toEqual([
+      { id: "pick-reminder-day", cron: "0 17 20 11 *" },
+      { id: "pick-reminder-final", cron: "0 16 21 11 *" },
+    ]);
+  });
+
+  test("a reminder already past drops out, and a Deadline off the hour keeps its minute", () => {
+    expect(reminderSchedules(new Date("2026-11-21T00:30:00Z"), new Date("2026-11-20T06:00:00Z"))).toEqual([
+      { id: "pick-reminder-final", cron: "30 23 20 11 *" },
+    ]);
+    expect(reminderSchedules(deadline, new Date("2026-11-21T16:30:00Z"))).toEqual([]);
+  });
+
+  test("no Deadline, no reminders", () => {
+    expect(reminderSchedules(null, new Date("2026-11-18T12:00:00Z"))).toEqual([]);
   });
 });

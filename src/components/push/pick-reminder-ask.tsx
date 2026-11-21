@@ -211,7 +211,7 @@ export function PickReminderAsk({
                 ? "You can turn them off any time in Settings."
                 : answered === "denied"
                   ? "To get your reminder, allow them in iPhone Settings › Notifications › Saturday Slate."
-                  : "One notification before picks lock, only when you still have picks to make."}
+                  : "A notification a day before picks lock and an hour before, only when you still have picks to make."}
             </DrawerDescription>
             {result === "error" && message ? (
               <p role="alert" className="m-0 text-sm text-destructive">

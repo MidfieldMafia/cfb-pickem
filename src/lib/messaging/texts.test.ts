@@ -451,13 +451,50 @@ describe("the scheduled reminder", () => {
     await db.insert(pushReservations).values({ key: pushKey.reminder(week.id, grandma.id) });
     const push = pusher();
 
-    const run = await runScheduledReminder(db, by(push), new Date(deadline.getTime() - HOUR));
+    const run = await runScheduledReminder(db, by(push), new Date(deadline.getTime() - 20 * HOUR));
 
     expect(run.ran && run.pushed.map((p) => p.member.displayName)).toEqual(["Cousin Em"]);
     expect(push.sent.map((s) => s.endpoint)).toEqual(["https://push.example/em"]);
     expect((await db.select().from(pushReservations)).map((r) => r.key).sort()).toEqual(
       [`reminder:${week.id}:${grandma.id}`, `reminder:${week.id}:${em.id}`].sort(),
     );
+  });
+
+  test("sends a day-before reminder and a last-hour one, each once, the second only to whoever is still behind", async () => {
+    const { db, grandma, em, week, deadline, slate, michigan, texas, miami } = await setup();
+    const push = pusher();
+
+    // QStash's day-before ping lands a moment after it fires.
+    const day = await runScheduledReminder(db, by(push), new Date(deadline.getTime() - 24 * HOUR + 30_000));
+    expect(day).toMatchObject({ ran: true, which: "day" });
+    expect(day.ran && day.pushed.map((p) => p.member.displayName)).toEqual(["Grandma", "Cousin Em"]);
+    // The daily cron the same afternoon sends nobody the day-before reminder again.
+    const backstop = await runScheduledReminder(db, by(push), new Date(deadline.getTime() - 23 * HOUR));
+    expect(backstop.ran && backstop.pushed).toEqual([]);
+
+    for (const game of [michigan, texas, miami]) await pickAs(db, em, slate, game, game.homeTeamId, THURSDAY);
+    await lockAs(db, em, slate, texas.id, THURSDAY);
+    await guessAs(db, em, slate, 60, THURSDAY);
+
+    const final = await runScheduledReminder(db, by(push), new Date(deadline.getTime() - HOUR + 30_000));
+    expect(final).toMatchObject({ ran: true, which: "final" });
+    expect(final.ran && final.pushed.map((p) => p.member.displayName)).toEqual(["Grandma"]);
+    expect((push.sent.at(-1)!.payload as { body: string }).body).toMatch(/^Last call\. Still need /);
+    const again = await runScheduledReminder(db, by(push), new Date(deadline.getTime() - 30 * 60_000));
+    expect(again.ran && again.pushed).toEqual([]);
+
+    expect(push.sent).toHaveLength(3);
+    expect((await db.select().from(pushReservations)).map((r) => r.key).sort()).toEqual(
+      [pushKey.reminder(week.id, grandma.id), pushKey.reminder(week.id, em.id), pushKey.finalReminder(week.id, grandma.id)].sort(),
+    );
+  });
+
+  test("a run a little past a day out still counts, and one further out waits", async () => {
+    const { db, deadline } = await setup();
+    const tooEarly = await runScheduledReminder(db, by(pusher()), new Date(deadline.getTime() - 24 * HOUR - 10 * 60_000));
+    expect(tooEarly).toEqual({ ran: false, why: "deadline is more than a day away" });
+    const justIn = await runScheduledReminder(db, by(pusher()), new Date(deadline.getTime() - 24 * HOUR - 60_000));
+    expect(justIn).toMatchObject({ ran: true, which: "day" });
   });
 
   test("a text sent before push-only does not stand in for this Week's push", async () => {

@@ -1,12 +1,13 @@
 /**
- * Keeps the live heartbeat's QStash schedules in step with the published Slate
- * (#546): one date-pinned schedule per UTC date a Game's window touches
- * (`heartbeat-windows.ts`), and none on any other day.
+ * Keeps the app's QStash schedules in step with the published Slate: the live
+ * heartbeat's (#546), one date-pinned schedule per UTC date a Game's window
+ * touches, and none on any other day; and the two Pick reminders', a day and an
+ * hour before the Deadline (all in `heartbeat-windows.ts`).
  *
- * The sync lists the schedules on `/api/cron/live`, creates or replaces the
- * wanted ones by id, and only then deletes every other schedule there — the
- * old fixed windows on the first run, and dates already past, since a
- * date-pinned cron would fire again next year. Any call that fails stops it
+ * The sync lists the schedules on `/api/cron/live` and `/api/cron/pick-reminder`,
+ * creates or replaces the wanted ones by id, and only then deletes every other
+ * schedule there — the old fixed windows on the first run, and dates already
+ * past, since a date-pinned cron would fire again next year. Any call that fails stops it
  * where it is, so nothing is deleted before its replacements exist.
  *
  * Plain `fetch` against the REST API, injected so a test runs it against a
@@ -21,7 +22,7 @@ import "server-only";
 import type { Game } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { publishedSlate } from "@/lib/slate/slate";
-import { heartbeatWindows } from "./heartbeat-windows";
+import { heartbeatWindows, reminderSchedules } from "./heartbeat-windows";
 
 /** The production domain: a preview's own URL is never a heartbeat target. */
 export const PRODUCTION_ORIGIN = "https://slate.midfield-mafia.com";
@@ -33,8 +34,16 @@ export interface HeartbeatConfig {
   qstashUrl: string;
   /** `CRON_SECRET`, forwarded so each ping passes `authorized()`. */
   secret: string;
-  /** The full `/api/cron/live` URL the schedules ping. */
+  /** The full `/api/cron/live` URL the heartbeat schedules ping. */
   destination: string;
+  /** The full `/api/cron/pick-reminder` URL the reminder schedules ping. */
+  reminderDestination: string;
+}
+
+/** What the sync schedules from: the published Slate's Games and its Deadline. */
+export interface ScheduledSlate {
+  games: Pick<Game, "kickoff" | "void">[];
+  deadline: Date | null;
 }
 
 export type SyncResult =
@@ -65,11 +74,13 @@ export function heartbeatConfig(
   const secret = value("CRON_SECRET");
   if (!token) return "QSTASH_TOKEN is not set";
   if (!secret) return "CRON_SECRET is not set";
+  const base = origin.replace(/\/+$/, "");
   return {
     token,
     secret,
     qstashUrl: (value("QSTASH_URL") ?? DEFAULT_QSTASH_URL).replace(/\/+$/, ""),
-    destination: `${origin.replace(/\/+$/, "")}/api/cron/live`,
+    destination: `${base}/api/cron/live`,
+    reminderDestination: `${base}/api/cron/pick-reminder`,
   };
 }
 
@@ -77,7 +88,7 @@ export function heartbeatConfig(
  * The app's sync: production only, since every preview deploy and local
  * session that publishes a slate would otherwise rewrite production's
  * schedules. Reads the published Slate, the only Week `/api/cron/live`
- * refreshes. Never throws.
+ * refreshes and the only one reminded. Never throws.
  */
 export async function syncHeartbeat(
   db: Db,
@@ -92,15 +103,15 @@ export async function syncHeartbeat(
   }
   try {
     const slate = await publishedSlate(db);
-    return await syncSchedules(slate?.games ?? [], config, deps);
+    return await syncSchedules({ games: slate?.games ?? [], deadline: slate?.week.deadline ?? null }, config, deps);
   } catch (error) {
     return failed(error, config, deps.log);
   }
 }
 
-/** Makes the schedules on `config.destination` exactly the windows `games` need. Never throws. */
+/** Makes the schedules on both destinations exactly the ones `slate` needs. Never throws. */
 export async function syncSchedules(
-  games: Pick<Game, "kickoff" | "void">[],
+  slate: ScheduledSlate,
   config: HeartbeatConfig,
   { fetch: send = fetch, now = new Date(), log }: SyncDeps = {},
 ): Promise<SyncResult> {
@@ -119,14 +130,18 @@ export async function syncSchedules(
   };
 
   try {
-    const wanted = heartbeatWindows(games, now);
-    const existing = ((await call("GET", "")) as Schedule[]).filter((s) => s.destination === config.destination);
+    const wanted = [
+      ...heartbeatWindows(slate.games, now).map((w) => ({ ...w, destination: config.destination })),
+      ...reminderSchedules(slate.deadline, now).map((w) => ({ ...w, destination: config.reminderDestination })),
+    ];
+    const ours = new Set([config.destination, config.reminderDestination]);
+    const existing = ((await call("GET", "")) as Schedule[]).filter((s) => ours.has(s.destination));
     const had = new Set(existing.map((s) => s.scheduleId));
     const created: string[] = [];
     const replaced: string[] = [];
 
     for (const window of wanted) {
-      await call("POST", `/${config.destination}`, {
+      await call("POST", `/${window.destination}`, {
         "Upstash-Schedule-Id": window.id,
         "Upstash-Cron": window.cron,
         "Upstash-Retries": "0",

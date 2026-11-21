@@ -29,8 +29,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: typeof payload.body === "string" ? payload.body : "",
-      // A second reminder for the same Week replaces the first banner rather than stacking.
+      // A second reminder for the same Week replaces the first banner rather than stacking, and still alerts.
       tag: typeof payload.tag === "string" ? payload.tag : undefined,
+      renotify: typeof payload.tag === "string",
       icon: "/icon-192.png",
       badge: "/icon-192.png",
       data: { url: typeof payload.url === "string" && payload.url.startsWith("/") ? payload.url : "/" },

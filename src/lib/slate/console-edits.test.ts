@@ -251,33 +251,35 @@ describe("refreshing from the feed", () => {
 
 /**
  * The four edits that can move the published Slate's kickoffs re-sync the
- * heartbeat's schedules (#546); the Deadline and the Tiebreaker Game cannot,
- * so they leave it alone. A refusal syncs nothing.
+ * heartbeat's schedules (#546), and so does moving the Deadline, which the two
+ * Pick reminders are scheduled from; the Tiebreaker Game moves neither, so it
+ * leaves them alone. A refusal syncs nothing.
  */
 describe("the heartbeat sync", () => {
-  test("publish, add, drop and Refresh each ask for one sync, and only once they succeed", async () => {
+  test("publish, add, drop, Refresh and the Deadline each ask for one sync, and only once they succeed", async () => {
     const { db, jonah, cfbd, rain, route, heartbeat, week, michigan, miami } = await draft();
 
-    await editDeadline(route, form({ weekId: week.id, deadline: "2026-09-10T23:00:00Z" }));
     await chooseTiebreaker(route, form({ weekId: week.id, gameId: michigan.id }));
     expect(heartbeat.syncs).toBe(0);
+    await editDeadline(route, form({ weekId: week.id, deadline: "2026-09-10T23:00:00Z" }));
+    expect(heartbeat.syncs).toBe(1);
 
     await addGameFromConsole(route, form({ weekId: week.id, cfbdGameId: OHIO_STATE_AT_TEXAS }), cfbd, rain);
-    expect(heartbeat.syncs).toBe(1);
-    await dropGame(route, form({ gameId: miami.id }));
     expect(heartbeat.syncs).toBe(2);
+    await dropGame(route, form({ gameId: miami.id }));
+    expect(heartbeat.syncs).toBe(3);
 
     await setTiebreaker(db, jonah, week.id, michigan.id);
     expect(await editPublish(route, form({ weekId: week.id }))).toEqual({
       done: "Published. Members can see the slate now.",
     });
-    expect(heartbeat.syncs).toBe(3);
-    expect(await refreshSlate(route, form({ weekId: week.id }), cfbd, rain)).toEqual({});
     expect(heartbeat.syncs).toBe(4);
+    expect(await refreshSlate(route, form({ weekId: week.id }), cfbd, rain)).toEqual({});
+    expect(heartbeat.syncs).toBe(5);
 
     // Refused: the slate is published now, so a drop throws and syncs nothing.
     await expect(dropGame(route, form({ gameId: michigan.id }))).rejects.toThrow();
-    expect(heartbeat.syncs).toBe(4);
+    expect(heartbeat.syncs).toBe(5);
   });
 
   test("an edit still succeeds when the sync throws", async () => {

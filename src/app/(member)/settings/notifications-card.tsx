@@ -165,7 +165,7 @@ export function NotificationsCard({
               <p id="reminder-label" className="text-base leading-6 font-semibold">
                 Remind me before picks lock
               </p>
-              <p className="text-sm leading-5 text-muted-foreground">The day before, if you&rsquo;re not done.</p>
+              <p className="text-sm leading-5 text-muted-foreground">A day before and an hour before, if you&rsquo;re not done.</p>
             </div>
             <Switch
               checked={view.rowsLive && reminder}
