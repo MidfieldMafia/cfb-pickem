@@ -11,8 +11,10 @@ import type { Db } from "@/db/types";
 
 /** One key per push, by what makes it one of a kind. */
 export const pushKey = {
-  /** A Week's scheduled Pick reminder to one member. */
+  /** A Week's day-before Pick reminder to one member. */
   reminder: (weekId: number, memberId: number) => `reminder:${weekId}:${memberId}`,
+  /** A Week's last-hour Pick reminder to one member. */
+  finalReminder: (weekId: number, memberId: number) => `reminder-final:${weekId}:${memberId}`,
   chat: (messageId: number, memberId: number) => `chat:${messageId}:${memberId}`,
   mention: (messageId: number, memberId: number) => `mention:${messageId}:${memberId}`,
   close: (gameId: number) => `close:${gameId}`,

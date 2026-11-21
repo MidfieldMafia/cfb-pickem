@@ -62,3 +62,24 @@ function ranges(hours: number[]): string {
   }
   return runs.map(([from, to]) => (from === to ? `${from}` : `${from}-${to}`)).join(",");
 }
+
+/** Ahead of the Deadline, when each of a Week's two Pick reminders goes: a day out, then an hour out. */
+export const REMINDER_LEADS = [
+  { id: "pick-reminder-day", hours: 24 },
+  { id: "pick-reminder-final", hours: 1 },
+] as const;
+
+/**
+ * The published Week's two Pick reminder pings: one QStash schedule each,
+ * pinned to the minute it fires (`0 17 20 11 *`), so each fires once. One
+ * already past drops out, and the sync deletes it, since a date-pinned cron
+ * fires again a year later. No Deadline, no schedules.
+ */
+export function reminderSchedules(deadline: Date | null, now: Date): HeartbeatWindow[] {
+  if (!deadline) return [];
+  return REMINDER_LEADS.flatMap(({ id, hours }) => {
+    const at = new Date(deadline.getTime() - hours * HOUR);
+    if (at <= now) return [];
+    return [{ id, cron: `${at.getUTCMinutes()} ${at.getUTCHours()} ${at.getUTCDate()} ${at.getUTCMonth() + 1} *` }];
+  });
+}

@@ -8,6 +8,7 @@ Every scheduled route lives under `src/app/api/cron/` and refuses anything witho
 | `/api/cron/refresh-slates` | Vercel Cron (`vercel.json`) | daily, 12:00 UTC |
 | `/api/cron/remind` | Vercel Cron (`vercel.json`) | daily, 16:00 UTC |
 | `/api/cron/live` | Upstash QStash schedules | every minute, in each published Game's window |
+| `/api/cron/pick-reminder` | Upstash QStash schedules | once a day before the published Deadline, once an hour before |
 
 Vercel Hobby runs a cron at most once a day, to the hour. That is why the live heartbeat
 has an outside caller; the choice is in `docs/research/live-heartbeat.md` on the
@@ -50,11 +51,25 @@ hours a week, about 46 CU-hours a month against Neon Free's 100 (the research's 
 was wrong); Week 10's windows are 13 hours. A game still running past its window updates from
 member traffic, as before.
 
+### The Pick reminders
+
+Each published Week gets two Pick reminders, a day before its Deadline and an hour before,
+each pushed to whoever is still behind when it goes (`runScheduledReminder` in
+`src/lib/messaging/texts.ts`). Vercel Hobby can't run a cron at a chosen minute, so QStash
+does: `reminderSchedules` in `heartbeat-windows.ts` makes `pick-reminder-day` and
+`pick-reminder-final`, each pinned to its minute (`0 17 20 11 *`) on `/api/cron/pick-reminder`.
+A run in the last 65 minutes sends the last-hour reminder and one within a day plus 5 minutes
+sends the day-before one. Each member's push is reserved under `reminder:<week>:<member>` or
+`reminder-final:<week>:<member>`, so a ping that comes twice sends once. The 16:00 UTC
+`/api/cron/remind` still runs the same function as a backstop: on a 17:00 UTC Deadline it lands
+in the last hour, and the reservation keeps it from sending a second time.
+
 ### Keeping the schedules in step
 
 The schedules live in QStash, not in this repo's deploy. `syncHeartbeat`
-(`src/lib/results/heartbeat-sync.ts`) lists the schedules on `/api/cron/live`, creates or
-replaces the wanted ones by id, and only then deletes every other schedule there: dates already
+(`src/lib/results/heartbeat-sync.ts`) lists the schedules on `/api/cron/live` and
+`/api/cron/pick-reminder`, creates or replaces the wanted ones by id, and only then deletes every
+other schedule there: dates already
 past, since a date-pinned cron fires again next year, and anything else on that destination.
 Each forwards the secret as `Upstash-Forward-Authorization`, which QStash delivers as the
 `Authorization` header `authorized()` checks. A call that fails stops the sync where it is and
@@ -65,8 +80,8 @@ It runs:
 
 - **daily from `/api/cron/refresh-slates`**, after `refreshUpcomingSlates`, so a kickoff the feed
   moved or a TBD that got set is caught by 12:00 UTC. Its result is the response's `heartbeat`.
-- **after the slate console's publish, add game, remove game and Refresh**, in `after()`, so a
-  QStash problem never fails the commissioner's edit.
+- **after the slate console's publish, add game, remove game, Refresh and Deadline edits**, in
+  `after()`, so a QStash problem never fails the commissioner's edit.
 
 Only production syncs (`VERCEL_ENV === "production"`), and the target is always
 `https://slate.midfield-mafia.com`, never a deployment URL: otherwise every preview and local

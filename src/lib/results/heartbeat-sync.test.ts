@@ -11,7 +11,14 @@ const TOKEN = "qstash-token-do-not-print";
 const SECRET = "cron-secret-do-not-print";
 const QSTASH = "https://qstash.test";
 const DESTINATION = "https://slate.midfield-mafia.com/api/cron/live";
-const CONFIG: HeartbeatConfig = { token: TOKEN, qstashUrl: QSTASH, secret: SECRET, destination: DESTINATION };
+const REMINDER = "https://slate.midfield-mafia.com/api/cron/pick-reminder";
+const CONFIG: HeartbeatConfig = {
+  token: TOKEN,
+  qstashUrl: QSTASH,
+  secret: SECRET,
+  destination: DESTINATION,
+  reminderDestination: REMINDER,
+};
 
 interface Stored {
   scheduleId: string;
@@ -72,11 +79,13 @@ function fakeQStash(initial: Omit<Stored, "header">[] = [], fail?: (method: stri
 const on = (destination: string) => (s: { scheduleId: string; cron: string }) => ({ ...s, destination });
 
 /** Week 10: Saturday 7 November, 17:00 to 00:30 UTC kickoffs. */
-const WEEK_10 = [
+const WEEK_10_GAMES = [
   { kickoff: new Date("2026-11-07T17:00:00Z"), void: false },
   { kickoff: new Date("2026-11-07T20:30:00Z"), void: false },
   { kickoff: new Date("2026-11-08T00:30:00Z"), void: false },
 ];
+/** Week 10's games alone, without a Deadline: the heartbeat's schedules and no reminders. */
+const WEEK_10 = { games: WEEK_10_GAMES, deadline: null };
 const NOV_3 = new Date("2026-11-03T12:00:00Z");
 
 function capture() {
@@ -144,11 +153,43 @@ describe("syncing the heartbeat schedules", () => {
   test("an empty slate deletes every heartbeat schedule", async () => {
     const qstash = fakeQStash(FIXED.map(on(DESTINATION)));
 
-    expect(await syncSchedules([], CONFIG, { fetch: qstash.fetch, now: NOV_3, log: () => {} })).toMatchObject({
+    expect(await syncSchedules({ games: [], deadline: null }, CONFIG, { fetch: qstash.fetch, now: NOV_3, log: () => {} })).toMatchObject({
       status: "synced",
       deleted: FIXED.map((s) => s.scheduleId),
     });
     expect(qstash.crons()).toEqual({});
+  });
+
+  test("schedules the two Pick reminders on their own route, a day and an hour before the Deadline", async () => {
+    const qstash = fakeQStash();
+    const slate = { games: WEEK_10_GAMES, deadline: new Date("2026-11-07T17:00:00Z") };
+
+    const result = await syncSchedules(slate, CONFIG, { fetch: qstash.fetch, now: NOV_3, log: () => {} });
+
+    expect(result).toMatchObject({
+      status: "synced",
+      created: ["slate-live-2026-11-07", "slate-live-2026-11-08", "pick-reminder-day", "pick-reminder-final"],
+    });
+    expect(qstash.crons()).toMatchObject({ "pick-reminder-day": "0 17 6 11 *", "pick-reminder-final": "0 16 7 11 *" });
+    for (const id of ["pick-reminder-day", "pick-reminder-final"]) {
+      expect(qstash.schedules.get(id)).toMatchObject({ destination: REMINDER, header: { authorization: [`Bearer ${SECRET}`] } });
+    }
+  });
+
+  test("moves the reminders with the Deadline, and deletes one whose moment has passed", async () => {
+    const qstash = fakeQStash([
+      on(REMINDER)({ scheduleId: "pick-reminder-day", cron: "0 17 6 11 *" }),
+      on(REMINDER)({ scheduleId: "pick-reminder-final", cron: "0 16 7 11 *" }),
+    ]);
+    // A day and a half out, the Deadline moved an hour later: the day-before ping is already past.
+    const slate = { games: WEEK_10_GAMES, deadline: new Date("2026-11-07T18:00:00Z") };
+    const now = new Date("2026-11-06T18:30:00Z");
+
+    const result = await syncSchedules(slate, CONFIG, { fetch: qstash.fetch, now, log: () => {} });
+
+    expect(result).toMatchObject({ status: "synced", replaced: ["pick-reminder-final"], deleted: ["pick-reminder-day"] });
+    expect(qstash.crons()["pick-reminder-final"]).toBe("0 17 7 11 *");
+    expect(qstash.crons()["pick-reminder-day"]).toBeUndefined();
   });
 
   test("a create failing midway deletes nothing, and says so without the secret or the token", async () => {
@@ -195,8 +236,15 @@ describe("the app's sync", () => {
     expect(result).toMatchObject({ status: "synced", deleted: FIXED.map((s) => s.scheduleId) });
     const ids = Object.keys(qstash.crons());
     expect(ids.length).toBeGreaterThan(0);
-    for (const id of ids) expect(id).toMatch(/^slate-live-2026-09-1\d$/);
-    for (const schedule of qstash.schedules.values()) expect(schedule.destination).toBe(DESTINATION);
+    for (const schedule of qstash.schedules.values()) {
+      if (schedule.scheduleId.startsWith("slate-live-")) {
+        expect(schedule.scheduleId).toMatch(/^slate-live-2026-09-1\d$/);
+        expect(schedule.destination).toBe(DESTINATION);
+      } else {
+        expect(schedule.destination).toBe(REMINDER);
+      }
+    }
+    expect(ids).toContain("pick-reminder-final");
     expect(lines.join("\n")).not.toContain(SECRET);
   });
 

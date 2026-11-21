@@ -31,6 +31,8 @@ const db = drizzle({ client: neon(requireEnv("DATABASE_URL")), schema });
 const slate = await publishedSlate(db);
 console.log(slate ? `Week ${slate.week.weekNumber} is published, ${slate.games.length} games.` : "No Week is published.");
 
-const result = await syncSchedules(slate?.games ?? [], config, { log: console.log });
+const result = await syncSchedules({ games: slate?.games ?? [], deadline: slate?.week.deadline ?? null }, config, {
+  log: console.log,
+});
 if (result.status !== "synced") process.exit(1);
-console.log(`${result.created.length + result.replaced.length} schedules ping ${config.destination}.`);
+console.log(`${result.created.length + result.replaced.length} schedules ping ${config.destination} and ${config.reminderDestination}.`);

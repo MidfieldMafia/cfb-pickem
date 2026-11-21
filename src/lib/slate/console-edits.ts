@@ -46,6 +46,8 @@ function resyncHeartbeat(route: ConsoleRoute, db: Db): void {
 export function editDeadline(route: ConsoleRoute, form: FormData): Promise<ActionState> {
   return consoleEdit(route, async ({ db, actor }) => {
     await setDeadline(db, actor, num(form, "weekId"), new Date(String(form.get("deadline") ?? "")));
+    // The Pick reminders are scheduled from the Deadline, so they move with it.
+    resyncHeartbeat(route, db);
     return { done: "Deadline moved.", revalidate: slateOnly };
   });
 }
