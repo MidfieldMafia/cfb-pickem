@@ -1,0 +1,154 @@
+[
+ {
+  "home": "Texas Tech",
+  "away": "TCU",
+  "day": "Thu 11/26",
+  "rivalry": "Battle for the Saddle",
+  "trophy": "Saddle Trophy",
+  "source": "texastech.com 2026 schedule (Thu Nov 26, 7 p.m. CT, Lubbock); trophy: texastech.com/news/2019/11/14/football-through-the-smoke-battle-for-the-saddle-trophy"
+ },
+ {
+  "home": "Ole Miss",
+  "away": "Mississippi State",
+  "day": "Fri 11/27",
+  "rivalry": "Egg Bowl",
+  "trophy": "Golden Egg",
+  "source": "olemisssports.com + hailstate.com 2026 schedules (Fri Nov 27, 11 a.m. CT, Oxford); olemisssports.com 2025 postgame notes call it the Battle of the Golden Egg"
+ },
+ {
+  "home": "Iowa",
+  "away": "Nebraska",
+  "day": "Fri 11/27",
+  "rivalry": "Heroes Game",
+  "trophy": "Heroes Trophy",
+  "source": "hawkeyesports.com 2026 schedule lists 'Pioneer Heroes Game', Fri Nov 27, 11:08 a.m. CT, Iowa City"
+ },
+ {
+  "home": "Florida State",
+  "away": "Florida",
+  "day": "Fri 11/27",
+  "rivalry": "Sunshine Showdown",
+  "trophy": null,
+  "source": "seminoles.com + floridagators.com 2026 schedules (Fri Nov 27, 3:30 p.m. ET, Tallahassee); name: seminoles.com/sunshine-showdown"
+ },
+ {
+  "home": "Wisconsin",
+  "away": "Minnesota",
+  "day": "Fri 11/27",
+  "rivalry": "Battle for Paul Bunyan's Axe",
+  "trophy": "Paul Bunyan's Axe",
+  "source": "uwbadgers.com + gophersports.com 2026 schedules (Fri Nov 27, 6:30 p.m. CT, Madison)"
+ },
+ {
+  "home": "Texas A&M",
+  "away": "Texas",
+  "day": "Fri 11/27",
+  "rivalry": "Lone Star Showdown",
+  "trophy": null,
+  "source": "12thman.com + texassports.com 2026 schedules (Fri Nov 27, 6:30 p.m. CT, College Station); the Lone Star Showdown trophy is all-sports (texaslonghorns.com 2025-04-30)"
+ },
+ {
+  "home": "Kentucky",
+  "away": "Louisville",
+  "day": "Sat 11/28",
+  "rivalry": "Governor's Cup",
+  "trophy": "Governor's Cup",
+  "source": "gocards.com 2026 schedule (Sat Nov 28, noon ET, Lexington)"
+ },
+ {
+  "home": "Ohio State",
+  "away": "Michigan",
+  "day": "Sat 11/28",
+  "rivalry": "The Game",
+  "trophy": null,
+  "source": "ohiostatebuckeyes.com + mgoblue.com 2026 schedules (Sat Nov 28, noon ET, Columbus)"
+ },
+ {
+  "home": "Northwestern",
+  "away": "Illinois",
+  "day": "Sat 11/28",
+  "rivalry": "Land of Lincoln Trophy game",
+  "trophy": "Land of Lincoln Trophy",
+  "source": "fightingillini.com 2026 schedule (Sat Nov 28, 11:30 a.m. CT, Evanston); trophy: fightingillini.com/news/2025/11/29"
+ },
+ {
+  "home": "Arkansas",
+  "away": "LSU",
+  "day": "Sat 11/28",
+  "rivalry": "Battle for the Golden Boot",
+  "trophy": "The Golden Boot",
+  "source": "lsusports.net schedule (Sat Nov 28, Fayetteville; kickoff TBD 11 a.m. or 11:45 a.m. CT); trophy: lsusports.net/boot"
+ },
+ {
+  "home": "Iowa State",
+  "away": "Kansas State",
+  "day": "Sat 11/28",
+  "rivalry": "Farmageddon",
+  "trophy": null,
+  "source": "cyclones.com + kstatesports.com 2026 schedules (Sat Nov 28, 1 p.m. CT, Ames); no traveling trophy"
+ },
+ {
+  "home": "Clemson",
+  "away": "South Carolina",
+  "day": "Sat 11/28",
+  "rivalry": "Palmetto Bowl",
+  "trophy": "Palmetto Bowl Trophy",
+  "source": "clemsontigers.com schedule (Sat Nov 28, 3 p.m. ET, Clemson); name and trophy adopted 2014-15 (gamecocksonline.com)"
+ },
+ {
+  "home": "Virginia Tech",
+  "away": "Virginia",
+  "day": "Sat 11/28",
+  "rivalry": "Commonwealth Clash",
+  "trophy": "Commonwealth Cup",
+  "source": "hokiesports.com schedule lists 'Smithfield Commonwealth Clash', Sat Nov 28, 3 p.m. ET, Blacksburg"
+ },
+ {
+  "home": "Georgia",
+  "away": "Georgia Tech",
+  "day": "Sat 11/28",
+  "rivalry": "Clean, Old-Fashioned Hate",
+  "trophy": "Governor's Cup",
+  "source": "georgiadogs.com 2026 schedule (Sat Nov 28, 3:30 p.m. ET, Athens)"
+ },
+ {
+  "home": "UCLA",
+  "away": "USC",
+  "day": "Sat 11/28",
+  "rivalry": "Battle for the Victory Bell",
+  "trophy": "Victory Bell",
+  "source": "usctrojans.com 2026 schedule (Sat Nov 28, 12:30 p.m. PT, Pasadena)"
+ },
+ {
+  "home": "Indiana",
+  "away": "Purdue",
+  "day": "Sat 11/28",
+  "rivalry": "Battle for the Old Oaken Bucket",
+  "trophy": "Old Oaken Bucket",
+  "source": "iuhoosiers.com 2026 schedule (Sat Nov 28, 7 p.m. ET, Bloomington)"
+ },
+ {
+  "home": "Alabama",
+  "away": "Auburn",
+  "day": "Sat 11/28",
+  "rivalry": "Iron Bowl",
+  "trophy": null,
+  "source": "rolltide.com 2026 schedule (Sat Nov 28, 6:30 p.m. CT, Tuscaloosa)"
+ },
+ {
+  "home": "Arizona",
+  "away": "Arizona State",
+  "day": "Sat 11/28",
+  "rivalry": "Territorial Cup",
+  "trophy": "Territorial Cup",
+  "source": "arizonawildcats.com 2026 schedule (Sat Nov 28, 7 p.m. MST, Tucson)"
+ },
+ {
+  "home": "UNLV",
+  "away": "Nevada",
+  "day": "Sat 11/28",
+  "rivalry": "Battle for Nevada",
+  "trophy": "Fremont Cannon",
+  "source": "unlvrebels.com + nevadawolfpack.com 2026 schedules (Sat Nov 28, 6 p.m. PT, Allegiant Stadium); trophy: nevadawolfpack.com/news/2025/11/29"
+ }
+]
