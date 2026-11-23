@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rivalry Week Look: Live Board</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="width: 1560px; height: 868px; box-sizing: border-box; padding: 0 0 8px; display: flex; gap: 40px; background: #e9e4da; font-family: var(--font-sans);">
+  <sc-for list="{{phones}}" as="p" hint-placeholder-count="4">
+    <div style="width: 360px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="height: 64px; box-sizing: border-box; padding-top: 8px;">
+        <div style="font: 700 16px/22px var(--font-sans); color: #241f1a;">{{p.label}}</div>
+        <div style="font: 400 13px/18px var(--font-sans); color: #5c5246;">{{p.sub}}</div>
+      </div>
+      <div style="{{p.rootStyle}}">
+        <sc-if value="{{p.laces}}" hint-placeholder-val="{{false}}">
+          <svg width="360" height="10" viewBox="0 0 360 10" aria-hidden="true" style="display: block; flex-shrink: 0;"><rect width="360" height="10" style="fill: var(--primary);"></rect><g style="stroke: var(--primary-foreground);" stroke-width="1.5" stroke-linecap="round"><line x1="148" y1="5" x2="212" y2="5"></line><line x1="156" y1="2" x2="156" y2="8"></line><line x1="164" y1="2" x2="164" y2="8"></line><line x1="172" y1="2" x2="172" y2="8"></line><line x1="180" y1="2" x2="180" y2="8"></line><line x1="188" y1="2" x2="188" y2="8"></line><line x1="196" y1="2" x2="196" y2="8"></line><line x1="204" y1="2" x2="204" y2="8"></line></g></svg>
+        </sc-if>
+        <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Live Board" sub="Week 13 · 1 live, 3 to kick off" right="{{p.menu}}"></x-import>
+        <sc-if value="{{p.band}}" hint-placeholder-val="{{false}}">
+          <div style="flex-shrink: 0; height: 28px; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--secondary); color: var(--secondary-foreground); font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase;">
+            <span aria-hidden="true" style="width: 24px; height: 1px; background: currentColor;"></span>
+            <span>Rivalry Week</span>
+            <span aria-hidden="true" style="width: 24px; height: 1px; background: currentColor;"></span>
+          </div>
+        </sc-if>
+
+        <div style="padding: 8px 16px 12px; border-bottom: 1px solid var(--border);">
+          <x-import component-from-global-scope="SaturdaySlateDesignSystem.StandingCard" label="Your place" place="3rd" detail="Points" figure="20"></x-import>
+        </div>
+
+        <ul style="flex: 1; min-height: 0; margin: 0; padding: 12px 16px; list-style: none; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+          <sc-for list="{{p.rows}}" as="r" hint-placeholder-count="4">
+            <li>
+              <button type="button" aria-label="{{r.aria}}" style="width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; box-sizing: border-box; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); text-align: left; font-family: var(--font-sans); cursor: pointer;">
+                <sc-if value="{{r.caps}}" hint-placeholder-val="{{false}}">
+                  <span style="font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">{{r.rivalry}}</span>
+                </sc-if>
+                <sc-if value="{{r.marquee}}" hint-placeholder-val="{{false}}">
+                  <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                    <span style="flex: 1; min-width: 0; font: 900 17px/22px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.rivalry}}</span>
+                    <span style="flex-shrink: 0; height: 3px; width: 24px; border-top: 3px double var(--secondary);"></span>
+                  </span>
+                </sc-if>
+                <span style="display: flex; min-height: 20px; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="{{r.topStyle}}">{{r.top}}</span>
+                  <sc-if value="{{r.pill}}" hint-placeholder-val="{{false}}">
+                    <span style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; box-sizing: border-box; border: 1px solid var(--secondary); border-radius: 999px; color: var(--secondary); font: 700 12px/16px var(--font-sans); white-space: nowrap;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" x2="19" y1="19" y2="13"></line><line x1="16" x2="20" y1="16" y2="20"></line><line x1="19" x2="21" y1="21" y2="19"></line><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="5" x2="9" y1="14" y2="18"></line><line x1="7" x2="4" y1="17" y2="20"></line><line x1="3" x2="5" y1="19" y2="21"></line></svg>
+                      {{r.rivalry}}
+                    </span>
+                  </sc-if>
+                  <sc-if value="{{r.live}}" hint-placeholder-val="{{false}}">
+                    <x-import component-from-global-scope="SaturdaySlateDesignSystem.Badge" variant="live">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><circle cx="12" cy="12" r="2"></circle><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path></svg>
+                      {{r.clock}}
+                    </x-import>
+                  </sc-if>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--muted-foreground);"><path d="m9 18 6-6-6-6"></path></svg>
+                </span>
+                <sc-for list="{{r.sides}}" as="s" hint-placeholder-count="2">
+                  <span style="display: grid; min-height: 32px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px;">
+                    <img src="{{s.logo}}" alt="" style="width: 22px; height: 22px; object-fit: contain;">
+                    <span style="display: flex; min-width: 0; align-items: center; gap: 6px;">
+                      <sc-if value="{{s.rank}}" hint-placeholder-val="{{false}}"><span style="flex-shrink: 0; font: 700 12px/16px var(--font-sans); color: var(--muted-foreground);">#{{s.rank}}</span></sc-if>
+                      <span style="{{s.nameStyle}}">{{s.name}}</span>
+                    </span>
+                    <span style="{{s.figStyle}}">{{s.fig}}</span>
+                  </span>
+                </sc-for>
+              </button>
+            </li>
+          </sc-for>
+        </ul>
+
+        <x-import component-from-global-scope="SaturdaySlateDesignSystem.BottomNav" tabs="{{p.tabs}}"></x-import>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1560,"height":868}}'>
+var B_TOKENS = '--background: #f5e7d9; --card: #fbf2e8; --popover: #fbf2e8; --muted: #ecd9c7; --accent: #f0dfcf; --muted-foreground: #665748; --secondary: #9c4314; --border: #93745a; --input: #93745a; --settled: #f1e2d3;';
+var LOOKS = [
+  { key: 'today', label: 'Today · no Look', sub: 'What every other Week wears' },
+  { key: 'A', label: 'A · The banner', sub: 'A rust band under every header; names as caps labels' },
+  { key: 'B', label: 'B · The paper', sub: 'The Week swaps the paper tokens; names as pills' },
+  { key: 'C', label: 'C · The program', sub: 'Laces across the top; rivalries billed in display type' }
+];
+var SAM = { flag: 'pine', pattern: 'sash', patternColor: 'gold', pole: 'tan', bg: 'auto' };
+var LOGO = {
+  'ole-miss': '/_blob/f8a8fd7edc90ef42a26eaccca636ee64', 'mississippi-state': '/_blob/bd834d6b9eea455b42e2274c0393dfc0',
+  minnesota: '/_blob/19b37b7f9ffc61864beacec274b0a254', wisconsin: '/_blob/ca401116e2a2790210f0321a015656bf',
+  michigan: '/_blob/bb8683c447689da4305311d09f3334dd', 'ohio-state': '/_blob/c03fc148ff44773fec5239a2691dfeff',
+  'notre-dame': '/_blob/ddcd1b6754d64bf1d6094effa60422f3', stanford: '/_blob/cd1befcbe04d74fdcb1cad1544aeb2ea'
+};
+var GAMES = [
+  { rivalry: 'Egg Bowl', live: true, clock: 'Q2 3:41', situation: '2nd & 7 at MSST 34',
+    away: { name: 'Miss. State', logo: 'mississippi-state', fig: '10', dim: true }, home: { name: 'Ole Miss', logo: 'ole-miss', rank: 14, fig: '14' } },
+  { rivalry: "Battle for Paul Bunyan's Axe", kickoff: 'Fri 3:00 PM',
+    away: { name: 'Minnesota', logo: 'minnesota', fig: '+3.5' }, home: { name: 'Wisconsin', logo: 'wisconsin', fig: '-3.5', fav: true } },
+  { rivalry: 'The Game', kickoff: 'Sat 11:00 AM',
+    away: { name: 'Michigan', logo: 'michigan', rank: 11, fig: '+7.5' }, home: { name: 'Ohio State', logo: 'ohio-state', rank: 2, fig: '-7.5', fav: true } },
+  { rivalry: null, kickoff: 'Sat 6:30 PM',
+    away: { name: 'Notre Dame', logo: 'notre-dame', rank: 7, fig: '-10', fav: true }, home: { name: 'Stanford', logo: 'stanford', fig: '+10' } }
+];
+function icon(h, parts) {
+  return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+    parts.map(function (p, i) { return h(p[0], Object.assign({ key: i }, p[1])); }));
+}
+function navTabs(h, active) {
+  return [
+    { href: '#', label: 'Picks', active: active === 'Picks', icon: icon(h, [['rect', { x: 8, y: 2, width: 8, height: 4, rx: 1 }], ['path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' }], ['path', { d: 'm9 14 2 2 4-4' }]]) },
+    { href: '#', label: 'Live Board', active: active === 'Live Board', icon: icon(h, [['path', { d: 'M4.9 19.1C1 15.2 1 8.8 4.9 4.9' }], ['path', { d: 'M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5' }], ['circle', { cx: 12, cy: 12, r: 2 }], ['path', { d: 'M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5' }], ['path', { d: 'M19.1 4.9C23 8.8 23 15.1 19.1 19' }]]) },
+    { href: '#', label: 'Leaderboard', active: active === 'Leaderboard', icon: icon(h, [['path', { d: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6' }], ['path', { d: 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18' }], ['path', { d: 'M4 22h16' }], ['path', { d: 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' }], ['path', { d: 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' }], ['path', { d: 'M18 2H6v7a6 6 0 0 0 12 0V2Z' }]]) },
+    { href: '#', label: 'Chat', active: active === 'Chat', icon: icon(h, [['path', { d: 'M7.9 20A9 9 0 1 0 4 16.1L2 22Z' }]]) }
+  ];
+}
+function phones(DS, h, active, extra) {
+  var mark = DS.pennantDataUri ? { name: 'Sam', file: DS.pennantDataUri(SAM), color: DS.pennantTint(SAM), kind: 'flag' } : undefined;
+  return LOOKS.map(function (l) {
+    var p = {
+      label: l.label, sub: l.sub,
+      isA: l.key === 'A', isB: l.key === 'B', isC: l.key === 'C',
+      band: l.key === 'A', laces: l.key === 'C',
+      rootStyle: 'position: relative; width: 360px; height: 780px; overflow: hidden; transform: translateZ(0); display: flex; flex-direction: column; background: var(--background); color: var(--foreground); font-family: var(--font-sans); box-shadow: 0 0 0 1px rgba(36,31,26,.3); ' + (l.key === 'B' ? B_TOKENS : ''),
+      menu: DS.MemberMenu ? h(DS.MemberMenu, { avatar: mark, displayName: 'Sam', group: 'Tailgate Twelve' }) : null,
+      tabs: navTabs(h, active)
+    };
+    return extra ? Object.assign(p, extra(l.key)) : p;
+  });
+}
+function side(s, live) {
+  var muted = s.dim;
+  return {
+    name: s.name, logo: LOGO[s.logo], rank: s.rank || null, fig: s.fig,
+    nameStyle: 'min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 900 17px/22px var(--font-display); color: ' + (muted ? 'var(--muted-foreground)' : 'var(--foreground)') + ';',
+    figStyle: live
+      ? 'min-width: 32px; text-align: right; font: 900 24px/28px var(--font-display); font-variant-numeric: tabular-nums; color: ' + (muted ? 'var(--muted-foreground)' : 'var(--foreground)') + ';'
+      : 'min-width: 32px; text-align: right; font: 900 17px/22px var(--font-display); font-variant-numeric: tabular-nums; color: ' + (s.fav ? 'var(--foreground)' : 'var(--muted-foreground)') + ';'
+  };
+}
+class Component extends DCLogic {
+  renderVals() {
+    var DS = window.SaturdaySlateDesignSystem || {};
+    var h = window.React.createElement;
+    return {
+      phones: phones(DS, h, 'Live Board', function (key) {
+        return {
+          rows: GAMES.map(function (g) {
+            var named = !!g.rivalry;
+            return {
+              aria: g.away.name + ' at ' + g.home.name + ', details',
+              rivalry: g.rivalry || '',
+              caps: named && key === 'A',
+              pill: named && key === 'B',
+              marquee: named && key === 'C',
+              live: !!g.live, clock: g.clock || '',
+              top: g.live ? g.situation : g.kickoff,
+              topStyle: 'flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; line-height: 16px; ' + (g.live ? 'font-weight: 700; color: var(--foreground);' : 'color: var(--muted-foreground);'),
+              sides: [side(g.away, g.live), side(g.home, g.live)]
+            };
+          })
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

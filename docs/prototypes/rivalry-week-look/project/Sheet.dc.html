@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rivalry Week Look: game sheet</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="width: 1560px; height: 868px; box-sizing: border-box; padding: 0 0 8px; display: flex; gap: 40px; background: #e9e4da; font-family: var(--font-sans);">
+  <sc-for list="{{phones}}" as="p" hint-placeholder-count="4">
+    <div style="width: 360px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="height: 64px; box-sizing: border-box; padding-top: 8px;">
+        <div style="font: 700 16px/22px var(--font-sans); color: #241f1a;">{{p.label}}</div>
+        <div style="font: 400 13px/18px var(--font-sans); color: #5c5246;">{{p.sub}}</div>
+      </div>
+      <div style="{{p.rootStyle}}">
+        <sc-if value="{{p.laces}}" hint-placeholder-val="{{false}}">
+          <svg width="360" height="10" viewBox="0 0 360 10" aria-hidden="true" style="display: block; flex-shrink: 0;"><rect width="360" height="10" style="fill: var(--primary);"></rect><g style="stroke: var(--primary-foreground);" stroke-width="1.5" stroke-linecap="round"><line x1="148" y1="5" x2="212" y2="5"></line><line x1="156" y1="2" x2="156" y2="8"></line><line x1="164" y1="2" x2="164" y2="8"></line><line x1="172" y1="2" x2="172" y2="8"></line><line x1="180" y1="2" x2="180" y2="8"></line><line x1="188" y1="2" x2="188" y2="8"></line><line x1="196" y1="2" x2="196" y2="8"></line><line x1="204" y1="2" x2="204" y2="8"></line></g></svg>
+        </sc-if>
+        <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Live Board" sub="Week 13 · 1 live, 3 to kick off" right="{{p.menu}}"></x-import>
+        <sc-if value="{{p.band}}" hint-placeholder-val="{{false}}">
+          <div style="flex-shrink: 0; height: 28px; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--secondary); color: var(--secondary-foreground); font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase;">
+            <span aria-hidden="true" style="width: 24px; height: 1px; background: currentColor;"></span>
+            <span>Rivalry Week</span>
+            <span aria-hidden="true" style="width: 24px; height: 1px; background: currentColor;"></span>
+          </div>
+        </sc-if>
+        <div style="flex: 1;"></div>
+        <x-import component-from-global-scope="SaturdaySlateDesignSystem.BottomNav" tabs="{{p.tabs}}"></x-import>
+
+        <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 40; background: rgba(36, 31, 26, 0.5);"></div>
+        <section role="dialog" aria-label="Mississippi State at Ole Miss" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 50; height: 650px; box-sizing: border-box; display: flex; flex-direction: column; border-top: 1px solid var(--border); border-radius: 14px 14px 0 0; background: var(--popover); color: var(--popover-foreground);">
+          <span aria-hidden="true" style="align-self: center; margin-top: 12px; width: 48px; height: 4px; border-radius: 999px; background: var(--muted);"></span>
+
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 16px 0;">
+            <sc-if value="{{p.isA}}" hint-placeholder-val="{{false}}">
+              <span style="font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Egg Bowl</span>
+              <span style="font-size: 13px; line-height: 18px; color: var(--muted-foreground);">For the Golden Egg</span>
+            </sc-if>
+            <sc-if value="{{p.isB}}" hint-placeholder-val="{{false}}">
+              <span style="display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; box-sizing: border-box; border: 1px solid var(--secondary); border-radius: 999px; color: var(--secondary); font: 700 12px/16px var(--font-sans); white-space: nowrap;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" x2="19" y1="19" y2="13"></line><line x1="16" x2="20" y1="16" y2="20"></line><line x1="19" x2="21" y1="21" y2="19"></line><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="5" x2="9" y1="14" y2="18"></line><line x1="7" x2="4" y1="17" y2="20"></line><line x1="3" x2="5" y1="19" y2="21"></line></svg>
+                Egg Bowl
+              </span>
+            </sc-if>
+            <sc-if value="{{p.isC}}" hint-placeholder-val="{{false}}">
+              <span style="font: 900 28px/34px var(--font-display);">Egg Bowl</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: var(--muted-foreground);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+                For the Golden Egg
+              </span>
+              <span aria-hidden="true" style="margin-top: 6px; width: 64px; border-top: 3px double var(--secondary);"></span>
+            </sc-if>
+          </div>
+
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 8px; padding: 10px 16px 12px;">
+            <div style="display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 4px;">
+              <img src="/_blob/bd834d6b9eea455b42e2274c0393dfc0" alt="" style="width: 56px; height: 56px; object-fit: contain;">
+              <span style="font: 900 17px/22px var(--font-display); color: var(--muted-foreground);">Miss. State</span>
+              <span style="font-size: 13px; line-height: 16px; font-weight: 500; color: var(--muted-foreground);">5–6</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 8px;">
+              <span style="display: flex; align-items: baseline; gap: 8px; font: 900 32px/40px var(--font-display); font-variant-numeric: tabular-nums;">
+                <span style="color: var(--muted-foreground);">10</span>
+                <span aria-hidden="true" style="font-size: 20px; color: var(--border);">–</span>
+                <span>14</span>
+              </span>
+              <x-import component-from-global-scope="SaturdaySlateDesignSystem.Badge" variant="live">Q2 3:41</x-import>
+            </div>
+            <div style="display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 4px;">
+              <img src="/_blob/f8a8fd7edc90ef42a26eaccca636ee64" alt="" style="width: 56px; height: 56px; object-fit: contain;">
+              <span style="font: 900 17px/22px var(--font-display);"><span style="font: 700 12px/16px var(--font-sans); color: var(--muted-foreground);">#14 </span>Ole Miss</span>
+              <span style="font-size: 13px; line-height: 16px; font-weight: 500; color: var(--muted-foreground);">9–2</span>
+            </div>
+          </div>
+
+          <sc-if value="{{p.isB}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 6px; padding: 0 16px 12px; font-size: 13px; line-height: 18px; color: var(--muted-foreground);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+              Playing for the Golden Egg
+            </div>
+          </sc-if>
+
+          <div style="padding: 0 16px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: grid; gap: 10px; box-sizing: border-box; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; box-sizing: border-box; border: 2px solid var(--primary); border-radius: 999px; background: var(--card);"><img src="/_blob/f8a8fd7edc90ef42a26eaccca636ee64" alt="" style="width: 26px; height: 26px; object-fit: contain;"></span>
+                <span style="flex: 1; min-width: 0;">
+                  <span style="display: block; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary);">Your pick</span>
+                  <span style="display: block; font: 900 18px/24px var(--font-display);">Ole Miss</span>
+                </span>
+                <span style="font-size: 13px; line-height: 18px; color: var(--muted-foreground);">Leading</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 20px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px; color: var(--muted-foreground);"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span>8 picked Ole Miss <span style="color: var(--muted-foreground);">· 4 picked Miss. State</span></span>
+            </div>
+            <div style="display: grid; gap: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground);">
+              <span style="font-weight: 700; color: var(--foreground);">2nd &amp; 7 at MSST 34</span>
+              <span>Pass complete for 12 yards to the MSST 34.</span>
+            </div>
+          </div>
+
+          <div style="flex: 1;"></div>
+          <div style="padding: 16px;">
+            <button type="button" style="width: 100%; height: 44px; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); font: 600 14px/20px var(--font-sans); cursor: pointer;">Close</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1560,"height":868}}'>
+var B_TOKENS = '--background: #f5e7d9; --card: #fbf2e8; --popover: #fbf2e8; --muted: #ecd9c7; --accent: #f0dfcf; --muted-foreground: #665748; --secondary: #9c4314; --border: #93745a; --input: #93745a; --settled: #f1e2d3;';
+var LOOKS = [
+  { key: 'today', label: 'Today · no Look', sub: 'What every other Week wears' },
+  { key: 'A', label: 'A · The banner', sub: 'Caps label, trophy as a muted line under it' },
+  { key: 'B', label: 'B · The paper', sub: 'Pill above, trophy line under the score' },
+  { key: 'C', label: 'C · The program', sub: 'The rivalry is the sheet’s headline' }
+];
+var SAM = { flag: 'pine', pattern: 'sash', patternColor: 'gold', pole: 'tan', bg: 'auto' };
+function icon(h, parts) {
+  return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+    parts.map(function (p, i) { return h(p[0], Object.assign({ key: i }, p[1])); }));
+}
+function navTabs(h, active) {
+  return [
+    { href: '#', label: 'Picks', active: active === 'Picks', icon: icon(h, [['rect', { x: 8, y: 2, width: 8, height: 4, rx: 1 }], ['path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' }], ['path', { d: 'm9 14 2 2 4-4' }]]) },
+    { href: '#', label: 'Live Board', active: active === 'Live Board', icon: icon(h, [['path', { d: 'M4.9 19.1C1 15.2 1 8.8 4.9 4.9' }], ['path', { d: 'M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5' }], ['circle', { cx: 12, cy: 12, r: 2 }], ['path', { d: 'M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5' }], ['path', { d: 'M19.1 4.9C23 8.8 23 15.1 19.1 19' }]]) },
+    { href: '#', label: 'Leaderboard', active: active === 'Leaderboard', icon: icon(h, [['path', { d: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6' }], ['path', { d: 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18' }], ['path', { d: 'M4 22h16' }], ['path', { d: 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' }], ['path', { d: 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' }], ['path', { d: 'M18 2H6v7a6 6 0 0 0 12 0V2Z' }]]) },
+    { href: '#', label: 'Chat', active: active === 'Chat', icon: icon(h, [['path', { d: 'M7.9 20A9 9 0 1 0 4 16.1L2 22Z' }]]) }
+  ];
+}
+function phones(DS, h, active, extra) {
+  var mark = DS.pennantDataUri ? { name: 'Sam', file: DS.pennantDataUri(SAM), color: DS.pennantTint(SAM), kind: 'flag' } : undefined;
+  return LOOKS.map(function (l) {
+    var p = {
+      label: l.label, sub: l.sub,
+      isA: l.key === 'A', isB: l.key === 'B', isC: l.key === 'C',
+      band: l.key === 'A', laces: l.key === 'C',
+      rootStyle: 'position: relative; width: 360px; height: 780px; overflow: hidden; transform: translateZ(0); display: flex; flex-direction: column; background: var(--background); color: var(--foreground); font-family: var(--font-sans); box-shadow: 0 0 0 1px rgba(36,31,26,.3); ' + (l.key === 'B' ? B_TOKENS : ''),
+      menu: DS.MemberMenu ? h(DS.MemberMenu, { avatar: mark, displayName: 'Sam', group: 'Tailgate Twelve' }) : null,
+      tabs: navTabs(h, active)
+    };
+    return extra ? Object.assign(p, extra(l.key)) : p;
+  });
+}
+class Component extends DCLogic {
+  renderVals() {
+    var DS = window.SaturdaySlateDesignSystem || {};
+    var h = window.React.createElement;
+    return { phones: phones(DS, h, 'Live Board') };
+  }
+}
+</script>
+</body>
+</html>

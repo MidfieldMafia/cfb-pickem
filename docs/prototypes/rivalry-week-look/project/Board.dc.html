@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rivalry Week Look: Leaderboard</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/tokens.css">
+<link rel="stylesheet" href="ds/saturdayslatedesignsystem/components/bundle.css">
+<script src="ds/saturdayslatedesignsystem/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--foreground)}a:hover{color:var(--primary)}
+</style>
+</helmet>
+<div style="width: 1560px; height: 868px; box-sizing: border-box; padding: 0 0 8px; display: flex; gap: 40px; background: #e9e4da; font-family: var(--font-sans);">
+  <sc-for list="{{phones}}" as="p" hint-placeholder-count="4">
+    <div style="width: 360px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="height: 64px; box-sizing: border-box; padding-top: 8px;">
+        <div style="font: 700 16px/22px var(--font-sans); color: #241f1a;">{{p.label}}</div>
+        <div style="font: 400 13px/18px var(--font-sans); color: #5c5246;">{{p.sub}}</div>
+      </div>
+      <div style="{{p.rootStyle}}">
+        <sc-if value="{{p.laces}}" hint-placeholder-val="{{false}}">
+          <svg width="360" height="10" viewBox="0 0 360 10" aria-hidden="true" style="display: block; flex-shrink: 0;"><rect width="360" height="10" style="fill: var(--primary);"></rect><g style="stroke: var(--primary-foreground);" stroke-width="1.5" stroke-linecap="round"><line x1="148" y1="5" x2="212" y2="5"></line><line x1="156" y1="2" x2="156" y2="8"></line><line x1="164" y1="2" x2="164" y2="8"></line><line x1="172" y1="2" x2="172" y2="8"></line><line x1="180" y1="2" x2="180" y2="8"></line><line x1="188" y1="2" x2="188" y2="8"></line><line x1="196" y1="2" x2="196" y2="8"></line><line x1="204" y1="2" x2="204" y2="8"></line></g></svg>
+        </sc-if>
+        <x-import component-from-global-scope="SaturdaySlateDesignSystem.AppHeader" title="Leaderboard" sub="2026 · Week 13 · In progress" right="{{p.menu}}"></x-import>
+        <sc-if value="{{p.band}}" hint-placeholder-val="{{false}}">
+          <div style="flex-shrink: 0; height: 28px; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--secondary); color: var(--secondary-foreground); font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase;">
+            <span aria-hidden="true" style="width: 24px; height: 1px; background: currentColor;"></span>
+            <span>Rivalry Week</span>
+            <span aria-hidden="true" style="width: 24px; height: 1px; background: currentColor;"></span>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; padding-top: 12px;">
+          <nav aria-label="Standings" style="display: flex; gap: 4px; padding: 0 16px 2px; overflow: hidden;">
+            <sc-for list="{{p.tiles}}" as="t" hint-placeholder-count="6">
+              <a href="#" aria-label="{{t.label}}" style="{{t.box}}">
+                <span style="{{t.capStyle}}">{{t.caption}}</span>
+                <span style="{{t.titleStyle}}">{{t.title}}</span>
+                <span style="{{t.placeStyle}}">{{t.place}}</span>
+              </a>
+            </sc-for>
+          </nav>
+
+          <section style="padding: 0 16px;">
+            <div style="border: 1px solid var(--border); border-radius: 14px; background: var(--card); overflow: hidden;">
+              <div aria-hidden="true" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground);">
+                <span style="flex: 1;"></span>
+                <span style="width: 36px; text-align: right;">W–L</span>
+                <span style="width: 40px; text-align: right;">Pts</span>
+                <span style="width: 32px; text-align: right;">Max</span>
+              </div>
+              <ul style="list-style: none; margin: 0; padding: 0;">
+                <sc-for list="{{p.rows}}" as="r" hint-placeholder-count="6">
+                  <li style="{{r.rowStyle}}">
+                    <span style="width: 16px; font-size: 14px; line-height: 20px; color: var(--muted-foreground);">{{r.place}}</span>
+                    <x-import component-from-global-scope="SaturdaySlateDesignSystem.Pennant" avatar="{{r.avatar}}" name="{{r.name}}" size="{{r.size}}"></x-import>
+                    <span style="min-width: 0; flex: 1; display: flex; align-items: center; gap: 6px;">
+                      <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</span>
+                      <sc-if value="{{r.you}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: var(--muted-foreground);">you</span></sc-if>
+                    </span>
+                    <span style="width: 36px; text-align: right; font-size: 14px; line-height: 20px; color: var(--muted-foreground); font-variant-numeric: tabular-nums;">{{r.record}}</span>
+                    <span style="width: 40px; text-align: right; font: 900 18px/28px var(--font-display); font-variant-numeric: tabular-nums;">{{r.points}}</span>
+                    <span style="width: 32px; text-align: right; font: 600 14px/20px var(--font-sans); color: var(--muted-foreground); font-variant-numeric: tabular-nums;">{{r.max}}</span>
+                  </li>
+                </sc-for>
+              </ul>
+            </div>
+            <p style="margin: 0; padding-top: 12px; font-size: 14px; line-height: 20px; color: var(--muted-foreground);">Dee leads the Week with 30.</p>
+          </section>
+
+          <div style="display: flex; flex-direction: column; padding: 0 16px;">
+            <a href="#" style="min-height: 44px; display: flex; align-items: center; font: 600 14px/20px var(--font-sans); text-decoration: underline;">How scoring and ties work</a>
+          </div>
+        </div>
+
+        <x-import component-from-global-scope="SaturdaySlateDesignSystem.BottomNav" tabs="{{p.tabs}}"></x-import>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1560,"height":868}}'>
+var B_TOKENS = '--background: #f5e7d9; --card: #fbf2e8; --popover: #fbf2e8; --muted: #ecd9c7; --accent: #f0dfcf; --muted-foreground: #665748; --secondary: #9c4314; --border: #93745a; --input: #93745a; --settled: #f1e2d3;';
+var LOOKS = [
+  { key: 'today', label: 'Today · no Look', sub: 'What every other Week wears' },
+  { key: 'A', label: 'A · The banner', sub: 'The band, nothing else' },
+  { key: 'B', label: 'B · The paper', sub: 'The paper, nothing else' },
+  { key: 'C', label: 'C · The program', sub: 'The laces, nothing else' }
+];
+var SAM = { flag: 'pine', pattern: 'sash', patternColor: 'gold', pole: 'tan', bg: 'auto' };
+var MEMBERS = [
+  { name: 'Dee', d: { flag: 'maroon', pattern: 'chevrons', patternColor: 'cream', pole: 'ink', bg: 'auto' }, s: [1, '3–0', 30, 120] },
+  { name: 'Marcus', d: { flag: 'sky', pattern: 'star', patternColor: 'cream', pole: 'ink', bg: 'auto' }, s: [2, '2–1', 20, 110] },
+  { name: 'Sam', you: true, d: SAM, s: [2, '2–1', 20, 100] },
+  { name: 'Kim', d: { flag: 'copper', pattern: 'tip', patternColor: 'ink', pole: 'stone', bg: 'auto' }, s: [4, '1–2', 10, 100] },
+  { name: 'Ray', d: { flag: 'moss', pattern: 'dot', patternColor: 'cream', pole: 'ink', bg: 'auto' }, s: [4, '1–1', 10, 90] },
+  { name: 'Tasha', d: { flag: 'slate', pattern: 'cross', patternColor: 'cream', pole: 'gold', bg: 'auto' }, s: [6, '0–3', 0, 90] }
+];
+function icon(h, parts) {
+  return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+    parts.map(function (p, i) { return h(p[0], Object.assign({ key: i }, p[1])); }));
+}
+function navTabs(h, active) {
+  return [
+    { href: '#', label: 'Picks', active: active === 'Picks', icon: icon(h, [['rect', { x: 8, y: 2, width: 8, height: 4, rx: 1 }], ['path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' }], ['path', { d: 'm9 14 2 2 4-4' }]]) },
+    { href: '#', label: 'Live Board', active: active === 'Live Board', icon: icon(h, [['path', { d: 'M4.9 19.1C1 15.2 1 8.8 4.9 4.9' }], ['path', { d: 'M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5' }], ['circle', { cx: 12, cy: 12, r: 2 }], ['path', { d: 'M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5' }], ['path', { d: 'M19.1 4.9C23 8.8 23 15.1 19.1 19' }]]) },
+    { href: '#', label: 'Leaderboard', active: active === 'Leaderboard', icon: icon(h, [['path', { d: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6' }], ['path', { d: 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18' }], ['path', { d: 'M4 22h16' }], ['path', { d: 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' }], ['path', { d: 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' }], ['path', { d: 'M18 2H6v7a6 6 0 0 0 12 0V2Z' }]]) },
+    { href: '#', label: 'Chat', active: active === 'Chat', icon: icon(h, [['path', { d: 'M7.9 20A9 9 0 1 0 4 16.1L2 22Z' }]]) }
+  ];
+}
+function phones(DS, h, active, extra) {
+  var mark = DS.pennantDataUri ? { name: 'Sam', file: DS.pennantDataUri(SAM), color: DS.pennantTint(SAM), kind: 'flag' } : undefined;
+  return LOOKS.map(function (l) {
+    var p = {
+      label: l.label, sub: l.sub,
+      isA: l.key === 'A', isB: l.key === 'B', isC: l.key === 'C',
+      band: l.key === 'A', laces: l.key === 'C',
+      rootStyle: 'position: relative; width: 360px; height: 780px; overflow: hidden; transform: translateZ(0); display: flex; flex-direction: column; background: var(--background); color: var(--foreground); font-family: var(--font-sans); box-shadow: 0 0 0 1px rgba(36,31,26,.3); ' + (l.key === 'B' ? B_TOKENS : ''),
+      menu: DS.MemberMenu ? h(DS.MemberMenu, { avatar: mark, displayName: 'Sam', group: 'Tailgate Twelve' }) : null,
+      tabs: navTabs(h, active)
+    };
+    return extra ? Object.assign(p, extra(l.key)) : p;
+  });
+}
+function tile(caption, title, place, opts) {
+  var cur = !!opts.current;
+  var season = !!opts.season;
+  return {
+    caption: caption, title: title, place: place, label: opts.label,
+    box: 'display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; flex-shrink: 0; height: 64px; width: ' + (season ? 64 : 48) + 'px; box-sizing: border-box; border-radius: 6px; text-decoration: none; border: 1px solid ' + (cur ? 'var(--primary)' : 'var(--border)') + '; background: ' + (cur ? 'var(--primary)' : 'var(--card)') + '; color: ' + (cur ? 'var(--primary-foreground)' : 'var(--foreground)') + ';',
+    capStyle: 'font: 700 11px/12px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: ' + (cur ? 'var(--primary-foreground)' : 'var(--secondary)') + ';',
+    titleStyle: 'font: 900 ' + (season ? '12px' : '22px') + '/24px var(--font-display);',
+    placeStyle: 'height: 16px; font: 700 12px/16px var(--font-sans); color: ' + (cur ? 'var(--primary-foreground)' : 'var(--muted-foreground)') + ';'
+  };
+}
+class Component extends DCLogic {
+  renderVals() {
+    var DS = window.SaturdaySlateDesignSystem || {};
+    var h = window.React.createElement;
+    var tiles = [
+      tile('2026', 'Season', '3rd', { season: true, label: 'Season, 3rd' }),
+      tile('Week', '13', '2nd', { current: true, label: 'Week 13, 2nd' }),
+      tile('Week', '12', '1st', { label: 'Week 12, 1st' }),
+      tile('Week', '11', '4th', { label: 'Week 11, 4th' }),
+      tile('Week', '10', '2nd', { label: 'Week 10, 2nd' }),
+      tile('Week', '9', '5th', { label: 'Week 9, 5th' })
+    ];
+    var rows = MEMBERS.map(function (m, i) {
+      return {
+        name: m.name, you: !!m.you, size: 28,
+        avatar: DS.pennantDataUri ? { name: m.name, file: DS.pennantDataUri(m.d), color: DS.pennantTint(m.d), kind: 'flag' } : undefined,
+        place: m.s[0], record: m.s[1], points: m.s[2], max: m.s[3],
+        rowStyle: 'display: flex; align-items: center; gap: 8px; padding: 12px;' + (i ? ' border-top: 1px solid var(--border);' : '') + (m.you ? ' background: var(--muted);' : '')
+      };
+    });
+    return { phones: phones(DS, h, 'Leaderboard', function () { return { tiles: tiles, rows: rows }; }) };
+  }
+}
+</script>
+</body>
+</html>

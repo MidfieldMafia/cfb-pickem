@@ -1,0 +1,32 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-23T20:30:00Z" },
+  "title": "Rivalry Week Look",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1560, "h": 868, "title": "Picks · the Iron Bowl, no trophy" },
+    "Live.dc.html": { "x": 0, "y": 988, "w": 1560, "h": 868, "title": "Live Board · three rivalries and one ordinary game" },
+    "Sheet.dc.html": { "x": 0, "y": 1976, "w": 1560, "h": 868, "title": "Game sheet · the Egg Bowl, for the Golden Egg" },
+    "Board.dc.html": { "x": 0, "y": 2964, "w": 1560, "h": 868, "title": "Leaderboard · chrome only" },
+    "Splash.dc.html": { "x": 0, "y": 3952, "w": 1560, "h": 868, "title": "Launch screen" }
+  },
+  "order": ["Main.dc.html", "Live.dc.html", "Sheet.dc.html", "Board.dc.html", "Splash.dc.html"],
+  "noteOrder": ["title", "how", "a", "b", "c"],
+  "notes": {
+    "title": { "x": 0, "y": -300, "text": "Rivalry Week Look: pick a column", "kind": "title1", "maxW": 1560 },
+    "how": { "x": 1640, "y": 0, "w": 400, "fill": "gray", "text": "Each board is one screen. Each column is one direction, the same in every board: Today (no Look), then A, B and C. Read a column top to bottom to see a direction across the app.\n\nChat, Settings and You carry no rivalry names, so they wear only the chrome, the same way the Leaderboard does: A's band, B's paper or C's laces.\n\nThe home-screen app icon stays the same in every direction. It can't change week to week." },
+    "a": { "x": 1640, "y": 560, "w": 400, "fill": "orange", "text": "A · The banner. No tokens change. A 28px rust band reading RIVALRY WEEK sits under every header and on the launch screen. A rivalry name is a rust caps label above its game: on the Picks kickoff line, on a Live Board row, and in the game sheet, where the trophy follows as a muted line.\n\nBuild: weekLook(week) gives each screen \"rivalry\". One RivalryBand component goes under AppHeader and the Picks header, plus one caps label." },
+    "b": { "x": 1640, "y": 1120, "w": 400, "fill": "teal", "text": "B · The paper. The whole app changes paper for the Week. A .look-rivalry class on <html> overrides 8 tokens: background, card, popover, muted, accent, muted-foreground, border/input and settled, with rust darkened to #9c4314 so caps labels still pass 4.5:1 on muted. Pine stays the chosen team. A rivalry name is a rust outline pill with crossed swords, set where the Tiebreaker and Void badges sit. The trophy appears only in the game sheet, under the score.\n\nBuild: weekLook sets the class in the root layout, plus one RivalryPill. This direction is the cheapest to build and the most app-wide." },
+    "c": { "x": 1640, "y": 1680, "w": 400, "fill": "green", "text": "C · The program. A 10px pine strip with football laces runs across the top of every screen and frames the launch screen. Rivalry games get top billing: the name in Chivo display type above the matchup on Picks, as the row title on the Live Board, and as the game sheet's headline with \"For the <trophy>\" under it. Ordinary games stay as they are.\n\nBuild: one Laces asset in the header slot, plus a RivalryTitle used in three places. The rows grow by about 20px." }
+  },
+  "designSystems": [
+    {
+      "title": "Saturday Slate Design System",
+      "namespace": "saturdayslatedesignsystem",
+      "artifact": "https://claude.ai/artifact/LaNEaker2yyAez16eThdfU",
+      "version": "1794542380-c65b",
+      "copiedAt": "2026-11-23T20:30:00Z"
+    }
+  ]
+}
