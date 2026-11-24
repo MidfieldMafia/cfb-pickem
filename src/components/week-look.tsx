@@ -28,7 +28,7 @@ export function useWeekLook(): WeekLook | null {
   return useContext(LookContext);
 }
 
-/** The band's own height, for anything that sticks just below it. */
+/** The band's own height (its `h-7`), for anything that sticks just below it. */
 export const BAND_HEIGHT = 28;
 
 /**
