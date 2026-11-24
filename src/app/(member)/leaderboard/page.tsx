@@ -7,6 +7,7 @@ import { closeGamesAfter } from "@/lib/push/close-game-after";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
+import { RivalryBand } from "@/components/week-look";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { effectiveResult, seasonResult } from "@/lib/results/results";
@@ -76,6 +77,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
         }
         right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
       />
+      <RivalryBand className="-mt-4" />
 
       {/* The content under the header: the Welcome Tour's `leaderboard-screen` target. */}
       <div data-tour="leaderboard-screen" className="flex flex-1 flex-col gap-4">

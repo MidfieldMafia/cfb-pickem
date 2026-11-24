@@ -4,6 +4,7 @@ import { AppHeader, SECTION_LABEL, CopyButton, Badge, Card, Input, Select } from
 
 import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
+import { RivalryBand } from "@/components/week-look";
 
 import { appUrl } from "@/lib/app-url";
 import { currentManageHref } from "@/lib/groups/current";
@@ -59,6 +60,7 @@ export default async function Manage({ params }: { params: Promise<{ groupId: st
         sub={`${view.group.name} · ${plural(view.members.length, "member")}`}
         right={<MemberMenu member={member} manage={await currentManageHref()} />}
       />
+      <RivalryBand className="-mt-4" />
 
       <Card asChild className="mx-4 gap-3">
         <section>

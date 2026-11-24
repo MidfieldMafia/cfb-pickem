@@ -8,6 +8,7 @@ import { Football } from "@/components/football";
 import { MemberMenu } from "@/components/member-menu";
 import { Pennant } from "@/components/pennant";
 import { TeamLogo } from "@/components/team-logo";
+import { BAND_HEIGHT, RivalryBand, useWeekLook } from "@/components/week-look";
 
 import { GameSheet } from "./game-sheet";
 
@@ -440,6 +441,7 @@ export function LiveBoard({
   const { state, nextPollAt } = useWeekState(initial);
   const [openGameId, setOpenGameId] = useState<number | null>(startGameId);
   const members = new Map(state.members.map((m) => [m.id, m]));
+  const banded = useWeekLook() === "rivalry";
   const weekNumber = state.week.weekNumber;
   const sub = state.locked
     ? state.complete
@@ -468,11 +470,16 @@ export function LiveBoard({
           right={<MemberMenu member={viewer} group={switcher} manage={manage} />}
         />
       </div>
+      <RivalryBand className="-mt-3" />
 
       {/* The content under the header, sticky block included: the Welcome Tour's `live-screen` target. */}
       <div data-tour="live-screen" className="flex flex-1 flex-col gap-3">
         {/* Stays put while the games scroll: the freshness line and the viewer's own rank are the header of every card below. */}
-        <div className="sticky top-[env(safe-area-inset-top)] z-10 space-y-3 border-b border-border bg-background px-4 pb-3">
+        {/* With the Rivalry Week band on, it sticks just below the band rather than over it. */}
+        <div
+          className="sticky z-10 space-y-3 border-b border-border bg-background px-4 pb-3"
+          style={{ top: banded ? `calc(env(safe-area-inset-top) + ${BAND_HEIGHT}px)` : "env(safe-area-inset-top)" }}
+        >
           {state.complete ? null : <FreshnessLine serverNow={state.serverNow} nextPollAt={nextPollAt} />}
           <YourRank state={state} viewer={viewer} />
         </div>

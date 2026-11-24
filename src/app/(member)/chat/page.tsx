@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
+import { RivalryBand } from "@/components/week-look";
 import { chatThread, markRead, mentionPeople } from "@/lib/chat/chat";
 import { toChatStateJson } from "@/lib/chat/json";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
@@ -40,6 +41,7 @@ export default async function Chat() {
           right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
         />
       </div>
+      <RivalryBand />
       {/* The thread and its composer: the Welcome Tour's `chat-screen` target. `min-h-0` keeps the thread scrolling inside its own box. */}
       <div data-tour="chat-screen" className="flex min-h-0 flex-1 flex-col">
         {/* Keyed on the Group, so switching boards starts the thread, its poll and its draft afresh. */}
