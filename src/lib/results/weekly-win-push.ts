@@ -46,6 +46,9 @@ export const weeklyWinLink = (groupId: number, weekNumber: number) => `/go?group
 
 type Named = { id: number; displayName: string };
 
+/** The Weekly Win as the push tells it. */
+type WinToTell = Pick<WeeklyWin, "decidedBy" | "points"> & { winners: Named[] };
+
 /**
  * What the push says to `memberId`: who won and how, or for a winner, their
  * own line. A winner of a shared Week reads their own line too.
@@ -56,7 +59,7 @@ type Named = { id: number; displayName: string };
  * the lone Week winner is the champion, two when they differ.
  */
 export function weeklyWinBody(
-  win: Pick<WeeklyWin, "decidedBy" | "points"> & { winners: Named[] },
+  win: WinToTell,
   weekNumber: number,
   memberId: number,
   champions: Named[] = [],
@@ -81,11 +84,11 @@ export function weeklyWinBody(
 }
 
 /** The Week's line for a member who did not win it. Week 13's names the Week on points, beside the title. */
-function othersWon(win: Pick<WeeklyWin, "decidedBy" | "points"> & { winners: Named[] }, weekNumber: number, named: boolean) {
+function othersWon(win: WinToTell, weekNumber: number, namesWeek: boolean) {
   const who = listNames(win.winners);
   switch (win.decidedBy) {
     case "points":
-      return `${who} won${named ? ` Week ${weekNumber}` : ""} with ${plural(win.points, "point")}.`;
+      return `${who} won${namesWeek ? ` Week ${weekNumber}` : ""} with ${plural(win.points, "point")}.`;
     case "tiebreaker":
       return `${who} won on the tiebreaker.`;
     case "shared":
@@ -129,7 +132,7 @@ async function refreshed(db: Db, cfbd: () => CfbdClient, slate: Slate, now: Date
  * the Week being told is Week 13; empty for every other Week. Read before the
  * reservation, so a failed read sends nothing rather than spending the push.
  */
-async function championsAfter(db: Db, groupId: number, weekNumber: number, now: Date): Promise<Named[]> {
+async function championsToName(db: Db, groupId: number, weekNumber: number, now: Date): Promise<Named[]> {
   if (weekNumber !== REGULAR_SEASON_FINAL_WEEK) return [];
   return (await seasonResult(db, groupId, now)).champion?.members ?? [];
 }
@@ -152,7 +155,7 @@ export async function runWeeklyWinPush(
   for (const group of allGroups) {
     const { weeklyWin } = await weekResult(db, group.id, slate, now);
     if (!weeklyWin) continue;
-    const champions = await championsAfter(db, group.id, week.weekNumber, now);
+    const champions = await championsToName(db, group.id, week.weekNumber, now);
     if (!(await reserve(db, pushKey.win(week.id, group.id)))) continue;
     const recipients = (await groupBoard(db, group.id))
       .map((entry) => entry.member)
