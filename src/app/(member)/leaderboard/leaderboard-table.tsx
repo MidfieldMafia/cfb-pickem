@@ -8,6 +8,7 @@ import { Pennant } from "@/components/pennant";
 
 import type { LeaderboardRow } from "@/lib/results/json";
 import { movement, tiebreakerMissLabel, winRateLabel, type Movement } from "@/lib/results/summary";
+import type { StillAlive } from "@/lib/results/still-alive";
 import { sortLeaderboard, type SortColumn, type SortDirection } from "./leaderboard-sort";
 import { SolidTrophy } from "./solid-trophy";
 
@@ -206,18 +207,39 @@ function SortableHead({
 }
 
 /**
+ * The rust caps line under a member's name while they can still finish first
+ * (#590, design B of #587). Weight 700 for "Still alive", 800 for the one
+ * line that is a result of sorts, "Clinched the title"; never wraps.
+ */
+function AliveMark({ clinched }: { clinched: boolean }) {
+  return (
+    <span
+      data-still-alive
+      className={`text-[11px] leading-[14px] tracking-[0.08em] whitespace-nowrap text-secondary uppercase ${clinched ? "font-extrabold" : "font-bold"}`}
+    >
+      {clinched ? "Clinched the title" : "Still alive"}
+    </span>
+  );
+}
+
+/**
  * `championId` is the member the Trophy belongs to, decided by the page
  * (`seasonChampion`): the Trophy marks the season's winner and nobody mid-season,
  * when a mark beside whoever happens to be leading reads as a result.
+ *
+ * `stillAlive` is the page's answer (`stillAlive`) to who can still finish
+ * first before Week 13 kicks off: null on every other day of the season.
  */
 export function LeaderboardTable({
   rows,
   viewerId,
   championId,
+  stillAlive = null,
 }: {
   rows: LeaderboardRow[];
   viewerId: number;
   championId: number | null;
+  stillAlive?: StillAlive | null;
 }) {
   // Reinitialized on every mount, so leaving the screen and coming back — a
   // reload — always starts from the default order (#134).
@@ -268,20 +290,26 @@ export function LeaderboardTable({
                     and no more: without it a table cell grows to fit its text,
                     so a long name pushed Miss off a phone instead of truncating. */}
                 <TableCell className="w-full max-w-0">
-                  <span className="flex items-center gap-2">
-                    <Pennant avatarId={row.member.avatarId} name={row.member.displayName} size={28} />
-                    {/* min-w-0 is what lets the name truncate rather than widen the column. */}
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate font-semibold">{row.member.displayName}</span>
-                      {/* The row's highlight marks you on screen; a visible "you"
-                          cost the name its room on a phone (#336). */}
-                      {you ? <span className="sr-only">(you)</span> : null}
-                      {row.member.id === championId ? (
-                        <Badge variant="leader">
-                          <Trophy size={12} aria-hidden /> <span className="sr-only">Season champion</span>
-                        </Badge>
-                      ) : null}
+                  <span className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-2">
+                      <Pennant avatarId={row.member.avatarId} name={row.member.displayName} size={28} />
+                      {/* min-w-0 is what lets the name truncate rather than widen the column. */}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-semibold">{row.member.displayName}</span>
+                        {/* The row's highlight marks you on screen; a visible "you"
+                            cost the name its room on a phone (#336). */}
+                        {you ? <span className="sr-only">(you)</span> : null}
+                        {row.member.id === championId ? (
+                          <Badge variant="leader">
+                            <Trophy size={12} aria-hidden /> <span className="sr-only">Season champion</span>
+                          </Badge>
+                        ) : null}
+                      </span>
                     </span>
+                    {/* Under the Pennant as well as the name, not indented to the
+                        name: "Clinched the title" is 125px in caps and the name
+                        column has 110 at 360px, so it ran under the Pts figure. */}
+                    {stillAlive?.alive.includes(row.member.id) ? <AliveMark clinched={stillAlive.clinched} /> : null}
                   </span>
                 </TableCell>
                 <TableCell className={`${NUMERIC} font-display text-lg font-black`}>

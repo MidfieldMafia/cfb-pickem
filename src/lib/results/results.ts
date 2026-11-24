@@ -457,6 +457,7 @@ async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPa
 /** The Leaderboard and the played Weeks, as the read models screens take. */
 function seasonView({ season, played, rows, graded, champion }: SeasonPass): SeasonResult {
   const byId = memberIndex(rows);
+  const stillIn = new Set(rows.filter((m) => m.active).map((m) => m.id));
   // The engine answers in week numbers, which are unique within a season; nothing here leans on read order.
   const weekOf = new Map(played.map((w) => [w.weekNumber, w]));
   return {
@@ -464,6 +465,7 @@ function seasonView({ season, played, rows, graded, champion }: SeasonPass): Sea
     weeks: graded.weeks.map((result) => toGradedWeek(weekOf.get(result.weekNumber)!, result, byId)),
     leaderboard: graded.leaderboard.map(({ memberId, ...rest }) => ({
       member: byId.get(memberId)!,
+      active: stillIn.has(Number(memberId)),
       ...rest,
     })),
     champion: champion && {

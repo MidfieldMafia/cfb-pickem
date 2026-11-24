@@ -16,6 +16,7 @@ function member(id: number) {
 function row(id: number, overrides: Partial<LeaderboardRow> = {}): LeaderboardRow {
   return {
     member: member(id),
+    active: true,
     rank: id,
     previousRank: null,
     totalPoints: 0,

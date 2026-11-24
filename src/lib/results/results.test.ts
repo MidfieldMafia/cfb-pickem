@@ -230,6 +230,7 @@ describe("the season leaderboard", () => {
     expect(season.leaderboard).toEqual([
       {
         member: { id: grandma.id, displayName: "Grandma", avatarId: null },
+        active: true,
         rank: 1,
         // Week 2 is the only played week, so there is no earlier board to have moved from.
         previousRank: null,
@@ -245,6 +246,7 @@ describe("the season leaderboard", () => {
       },
       {
         member: { id: jonah.id, displayName: "Jonah", avatarId: null },
+        active: true,
         rank: 2,
         previousRank: null,
         totalPoints: 10,
@@ -426,6 +428,11 @@ describe("the Regular Season Champion", () => {
 
     const season = await seasonForFamily(db, SUNDAY);
     expect(season.leaderboard[0].member.displayName).toBe("Grandma");
+    // The row stays, flagged, for the still-alive mark to pass over (#590).
+    expect(season.leaderboard.map((r) => [r.member.displayName, r.active])).toEqual([
+      ["Grandma", false],
+      ["Jonah", true],
+    ]);
     expect(crowned(season)).toEqual({ names: ["Jonah"], points: 10, corrected: false });
   });
 });

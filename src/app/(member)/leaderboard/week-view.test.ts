@@ -44,6 +44,7 @@ function week(weekNumber: number, complete: boolean, scores: WeeklyScore[] = [],
 function row(id: number, rank: number): LeaderboardRow {
   return {
     member: member(id),
+    active: true,
     rank,
     previousRank: null,
     totalPoints: 0,

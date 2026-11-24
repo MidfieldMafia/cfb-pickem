@@ -110,6 +110,8 @@ export interface WeeklyWin {
 
 export interface LeaderboardRow {
   member: ScoredMember;
+  /** False once the member has left the group: a row they keep while they have Picks, but never marked or crowned. */
+  active: boolean;
   /** 1-based; members that tie on every season tiebreak share a rank. */
   rank: number;
   /** The place this rank moved from; null when there is no earlier board to have held one on. */
