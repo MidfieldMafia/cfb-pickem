@@ -7,7 +7,7 @@ import { chatThread, markRead, mentionPeople } from "@/lib/chat/chat";
 import { toChatStateJson } from "@/lib/chat/json";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
-import { regularSeasonChampion } from "@/lib/results/results";
+import { seasonResult } from "@/lib/results/results";
 import { plural } from "@/lib/plural";
 import { toMemberJson } from "@/lib/slate/json";
 import { ChampionBanner } from "./champion-banner";
@@ -29,10 +29,10 @@ export default async function Chat() {
   const group = choice.current;
   const now = new Date();
   // `people` is the Group's active Members now, the same count the header has always shown.
-  const [thread, people, champion] = await Promise.all([
+  const [thread, people, { champion }] = await Promise.all([
     chatThread(db(), member, group.id),
     mentionPeople(db(), member, group.id),
-    regularSeasonChampion(db(), group.id, now),
+    seasonResult(db(), group.id, now),
   ]);
   await markRead(db(), member.id, group.id, thread);
   const members = people.length;

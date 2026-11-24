@@ -489,8 +489,3 @@ function seasonView({ season, played, rows, graded, champion }: SeasonPass): Sea
 export async function seasonResult(db: Db, groupId: number, now: Date = new Date()): Promise<SeasonResult> {
   return seasonView(await gradeSeason(db, groupId, now));
 }
-
-/** The group's Regular Season Champion, for a screen that shows it without the board: null until Week 13 is settled. */
-export async function regularSeasonChampion(db: Db, groupId: number, now: Date = new Date()): Promise<RegularSeasonChampion | null> {
-  return (await seasonResult(db, groupId, now)).champion;
-}
