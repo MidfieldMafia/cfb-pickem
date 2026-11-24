@@ -9,7 +9,7 @@
  */
 import "server-only";
 import { asc, eq, inArray, isNull } from "drizzle-orm";
-import { chatMentions, chatMessages, chatReactions, groups, membershipRemovals, members, memberships, type Group, type Member, type MembershipRole } from "@/db/schema";
+import { championSheetViews, chatMentions, chatMessages, chatReactions, groups, membershipRemovals, members, memberships, type Group, type Member, type MembershipRole } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { Commissioner } from "@/lib/members/authority";
 import { newSecret, type NewMemberInput } from "@/lib/members/members";
@@ -143,6 +143,7 @@ export async function deleteGroup(
   await db.delete(chatReactions).where(inArray(chatReactions.messageId, itsMessages));
   await db.delete(chatMessages).where(eq(chatMessages.groupId, groupId));
   await db.delete(membershipRemovals).where(eq(membershipRemovals.groupId, groupId));
+  await db.delete(championSheetViews).where(eq(championSheetViews.groupId, groupId));
   await db.delete(memberships).where(eq(memberships.groupId, groupId));
   await db.delete(groups).where(eq(groups.id, groupId));
   return { name: summary.name, leftWithoutGroup: summary.leftWithoutGroup };

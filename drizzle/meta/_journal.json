@@ -148,6 +148,13 @@
       "when": 1793667632428,
       "tag": "0020_chat-pushes",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795557686236,
+      "tag": "0021_champion-sheet-views",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { db } from "@/db";
+import { seenFromAction } from "@/lib/champion/sheet";
 import { CURRENT_GROUP_COOKIE, currentGroupCookieOptions, groupChoice } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { dismissFromAction } from "@/lib/tours/route";
@@ -35,4 +36,9 @@ export async function switchGroup(formData: FormData): Promise<void> {
 /** The Tour runner's Done, Skip and Escape. `dismissFromAction` says what it checks. */
 export async function dismissTourAction(tourId: string): Promise<void> {
   await dismissFromAction({ db: db(), requireMember }, tourId);
+}
+
+/** The champion sheet's Close, scrim, Escape and See the Leaderboard. `seenFromAction` says what it checks. */
+export async function championSheetSeenAction(groupId: number): Promise<void> {
+  await seenFromAction({ db: db(), requireMember }, groupId);
 }
