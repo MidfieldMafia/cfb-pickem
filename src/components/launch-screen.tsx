@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Wordmark } from "@saturday-slate/design-system";
 import { LAUNCH_KEY } from "@/lib/launch";
+import { RivalryStrip } from "./week-look";
 
 const HOLD_MS = 1200;
 const FADE_MS = 200;
@@ -40,6 +41,7 @@ export function LaunchScreen() {
   return (
     <div aria-hidden className="launch-screen" data-leaving={phase === "leaving" ? "" : undefined}>
       <Wordmark size="lg" />
+      <RivalryStrip className="launch-look w-full" />
     </div>
   );
 }

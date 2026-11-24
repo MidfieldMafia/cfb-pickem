@@ -9,6 +9,7 @@ import { HEADER_TOP, HeaderLinks, Badge, Card, Progress, LocalTime, SECTION_LABE
 
 import { groupByKickoff, windowLabel } from "@/components/picks/kickoff-groups";
 import { TeamLogo } from "@/components/team-logo";
+import { RivalryBand } from "@/components/week-look";
 
 import { formatCountdown } from "@/lib/picks/clock";
 import { tiebreakerView, type SheetGameJson, type SheetJson } from "@/lib/picks/json";
@@ -218,6 +219,7 @@ export function Review({
           )}
         </p>
       </header>
+      <RivalryBand className="-mx-4" />
 
       {/* The content under the header: the Welcome Tour's `picks-screen` target. */}
       <div data-tour="picks-screen" className="flex flex-1 flex-col gap-3">

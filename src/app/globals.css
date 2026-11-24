@@ -16,6 +16,8 @@
     position: fixed;
     inset: 0;
     z-index: 50;
+    flex-direction: column;
+    gap: 1.5rem;
     align-items: center;
     justify-content: center;
     background: var(--background);
@@ -33,3 +35,9 @@
      and whatever it keeps below the box (the composer) stays put. */
   body:has([data-own-scroll]) { height: 100%; }
 }
+
+/* The Rivalry Week band under the launch Wordmark (#588). The launch screen
+   paints before any layout has read the Week, so it shows the Look the member
+   screens last remembered, which LAUNCH_GUARD puts on <html data-look>.
+   Outside the base layer, so it outranks the band's own `flex` utility. */
+html:not([data-look="rivalry"]) .launch-look { display: none; }

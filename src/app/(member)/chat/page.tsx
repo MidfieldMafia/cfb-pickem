@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
+import { RivalryBand } from "@/components/week-look";
 import { chatThread, markRead, mentionPeople } from "@/lib/chat/chat";
 import { toChatStateJson } from "@/lib/chat/json";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
@@ -46,6 +47,7 @@ export default async function Chat() {
           right={<MemberMenu member={member} group={<GroupSwitcher choice={choice} />} manage={await currentManageHref()} />}
         />
       </div>
+      <RivalryBand />
       {/* From Week 13 settling, the Regular Season Champion is pinned above the thread (#589). */}
       {champion ? (
         <div className="shrink-0 px-4 pt-3">

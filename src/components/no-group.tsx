@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppHeader, SECTION_LABEL, Button, Card } from "@saturday-slate/design-system";
 
 import { MemberMenu } from "@/components/member-menu";
+import { RivalryBand } from "@/components/week-look";
 
 import type { Member } from "@/db/schema";
 import { currentManageHref } from "@/lib/groups/current";
@@ -21,6 +22,7 @@ export async function NoGroup({ member }: { member: Member }) {
         title="Saturday Slate"
         right={<MemberMenu member={member} manage={await currentManageHref()} />}
       />
+      <RivalryBand className="-mt-4" />
       <Card asChild className="mx-4 gap-2">
         <section>
           <p className={SECTION_LABEL}>You&rsquo;re not in a group yet</p>

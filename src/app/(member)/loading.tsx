@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Card, HEADER_TOP } from "@saturday-slate/design-system";
+import { RivalryBand } from "@/components/week-look";
 
 /**
  * What a member screen shows while its server work runs (#262). It sits
@@ -25,6 +26,7 @@ export default function Loading() {
           <div className="h-3.5 w-44 rounded bg-muted" />
         </div>
       </div>
+      <RivalryBand className="-mt-4" />
       {[24, 36, 36].map((height, i) => (
         <Card key={i} aria-hidden className="mx-4 motion-safe:animate-pulse" style={{ height: height * 4 }}>
           <div className="h-4 w-1/3 rounded bg-muted" />

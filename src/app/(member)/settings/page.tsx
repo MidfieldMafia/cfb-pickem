@@ -1,6 +1,7 @@
 import { AppHeader } from "@saturday-slate/design-system";
 import { db } from "@/db";
 import { MemberMenu } from "@/components/member-menu";
+import { RivalryBand } from "@/components/week-look";
 import { currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { isCommissioner } from "@/lib/members/members";
@@ -20,6 +21,7 @@ export default async function Settings() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader title="Settings" right={<MemberMenu member={member} manage={await currentManageHref()} />} />
+      <RivalryBand className="-mt-4" />
       <NotificationsCard
         endpoints={endpoints}
         stopped={pushStopped(member, endpoints.length)}
