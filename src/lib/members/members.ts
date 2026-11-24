@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { and, asc, count, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { inOneBatch } from "@/db/batch";
 import {
+  championSheetViews,
   chatMentions,
   chatMessages,
   chatReactions,
@@ -286,13 +287,14 @@ export async function removeMember(db: Db, actor: Commissioner, memberId: number
     tx.delete(chatMentions).where(inArray(chatMentions.messageId, theirMessages)),
     tx.delete(chatMessages).where(eq(chatMessages.memberId, memberId)),
     tx.delete(tourDismissals).where(eq(tourDismissals.memberId, memberId)),
+    tx.delete(championSheetViews).where(eq(championSheetViews.memberId, memberId)),
     tx.delete(pushSubscriptions).where(eq(pushSubscriptions.memberId, memberId)),
     tx.delete(pushMessages).where(eq(pushMessages.memberId, memberId)),
     // A message they took down stays down; it just no longer names who did it.
     tx.update(chatMessages).set({ removedBy: null }).where(eq(chatMessages.removedBy, memberId)),
     tx.delete(members).where(eq(members.id, memberId)).returning(),
   ]);
-  const [deleted] = writes[20];
+  const [deleted] = writes[21];
   return deleted;
 }
 

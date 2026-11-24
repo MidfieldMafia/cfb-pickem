@@ -741,6 +741,32 @@ export const tourDismissals = pgTable(
   (t) => [primaryKey({ columns: [t.memberId, t.tourId] })],
 );
 
+/**
+ * The Regular Season Champion's celebration sheet, seen (#592): one row per
+ * member, group and season, written however the sheet was dismissed, so it
+ * shows once on any device. `asChampion` is whether they were the champion
+ * when they saw it: a Result Override that crowns someone who had already
+ * seen it as another member shows it to them once more, and one that takes
+ * the title away never replays it.
+ */
+export const championSheetViews = pgTable(
+  "champion_sheet_views",
+  {
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id),
+    seasonId: integer("season_id")
+      .notNull()
+      .references(() => seasons.id),
+    asChampion: boolean("as_champion").notNull(),
+    seenAt: utc("seen_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.memberId, t.groupId, t.seasonId] })],
+);
+
 export const seasonsRelations = relations(seasons, ({ many }) => ({ weeks: many(weeks) }));
 export const weeksRelations = relations(weeks, ({ one, many }) => ({
   season: one(seasons, { fields: [weeks.seasonId], references: [seasons.id] }),
