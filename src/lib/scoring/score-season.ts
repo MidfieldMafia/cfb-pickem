@@ -93,8 +93,8 @@ function rank(rows: LeaderboardRow[]): LeaderboardRow[] {
   return sorted.map((row, i) => ({ ...row, rank: ranks[i] }));
 }
 
-/** The Leaderboard over a set of graded weeks: one row per member, ranked. */
-function standings(results: WeekResult[], members: Member[]): LeaderboardRow[] {
+/** The Leaderboard over a set of graded weeks: one row per member, ranked, every `previousRank` null. */
+export function standings(results: WeekResult[], members: Member[]): LeaderboardRow[] {
   const byMember = seasonScores(results);
   return rank(members.map((member) => leaderboardRow(member, byMember.get(member.id) ?? [])));
 }

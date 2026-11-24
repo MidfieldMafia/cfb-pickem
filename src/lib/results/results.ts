@@ -23,7 +23,7 @@ import { groupBoard, type BoardMember } from "@/lib/groups/memberships";
 import type { Commissioner } from "@/lib/members/authority";
 import { seasonEntries, weekEntries } from "@/lib/picks/picks";
 import { plural } from "@/lib/plural";
-import { scoreSeason, scoreWeek } from "@/lib/scoring";
+import { regularSeasonChampions, scoreSeason, scoreWeek } from "@/lib/scoring";
 import type * as engine from "@/lib/scoring/types";
 import {
   toGameView,
@@ -49,7 +49,15 @@ import {
   underway,
 } from "./result";
 import { toEngineMember, toEngineWeek } from "./engine";
-import type { LeaderboardRow, Reveal, RevealPick, ScoredMember, WeeklyScore, WeeklyWin } from "./json";
+import type {
+  LeaderboardRow,
+  RegularSeasonChampion,
+  Reveal,
+  RevealPick,
+  ScoredMember,
+  WeeklyScore,
+  WeeklyWin,
+} from "./json";
 
 export { clockLabel, effectiveResult, REVIEW_AFTER_MS, underway };
 export type { GameResult, LiveScore, ResultLabel };
@@ -205,6 +213,8 @@ export interface SeasonResult {
   /** Published Weeks whose Deadline has passed and in which someone on the group's board made a Pick, in week order. */
   weeks: GradedWeek[];
   leaderboard: LeaderboardRow[];
+  /** Null until Week 13 is settled. */
+  champion: RegularSeasonChampion | null;
 }
 
 /** The member rows a graded read joins against, keyed the way the engine names them. */
@@ -363,6 +373,7 @@ interface SeasonPass {
   /** Every member the pass graded: `group`'s active members plus anyone since deactivated who still has Picks. */
   rows: BoardMember[];
   graded: engine.SeasonResult;
+  champion: { memberIds: string[]; points: number; corrected: boolean } | null;
 }
 
 /**
@@ -401,29 +412,50 @@ export async function groupPlayedWeeks(db: Db, groupId: number, season: Season, 
   return weekGames.map(({ week }) => week);
 }
 
+/**
+ * A Game as the feed had it: a Result Override standing over the feed's own
+ * final is set aside. One standing over no final at all is kept, since it
+ * filled in a result the feed never gave rather than correcting one.
+ */
+function asTheFeedHadIt(game: Game): Game {
+  const feedFinal = game.status === "final" && game.homeScore !== null && game.awayScore !== null;
+  return feedFinal ? { ...game, overrideHomeScore: null, overrideAwayScore: null } : game;
+}
+
 async function gradeSeason(db: Db, groupId: number, now: Date): Promise<SeasonPass> {
   // Neither read depends on the other, so the board waits for one round trip.
   const [season, group] = await Promise.all([activeSeason(db), groupBoard(db, groupId)]);
   const { weekGames, boards } = await groupWeeks(db, season, group, now);
   const played = weekGames.map(({ week }) => week);
   // `seasonEntries` has already applied `roster` a Week at a time, so this is not a
-  // fourth answer to who is on the board � it is the season-wide superset of those
+  // fourth answer to who is on the board — it is the season-wide superset of those
   // boards, within this group: its active members plus anyone since deactivated
   // who still has Picks, so the grading has a name for every id it hands back,
   // and an empty season is a table of zeroes rather than an empty screen.
   const onABoard = new Set(weekGames.flatMap(({ week }) => boards.get(week.id)!.map((m) => m.member.id)));
   const rows = group.filter((m) => m.active || onABoard.has(m.id));
+  const engineMembers = rows.map(toEngineMember);
+  const grade = (gameOf: (game: Game) => Game) =>
+    scoreSeason(
+      season.rules,
+      weekGames.map(({ week, games: slateGames }) => toEngineWeek(week, slateGames.map(gameOf), boards.get(week.id)!, now)),
+      engineMembers,
+    );
 
-  const graded = scoreSeason(
-    season.rules,
-    weekGames.map(({ week, games: slateGames }) => toEngineWeek(week, slateGames, boards.get(week.id)!, now)),
-    rows.map(toEngineMember),
-  );
-  return { season, played, rows, graded };
+  const graded = grade((game) => game);
+  const candidates = rows.map((m, i) => ({ ...engineMembers[i], active: m.active }));
+  const crowned = regularSeasonChampions(graded, candidates);
+  if (crowned.length === 0) return { season, played, rows, graded, champion: null };
+  // Only once there is a champion is the season graded a second time, on the
+  // feed's finals, to see whether a correction is what crowned them.
+  const fed = regularSeasonChampions(grade(asTheFeedHadIt), candidates).map((row) => row.memberId);
+  const memberIds = crowned.map((row) => row.memberId);
+  const corrected = fed.length !== memberIds.length || fed.some((id) => !memberIds.includes(id));
+  return { season, played, rows, graded, champion: { memberIds, points: crowned[0].totalPoints, corrected } };
 }
 
 /** The Leaderboard and the played Weeks, as the read models screens take. */
-function seasonView({ season, played, rows, graded }: SeasonPass): SeasonResult {
+function seasonView({ season, played, rows, graded, champion }: SeasonPass): SeasonResult {
   const byId = memberIndex(rows);
   // The engine answers in week numbers, which are unique within a season; nothing here leans on read order.
   const weekOf = new Map(played.map((w) => [w.weekNumber, w]));
@@ -434,6 +466,11 @@ function seasonView({ season, played, rows, graded }: SeasonPass): SeasonResult 
       member: byId.get(memberId)!,
       ...rest,
     })),
+    champion: champion && {
+      members: champion.memberIds.map((id) => byId.get(id)!),
+      points: champion.points,
+      corrected: champion.corrected,
+    },
   };
 }
 
@@ -451,4 +488,9 @@ function seasonView({ season, played, rows, graded }: SeasonPass): SeasonResult 
  */
 export async function seasonResult(db: Db, groupId: number, now: Date = new Date()): Promise<SeasonResult> {
   return seasonView(await gradeSeason(db, groupId, now));
+}
+
+/** The group's Regular Season Champion, for a screen that shows it without the board: null until Week 13 is settled. */
+export async function regularSeasonChampion(db: Db, groupId: number, now: Date = new Date()): Promise<RegularSeasonChampion | null> {
+  return (await seasonResult(db, groupId, now)).champion;
 }

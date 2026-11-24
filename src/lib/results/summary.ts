@@ -275,3 +275,14 @@ export function seasonStatusLabel(latest: { week: { weekNumber: number }; comple
   if (!latest) return "before Week 1";
   return latest.complete ? `through Week ${latest.week.weekNumber}` : `Week ${latest.week.weekNumber} in progress`;
 }
+
+/** The Regular Season Champion's title over their name, plural for co-champions. */
+export function championLabel(champions: Pick<ScoredMember, "displayName">[]): string {
+  return champions.length > 1 ? "Regular Season Champions" : "Regular Season Champion";
+}
+
+/** "Dee is the Regular Season Champion", where a screen needs a sentence. Names members, never their roles. */
+export function championSentence(champions: Pick<ScoredMember, "displayName">[]): string {
+  const verb = champions.length > 1 ? "are" : "is";
+  return `${listNames(champions)} ${verb} the ${championLabel(champions)}`;
+}

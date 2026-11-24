@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { eq } from "drizzle-orm";
-import { games } from "@/db/schema";
+import { games, members, weeks } from "@/db/schema";
 import type { Db } from "@/db/types";
 import type { CfbdClient } from "@/lib/cfbd/types";
 import { PicksHidden } from "@/lib/picks/picks";
@@ -371,6 +371,62 @@ describe("the season leaderboard", () => {
       averageTiebreakerMiss: null,
       cumulativeTiebreakerError: 0,
     });
+  });
+});
+
+describe("the Regular Season Champion", () => {
+  /** The fixture's Week as the season's last regular-season Week, so its board crowns the champion. */
+  async function asWeek13(db: Db, weekId: number) {
+    await db.update(weeks).set({ weekNumber: 13 }).where(eq(weeks.id, weekId));
+  }
+
+  const crowned = (season: Awaited<ReturnType<typeof seasonForFamily>>) =>
+    season.champion && {
+      names: season.champion.members.map((m) => m.displayName),
+      points: season.champion.points,
+      corrected: season.champion.corrected,
+    };
+
+  test("is nobody while a Week 13 game is still to play, and the leader once it is settled", async () => {
+    const { db, week, ingest } = await setup();
+    await asWeek13(db, week.id);
+    await ingest(feedWith({ [OKLAHOMA_AT_MICHIGAN]: [24, 27] }), SATURDAY_EVENING);
+    expect((await seasonForFamily(db, SATURDAY_EVENING)).champion).toBeNull();
+
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+    expect(crowned(await seasonForFamily(db, SUNDAY))).toEqual({ names: ["Grandma"], points: 30, corrected: false });
+  });
+
+  test("moves with a Result Override over the feed's final, and says it was corrected", async () => {
+    const { db, jonah, week, michigan, ingest } = await setup();
+    await asWeek13(db, week.id);
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+
+    await overrideResult(db, jonah, michigan.id, { homeScore: 24, awayScore: 30, note: "Teams the wrong way round" }, SUNDAY);
+    expect(crowned(await seasonForFamily(db, SUNDAY))).toEqual({ names: ["Jonah"], points: 20, corrected: true });
+
+    await clearOverride(db, jonah, michigan.id, SUNDAY);
+    expect(crowned(await seasonForFamily(db, SUNDAY))).toEqual({ names: ["Grandma"], points: 30, corrected: false });
+  });
+
+  test("an override that leaves the champion where they were is no correction", async () => {
+    const { db, jonah, week, michigan, ingest } = await setup();
+    await asWeek13(db, week.id);
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+
+    await overrideResult(db, jonah, michigan.id, { homeScore: 28, awayScore: 24, note: "Late field goal" }, SUNDAY);
+    expect(crowned(await seasonForFamily(db, SUNDAY))).toEqual({ names: ["Grandma"], points: 30, corrected: false });
+  });
+
+  test("passes over a leader who has left for the top member still in the group", async () => {
+    const { db, grandma, week, ingest } = await setup();
+    await asWeek13(db, week.id);
+    await ingest(feedWith(ALL_FINAL), SUNDAY);
+    await db.update(members).set({ active: false }).where(eq(members.id, grandma.id));
+
+    const season = await seasonForFamily(db, SUNDAY);
+    expect(season.leaderboard[0].member.displayName).toBe("Grandma");
+    expect(crowned(season)).toEqual({ names: ["Jonah"], points: 10, corrected: false });
   });
 });
 

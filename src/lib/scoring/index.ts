@@ -7,6 +7,7 @@
  * - `scoreWeek` grades one week: per-member Weekly Scores with a per-pick
  *   breakdown and the Weekly Win.
  * - `scoreSeason` grades every published week and builds the Leaderboard.
+ * - `regularSeasonChampions` names the Regular Season Champion off that grading.
  *
  * A week counts for a member — a Played Week — when its Deadline fell after
  * they joined and they made at least one Pick on it. Those are two different
@@ -22,3 +23,4 @@
  */
 export { scoreWeek, weekComplete } from "./score-week";
 export { scoreSeason } from "./score-season";
+export { REGULAR_SEASON_FINAL_WEEK, regularSeasonChampions, type ChampionCandidate } from "./champion";

@@ -3,6 +3,8 @@ import { finalResult, SCHEDULED, voidResult } from "@/test/game";
 import type { LeaderboardRow, Reveal, RevealGame, RevealPick, ScoredMember, WeeklyScore, WeeklyWin } from "./json";
 import type { GameJson, GameView } from "@/lib/slate/json";
 import {
+  championLabel,
+  championSentence,
   movement,
   ordinal,
   pickBreakdown,
@@ -355,5 +357,17 @@ describe("how far the season has got", () => {
 
   test("a finished week is through", () => {
     expect(seasonStatusLabel({ week: { weekNumber: 3 }, complete: true })).toBe("through Week 3");
+  });
+});
+
+describe("the Regular Season Champion, in words", () => {
+  test("one champion is the Regular Season Champion", () => {
+    expect(championLabel([JONAH])).toBe("Regular Season Champion");
+    expect(championSentence([JONAH])).toBe("Jonah is the Regular Season Champion");
+  });
+
+  test("co-champions are named together, and the title goes plural", () => {
+    expect(championLabel([JONAH, ALEX])).toBe("Regular Season Champions");
+    expect(championSentence([JONAH, ALEX])).toBe("Jonah and Alex are the Regular Season Champions");
   });
 });

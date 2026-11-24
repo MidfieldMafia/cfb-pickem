@@ -124,3 +124,20 @@ export interface LeaderboardRow {
   /** Mean absolute Tiebreaker Guess miss over weeks actually guessed. Display-only; lower is better. */
   averageTiebreakerMiss: number | null;
 }
+
+/**
+ * The Regular Season Champion (`regularSeasonChampions`), as a screen shows
+ * it: more than one member only when they tie on every season tiebreak.
+ */
+export interface RegularSeasonChampion {
+  members: ScoredMember[];
+  /** Their points through Week 13, the same for every co-champion. */
+  points: number;
+  /**
+   * A Result Override that stands over a feed's final crowned someone else:
+   * read off the feed's own finals, the champion would not be these members.
+   * Computed on every read like the title itself, so clearing the override
+   * clears this too.
+   */
+  corrected: boolean;
+}

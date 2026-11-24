@@ -13,6 +13,7 @@ import { effectiveResult, seasonResult } from "@/lib/results/results";
 import { seasonChampion, seasonStatusLabel, weeklyContenders, weeklyWinners, weeklyWinSentence } from "@/lib/results/summary";
 import { MAX_WEEK_NUMBER } from "@/lib/slate/slate";
 import { freshSlate } from "@/lib/week/week";
+import { ChampionCard } from "./champion-card";
 import { LeaderboardTable } from "./leaderboard-table";
 import { gamesLeftLabel, revealHref, selectedWeek, stripTiles, weekInProgress } from "./week-view";
 import { LiveWeekCard, RevealCard, WeekStrip } from "./week-strip";
@@ -34,6 +35,9 @@ import { WeeklyScoreList } from "./weekly-score";
  * progress while there is one, and on Season otherwise (#243);
  * `?week=season` asks for Season outright. A finished Week ends in a card to
  * its Reveal (#244), which has a screen of its own at `reveal/`.
+ *
+ * Once Week 13 is settled the Season board opens on the Regular Season
+ * Champion's card (#589), above the table, from the same pass.
  *
  * While a Week is in progress the feed is pulled first, on the Live Board's
  * stale gate, so the standings and the games-left card read the same scores.
@@ -111,6 +115,11 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
             </>
           ) : (
             <>
+              {season.champion ? (
+                <div className="pb-4">
+                  <ChampionCard champion={season.champion} />
+                </div>
+              ) : null}
               <LeaderboardTable rows={season.leaderboard} viewerId={member.id} championId={championId} />
               {movedSince ? (
                 <p className="pt-3 text-sm text-muted-foreground">Arrows are places moved since Week {movedSince}.</p>
