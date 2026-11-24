@@ -1,0 +1,116 @@
+[
+  {
+    "home": "Texas Tech",
+    "away": "TCU",
+    "rivalry": "Battle for the Saddle",
+    "trophy": "Saddle Trophy"
+  },
+  {
+    "home": "Ole Miss",
+    "away": "Mississippi State",
+    "rivalry": "Egg Bowl",
+    "trophy": "Golden Egg"
+  },
+  {
+    "home": "Iowa",
+    "away": "Nebraska",
+    "rivalry": "Heroes Game",
+    "trophy": "Heroes Trophy"
+  },
+  {
+    "home": "Florida State",
+    "away": "Florida",
+    "rivalry": "Sunshine Showdown",
+    "trophy": null
+  },
+  {
+    "home": "Wisconsin",
+    "away": "Minnesota",
+    "rivalry": "Battle for Paul Bunyan's Axe",
+    "trophy": "Paul Bunyan's Axe"
+  },
+  {
+    "home": "Texas A&M",
+    "away": "Texas",
+    "rivalry": "Lone Star Showdown",
+    "trophy": null
+  },
+  {
+    "home": "Kentucky",
+    "away": "Louisville",
+    "rivalry": "Governor's Cup",
+    "trophy": "Governor's Cup"
+  },
+  {
+    "home": "Ohio State",
+    "away": "Michigan",
+    "rivalry": "The Game",
+    "trophy": null
+  },
+  {
+    "home": "Northwestern",
+    "away": "Illinois",
+    "rivalry": "Land of Lincoln Trophy game",
+    "trophy": "Land of Lincoln Trophy"
+  },
+  {
+    "home": "Arkansas",
+    "away": "LSU",
+    "rivalry": "Battle for the Golden Boot",
+    "trophy": "Golden Boot"
+  },
+  {
+    "home": "Iowa State",
+    "away": "Kansas State",
+    "rivalry": "Farmageddon",
+    "trophy": null
+  },
+  {
+    "home": "Clemson",
+    "away": "South Carolina",
+    "rivalry": "Palmetto Bowl",
+    "trophy": "Palmetto Bowl Trophy"
+  },
+  {
+    "home": "Virginia Tech",
+    "away": "Virginia",
+    "rivalry": "Commonwealth Clash",
+    "trophy": "Commonwealth Cup"
+  },
+  {
+    "home": "Georgia",
+    "away": "Georgia Tech",
+    "rivalry": "Clean, Old-Fashioned Hate",
+    "trophy": "Governor's Cup"
+  },
+  {
+    "home": "UCLA",
+    "away": "USC",
+    "rivalry": "Battle for the Victory Bell",
+    "trophy": "Victory Bell"
+  },
+  {
+    "home": "Indiana",
+    "away": "Purdue",
+    "rivalry": "Battle for the Old Oaken Bucket",
+    "trophy": "Old Oaken Bucket"
+  },
+  {
+    "home": "Alabama",
+    "away": "Auburn",
+    "rivalry": "Iron Bowl",
+    "trophy": null
+  },
+  {
+    "home": "Arizona",
+    "away": "Arizona State",
+    "rivalry": "Territorial Cup",
+    "trophy": "Territorial Cup"
+  },
+  {
+    "home": "UNLV",
+    "away": "Nevada",
+    "rivalry": "Battle for Nevada",
+    "trophy": "Fremont Cannon"
+  }
+]

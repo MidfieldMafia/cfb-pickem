@@ -7,7 +7,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { LOOK_KEY } from "@/lib/launch";
-import { RivalryBand, WeekLookProvider } from "./week-look";
+import { RivalryBand, RivalryTitle, WeekLookProvider } from "./week-look";
 
 afterEach(() => {
   cleanup();
@@ -40,5 +40,38 @@ describe("RivalryBand", () => {
   test("renders nothing outside the member layout", () => {
     const { container } = render(<RivalryBand />);
     expect(container.innerHTML).toBe("");
+  });
+});
+
+describe("RivalryTitle", () => {
+  const eggBowl = { awayTeam: "Mississippi State", homeTeam: "Ole Miss" };
+  const inLook = (look: "rivalry" | null, game: { awayTeam: string; homeTeam: string }, variant: "picks" | "sheet") =>
+    render(
+      <WeekLookProvider look={look}>
+        <RivalryTitle game={game} variant={variant} />
+      </WeekLookProvider>,
+    ).container;
+
+  test("bills a rivalry game by name and trophy on Picks, between the double rules", () => {
+    const container = inLook("rivalry", eggBowl, "picks");
+    expect(container.textContent).toBe("Egg BowlFor the Golden Egg");
+    expect(container.firstElementChild?.className).toContain("border-double");
+  });
+
+  test("heads the game sheet with the name and trophy, and no rule", () => {
+    const container = inLook("rivalry", eggBowl, "sheet");
+    expect(container.textContent).toBe("Egg BowlFor the Golden Egg");
+    expect(container.firstElementChild?.className).not.toContain("border");
+  });
+
+  test("shows the title alone for a rivalry with no trophy", () => {
+    const container = inLook("rivalry", { awayTeam: "Auburn", homeTeam: "Alabama" }, "picks");
+    expect(container.textContent).toBe("Iron Bowl");
+  });
+
+  test("renders nothing for an ordinary game, or while the Look is off", () => {
+    expect(inLook("rivalry", { awayTeam: "Oklahoma", homeTeam: "Michigan" }, "picks").innerHTML).toBe("");
+    cleanup();
+    expect(inLook(null, eggBowl, "sheet").innerHTML).toBe("");
   });
 });

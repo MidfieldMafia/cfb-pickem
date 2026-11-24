@@ -12,7 +12,7 @@ import { PickReminderAsk } from "@/components/push/pick-reminder-ask";
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
-import { RivalryBand } from "@/components/week-look";
+import { RivalryBand, RivalryTitle } from "@/components/week-look";
 
 import { track } from "@/lib/analytics/analytics";
 import { teamBarColors } from "@/lib/results/bar-colors";
@@ -388,6 +388,8 @@ export function PickFlow({
               {voided ? <Badge variant="void">Void{why ? `: ${why}` : ""}</Badge> : null}
               {detail?.weather ? <WeatherPill weather={detail.weather} /> : null}
             </div>
+
+            <RivalryTitle game={game} variant="picks" />
 
             {/* An outline, not a border: it sets the Tiebreaker Game apart without moving the tiles. */}
             <div

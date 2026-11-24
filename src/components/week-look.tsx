@@ -1,8 +1,10 @@
 "use client";
 
+import { Trophy } from "lucide-react";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { LOOK_KEY } from "@/lib/launch";
 import type { WeekLook } from "@/lib/week/look";
+import { rivalryOf } from "@/lib/week/rivalry";
 
 /**
  * The Week's Look (`weekLook`), read once by the member layout and handed to
@@ -58,4 +60,42 @@ export function RivalryStrip({ className = "" }: { className?: string }) {
 export function RivalryBand({ className = "" }: { className?: string }) {
   if (useWeekLook() !== "rivalry") return null;
   return <RivalryStrip className={`sticky top-[env(safe-area-inset-top)] z-10 self-stretch ${className}`} />;
+}
+
+/**
+ * A rivalry game's name, billed above the matchup while the Rivalry Week Look
+ * is on (#591), with "For the <trophy>" under it when the game has one. On
+ * Picks it is ruled above and below with the rust double rule; on the game
+ * sheet it is the headline, larger and unruled. Nothing renders for an
+ * ordinary game or while the Look is off.
+ */
+export function RivalryTitle({
+  game,
+  variant,
+}: {
+  game: { awayTeam: string; homeTeam: string };
+  variant: "picks" | "sheet";
+}) {
+  const rivalry = rivalryOf(useWeekLook(), game);
+  if (!rivalry) return null;
+  const picks = variant === "picks";
+  return (
+    <div
+      className={`flex flex-col items-center gap-0.5 text-center ${
+        picks ? "border-y-[3px] border-double border-secondary pt-0.5 pb-1" : "px-4 pt-3.5"
+      }`}
+    >
+      <span
+        className={`font-display font-black text-foreground ${picks ? "text-[26px] leading-8" : "text-[28px] leading-[34px]"}`}
+      >
+        {rivalry.name}
+      </span>
+      {rivalry.trophy ? (
+        <span className="inline-flex items-center gap-1.5 text-[13px] leading-[18px] text-muted-foreground">
+          <Trophy size={14} aria-hidden />
+          For the {rivalry.trophy}
+        </span>
+      ) : null}
+    </div>
+  );
 }

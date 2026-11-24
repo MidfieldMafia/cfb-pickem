@@ -20,6 +20,7 @@ import { Football } from "@/components/football";
 import { Pennant } from "@/components/pennant";
 import { WeatherPill } from "@/components/picks/weather-pill";
 import { TeamLogo } from "@/components/team-logo";
+import { RivalryTitle } from "@/components/week-look";
 
 import { awayShare, type FinalStats, type Leader, type LeaderKey, type LeaderRow, type TeamStatRow } from "@/lib/results/box-score";
 import { recentPlays, type GamePlaysJson, type RecentPlays } from "@/lib/results/game-feed";
@@ -692,6 +693,7 @@ function SheetBody({
 
   return (
     <>
+      <RivalryTitle game={g} variant="sheet" />
       <SheetHeader game={game} serverNow={serverNow} landed={landed} />
       <div className="grid gap-2.5 overflow-y-auto px-4 pb-2" style={{ maxHeight: "calc(100dvh - 300px)" }}>
         {player.landed ? <FieldCard player={player} awayTeam={g.awayTeam} homeTeam={g.homeTeam} neutralSite={game.detail?.neutralSite} /> : null}
