@@ -8,8 +8,10 @@ import { chatThread, markRead, mentionPeople } from "@/lib/chat/chat";
 import { toChatStateJson } from "@/lib/chat/json";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
+import { seasonResult } from "@/lib/results/results";
 import { plural } from "@/lib/plural";
 import { toMemberJson } from "@/lib/slate/json";
+import { ChampionBanner } from "./champion-banner";
 import { ChatThread } from "./chat-thread";
 
 /**
@@ -28,7 +30,11 @@ export default async function Chat() {
   const group = choice.current;
   const now = new Date();
   // `people` is the Group's active Members now, the same count the header has always shown.
-  const [thread, people] = await Promise.all([chatThread(db(), member, group.id), mentionPeople(db(), member, group.id)]);
+  const [thread, people, { champion }] = await Promise.all([
+    chatThread(db(), member, group.id),
+    mentionPeople(db(), member, group.id),
+    seasonResult(db(), group.id, now),
+  ]);
   await markRead(db(), member.id, group.id, thread);
   const members = people.length;
 
@@ -42,6 +48,12 @@ export default async function Chat() {
         />
       </div>
       <RivalryBand />
+      {/* From Week 13 settling, the Regular Season Champion is pinned above the thread (#589). */}
+      {champion ? (
+        <div className="shrink-0 px-4 pt-3">
+          <ChampionBanner champion={champion} />
+        </div>
+      ) : null}
       {/* The thread and its composer: the Welcome Tour's `chat-screen` target. `min-h-0` keeps the thread scrolling inside its own box. */}
       <div data-tour="chat-screen" className="flex min-h-0 flex-1 flex-col">
         {/* Keyed on the Group, so switching boards starts the thread, its poll and its draft afresh. */}
