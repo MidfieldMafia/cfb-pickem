@@ -7,7 +7,7 @@
  */
 import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
-import { members, pushSubscriptions, type Game, type Member } from "@/db/schema";
+import { members, pushSubscriptions, weeks, type Game, type Member } from "@/db/schema";
 import type { Db } from "@/db/types";
 import { addMember } from "@/lib/groups/console";
 import type { Pusher, PushPayload, PushTarget } from "@/lib/push/sender";
@@ -191,6 +191,29 @@ describe("a Week settled", () => {
   });
 });
 
+describe("Week 13", () => {
+  test("names the Regular Season Champion, read off the season as Week 13 settles, and a correction sends nothing more", async () => {
+    const { db, week, jonah, grandma, miami, pickAll, run, push, to } = await seed();
+    await db.update(weeks).set({ weekNumber: 13 }).where(eq(weeks.id, week.id));
+    const katie = await joinAt(db, jonah, "Katie", TUESDAY);
+    await device(db, katie);
+    await pickAll(jonah);
+    await pickAll(grandma, [miami]);
+
+    await run();
+
+    expect(to(jonah).map((p) => [p.title, p.body])).toEqual([
+      ["Week 13 in Mabry Family", "You won Week 13 with 30 points and the Regular Season title."],
+    ]);
+    expect(to(grandma).map((p) => p.body)).toEqual(["Jonah won Week 13 and the Regular Season title."]);
+    expect(to(katie).map((p) => p.body)).toEqual(["Jonah won Week 13 and the Regular Season title."]);
+
+    await overrideResult(db, jonah, miami.id, { homeScore: 7, awayScore: 45, note: "Feed had it backwards" }, SUNDAY);
+    await run(feedWith(ALL_FINAL), new Date(SUNDAY.getTime() + 24 * 3600_000));
+    expect(push.sent).toHaveLength(3);
+  });
+});
+
 describe("weeklyWinBody", () => {
   const katie = { id: 1, displayName: "Katie" };
   const jimmy = { id: 2, displayName: "Jimmy" };
@@ -203,5 +226,46 @@ describe("weeklyWinBody", () => {
     expect(weeklyWinBody(win("shared", [katie, jimmy]), 9, ann.id)).toBe("Katie and Jimmy share the Weekly Win.");
     expect(weeklyWinBody(win("shared", [katie, jimmy, ann]), 9, 99)).toBe("Katie, Jimmy and Ann share the Weekly Win.");
     expect(weeklyWinBody(win("points"), 9, katie.id)).toBe("You won Week 9 with 14 points.");
+  });
+
+  test("an ordinary Week, with no champion to name, is unchanged", () => {
+    expect(weeklyWinBody(win("points"), 12, jimmy.id, [])).toBe("Katie won with 14 points.");
+    expect(weeklyWinBody(win("points"), 12, katie.id)).toBe("You won Week 12 with 14 points.");
+  });
+
+  describe("Week 13 names the Regular Season Champion", () => {
+    const dee = { id: 4, displayName: "Dee" };
+    const sam = { id: 5, displayName: "Sam" };
+    const you = { id: 6, displayName: "Casey" };
+    const week13 = (winners: { id: number; displayName: string }[], decidedBy: "points" | "tiebreaker" | "shared" = "points") =>
+      win(decidedBy, winners, 30);
+
+    test.each([
+      ["you won the Week and the title", week13([you]), [you], "You won Week 13 with 30 points and the Regular Season title."],
+      ["you're champion, someone else won the Week", week13([dee]), [you], "You're the Regular Season Champion. Dee won Week 13 with 30 points."],
+      ["someone else won both", week13([dee]), [dee], "Dee won Week 13 and the Regular Season title."],
+      ["different people won the Week and the title", week13([dee]), [sam], "Dee won Week 13 with 30 points. Sam is the Regular Season Champion."],
+      ["co-champions", week13([dee]), [sam, dee], "Sam and Dee share the Regular Season title."],
+      ["you're one of the co-champions", week13([dee]), [you, dee], "You and Dee share the Regular Season title."],
+    ])("%s", (_case, weeklyWin, champions, body) => {
+      expect(weeklyWinBody(weeklyWin, 13, you.id, champions)).toBe(body);
+    });
+
+    test("a Weekly Win shared or on the tiebreaker keeps its own phrasing", () => {
+      expect(weeklyWinBody(week13([dee], "tiebreaker"), 13, you.id, [sam])).toBe(
+        "Dee won on the tiebreaker. Sam is the Regular Season Champion.",
+      );
+      expect(weeklyWinBody(week13([dee, sam], "shared"), 13, you.id, [you])).toBe(
+        "You're the Regular Season Champion. Dee and Sam share the Weekly Win.",
+      );
+      expect(weeklyWinBody(week13([dee], "tiebreaker"), 13, you.id, [dee])).toBe("Dee won Week 13 and the Regular Season title.");
+      expect(weeklyWinBody(week13([dee, sam], "shared"), 13, you.id, [dee])).toBe(
+        "Dee and Sam share the Weekly Win. Dee is the Regular Season Champion.",
+      );
+    });
+
+    test("a Week winner who is not champion reads their own line, then the title", () => {
+      expect(weeklyWinBody(week13([you]), 13, you.id, [dee])).toBe("You won Week 13 with 30 points. Dee is the Regular Season Champion.");
+    });
   });
 });

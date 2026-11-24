@@ -11,6 +11,10 @@
  * a second push. A group where nobody played has no Weekly Win and sends
  * nothing.
  *
+ * Week 13's push also names the Regular Season Champion (#586 item 5), in the
+ * same push under the same reservation, so an override after it sends no
+ * second one.
+ *
  * Recipients are the group's members now, active, with Weekly Win on
  * (`members.notify_weekly_win`) and a device: one push per group, so a member
  * in two groups gets two.
@@ -26,11 +30,12 @@ import { pushToMember } from "@/lib/push/deliver";
 import { pushKey, reserve } from "@/lib/push/reservations";
 import type { Pusher, PushPayload } from "@/lib/push/sender";
 import { membersWithDevices } from "@/lib/push/settings";
+import { REGULAR_SEASON_FINAL_WEEK } from "@/lib/scoring";
 import { deadlinePassed, slateFor, type Slate } from "@/lib/slate/slate";
 import { weekSettled } from "./engine";
 import type { WeeklyWin } from "./json";
-import { weekResult } from "./results";
-import { listNames } from "./summary";
+import { seasonResult, weekResult } from "./results";
+import { championSentence, listNames } from "./summary";
 import { refreshResultsIfStale } from "./writes";
 
 /** A day, like the Pick reminder's: the news is still news the next morning, and the Leaderboard says it anyway. */
@@ -39,20 +44,48 @@ export const WEEKLY_WIN_TTL = 24 * 60 * 60;
 /** The link: the device switches to the group, then opens that Week's Leaderboard. */
 export const weeklyWinLink = (groupId: number, weekNumber: number) => `/go?group=${groupId}&to=/leaderboard?week=${weekNumber}`;
 
+type Named = { id: number; displayName: string };
+
 /**
  * What the push says to `memberId`: who won and how, or for a winner, their
  * own line. A winner of a shared Week reads their own line too.
+ *
+ * `champions` is the Regular Season Champion (#586 item 5), passed only for
+ * Week 13; empty, the body is the ordinary Week's. Co-champions are the whole
+ * body. Otherwise the title is folded into the Week's line: one sentence when
+ * the lone Week winner is the champion, two when they differ.
  */
 export function weeklyWinBody(
-  win: Pick<WeeklyWin, "decidedBy" | "points"> & { winners: { id: number; displayName: string }[] },
+  win: Pick<WeeklyWin, "decidedBy" | "points"> & { winners: Named[] },
   weekNumber: number,
   memberId: number,
+  champions: Named[] = [],
 ): string {
-  if (win.winners.some((w) => w.id === memberId)) return `You won Week ${weekNumber} with ${plural(win.points, "point")}.`;
+  const won = win.winners.some((w) => w.id === memberId);
+  const points = plural(win.points, "point");
+  if (champions.length > 1) {
+    const others = champions.filter((c) => c.id !== memberId);
+    const names = others.length < champions.length ? [{ displayName: "You" }, ...others] : champions;
+    return `${listNames(names)} share the Regular Season title.`;
+  }
+  const [champion] = champions;
+  if (champion?.id === memberId) {
+    if (won) return `You won Week ${weekNumber} with ${points} and the Regular Season title.`;
+    return `You're the Regular Season Champion. ${othersWon(win, weekNumber, true)}`;
+  }
+  if (champion && !won && win.decidedBy !== "shared" && win.winners[0].id === champion.id) {
+    return `${champion.displayName} won Week ${weekNumber} and the Regular Season title.`;
+  }
+  const week = won ? `You won Week ${weekNumber} with ${points}.` : othersWon(win, weekNumber, Boolean(champion));
+  return champion ? `${week} ${championSentence([champion])}.` : week;
+}
+
+/** The Week's line for a member who did not win it. Week 13's names the Week on points, beside the title. */
+function othersWon(win: Pick<WeeklyWin, "decidedBy" | "points"> & { winners: Named[] }, weekNumber: number, named: boolean) {
   const who = listNames(win.winners);
   switch (win.decidedBy) {
     case "points":
-      return `${who} won with ${plural(win.points, "point")}.`;
+      return `${who} won${named ? ` Week ${weekNumber}` : ""} with ${plural(win.points, "point")}.`;
     case "tiebreaker":
       return `${who} won on the tiebreaker.`;
     case "shared":
@@ -91,6 +124,16 @@ async function refreshed(db: Db, cfbd: () => CfbdClient, slate: Slate, now: Date
   }
 }
 
+/**
+ * The group's Regular Season Champion, read off the season as it stands, once
+ * the Week being told is Week 13; empty for every other Week. Read before the
+ * reservation, so a failed read sends nothing rather than spending the push.
+ */
+async function championsAfter(db: Db, groupId: number, weekNumber: number, now: Date): Promise<Named[]> {
+  if (weekNumber !== REGULAR_SEASON_FINAL_WEEK) return [];
+  return (await seasonResult(db, groupId, now)).champion?.members ?? [];
+}
+
 /** The 16:00 UTC job's Weekly Win: sends each group's once its Week is settled, and says what went. */
 export async function runWeeklyWinPush(
   db: Db,
@@ -109,6 +152,7 @@ export async function runWeeklyWinPush(
   for (const group of allGroups) {
     const { weeklyWin } = await weekResult(db, group.id, slate, now);
     if (!weeklyWin) continue;
+    const champions = await championsAfter(db, group.id, week.weekNumber, now);
     if (!(await reserve(db, pushKey.win(week.id, group.id)))) continue;
     const recipients = (await groupBoard(db, group.id))
       .map((entry) => entry.member)
@@ -118,7 +162,7 @@ export async function runWeeklyWinPush(
       recipients.map(async (m): Promise<WeeklyWinPushSent> => {
         const payload: PushPayload = {
           title: `Week ${week.weekNumber} in ${group.name}`,
-          body: weeklyWinBody(weeklyWin, week.weekNumber, m.id),
+          body: weeklyWinBody(weeklyWin, week.weekNumber, m.id, champions),
           url: link,
           tag: `win-${week.weekNumber}-${group.id}`,
         };
