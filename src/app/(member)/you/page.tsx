@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { MessageSquare } from "lucide-react";
 import { AppHeader, CopyButton, SECTION_LABEL, Badge, Button, Card, LINK } from "@saturday-slate/design-system";
 import { MemberMenu } from "@/components/member-menu";
+import { RivalryBand } from "@/components/week-look";
 
 import { Pennant } from "@/components/pennant";
 
@@ -44,6 +45,7 @@ export default async function You() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
       <AppHeader title="You" right={<MemberMenu member={member} manage={await currentManageHref()} />} />
+      <RivalryBand className="-mt-4" />
 
       <Card asChild className="mx-4 gap-3">
         <section>

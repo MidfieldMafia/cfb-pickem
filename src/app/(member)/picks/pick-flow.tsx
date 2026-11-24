@@ -12,6 +12,7 @@ import { PickReminderAsk } from "@/components/push/pick-reminder-ask";
 import { MatchupPanel } from "@/components/picks/matchup-panel";
 import { TeamTile } from "@/components/picks/team-tile";
 import { WeatherPill } from "@/components/picks/weather-pill";
+import { RivalryBand } from "@/components/week-look";
 
 import { track } from "@/lib/analytics/analytics";
 import { teamBarColors } from "@/lib/results/bar-colors";
@@ -303,6 +304,7 @@ export function PickFlow({
         <HeaderLinks />
         {menu}
       </header>
+      <RivalryBand />
 
       <HomeScreenNudge open={!locked} banner={page === null} />
       {reminder ? (

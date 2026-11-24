@@ -6,6 +6,7 @@ import { GroupSwitcher } from "@/components/group-switcher";
 import { MemberMenu } from "@/components/member-menu";
 import { NoGroup } from "@/components/no-group";
 import { RevealList } from "@/components/reveal";
+import { RivalryBand } from "@/components/week-look";
 import { cfbd } from "@/lib/cfbd";
 import { closeGamesAfter } from "@/lib/push/close-game-after";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
@@ -40,6 +41,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
         <AppHeader title="Reveal" right={menu} />
+        <RivalryBand className="-mt-4" />
         <Card asChild className="mx-4 gap-2">
           <section>
             <p className={SECTION_LABEL}>Nothing to show yet</p>
@@ -69,6 +71,7 @@ export default async function WeekReveal({ searchParams }: { searchParams: Promi
         sub={`${slate.season.year} · Week ${weekNumber} · ${complete ? "Final" : "In progress"}`}
         right={menu}
       />
+      <RivalryBand className="-mt-4" />
 
       <div className="-mb-3 -mt-1 px-4">
         <BackLink href={`/leaderboard?week=${weekNumber}`} className="text-sm">
