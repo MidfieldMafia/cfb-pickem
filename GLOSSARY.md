@@ -104,12 +104,17 @@ _Avoid_: Standings, rankings, table
 
 **Regular Season Champion**:
 The member first on a group's Leaderboard once the last regular-season Week (Week 13 in 2026) is settled, ties broken by the season tiebreak rules; members still level after every tiebreak are co-champions. Only a member still in the group can hold it. Computed on every read, never stored. Points carry on into the postseason, so it names a moment, not an ending.
+_Avoid_: Season champion, winner
 
 ### The app
 
 **Theme**:
 The app has one, light. There is no dark mode: the `dark:` classes in the design system's shadcn-derived components never fire, because nothing sets a dark theme. A ticket that asks for "light and dark" is built and checked in light.
 _Avoid_: Dark mode, color scheme
+
+**Week Look**:
+The visual dressing the whole app wears for one Week, such as Rivalry Week or the postseason. Every screen wears it together, and it comes and goes with the Week, never by a member's choice. It sits on top of the Theme, not in place of it.
+_Avoid_: Theme, skin
 
 **Live Board**:
 The Saturday view of the slate with live scores and the picks of every member of a group, colored by whether they are currently winning.
