@@ -23,6 +23,7 @@ function member(id: number) {
 function row(id: number, rank: number, overrides: Partial<LeaderboardRow> = {}): LeaderboardRow {
   return {
     member: member(id),
+    active: true,
     rank,
     previousRank: null,
     totalPoints: 0,
@@ -204,6 +205,48 @@ describe("the Trophy", () => {
     fireEvent.click(screen.getByRole("button", { name: "Pts" }));
     fireEvent.click(screen.getByRole("button", { name: "Pts" }));
     expect(trophies()).toEqual([2]);
+  });
+});
+
+describe("the still-alive mark", () => {
+  /** The mark on each row, by member id: null where a row has none. */
+  function marks(): Record<number, string | null> {
+    return Object.fromEntries(
+      screen
+        .getAllByRole("row")
+        .slice(1)
+        .map((tr) => [Number(tr.getAttribute("data-member-id")), tr.querySelector("[data-still-alive]")?.textContent ?? null]),
+    );
+  }
+
+  test("sits under the name of each member alive", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} stillAlive={{ alive: [1, 2], clinched: false }} />);
+    expect(marks()).toEqual({ 1: "Still alive", 2: "Still alive", 3: null });
+  });
+
+  test("reads Clinched the title for a sole survivor, heavier and on one line", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} stillAlive={{ alive: [2], clinched: true }} />);
+    expect(marks()).toEqual({ 1: null, 2: "Clinched the title", 3: null });
+    const mark = document.querySelector("[data-still-alive]")!;
+    expect(mark.className).toMatch(/font-extrabold/);
+    expect(mark.className).toMatch(/whitespace-nowrap/);
+  });
+
+  test("is set in the rust caps the design names, at weight 700 for Still alive", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} stillAlive={{ alive: [1], clinched: false }} />);
+    const { className } = document.querySelector("[data-still-alive]")!;
+    for (const token of ["text-[11px]", "leading-[14px]", "tracking-[0.08em]", "text-secondary", "uppercase", "font-bold"]) {
+      expect(className).toContain(token);
+    }
+  });
+
+  test("is absent with no mark, and stays with its member when the board is sorted", () => {
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} />);
+    expect(marks()).toEqual({ 1: null, 2: null, 3: null });
+    cleanup();
+    render(<LeaderboardTable rows={ROWS} viewerId={1} championId={null} stillAlive={{ alive: [3], clinched: true }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Pts" }));
+    expect(marks()).toEqual({ 1: null, 2: null, 3: "Clinched the title" });
   });
 });
 

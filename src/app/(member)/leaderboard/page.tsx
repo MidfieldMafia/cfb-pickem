@@ -11,7 +11,9 @@ import { RivalryBand } from "@/components/week-look";
 import { currentGroupChoice, currentManageHref } from "@/lib/groups/current";
 import { requireMember } from "@/lib/members/current";
 import { effectiveResult, seasonResult } from "@/lib/results/results";
+import { beforeWeekKickoff, stillAlive } from "@/lib/results/still-alive";
 import { seasonChampion, seasonStatusLabel, weeklyContenders, weeklyWinners, weeklyWinSentence } from "@/lib/results/summary";
+import { REGULAR_SEASON_FINAL_WEEK } from "@/lib/scoring";
 import { MAX_WEEK_NUMBER } from "@/lib/slate/slate";
 import { freshSlate } from "@/lib/week/week";
 import { ChampionCard } from "./champion-card";
@@ -38,7 +40,9 @@ import { WeeklyScoreList } from "./weekly-score";
  * its Reveal (#244), which has a screen of its own at `reveal/`.
  *
  * Once Week 13 is settled the Season board opens on the Regular Season
- * Champion's card (#589), above the table, from the same pass.
+ * Champion's card (#589), above the table, from the same pass. Before Week 13
+ * kicks off, the members who can still finish first wear a "Still alive" line
+ * on it (#590).
  *
  * While a Week is in progress the feed is pulled first, on the Live Board's
  * stale gate, so the standings and the games-left card read the same scores.
@@ -69,6 +73,10 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
   // one week played there is no such board, so there are no arrows to explain.
   const movedSince = played.length > 1 ? played[played.length - 2].week.weekNumber : null;
   const championId = seasonChampion(season.leaderboard, played, MAX_WEEK_NUMBER);
+  // Before Week 13's first kickoff, who can still finish first. The Week's
+  // maxPoints exist from its Deadline, so there is nothing to read before then.
+  const finalWeek = played.find((w) => w.week.weekNumber === REGULAR_SEASON_FINAL_WEEK);
+  const alive = finalWeek && beforeWeekKickoff(slate, now) ? stillAlive(season.leaderboard, finalWeek.scores) : null;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 pb-8">
@@ -122,7 +130,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
                   <ChampionCard champion={season.champion} />
                 </div>
               ) : null}
-              <LeaderboardTable rows={season.leaderboard} viewerId={member.id} championId={championId} />
+              <LeaderboardTable rows={season.leaderboard} viewerId={member.id} championId={championId} stillAlive={alive} />
               {movedSince ? (
                 <p className="pt-3 text-sm text-muted-foreground">Arrows are places moved since Week {movedSince}.</p>
               ) : null}

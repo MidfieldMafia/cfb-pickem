@@ -106,6 +106,10 @@ _Avoid_: Standings, rankings, table
 The member first on a group's Leaderboard once the last regular-season Week (Week 13 in 2026) is settled, ties broken by the season tiebreak rules; members still level after every tiebreak are co-champions. Only a member still in the group can hold it. Computed on every read, never stored. Points carry on into the postseason, so it names a moment, not an ending.
 _Avoid_: Season champion, winner
 
+**Still alive**:
+A member who can still finish first in the season before Week 13 kicks off: their season points plus Week 13's max possible Weekly Score reach the points of the leader still in the group. Everyone tied for first is alive, and the mark does not predict tiebreakers. Shown as a rust "Still alive" line under the name on the Leaderboard, or "Clinched the title" when one member is left; hidden when more than half the group is alive. Members who have left the group are never marked.
+_Avoid_: In the hunt, in contention
+
 ### The app
 
 **Theme**:

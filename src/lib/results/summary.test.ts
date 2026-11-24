@@ -58,6 +58,7 @@ const ALEX = member(3, "Alex");
 function row(who: ScoredMember, rank: number, totalPoints: number): LeaderboardRow {
   return {
     member: who,
+    active: true,
     rank,
     previousRank: null,
     totalPoints,
