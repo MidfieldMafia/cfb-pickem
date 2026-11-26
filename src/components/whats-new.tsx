@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, Bell, Megaphone, Timer, Trophy, X, type LucideIcon } from "lucide-react";
+import { Bell, Crown, HeartPulse, Megaphone, Swords, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, type MouseEvent } from "react";
 import { Button, MENU_ROW, SECTION_LABEL } from "@saturday-slate/design-system";
 import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
@@ -12,28 +12,28 @@ import { hasSeen, markSeen, WHATS_NEW_OPEN } from "@/lib/whats-new";
  * of the CHANGELOG's What's new rather than a copy of it.
  */
 const ENTRY: { id: string; label: string; items: { icon: LucideIcon; title: string; body: string }[] } = {
-  id: "2026-11-01",
-  label: "What's new · Nov 1–7",
+  id: "2026-11-22",
+  label: "What's new · Nov 22–28",
   items: [
     {
+      icon: Swords,
+      title: "Rivalry Week",
+      body: "The whole app wears Rivalry Week this week, and each rivalry game on Picks is billed by name with the trophy it is played for.",
+    },
+    {
+      icon: HeartPulse,
+      title: "Still alive",
+      body: "Before Week 13 kicks off, the Leaderboard marks everyone who can still finish first.",
+    },
+    {
+      icon: Crown,
+      title: "Regular Season Champion",
+      body: "Once Week 13 is settled, the champion is named on the Leaderboard, in Chat and in a one-time sheet. If it's you, Share your win.",
+    },
+    {
       icon: Bell,
-      title: "Notifications in Settings",
-      body: "Settings has one switch for pushes on this phone, and a row for each kind of push. Remind me before picks lock now starts on.",
-    },
-    {
-      icon: AtSign,
-      title: "Mentions in Chat",
-      body: "Type @ in Chat to mention someone, or @everyone. You get a push when you're mentioned, or for every message if you choose All in Settings.",
-    },
-    {
-      icon: Timer,
-      title: "Close games",
-      body: "A push when a game on the Slate is one score apart in its last two minutes. Tap it to open that game on the Live Board.",
-    },
-    {
-      icon: Trophy,
-      title: "Who won the Week",
-      body: "Once your Group's Week is settled, a push tells you who took the Weekly Win.",
+      title: "Two Reminders",
+      body: "A Reminder now comes a day before the Deadline, and again an hour before if you're still not done.",
     },
   ],
 };
